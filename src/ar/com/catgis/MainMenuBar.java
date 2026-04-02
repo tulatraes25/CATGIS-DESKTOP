@@ -167,6 +167,22 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
+        JMenuItem itemUnirElementos = createItem("Unir elementos seleccionados", AppIcons.saveIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_J, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemUnirElementos.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.mergeSelectedFeatures();
+            }
+        });
+
+        JMenuItem itemExplotar = createItem("Explotar entidades seleccionadas", AppIcons.exportIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_E, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemExplotar.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.explodeSelectedFeatures();
+            }
+        });
+
         menuEdicion.add(itemCortar);
         menuEdicion.add(itemCopiar);
         menuEdicion.add(itemCopiarACapaEditable);
@@ -178,6 +194,8 @@ public class MainMenuBar extends JMenuBar {
         menuEdicion.addSeparator();
         menuEdicion.add(itemMoverSeleccion);
         menuEdicion.add(itemCortarGeometria);
+        menuEdicion.add(itemUnirElementos);
+        menuEdicion.add(itemExplotar);
         menuEdicion.addSeparator();
         menuEdicion.add(itemGuardarEdicion);
         menuEdicion.add(itemTerminarEdicion);
