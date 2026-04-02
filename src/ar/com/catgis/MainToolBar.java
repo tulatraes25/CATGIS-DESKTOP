@@ -24,8 +24,11 @@ public class MainToolBar extends JToolBar {
         JButton btnAbrirProyecto = createButton("Abrir proyecto", AppIcons.projectIcon());
         btnAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
 
-        JButton btnAgregarCapa = createButton("Agregar capa al proyecto actual", createAddLayerIcon());
+        JButton btnAgregarCapa = createButton("Agregar capa al proyecto actual", createOpenLayerIcon());
         btnAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
+
+        JButton btnNuevaCapaVectorial = createButton("Crear nueva capa vectorial", createNewVectorLayerIcon());
+        btnNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
 
         JButton btnTablaPuntos = createButton("Importar tabla de puntos", AppIcons.importTableIcon());
         btnTablaPuntos.addActionListener(e -> OpenTablePointsAction.openTablePoints());
@@ -89,7 +92,7 @@ public class MainToolBar extends JToolBar {
             if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
                 CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
             } else {
-                CatgisDesktopApp.mapPanel.finishCurrentDrawing();
+                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
             }
         });
 
@@ -113,6 +116,7 @@ public class MainToolBar extends JToolBar {
 
         add(btnAbrirProyecto);
         add(btnAgregarCapa);
+        add(btnNuevaCapaVectorial);
         add(btnTablaPuntos);
         add(btnGuardar);
         add(btnGuardarComo);
@@ -154,15 +158,44 @@ public class MainToolBar extends JToolBar {
         return button;
     }
 
-    private Icon createAddLayerIcon() {
+    private Icon createOpenLayerIcon() {
         int w = 18, h = 18;
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(54, 114, 196));
+        g.fillRoundRect(2, 6, 14, 9, 3, 3);
+        g.setColor(new Color(86, 142, 217));
+        g.fillRoundRect(3, 4, 6, 4, 2, 2);
+        g.setColor(new Color(243, 249, 255));
+        g.fillRect(4, 8, 10, 5);
         g.setColor(new Color(34, 139, 34));
-        g.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g.drawLine(w / 2, 3, w / 2, h - 3);
-        g.drawLine(3, h / 2, w - 3, h / 2);
+        g.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(13, 2, 13, 8);
+        g.drawLine(10, 5, 16, 5);
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private Icon createNewVectorLayerIcon() {
+        int w = 18, h = 18;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(45, 105, 185));
+        g.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawRoundRect(2, 3, 11, 12, 3, 3);
+        g.setColor(new Color(33, 150, 83));
+        g.setStroke(new BasicStroke(2.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(5, 11, 7, 8);
+        g.drawLine(7, 8, 10, 10);
+        g.fillOval(4, 10, 2, 2);
+        g.fillOval(6, 7, 2, 2);
+        g.fillOval(9, 9, 2, 2);
+        g.setColor(new Color(34, 139, 34));
+        g.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(14, 5, 14, 15);
+        g.drawLine(9, 10, 17, 10);
         g.dispose();
         return new ImageIcon(img);
     }

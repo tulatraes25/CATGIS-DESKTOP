@@ -202,6 +202,18 @@ public class LayersPanel extends JPanel {
         return layerList.getSelectedValue();
     }
 
+    public void selectLayer(Layer layer) {
+        if (layer == null) {
+            layerList.clearSelection();
+            return;
+        }
+        int index = model.indexOf(layer);
+        if (index >= 0) {
+            layerList.setSelectedIndex(index);
+            layerList.ensureIndexIsVisible(index);
+        }
+    }
+
     public void refreshLayerList() {
         layerList.repaint();
     }

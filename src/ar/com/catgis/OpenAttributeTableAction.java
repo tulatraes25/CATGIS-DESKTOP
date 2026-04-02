@@ -2,6 +2,7 @@ package ar.com.catgis;
 
 import org.geotools.api.feature.Property;
 import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 
 import javax.swing.AbstractAction;
 import javax.swing.JFrame;
@@ -72,33 +73,53 @@ public class OpenAttributeTableAction extends AbstractAction {
             }
 
             List<SimpleFeature> features = data.getFeatures();
-            if (features == null || features.isEmpty()) {
-                JOptionPane.showMessageDialog(null, "La capa no contiene entidades.");
+            SimpleFeatureType schema = data.getSchema();
+            if ((features == null || features.isEmpty()) && schema == null) {
+                JOptionPane.showMessageDialog(null, "La capa no tiene tabla de atributos disponible.");
                 return null;
             }
 
             List<String> columnNames = new ArrayList<>();
             List<Object[]> rows = new ArrayList<>();
 
-            SimpleFeature firstFeature = features.get(0);
-            List<Property> properties = new ArrayList<>(firstFeature.getProperties());
+            if (schema != null) {
+                schema.getAttributeDescriptors().forEach(descriptor -> {
+                    String name = descriptor.getLocalName();
+                    if (!"the_geom".equalsIgnoreCase(name) && !"geom".equalsIgnoreCase(name)) {
+                        FieldConfig config = layer.getOrCreateFieldConfig(
+                                name,
+                                descriptor.getType() != null && descriptor.getType().getBinding() != null
+                                        ? descriptor.getType().getBinding().getSimpleName()
+                                        : "String"
+                        );
+                        if (config.isVisible()) {
+                            columnNames.add(name);
+                        }
+                    }
+                });
+            } else if (features != null && !features.isEmpty()) {
+                SimpleFeature firstFeature = features.get(0);
+                List<Property> properties = new ArrayList<>(firstFeature.getProperties());
 
-            for (Property property : properties) {
-                String name = property.getName().toString();
-                if (!"the_geom".equalsIgnoreCase(name) && !"geom".equalsIgnoreCase(name)) {
-                    FieldConfig config = layer.getOrCreateFieldConfig(name, "");
-                    if (config.isVisible()) {
-                        columnNames.add(name);
+                for (Property property : properties) {
+                    String name = property.getName().toString();
+                    if (!"the_geom".equalsIgnoreCase(name) && !"geom".equalsIgnoreCase(name)) {
+                        FieldConfig config = layer.getOrCreateFieldConfig(name, "");
+                        if (config.isVisible()) {
+                            columnNames.add(name);
+                        }
                     }
                 }
             }
 
-            for (SimpleFeature feature : features) {
-                List<Object> row = new ArrayList<>();
-                for (String columnName : columnNames) {
-                    row.add(feature.getAttribute(columnName));
+            if (features != null) {
+                for (SimpleFeature feature : features) {
+                    List<Object> row = new ArrayList<>();
+                    for (String columnName : columnNames) {
+                        row.add(feature.getAttribute(columnName));
+                    }
+                    rows.add(row.toArray(new Object[0]));
                 }
-                rows.add(row.toArray(new Object[0]));
             }
 
             AttributeTableWindow window = new AttributeTableWindow(layer, data, columnNames, rows);

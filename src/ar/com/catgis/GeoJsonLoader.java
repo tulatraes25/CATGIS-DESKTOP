@@ -96,7 +96,7 @@ public class GeoJsonLoader {
         int featureCount = features.size();
         String message = "GeoJSON cargado: " + file.getName() + " | entidades: " + featureCount;
 
-        return new ShapefileData(features, envelope, sourceName, featureCount, message);
+        return new ShapefileData(features, envelope, sourceName, featureCount, message, featureCollection.getSchema());
     }
 
     public static ShapefileData loadGeoJson(File file) throws Exception {

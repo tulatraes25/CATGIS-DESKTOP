@@ -20,18 +20,13 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Point;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -39,8 +34,10 @@ public class FloatingVectorEditToolbar extends JPanel {
 
     private final JToggleButton btnMove;
     private final JToggleButton btnSelect;
+    private final JToggleButton btnSnap;
     private final JButton btnZoomSelected;
     private final JButton btnCopy;
+    private final JButton btnCopyToEditingLayer;
     private final JButton btnPaste;
     private final JButton btnDeleteSelection;
     private final JButton btnClearSelection;
@@ -79,22 +76,18 @@ public class FloatingVectorEditToolbar extends JPanel {
     private JLabel polygonSectionLabel;
     private JLabel vertexSectionLabel;
 
-    private Point dragOffset;
-
     public FloatingVectorEditToolbar() {
         setOpaque(true);
-        setBackground(new Color(244, 245, 247));
+        setBackground(new Color(245, 247, 250));
         setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(182, 190, 202)),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(214, 220, 228)),
+                BorderFactory.createEmptyBorder(3, 0, 0, 0)
         ));
-        setLayout(new BorderLayout(0, 4));
-        setPreferredSize(new Dimension(860, 112));
+        setLayout(new BorderLayout());
+        setMinimumSize(new Dimension(100, 46));
 
-        JPanel header = buildHeader();
-        JPanel body = new JPanel();
+        JPanel body = new JPanel(new BorderLayout());
         body.setOpaque(false);
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
 
         btnMove = createToggleButton("Mover mapa", AppIcons.panIcon());
         btnMove.addActionListener(e -> {
@@ -113,6 +106,14 @@ public class FloatingVectorEditToolbar extends JPanel {
                 } else {
                     CatgisDesktopApp.mapPanel.enableSelectMode();
                 }
+            }
+            refreshState();
+        });
+
+        btnSnap = createSnapToggleButton();
+        btnSnap.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.setSnapEnabled(btnSnap.isSelected());
             }
             refreshState();
         });
@@ -138,6 +139,19 @@ public class FloatingVectorEditToolbar extends JPanel {
                 return;
             }
             CatgisDesktopApp.mapPanel.copySelectedFeatures();
+            refreshState();
+        });
+
+        btnCopyToEditingLayer = createActionButton("Copiar elementos seleccionados a la capa en edicion", AppIcons.attrAssignIcon());
+        btnCopyToEditingLayer.addActionListener(e -> {
+            if (!ensureFeatureSelection("copiar a la capa editable")) {
+                return;
+            }
+            Layer layer = getPreferredEditingLayer();
+            if (layer != null) {
+                CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+            }
+            CatgisDesktopApp.mapPanel.copySelectedFeaturesToEditingLayer();
             refreshState();
         });
 
@@ -229,11 +243,23 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnHole = createActionButton("Crear agujero", AppIcons.holeIcon());
         btnHole.addActionListener(e -> activateHoleMode());
 
-        btnIncreaseArea = createActionButton("Aumentar superficie", AppIcons.polygonIcon());
-        btnIncreaseArea.addActionListener(e -> showPendingTool("Aumentar superficie", "Esta herramienta queda marcada como siguiente etapa junto con disminuir superficie y poligono adyacente."));
+        btnIncreaseArea = createActionButton("Aumentar superficie", AppIcons.increaseAreaIcon());
+        btnIncreaseArea.addActionListener(e -> {
+            if (!ensureFeatureSelection("aumentar la superficie")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.increaseSelectedPolygonArea();
+            refreshState();
+        });
 
-        btnDecreaseArea = createActionButton("Disminuir superficie", AppIcons.polygonIcon());
-        btnDecreaseArea.addActionListener(e -> showPendingTool("Disminuir superficie", "Esta herramienta queda marcada como siguiente etapa junto con aumentar superficie y poligono adyacente."));
+        btnDecreaseArea = createActionButton("Disminuir superficie", AppIcons.decreaseAreaIcon());
+        btnDecreaseArea.addActionListener(e -> {
+            if (!ensureFeatureSelection("disminuir la superficie")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.decreaseSelectedPolygonArea();
+            refreshState();
+        });
 
         btnAdjacentPolygon = createActionButton("Generar poligono adyacente", AppIcons.polygonIcon());
         btnAdjacentPolygon.addActionListener(e -> showPendingTool("Poligono adyacente", "La paleta ya reserva esta herramienta, pero todavia falta el motor de construccion adyacente estilo Kosmo."));
@@ -285,12 +311,14 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (CatgisDesktopApp.mapPanel == null) {
                 return;
             }
-            if (CatgisDesktopApp.mapPanel.isFeatureEditMode() || CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
-                CatgisDesktopApp.mapPanel.finishFeatureEdit();
+            if (CatgisDesktopApp.mapPanel.isDrawingActive()) {
+                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
             } else if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
                 CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
+            } else if (CatgisDesktopApp.mapPanel.isFeatureEditMode() || CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
+                CatgisDesktopApp.mapPanel.finishFeatureEdit();
             } else {
-                CatgisDesktopApp.mapPanel.finishCurrentDrawing();
+                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
             }
             refreshState();
         });
@@ -300,10 +328,12 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (CatgisDesktopApp.mapPanel == null) {
                 return;
             }
-            if (CatgisDesktopApp.mapPanel.isFeatureEditMode() || CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
-                CatgisDesktopApp.mapPanel.cancelFeatureEdit();
+            if (CatgisDesktopApp.mapPanel.isDrawingActive()) {
+                CatgisDesktopApp.mapPanel.cancelCurrentDrawing();
             } else if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
                 CatgisDesktopApp.mapPanel.cancelCurrentMeasurement();
+            } else if (CatgisDesktopApp.mapPanel.isFeatureEditMode() || CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
+                CatgisDesktopApp.mapPanel.cancelFeatureEdit();
             } else {
                 CatgisDesktopApp.mapPanel.cancelCurrentDrawing();
             }
@@ -311,10 +341,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         });
 
         addButtons(body);
-        add(header, BorderLayout.NORTH);
         add(body, BorderLayout.CENTER);
-
-        installDragSupport(header);
         refreshState();
     }
 
@@ -324,19 +351,19 @@ public class FloatingVectorEditToolbar extends JPanel {
         strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
         strip.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        strip.add(createSection("Seleccion", btnMove, btnSelect, btnZoomSelected, btnCopy, btnPaste, btnDeleteSelection, btnClearSelection, btnEditAttributes, btnMoveFeature));
-        strip.add(Box.createHorizontalStrut(4));
+        strip.add(createSection("Seleccion", btnMove, btnSelect, btnSnap, btnZoomSelected, btnCopy, btnCopyToEditingLayer, btnPaste, btnDeleteSelection, btnClearSelection, btnEditAttributes, btnMoveFeature));
+        strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Puntos", btnPoint, btnMultiPoint));
-        strip.add(Box.createHorizontalStrut(4));
+        strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Lineas", btnLine, btnContinueLine, btnCut));
-        strip.add(Box.createHorizontalStrut(4));
+        strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Vertices", btnMoveVertex, btnAddVertex, btnRemoveVertex, btnJoinVertices));
-        strip.add(Box.createHorizontalStrut(4));
+        strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Poligonos", btnRectangle, btnPolygon, btnSplitPolygon, btnHole, btnIncreaseArea, btnDecreaseArea, btnAdjacentPolygon));
-        strip.add(Box.createHorizontalStrut(4));
+        strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Sesion", btnUndo, btnRedo, btnMerge, btnExplode, btnOptions, btnSaveChanges, btnFinish, btnCancel));
 
-        body.add(strip);
+        body.add(strip, BorderLayout.CENTER);
     }
 
     public void refreshState() {
@@ -354,8 +381,10 @@ public class FloatingVectorEditToolbar extends JPanel {
         Layer editingLayer = map.getEditingLayerRef();
         SimpleFeature selectedFeature = map.getSelectedFeatureRef();
         int selectionCount = map.getSelectedFeatureCount();
+        boolean snapEnabled = map.isSnapEnabled();
         boolean hasVectorSelection = selectionCount > 0;
         boolean hasEditingLayer = editingLayer != null;
+        boolean hasEditableTarget = getPreferredEditingLayer() != null;
         boolean editingActive = map.isFeatureEditMode();
         boolean editDirty = map.hasFeatureEditChanges();
         boolean pointSelection = selectedFeature != null
@@ -379,6 +408,8 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnMove.setSelected(!interactionActive && "MOVE".equalsIgnoreCase(currentTool));
         btnSelect.setSelected(!interactionActive && "SELECT".equalsIgnoreCase(currentTool));
+        btnSnap.setSelected(snapEnabled);
+        btnSnap.setToolTipText(snapEnabled ? "Snapping activo" : "Snapping desactivado");
         btnPoint.setSelected("POINT".equalsIgnoreCase(drawingMode));
         btnMultiPoint.setSelected("MULTIPOINT".equalsIgnoreCase(drawingMode));
         btnLine.setSelected("LINE".equalsIgnoreCase(drawingMode));
@@ -387,6 +418,7 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnZoomSelected.setEnabled(hasVectorSelection);
         btnCopy.setEnabled(hasVectorSelection);
+        btnCopyToEditingLayer.setEnabled(hasVectorSelection && hasEditableTarget);
         btnPaste.setEnabled(hasEditingLayer && map.hasCopiedFeature());
         btnDeleteSelection.setEnabled(hasVectorSelection);
         btnClearSelection.setEnabled(hasVectorSelection || hasEditingLayer);
@@ -653,47 +685,24 @@ public class FloatingVectorEditToolbar extends JPanel {
         );
     }
 
-    private JPanel buildHeader() {
-        JPanel header = new JPanel(new BorderLayout());
-        header.setOpaque(true);
-        header.setBackground(new Color(232, 235, 239));
-        header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(196, 202, 211)),
-                BorderFactory.createEmptyBorder(3, 6, 3, 6)
-        ));
-        header.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-
-        JLabel title = new JLabel("Edicion vectorial");
-        title.setForeground(new Color(32, 41, 58));
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 10.5f));
-
-        JLabel hint = new JLabel("Arrastrar", SwingConstants.RIGHT);
-        hint.setForeground(new Color(104, 114, 126));
-        hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 9f));
-
-        header.add(title, BorderLayout.WEST);
-        header.add(hint, BorderLayout.EAST);
-        return header;
-    }
-
     private JPanel createSection(String title, AbstractButton... buttons) {
-        JPanel section = new JPanel(new BorderLayout(0, 3));
+        JPanel section = new JPanel(new BorderLayout(0, 2));
         section.setOpaque(true);
         section.setBackground(new Color(246, 247, 249));
         section.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(214, 219, 226)),
-                BorderFactory.createEmptyBorder(3, 3, 3, 3)
+                BorderFactory.createEmptyBorder(2, 2, 2, 2)
         ));
         section.setAlignmentX(Component.LEFT_ALIGNMENT);
         section.setAlignmentY(Component.TOP_ALIGNMENT);
 
         JLabel label = new JLabel(title.toUpperCase());
         label.setForeground(new Color(92, 101, 113));
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 9.5f));
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 8.7f));
         label.setHorizontalAlignment(SwingConstants.CENTER);
-        label.setBorder(BorderFactory.createEmptyBorder(0, 1, 0, 0));
+        label.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        JPanel grid = new JPanel(new GridLayout(1, 0, 3, 3));
+        JPanel grid = new JPanel(new GridLayout(1, 0, 2, 2));
         grid.setOpaque(false);
         for (AbstractButton button : buttons) {
             grid.add(button);
@@ -729,14 +738,14 @@ public class FloatingVectorEditToolbar extends JPanel {
             section.setBackground(new Color(255, 245, 240));
             section.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(211, 101, 86)),
-                    BorderFactory.createEmptyBorder(3, 3, 3, 3)
+                    BorderFactory.createEmptyBorder(2, 2, 2, 2)
             ));
             label.setForeground(new Color(167, 55, 39));
         } else {
             section.setBackground(new Color(246, 247, 249));
             section.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(214, 219, 226)),
-                    BorderFactory.createEmptyBorder(3, 3, 3, 3)
+                    BorderFactory.createEmptyBorder(2, 2, 2, 2)
             ));
             label.setForeground(new Color(92, 101, 113));
         }
@@ -745,6 +754,14 @@ public class FloatingVectorEditToolbar extends JPanel {
     private JToggleButton createToggleButton(String tooltip, javax.swing.Icon icon) {
         JToggleButton button = new JToggleButton(icon);
         styleButton(button, tooltip);
+        return button;
+    }
+
+    private JToggleButton createSnapToggleButton() {
+        JToggleButton button = new JToggleButton("SNAP");
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 9.5f));
+        button.setHorizontalAlignment(SwingConstants.CENTER);
+        styleSnapButton(button);
         return button;
     }
 
@@ -758,7 +775,8 @@ public class FloatingVectorEditToolbar extends JPanel {
         button.setToolTipText(tooltip);
         button.setFocusable(false);
         button.setMargin(new Insets(0, 0, 0, 0));
-        button.setPreferredSize(new Dimension(22, 20));
+        button.setPreferredSize(new Dimension(21, 20));
+        button.setMinimumSize(new Dimension(21, 20));
         button.setBackground(new Color(249, 249, 250));
         button.setBorder(BorderFactory.createLineBorder(new Color(188, 194, 203)));
         button.setOpaque(true);
@@ -782,39 +800,31 @@ public class FloatingVectorEditToolbar extends JPanel {
         });
     }
 
-    private void installDragSupport(JPanel header) {
-        MouseAdapter dragHandler = new MouseAdapter() {
+    private void styleSnapButton(JToggleButton button) {
+        button.setToolTipText("Snapping activo");
+        button.setFocusable(false);
+        button.setMargin(new Insets(0, 3, 0, 3));
+        button.setPreferredSize(new Dimension(40, 20));
+        button.setMinimumSize(new Dimension(40, 20));
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.addChangeListener(new ChangeListener() {
             @Override
-            public void mousePressed(MouseEvent e) {
-                dragOffset = e.getPoint();
-            }
-
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (dragOffset == null || getParent() == null) {
-                    return;
+            public void stateChanged(ChangeEvent e) {
+                boolean selected = button.isSelected();
+                boolean pressed = button.getModel().isPressed();
+                if (selected) {
+                    button.setBackground(pressed ? new Color(34, 197, 94) : new Color(22, 163, 74));
+                    button.setForeground(Color.WHITE);
+                    button.setBorder(BorderFactory.createLineBorder(new Color(21, 128, 61)));
+                } else {
+                    button.setBackground(pressed ? new Color(248, 113, 113) : new Color(220, 38, 38));
+                    button.setForeground(Color.WHITE);
+                    button.setBorder(BorderFactory.createLineBorder(new Color(153, 27, 27)));
                 }
-
-                Point parentPoint = SwingUtilities.convertPoint(header, e.getPoint(), getParent());
-                int newX = parentPoint.x - dragOffset.x;
-                int newY = parentPoint.y - dragOffset.y;
-
-                Dimension pref = getPreferredSize();
-                int parentWidth = getParent().getWidth();
-                int parentHeight = getParent().getHeight();
-
-                int maxX = Math.max(12, parentWidth - pref.width - 12);
-                int maxY = Math.max(12, parentHeight - pref.height - 12);
-
-                newX = Math.max(12, Math.min(newX, maxX));
-                newY = Math.max(12, Math.min(newY, maxY));
-
-                setLocation(newX, newY);
-                getParent().repaint();
             }
-        };
-
-        header.addMouseListener(dragHandler);
-        header.addMouseMotionListener(dragHandler);
+        });
+        button.setSelected(CatgisDesktopApp.mapPanel == null || CatgisDesktopApp.mapPanel.isSnapEnabled());
     }
+
 }

@@ -69,6 +69,10 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     private static boolean saveProjectToFile(File file) {
+        if (!persistVectorLayers()) {
+            return false;
+        }
+
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
             writer.write("CATGIS_PROJECT");
             writer.newLine();
@@ -185,6 +189,49 @@ public class SaveProjectAction extends AbstractAction {
             return "";
         }
         return color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + color.getAlpha();
+    }
+
+    private static boolean persistVectorLayers() {
+        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.mapPanel == null) {
+            return true;
+        }
+
+        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+            if (layer == null || layer instanceof RasterLayer) {
+                continue;
+            }
+
+            ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+            if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
+                continue;
+            }
+
+            boolean ok;
+            if (ExportVectorLayerAction.hasSupportedVectorPath(layer)) {
+                ok = ExportVectorLayerAction.saveLayerToCurrentPath(layer, CatgisDesktopApp.getMainFrameSafe(), false);
+            } else {
+                JOptionPane.showMessageDialog(
+                        CatgisDesktopApp.getMainFrameSafe(),
+                        "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegí dónde guardarla antes de guardar el proyecto.",
+                        "Guardar capa vectorial",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+                File exported = ExportVectorLayerAction.exportLayerWithDialog(
+                        layer,
+                        data,
+                        CatgisDesktopApp.getMainFrameSafe(),
+                        "Guardar capa vectorial",
+                        false
+                );
+                ok = exported != null;
+            }
+
+            if (!ok) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static String safe(String value) {

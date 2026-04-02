@@ -5,7 +5,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -54,15 +53,29 @@ public class CatgisDesktopApp extends JFrame {
     }
 
     private JPanel buildTopContainer() {
-        JPanel topContainer = new JPanel(new BorderLayout());
+        JPanel topContainer = new JPanel();
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setOpaque(true);
         topContainer.setBackground(new Color(245, 247, 250));
         topContainer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(218, 223, 230)),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+                BorderFactory.createEmptyBorder(4, 8, 6, 8)
         ));
 
-        topContainer.add(new MainToolBar(), BorderLayout.CENTER);
+        JPanel mainToolsRow = new JPanel(new BorderLayout());
+        mainToolsRow.setOpaque(false);
+        mainToolsRow.add(new MainToolBar(), BorderLayout.CENTER);
+        mainToolsRow.setAlignmentX(LEFT_ALIGNMENT);
+        mainToolsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
+
+        JPanel editToolsRow = new JPanel(new BorderLayout());
+        editToolsRow.setOpaque(false);
+        editToolsRow.add(floatingVectorEditToolbar, BorderLayout.CENTER);
+        editToolsRow.setAlignmentX(LEFT_ALIGNMENT);
+        editToolsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+
+        topContainer.add(mainToolsRow);
+        topContainer.add(editToolsRow);
         return topContainer;
     }
 
@@ -168,37 +181,12 @@ public class CatgisDesktopApp extends JFrame {
         return mapContainer;
     }
 
-    private JLayeredPane buildMapWorkspace() {
-        JLayeredPane layeredPane = new JLayeredPane() {
-            @Override
-            public void doLayout() {
-                if (mapPanel != null) {
-                    mapPanel.setBounds(0, 0, getWidth(), getHeight());
-                }
-
-                if (floatingVectorEditToolbar != null) {
-                    Dimension pref = floatingVectorEditToolbar.getPreferredSize();
-                    int width = pref.width;
-                    int height = pref.height;
-                    int x = floatingVectorEditToolbar.getX() > 0 ? floatingVectorEditToolbar.getX() : 16;
-                    int y = floatingVectorEditToolbar.getY() > 0 ? floatingVectorEditToolbar.getY() : 16;
-
-                    int maxX = Math.max(12, getWidth() - width - 12);
-                    int maxY = Math.max(12, getHeight() - height - 12);
-
-                    x = Math.max(12, Math.min(x, maxX));
-                    y = Math.max(12, Math.min(y, maxY));
-
-                    floatingVectorEditToolbar.setBounds(x, y, width, height);
-                }
-            }
-        };
-
-        layeredPane.setOpaque(true);
-        layeredPane.setBackground(Color.WHITE);
-        layeredPane.add(mapPanel, Integer.valueOf(JLayeredPane.DEFAULT_LAYER));
-        layeredPane.add(floatingVectorEditToolbar, Integer.valueOf(JLayeredPane.PALETTE_LAYER));
-        return layeredPane;
+    private JPanel buildMapWorkspace() {
+        JPanel workspace = new JPanel(new BorderLayout());
+        workspace.setOpaque(true);
+        workspace.setBackground(Color.WHITE);
+        workspace.add(mapPanel, BorderLayout.CENTER);
+        return workspace;
     }
 
     private JPanel buildMapHeader() {

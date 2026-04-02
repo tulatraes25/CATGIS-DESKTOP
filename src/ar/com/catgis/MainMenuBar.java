@@ -27,15 +27,18 @@ public class MainMenuBar extends JMenuBar {
         JMenu menuProyecto = new JMenu("Proyecto");
         int menuMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 
-        JMenuItem itemNuevoProyecto = createItem("Nuevo proyecto", AppIcons.projectIcon());
+        JMenuItem itemNuevoProyecto = createItem("Nuevo proyecto", createNewProjectIcon());
         itemNuevoProyecto.addActionListener(e -> NewProjectAction.newProject());
 
-        JMenuItem itemAbrirProyecto = createItem("Abrir proyecto", AppIcons.projectIcon(),
+        JMenuItem itemAbrirProyecto = createItem("Abrir proyecto", createOpenProjectIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_O, menuMask));
         itemAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
 
-        JMenuItem itemAgregarCapa = createItem("Agregar capa", createAddLayerIcon());
+        JMenuItem itemAgregarCapa = createItem("Agregar capa", createOpenLayerIcon());
         itemAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
+
+        JMenuItem itemNuevaCapaVectorial = createItem("Nueva capa vectorial", createNewVectorLayerIcon());
+        itemNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
 
         JMenuItem itemAbrirTabla = createItem("Importar tabla de puntos", AppIcons.importTableIcon());
         itemAbrirTabla.addActionListener(e -> OpenTablePointsAction.openTablePoints());
@@ -54,6 +57,7 @@ public class MainMenuBar extends JMenuBar {
         menuArchivo.add(itemNuevoProyecto);
         menuArchivo.add(itemAbrirProyecto);
         menuArchivo.add(itemAgregarCapa);
+        menuArchivo.add(itemNuevaCapaVectorial);
         menuArchivo.add(itemAbrirTabla);
         menuArchivo.addSeparator();
         menuArchivo.add(itemGuardarProyecto);
@@ -85,6 +89,18 @@ public class MainMenuBar extends JMenuBar {
                     CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
                 }
                 CatgisDesktopApp.mapPanel.pasteCopiedFeatures();
+            }
+        });
+
+        JMenuItem itemCopiarACapaEditable = createItem("Copiar selección a capa editable", AppIcons.attrAssignIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_V, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemCopiarACapaEditable.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                Layer layer = getPreferredVectorLayer();
+                if (layer != null) {
+                    CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+                }
+                CatgisDesktopApp.mapPanel.copySelectedFeaturesToEditingLayer();
             }
         });
 
@@ -153,6 +169,7 @@ public class MainMenuBar extends JMenuBar {
 
         menuEdicion.add(itemCortar);
         menuEdicion.add(itemCopiar);
+        menuEdicion.add(itemCopiarACapaEditable);
         menuEdicion.add(itemPegar);
         menuEdicion.add(itemBorrar);
         menuEdicion.addSeparator();
@@ -225,7 +242,7 @@ public class MainMenuBar extends JMenuBar {
             if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
                 CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
             } else {
-                CatgisDesktopApp.mapPanel.finishCurrentDrawing();
+                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
             }
         });
 
@@ -344,15 +361,83 @@ public class MainMenuBar extends JMenuBar {
         return null;
     }
 
-    private Icon createAddLayerIcon() {
+    private Icon createNewProjectIcon() {
         int w = 16, h = 16;
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(104, 70, 193));
+        g.fillRoundRect(2, 2, 10, 12, 3, 3);
+        g.setColor(new Color(230, 224, 252));
+        g.fillRect(4, 5, 6, 1);
+        g.fillRect(4, 8, 6, 1);
+        g.fillRect(4, 11, 4, 1);
         g.setColor(new Color(34, 139, 34));
-        g.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g.drawLine(w / 2, 2, w / 2, h - 2);
-        g.drawLine(2, h / 2, w - 2, h / 2);
+        g.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(12, 5, 12, 13);
+        g.drawLine(8, 9, 15, 9);
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private Icon createOpenProjectIcon() {
+        int w = 16, h = 16;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(104, 70, 193));
+        g.fillRoundRect(2, 5, 9, 8, 3, 3);
+        g.setColor(new Color(137, 106, 219));
+        g.fillRoundRect(3, 3, 5, 3, 2, 2);
+        g.setColor(new Color(238, 233, 255));
+        g.fillRect(4, 7, 5, 4);
+        g.setColor(new Color(41, 121, 255));
+        g.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(10, 8, 14, 8);
+        g.drawLine(12, 6, 14, 8);
+        g.drawLine(12, 10, 14, 8);
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private Icon createOpenLayerIcon() {
+        int w = 16, h = 16;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(54, 114, 196));
+        g.fillRoundRect(2, 6, 12, 8, 3, 3);
+        g.setColor(new Color(86, 142, 217));
+        g.fillRoundRect(3, 4, 5, 3, 2, 2);
+        g.setColor(new Color(243, 249, 255));
+        g.fillRect(4, 8, 8, 4);
+        g.setColor(new Color(34, 139, 34));
+        g.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(12, 3, 12, 8);
+        g.drawLine(9, 5, 15, 5);
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private Icon createNewVectorLayerIcon() {
+        int w = 16, h = 16;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(45, 105, 185));
+        g.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawRoundRect(2, 2, 9, 11, 3, 3);
+        g.setColor(new Color(33, 150, 83));
+        g.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(4, 10, 6, 7);
+        g.drawLine(6, 7, 8, 9);
+        g.fillOval(3, 9, 2, 2);
+        g.fillOval(5, 6, 2, 2);
+        g.fillOval(7, 8, 2, 2);
+        g.setColor(new Color(34, 139, 34));
+        g.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.drawLine(12, 5, 12, 14);
+        g.drawLine(8, 10, 15, 10);
         g.dispose();
         return new ImageIcon(img);
     }

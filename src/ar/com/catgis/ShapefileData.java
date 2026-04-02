@@ -2,11 +2,13 @@ package ar.com.catgis;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.locationtech.jts.geom.Envelope;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ShapefileData {
@@ -15,6 +17,7 @@ public class ShapefileData {
     private final String sourceName;
     private final int featureCount;
     private final String message;
+    private final SimpleFeatureType schema;
     private final SimpleFeatureCollection featureCollection;
 
     public ShapefileData(SimpleFeatureCollection featureCollection, String sourceName, int featureCount) {
@@ -22,7 +25,7 @@ public class ShapefileData {
     }
 
     public ShapefileData(SimpleFeatureCollection featureCollection, String sourceName, int featureCount, String message) {
-        this.featureCollection = featureCollection;
+        this.schema = featureCollection != null ? featureCollection.getSchema() : null;
         this.sourceName = sourceName;
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
@@ -38,15 +41,26 @@ public class ShapefileData {
                 ex.printStackTrace();
             }
         }
+        this.featureCollection = buildFeatureCollection(this.features, this.schema);
     }
 
     public ShapefileData(List<SimpleFeature> features, Envelope envelope, String sourceName, int featureCount, String message) {
+        this(features, envelope, sourceName, featureCount, message, inferSchemaStatic(features));
+    }
+
+    public ShapefileData(List<SimpleFeature> features,
+                         Envelope envelope,
+                         String sourceName,
+                         int featureCount,
+                         String message,
+                         SimpleFeatureType schema) {
         this.features = features != null ? new ArrayList<>(features) : new ArrayList<>();
         this.envelope = envelope;
         this.sourceName = sourceName;
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
-        this.featureCollection = buildFeatureCollection(this.features);
+        this.schema = schema != null ? schema : inferSchemaStatic(this.features);
+        this.featureCollection = buildFeatureCollection(this.features, this.schema);
     }
 
     public ShapefileData(List<?> rawFeatures, Object envelopeObj, String sourceName, int featureCount, String message) {
@@ -68,10 +82,15 @@ public class ShapefileData {
         this.sourceName = sourceName;
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
-        this.featureCollection = buildFeatureCollection(this.features);
+        this.schema = inferSchemaStatic(this.features);
+        this.featureCollection = buildFeatureCollection(this.features, this.schema);
     }
 
-    private SimpleFeatureCollection buildFeatureCollection(List<SimpleFeature> features) {
+    private SimpleFeatureCollection buildFeatureCollection(List<SimpleFeature> features, SimpleFeatureType schema) {
+        if (schema != null) {
+            return new ListFeatureCollection(schema, features != null ? features : Collections.emptyList());
+        }
+
         DefaultFeatureCollection collection = new DefaultFeatureCollection();
         if (features != null) {
             for (SimpleFeature f : features) {
@@ -81,6 +100,18 @@ public class ShapefileData {
             }
         }
         return collection;
+    }
+
+    private static SimpleFeatureType inferSchemaStatic(List<SimpleFeature> features) {
+        if (features == null) {
+            return null;
+        }
+        for (SimpleFeature feature : features) {
+            if (feature != null && feature.getFeatureType() != null) {
+                return feature.getFeatureType();
+            }
+        }
+        return null;
     }
 
     public List<SimpleFeature> getFeatures() {
@@ -103,6 +134,10 @@ public class ShapefileData {
         return message;
     }
 
+    public SimpleFeatureType getSchema() {
+        return schema;
+    }
+
     public SimpleFeatureCollection getFeatureCollection() {
         return featureCollection;
     }
@@ -110,16 +145,15 @@ public class ShapefileData {
     public List<String> getAttributeNames() {
         List<String> names = new ArrayList<>();
 
-        if (featureCollection == null) {
+        SimpleFeatureType currentSchema = schema != null
+                ? schema
+                : featureCollection != null ? featureCollection.getSchema() : null;
+
+        if (currentSchema == null) {
             return names;
         }
 
-        SimpleFeatureType schema = featureCollection.getSchema();
-        if (schema == null) {
-            return names;
-        }
-
-        schema.getAttributeDescriptors().forEach(descriptor -> {
+        currentSchema.getAttributeDescriptors().forEach(descriptor -> {
             String name = descriptor.getLocalName();
             if (!"the_geom".equalsIgnoreCase(name) && !"geom".equalsIgnoreCase(name)) {
                 names.add(name);

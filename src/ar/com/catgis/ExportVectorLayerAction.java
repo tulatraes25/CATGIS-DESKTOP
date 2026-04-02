@@ -25,6 +25,7 @@ import org.locationtech.jts.geom.Polygon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.Component;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,9 +35,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class ExportVectorLayerAction {
+
+    private static final String SHAPEFILE_OPTION = "Shapefile (*.shp)";
+    private static final String GEOJSON_OPTION = "GeoJSON (*.geojson)";
+    private static final String KML_OPTION = "KML (*.kml)";
 
     public static void exportLayer(Layer layer) {
         if (layer == null) {
@@ -45,74 +51,164 @@ public class ExportVectorLayerAction {
         }
 
         ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
-        if (data == null || data.getFeatures() == null || data.getFeatures().isEmpty()) {
+        if (!hasExportableVectorData(data)) {
             JOptionPane.showMessageDialog(null, "La capa no tiene datos disponibles para exportar.");
             return;
         }
 
+        exportLayerWithDialog(layer, data, CatgisDesktopApp.getMainFrameSafe(), "Exportar capa", true);
+    }
+
+    public static File exportLayerWithDialog(Layer layer,
+                                             ShapefileData data,
+                                             Component parent,
+                                             String dialogTitle,
+                                             boolean showSuccessMessage) {
+        if (layer == null) {
+            JOptionPane.showMessageDialog(parent, "No hay una capa seleccionada.");
+            return null;
+        }
+        if (!hasExportableVectorData(data)) {
+            JOptionPane.showMessageDialog(parent, "La capa no tiene datos disponibles para exportar.");
+            return null;
+        }
+
         Object selected = JOptionPane.showInputDialog(
-                null,
+                parent,
                 "Seleccione formato de exportación:",
-                "Exportar capa",
+                dialogTitle != null && !dialogTitle.isBlank() ? dialogTitle : "Exportar capa",
                 JOptionPane.PLAIN_MESSAGE,
                 null,
-                new String[]{"Shapefile (*.shp)", "GeoJSON (*.geojson)", "KML (*.kml)"},
-                "Shapefile (*.shp)"
+                new String[]{SHAPEFILE_OPTION, GEOJSON_OPTION, KML_OPTION},
+                SHAPEFILE_OPTION
         );
 
         if (selected == null) {
-            return;
+            return null;
         }
 
         String option = selected.toString();
+        String extension = extensionForOption(option);
 
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Exportar capa");
+        chooser.setDialogTitle(dialogTitle != null && !dialogTitle.isBlank() ? dialogTitle : "Exportar capa");
         chooser.setAcceptAllFileFilterUsed(false);
 
-        String extension;
-        if (option.startsWith("Shapefile")) {
+        if (SHAPEFILE_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("Shapefile (*.shp)", "shp"));
-            extension = ".shp";
-        } else if (option.startsWith("GeoJSON")) {
+        } else if (GEOJSON_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson)", "geojson"));
-            extension = ".geojson";
         } else {
             chooser.setFileFilter(new FileNameExtensionFilter("KML (*.kml)", "kml"));
-            extension = ".kml";
         }
 
         chooser.setSelectedFile(new File(safeFileName(layer.getName()) + extension));
 
-        int result = chooser.showSaveDialog(null);
+        int result = chooser.showSaveDialog(parent);
         if (result != JFileChooser.APPROVE_OPTION) {
-            return;
+            return null;
         }
 
         File file = chooser.getSelectedFile();
-        if (!file.getName().toLowerCase().endsWith(extension)) {
+        if (!file.getName().toLowerCase(Locale.ROOT).endsWith(extension)) {
             file = new File(file.getAbsolutePath() + extension);
         }
 
+        if (file.exists()) {
+            int overwrite = JOptionPane.showConfirmDialog(
+                    parent,
+                    "El archivo ya existe.\n¿Querés reemplazarlo?\n\n" + file.getAbsolutePath(),
+                    dialogTitle != null && !dialogTitle.isBlank() ? dialogTitle : "Exportar capa",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+            if (overwrite != JOptionPane.YES_OPTION) {
+                return null;
+            }
+        }
+
+        if (!saveLayerToFile(layer, data, file, option, parent, showSuccessMessage)) {
+            return null;
+        }
+
+        return file;
+    }
+
+    public static boolean saveLayerToCurrentPath(Layer layer, Component parent, boolean showSuccessMessage) {
+        if (layer == null || layer.getPath() == null || layer.getPath().isBlank() || CatgisDesktopApp.mapPanel == null) {
+            return false;
+        }
+
+        ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+        if (!hasExportableVectorData(data)) {
+            return false;
+        }
+
+        String option = optionForPath(layer.getPath());
+        if (option == null) {
+            return false;
+        }
+
+        return saveLayerToFile(layer, data, new File(layer.getPath()), option, parent, showSuccessMessage);
+    }
+
+    public static boolean hasSupportedVectorPath(Layer layer) {
+        return layer != null && optionForPath(layer.getPath()) != null;
+    }
+
+    public static boolean saveLayerDataToFile(Layer layer,
+                                              ShapefileData data,
+                                              File file,
+                                              Component parent,
+                                              boolean showSuccessMessage) {
+        if (layer == null || file == null || !hasExportableVectorData(data)) {
+            return false;
+        }
+
+        String option = optionForPath(file.getName());
+        if (option == null) {
+            return false;
+        }
+
+        return saveLayerToFile(layer, data, file, option, parent, showSuccessMessage);
+    }
+
+    private static boolean saveLayerToFile(Layer layer,
+                                           ShapefileData data,
+                                           File file,
+                                           String option,
+                                           Component parent,
+                                           boolean showSuccessMessage) {
         try {
-            if (option.startsWith("Shapefile")) {
-                exportToShapefile(layer, data, file);
-            } else if (option.startsWith("GeoJSON")) {
-                exportToGeoJson(layer, data, file);
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+
+            if (SHAPEFILE_OPTION.equals(option)) {
+                deleteShapefileSidecars(file);
+                exportToShapefile(layer, data, file, resolveTargetCode(layer, option));
+            } else if (GEOJSON_OPTION.equals(option)) {
+                exportToGeoJson(layer, data, file, resolveTargetCode(layer, option));
             } else {
                 exportToKml(layer, data, file);
             }
 
-            JOptionPane.showMessageDialog(null, "Capa exportada correctamente:\n" + file.getAbsolutePath());
+            refreshLayerFromFile(layer, file);
 
+            if (showSuccessMessage) {
+                JOptionPane.showMessageDialog(parent, "Capa exportada correctamente:\n" + file.getAbsolutePath());
+            }
+            return true;
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al exportar capa: " + ex.getMessage());
+            JOptionPane.showMessageDialog(parent, "Error al exportar capa: " + ex.getMessage());
+            return false;
         }
     }
 
-    private static void exportToShapefile(Layer layer, ShapefileData data, File file) throws Exception {
-        TransformResult transformResult = transformFeaturesToTarget(layer, data, getProjectCRSCode());
+    private static void exportToShapefile(Layer layer, ShapefileData data, File file, String targetCode) throws Exception {
+        TransformResult transformResult = transformFeaturesToTarget(layer, data, targetCode);
         SimpleFeatureType featureType = transformResult.featureType;
         List<SimpleFeature> features = transformResult.features;
 
@@ -147,8 +243,8 @@ public class ExportVectorLayerAction {
         }
     }
 
-    private static void exportToGeoJson(Layer layer, ShapefileData data, File file) throws Exception {
-        TransformResult transformResult = transformFeaturesToTarget(layer, data, getProjectCRSCode());
+    private static void exportToGeoJson(Layer layer, ShapefileData data, File file, String targetCode) throws Exception {
+        TransformResult transformResult = transformFeaturesToTarget(layer, data, targetCode);
         SimpleFeatureType featureType = transformResult.featureType;
         List<SimpleFeature> features = transformResult.features;
 
@@ -209,9 +305,19 @@ public class ExportVectorLayerAction {
     }
 
     private static TransformResult transformFeaturesToTarget(Layer layer, ShapefileData data, String targetCode) throws Exception {
-        List<SimpleFeature> inputFeatures = data.getFeatures();
-        if (inputFeatures == null || inputFeatures.isEmpty()) {
-            throw new RuntimeException("La capa no contiene entidades.");
+        List<SimpleFeature> inputFeatures = data != null && data.getFeatures() != null
+                ? data.getFeatures()
+                : List.of();
+        SimpleFeatureType sourceType = data != null ? data.getSchema() : null;
+        if (sourceType == null && !inputFeatures.isEmpty()) {
+            sourceType = inputFeatures.get(0).getFeatureType();
+        }
+        if (sourceType == null) {
+            throw new RuntimeException("La capa no tiene esquema vectorial disponible.");
+        }
+
+        if (targetCode == null || targetCode.isBlank()) {
+            targetCode = getProjectCRSCode();
         }
 
         String sourceCode = normalizeLayerCRS(layer);
@@ -231,9 +337,6 @@ public class ExportVectorLayerAction {
             targetCRS = CRS.decode(targetCode, true);
         }
 
-        SimpleFeature first = inputFeatures.get(0);
-        SimpleFeatureType sourceType = first.getFeatureType();
-
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
         typeBuilder.setName(safeTypeName(layer.getName()));
 
@@ -248,7 +351,14 @@ public class ExportVectorLayerAction {
                 }
                 typeBuilder.add(gd.getLocalName(), gd.getType().getBinding());
             } else {
-                typeBuilder.add(descriptor.getLocalName(), String.class);
+                FieldConfig config = layer != null ? layer.getFieldConfigs().get(descriptor.getLocalName()) : null;
+                Class<?> binding = config != null
+                        ? DrawFeatureBuilder.resolveAttributeClass(config.getTypeName())
+                        : descriptor.getType().getBinding();
+                if (config != null && config.getLength() > 0) {
+                    typeBuilder.length(config.getLength());
+                }
+                typeBuilder.add(descriptor.getLocalName(), binding != null ? binding : String.class);
             }
         }
 
@@ -270,7 +380,11 @@ public class ExportVectorLayerAction {
                     }
                     builder.add(geometry);
                 } else {
-                    builder.add(value != null ? String.valueOf(value) : "");
+                    Class<?> targetBinding = targetType.getDescriptor(name) != null
+                            && targetType.getDescriptor(name).getType() != null
+                            ? targetType.getDescriptor(name).getType().getBinding()
+                            : String.class;
+                    builder.add(coerceAttributeValue(value, targetBinding));
                 }
             }
 
@@ -279,6 +393,57 @@ public class ExportVectorLayerAction {
         }
 
         return new TransformResult(targetType, output);
+    }
+
+    private static Object coerceAttributeValue(Object value, Class<?> targetBinding) {
+        if (targetBinding == null || value == null) {
+            return value;
+        }
+        if (targetBinding.isInstance(value)) {
+            return value;
+        }
+
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty()) {
+            return String.class.isAssignableFrom(targetBinding) ? "" : null;
+        }
+
+        try {
+            if (String.class.isAssignableFrom(targetBinding)) {
+                return text;
+            }
+            if (Integer.class.isAssignableFrom(targetBinding) || int.class.isAssignableFrom(targetBinding)) {
+                return Integer.parseInt(text);
+            }
+            if (Long.class.isAssignableFrom(targetBinding) || long.class.isAssignableFrom(targetBinding)) {
+                return Long.parseLong(text);
+            }
+            if (Float.class.isAssignableFrom(targetBinding) || float.class.isAssignableFrom(targetBinding)) {
+                return Float.parseFloat(text.replace(',', '.'));
+            }
+            if (Double.class.isAssignableFrom(targetBinding) || double.class.isAssignableFrom(targetBinding)) {
+                return Double.parseDouble(text.replace(',', '.'));
+            }
+            if (Boolean.class.isAssignableFrom(targetBinding) || boolean.class.isAssignableFrom(targetBinding)) {
+                return "true".equalsIgnoreCase(text) || "1".equals(text) || "si".equalsIgnoreCase(text);
+            }
+            if (java.util.Date.class.isAssignableFrom(targetBinding)) {
+                return value instanceof java.util.Date ? value : null;
+            }
+        } catch (Exception ignored) {
+        }
+
+        return String.class.isAssignableFrom(targetBinding) ? text : null;
+    }
+
+    public static boolean hasExportableVectorData(ShapefileData data) {
+        if (data == null) {
+            return false;
+        }
+        if (data.getSchema() == null) {
+            return false;
+        }
+        return data.getFeatures() != null;
     }
 
     private static String getProjectCRSCode() {
@@ -295,6 +460,17 @@ public class ExportVectorLayerAction {
             return "";
         }
         return CRSDefinitions.normalizeCode(layer.getSourceCRS());
+    }
+
+    private static String resolveTargetCode(Layer layer, String option) {
+        if (KML_OPTION.equals(option)) {
+            return "EPSG:4326";
+        }
+        String sourceCode = normalizeLayerCRS(layer);
+        if (!sourceCode.isBlank()) {
+            return sourceCode;
+        }
+        return getProjectCRSCode();
     }
 
     private static String safeFileName(String text) {
@@ -421,6 +597,107 @@ public class ExportVectorLayerAction {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
+    }
+
+    private static String extensionForOption(String option) {
+        if (SHAPEFILE_OPTION.equals(option)) {
+            return ".shp";
+        }
+        if (GEOJSON_OPTION.equals(option)) {
+            return ".geojson";
+        }
+        return ".kml";
+    }
+
+    private static String optionForPath(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        String lower = path.trim().toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".shp")) {
+            return SHAPEFILE_OPTION;
+        }
+        if (lower.endsWith(".geojson") || lower.endsWith(".json")) {
+            return GEOJSON_OPTION;
+        }
+        if (lower.endsWith(".kml")) {
+            return KML_OPTION;
+        }
+        return null;
+    }
+
+    private static void deleteShapefileSidecars(File shpFile) {
+        String absolutePath = shpFile.getAbsolutePath();
+        int dot = absolutePath.lastIndexOf('.');
+        String base = dot > 0 ? absolutePath.substring(0, dot) : absolutePath;
+        String[] extensions = {".shp", ".shx", ".dbf", ".prj", ".fix", ".qix", ".cpg"};
+        for (String extension : extensions) {
+            File candidate = new File(base + extension);
+            if (candidate.exists() && !candidate.delete()) {
+                throw new RuntimeException("No se pudo reemplazar el archivo existente: " + candidate.getAbsolutePath());
+            }
+        }
+    }
+
+    public static void refreshLayerFromFile(Layer layer, File file) throws Exception {
+        if (layer == null || file == null) {
+            return;
+        }
+
+        String lower = file.getName().toLowerCase(Locale.ROOT);
+        ShapefileData reloaded;
+        String sourceCRS = layer.getSourceCRS();
+
+        if (lower.endsWith(".shp")) {
+            reloaded = ShapefileLoader.load(file);
+            String detected = ShapefileLoader.getCRSCode(file);
+            if (detected != null && !detected.isBlank()) {
+                sourceCRS = detected;
+            }
+        } else if (lower.endsWith(".geojson") || lower.endsWith(".json")) {
+            reloaded = GeoJsonLoader.load(file);
+            if (sourceCRS == null || sourceCRS.isBlank()) {
+                sourceCRS = "EPSG:4326";
+            }
+        } else if (lower.endsWith(".kml")) {
+            reloaded = KmlLoader.load(file);
+            sourceCRS = "EPSG:4326";
+        } else {
+            throw new RuntimeException("Formato vectorial no soportado: " + file.getAbsolutePath());
+        }
+
+        layer.setPath(file.getAbsolutePath());
+        layer.setSourceName(file.getName());
+        layer.setFeatureCount(reloaded.getFeatureCount());
+        layer.setSourceCRS(sourceCRS);
+        if (looksTemporaryLayerName(layer.getName())) {
+            layer.setName(stripExtension(file.getName()));
+        }
+
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, reloaded);
+            CatgisDesktopApp.mapPanel.repaint();
+        }
+        if (CatgisDesktopApp.layersPanel != null) {
+            CatgisDesktopApp.layersPanel.refreshLayerList();
+        }
+    }
+
+    private static boolean looksTemporaryLayerName(String name) {
+        if (name == null) {
+            return false;
+        }
+        return name.startsWith("Dibujo_")
+                || name.startsWith("Pines_")
+                || name.startsWith("Consulta_");
+    }
+
+    private static String stripExtension(String name) {
+        if (name == null || name.isBlank()) {
+            return "capa";
+        }
+        int idx = name.lastIndexOf('.');
+        return idx > 0 ? name.substring(0, idx) : name;
     }
 
     private static class TransformResult {

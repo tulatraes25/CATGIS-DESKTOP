@@ -2,6 +2,7 @@ package ar.com.catgis;
 
 import org.geotools.api.feature.Property;
 import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.kml.KMLConfiguration;
 import org.geotools.xsd.Parser;
 import org.locationtech.jts.geom.Envelope;
@@ -80,7 +81,8 @@ public class KmlLoader {
         int featureCount = features.size();
         String message = "KML cargado: " + file.getName() + " | entidades: " + featureCount;
 
-        return new ShapefileData(features, envelope, sourceName, featureCount, message);
+        SimpleFeatureType schema = !features.isEmpty() ? features.get(0).getFeatureType() : null;
+        return new ShapefileData(features, envelope, sourceName, featureCount, message, schema);
     }
 
     private static void collectSimpleFeatures(Object obj, List<SimpleFeature> features) {

@@ -29,6 +29,7 @@ public class LayerPropertiesDialog extends JDialog {
     private final Layer layer;
 
     private final JTextField nameField;
+    private final JTextField pathField;
     private final JCheckBox visibleCheck;
     private final JCheckBox labelsVisibleCheck;
     private final JComboBox<String> labelFieldCombo;
@@ -77,6 +78,10 @@ public class LayerPropertiesDialog extends JDialog {
 
         gbc.gridwidth = 1;
         addRow(formPanel, gbc, row++, "Nombre", nameField = new JTextField(layer.getName(), 24));
+        pathField = new JTextField(buildPathDisplay(layer), 24);
+        pathField.setEditable(false);
+        pathField.setToolTipText(layer.getPath());
+        addRow(formPanel, gbc, row++, "Ubicación en disco", pathField);
 
         visibleCheck = new JCheckBox("Capa visible", layer.isVisible());
         gbc.gridx = 0;
@@ -252,6 +257,31 @@ public class LayerPropertiesDialog extends JDialog {
             return new Color(120, 170, 255, alpha);
         }
         return new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha);
+    }
+
+    private String buildPathDisplay(Layer layer) {
+        if (layer == null || layer.getPath() == null || layer.getPath().isBlank()) {
+            return "Sin archivo asociado";
+        }
+
+        String path = layer.getPath().trim();
+        String lower = path.toLowerCase();
+        boolean looksStored = new java.io.File(path).isAbsolute()
+                || new java.io.File(path).exists()
+                || lower.endsWith(".shp")
+                || lower.endsWith(".geojson")
+                || lower.endsWith(".json")
+                || lower.endsWith(".kml")
+                || lower.endsWith(".tif")
+                || lower.endsWith(".tiff")
+                || lower.endsWith(".img")
+                || lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".png")
+                || lower.endsWith(".bmp")
+                || lower.endsWith(".gif");
+
+        return looksStored ? path : "Sin archivo asociado";
     }
 
     public static void open(Layer layer) {

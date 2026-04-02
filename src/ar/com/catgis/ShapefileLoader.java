@@ -2,6 +2,7 @@ package ar.com.catgis;
 
 import org.geotools.api.data.SimpleFeatureSource;
 import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
@@ -66,6 +67,7 @@ public class ShapefileLoader {
             String typeName = store.getTypeNames()[0];
             SimpleFeatureSource featureSource = store.getFeatureSource(typeName);
             SimpleFeatureCollection featureCollection = featureSource.getFeatures();
+            SimpleFeatureType schema = featureSource.getSchema();
 
             List<SimpleFeature> features = new ArrayList<>();
             try (FeatureIterator<SimpleFeature> iterator = featureCollection.features()) {
@@ -105,7 +107,7 @@ public class ShapefileLoader {
             int featureCount = features.size();
             String message = "Shapefile cargado: " + file.getName() + " | entidades: " + featureCount;
 
-            return new ShapefileData(features, envelope, sourceName, featureCount, message);
+            return new ShapefileData(features, envelope, sourceName, featureCount, message, schema);
 
         } finally {
             if (store != null) {

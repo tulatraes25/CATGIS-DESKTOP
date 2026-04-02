@@ -67,6 +67,8 @@ public final class AppIcons {
     public static Icon joinVerticesIcon() { return svg("join-vertices"); }
     public static Icon rectangleIcon() { return svg("rectangle"); }
     public static Icon moveFeatureIcon() { return svg("move-feature"); }
+    public static Icon increaseAreaIcon() { return svg("increase-area"); }
+    public static Icon decreaseAreaIcon() { return svg("decrease-area"); }
 
     private static Icon svg(String name) {
         String resourcePath = "icons/" + name + ".svg";
