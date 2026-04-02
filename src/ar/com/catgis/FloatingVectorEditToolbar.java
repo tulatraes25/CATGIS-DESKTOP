@@ -265,10 +265,20 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnAdjacentPolygon.addActionListener(e -> showPendingTool("Poligono adyacente", "La paleta ya reserva esta herramienta, pero todavia falta el motor de construccion adyacente estilo Kosmo."));
 
         btnMerge = createActionButton("Unir elementos", AppIcons.saveIcon());
-        btnMerge.addActionListener(e -> showPendingTool("Unir elementos", "La union de entidades seleccionadas queda como siguiente bloque fuerte de edicion."));
+        btnMerge.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.mergeSelectedFeatures();
+            }
+            refreshState();
+        });
 
         btnExplode = createActionButton("Explotar entidades seleccionadas", AppIcons.exportIcon());
-        btnExplode.addActionListener(e -> showPendingTool("Explotar entidad", "La explosion de multipartes queda visible en la paleta, pero falta implementarla en la capa editable."));
+        btnExplode.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.explodeSelectedFeatures();
+            }
+            refreshState();
+        });
 
         btnUndo = createActionButton("Deshacer", AppIcons.undoIcon());
         btnUndo.addActionListener(e -> {
@@ -440,8 +450,8 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnIncreaseArea.setEnabled(polygonSelection);
         btnDecreaseArea.setEnabled(polygonSelection);
         btnAdjacentPolygon.setEnabled(polygonSelection);
-        btnMerge.setEnabled(hasEditingLayer);
-        btnExplode.setEnabled(hasVectorSelection);
+        btnMerge.setEnabled(map.canMergeSelectedFeatures());
+        btnExplode.setEnabled(map.canExplodeSelectedFeatures());
         btnUndo.setEnabled(map.canUndoFeatureEdit());
         btnRedo.setEnabled(map.canRedoFeatureEdit());
         btnOptions.setEnabled(hasEditingLayer || hasVectorSelection);

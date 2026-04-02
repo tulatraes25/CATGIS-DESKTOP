@@ -3929,6 +3929,155 @@ public class MapPanel extends JPanel {
         return deleteSelectedFeatures();
     }
 
+    public boolean canMergeSelectedFeatures() {
+        if (selectedLayer == null || getSelectedFeatureCount() < 2) {
+            return false;
+        }
+
+        ShapefileData data = getShapefileData(selectedLayer);
+        String family = resolveGeometryFamily(data != null ? data.getSchema() : null);
+        return "LINE".equals(family) || "POLYGON".equals(family);
+    }
+
+    public boolean mergeSelectedFeatures() {
+        if (!canMergeSelectedFeatures()) {
+            return false;
+        }
+
+        ShapefileData data = getShapefileData(selectedLayer);
+        List<String> selectedIds = getSelectedFeatureIdsForLayer(selectedLayer);
+        if (data == null || selectedIds.size() < 2) {
+            return false;
+        }
+
+        List<SimpleFeature> selectedFeatures = collectSelectedFeatures(data.getFeatures(), selectedIds);
+        if (selectedFeatures.size() < 2) {
+            return false;
+        }
+
+        String family = resolveGeometryFamily(data.getSchema());
+        Geometry mergedGeometry = buildMergedGeometry(selectedFeatures, family);
+        if (mergedGeometry == null || mergedGeometry.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No se pudieron unir las entidades seleccionadas.",
+                    "Unir elementos",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return false;
+        }
+
+        List<SimpleFeature> replacementFeatures = buildFeaturesForMergedGeometry(selectedFeatures.get(0), mergedGeometry, data.getSchema());
+        if (replacementFeatures.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "La geometria resultante no es compatible con la capa actual.",
+                    "Unir elementos",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return false;
+        }
+
+        pushUndoSnapshotForSelectedLayer();
+        List<SimpleFeature> updatedFeatures = replaceFeaturesBySelection(data.getFeatures(), selectedIds, replacementFeatures);
+        List<String> resultIds = extractFeatureIds(replacementFeatures);
+        replaceLayerFeatures(selectedLayer, updatedFeatures, resultIds.get(0), resultIds.size() == 1, null);
+        applyFeatureSelection(
+                selectedLayer,
+                resultIds,
+                resultIds.size() == 1,
+                true,
+                false,
+                resultIds.size() == 1 ? "Elementos unidos." : resultIds.size() + " entidades resultantes tras unir."
+        );
+        return true;
+    }
+
+    public boolean canExplodeSelectedFeatures() {
+        if (selectedLayer == null) {
+            return false;
+        }
+
+        ShapefileData data = getShapefileData(selectedLayer);
+        List<String> selectedIds = getSelectedFeatureIdsForLayer(selectedLayer);
+        if (data == null || selectedIds.isEmpty()) {
+            return false;
+        }
+
+        for (SimpleFeature feature : collectSelectedFeatures(data.getFeatures(), selectedIds)) {
+            if (geometryPartCount(extractFeatureGeometryCopy(feature)) > 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean explodeSelectedFeatures() {
+        if (selectedLayer == null) {
+            return false;
+        }
+
+        ShapefileData data = getShapefileData(selectedLayer);
+        List<String> selectedIds = getSelectedFeatureIdsForLayer(selectedLayer);
+        if (data == null || selectedIds.isEmpty()) {
+            return false;
+        }
+
+        List<SimpleFeature> updatedFeatures = new ArrayList<>();
+        List<String> resultIds = new ArrayList<>();
+        boolean changed = false;
+        for (SimpleFeature feature : data.getFeatures()) {
+            if (feature == null) {
+                continue;
+            }
+
+            if (!selectedIds.contains(feature.getID())) {
+                updatedFeatures.add(feature);
+                continue;
+            }
+
+            List<Geometry> parts = collectGeometryParts(extractFeatureGeometryCopy(feature));
+            if (parts.size() <= 1) {
+                updatedFeatures.add(feature);
+                resultIds.add(feature.getID());
+                continue;
+            }
+
+            List<SimpleFeature> replacementFeatures = buildReplacementFeatures(feature, parts);
+            if (replacementFeatures.isEmpty()) {
+                updatedFeatures.add(feature);
+                resultIds.add(feature.getID());
+                continue;
+            }
+
+            updatedFeatures.addAll(replacementFeatures);
+            resultIds.addAll(extractFeatureIds(replacementFeatures));
+            changed = true;
+        }
+
+        if (!changed) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "La seleccion no contiene entidades multiparte para explotar.",
+                    "Explotar entidades",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return false;
+        }
+
+        pushUndoSnapshotForSelectedLayer();
+        replaceLayerFeatures(selectedLayer, updatedFeatures, resultIds.get(0), resultIds.size() == 1, null);
+        applyFeatureSelection(
+                selectedLayer,
+                resultIds,
+                resultIds.size() == 1,
+                true,
+                false,
+                resultIds.size() == 1 ? "Entidad explotada." : resultIds.size() + " entidades resultantes tras explotar."
+        );
+        return true;
+    }
+
     public boolean deleteSelectedFeatures() {
         if (selectedLayer == null) {
             return false;
@@ -5828,6 +5977,169 @@ public class MapPanel extends JPanel {
         return builder.buildFeature(buildNextFeatureId(targetFeatures));
     }
 
+    private List<SimpleFeature> collectSelectedFeatures(List<SimpleFeature> features, List<String> selectedIds) {
+        List<SimpleFeature> selected = new ArrayList<>();
+        if (features == null || selectedIds == null || selectedIds.isEmpty()) {
+            return selected;
+        }
+
+        LinkedHashSet<String> orderedIds = new LinkedHashSet<>(selectedIds);
+        for (SimpleFeature feature : features) {
+            if (feature != null && orderedIds.contains(feature.getID())) {
+                selected.add(feature);
+            }
+        }
+        return selected;
+    }
+
+    private List<String> extractFeatureIds(List<SimpleFeature> features) {
+        List<String> ids = new ArrayList<>();
+        if (features == null) {
+            return ids;
+        }
+
+        for (SimpleFeature feature : features) {
+            if (feature != null && feature.getID() != null && !feature.getID().isBlank()) {
+                ids.add(feature.getID());
+            }
+        }
+        return ids;
+    }
+
+    private List<SimpleFeature> replaceFeaturesBySelection(List<SimpleFeature> sourceFeatures,
+                                                           List<String> selectedIds,
+                                                           List<SimpleFeature> replacementFeatures) {
+        List<SimpleFeature> updated = new ArrayList<>();
+        if (sourceFeatures == null) {
+            updated.addAll(replacementFeatures);
+            return updated;
+        }
+
+        LinkedHashSet<String> idsToReplace = new LinkedHashSet<>(selectedIds);
+        boolean inserted = false;
+        for (SimpleFeature feature : sourceFeatures) {
+            if (feature == null) {
+                continue;
+            }
+            if (idsToReplace.contains(feature.getID())) {
+                if (!inserted) {
+                    updated.addAll(replacementFeatures);
+                    inserted = true;
+                }
+                continue;
+            }
+            updated.add(feature);
+        }
+
+        if (!inserted) {
+            updated.addAll(replacementFeatures);
+        }
+        return updated;
+    }
+
+    private List<SimpleFeature> buildFeaturesForMergedGeometry(SimpleFeature sourceFeature,
+                                                               Geometry mergedGeometry,
+                                                               SimpleFeatureType targetType) {
+        if (sourceFeature == null || mergedGeometry == null) {
+            return new ArrayList<>();
+        }
+
+        Class<?> binding = targetType != null && targetType.getGeometryDescriptor() != null
+                ? targetType.getGeometryDescriptor().getType().getBinding()
+                : null;
+        List<Geometry> parts;
+        if (binding != null && (binding.isInstance(mergedGeometry)
+                || MultiLineString.class.isAssignableFrom(binding)
+                || MultiPolygon.class.isAssignableFrom(binding)
+                || MultiPoint.class.isAssignableFrom(binding))) {
+            parts = List.of(mergedGeometry);
+        } else {
+            parts = collectGeometryParts(mergedGeometry);
+        }
+        return buildReplacementFeatures(sourceFeature, parts);
+    }
+
+    private Geometry buildMergedGeometry(List<SimpleFeature> selectedFeatures, String family) {
+        List<Geometry> geometries = new ArrayList<>();
+        for (SimpleFeature feature : selectedFeatures) {
+            Geometry geometry = extractFeatureGeometryCopy(feature);
+            if (geometry != null && !geometry.isEmpty()) {
+                geometries.add(geometry);
+            }
+        }
+
+        if (geometries.size() < 2) {
+            return null;
+        }
+
+        GeometryFactory factory = geometries.get(0).getFactory();
+        if ("LINE".equals(family)) {
+            Geometry unioned = UnaryUnionOp.union(geometries);
+            LineMerger merger = new LineMerger();
+            merger.add(unioned);
+            Collection<?> mergedLines = merger.getMergedLineStrings();
+            List<LineString> lines = new ArrayList<>();
+            for (Object candidate : mergedLines) {
+                if (candidate instanceof LineString lineString && !lineString.isEmpty()) {
+                    lines.add((LineString) lineString.copy());
+                }
+            }
+
+            if (lines.isEmpty()) {
+                List<Geometry> parts = collectGeometryParts(unioned);
+                for (Geometry part : parts) {
+                    if (part instanceof LineString lineString && !lineString.isEmpty()) {
+                        lines.add((LineString) lineString.copy());
+                    }
+                }
+            }
+
+            if (lines.isEmpty()) {
+                return unioned;
+            }
+            if (lines.size() == 1) {
+                return lines.get(0);
+            }
+            return factory.createMultiLineString(lines.toArray(new LineString[0]));
+        }
+
+        if ("POLYGON".equals(family)) {
+            Geometry unioned = UnaryUnionOp.union(geometries);
+            if (unioned == null || unioned.isEmpty()) {
+                return null;
+            }
+            Geometry cleaned = unioned.buffer(0);
+            return cleaned == null || cleaned.isEmpty() ? unioned : cleaned;
+        }
+
+        return null;
+    }
+
+    private String resolveGeometryFamily(SimpleFeatureType featureType) {
+        if (featureType == null || featureType.getGeometryDescriptor() == null) {
+            return "";
+        }
+
+        Class<?> binding = featureType.getGeometryDescriptor().getType().getBinding();
+        if (binding == null) {
+            return "";
+        }
+        if (Point.class.isAssignableFrom(binding) || MultiPoint.class.isAssignableFrom(binding)) {
+            return "POINT";
+        }
+        if (LineString.class.isAssignableFrom(binding) || MultiLineString.class.isAssignableFrom(binding)) {
+            return "LINE";
+        }
+        if (Polygon.class.isAssignableFrom(binding) || MultiPolygon.class.isAssignableFrom(binding)) {
+            return "POLYGON";
+        }
+        return "";
+    }
+
+    private int geometryPartCount(Geometry geometry) {
+        return collectGeometryParts(geometry).size();
+    }
+
     private void offsetGeometryForPaste(Geometry geometry) {
         if (geometry == null) {
             return;
@@ -5881,6 +6193,27 @@ public class MapPanel extends JPanel {
     private List<Geometry> collectGeometryParts(Geometry geometry) {
         List<Geometry> parts = new ArrayList<>();
         if (geometry == null || geometry.isEmpty()) {
+            return parts;
+        }
+        if (geometry instanceof GeometryCollection collection
+                && !(geometry instanceof MultiLineString)
+                && !(geometry instanceof MultiPolygon)
+                && !(geometry instanceof MultiPoint)) {
+            for (int i = 0; i < collection.getNumGeometries(); i++) {
+                Geometry part = collection.getGeometryN(i);
+                if (part != null && !part.isEmpty()) {
+                    parts.addAll(collectGeometryParts(part));
+                }
+            }
+            return parts;
+        }
+        if (geometry instanceof MultiPoint multiPoint) {
+            for (int i = 0; i < multiPoint.getNumGeometries(); i++) {
+                Geometry part = multiPoint.getGeometryN(i);
+                if (part != null && !part.isEmpty()) {
+                    parts.add((Geometry) part.copy());
+                }
+            }
             return parts;
         }
         if (geometry instanceof MultiLineString multiLine) {
