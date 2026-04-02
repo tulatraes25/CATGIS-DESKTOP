@@ -1,0 +1,58 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'ar.com.catgis'
+version = '1.0'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.osgeo.org/repository/release/' }
+}
+
+dependencies {
+    implementation platform('org.geotools:gt-bom:34.0')
+
+    implementation 'org.geotools:gt-main'
+    implementation 'org.geotools:gt-shapefile'
+    implementation 'org.geotools:gt-swing'
+    implementation 'org.geotools:gt-geojson'
+    implementation 'org.geotools.xsd:gt-xsd-kml:34.0'
+    implementation 'org.geotools:gt-referencing'
+    implementation 'org.geotools:gt-epsg-hsql'
+    implementation 'org.geotools:gt-geotiff'
+    implementation 'org.geotools:gt-imageio-ext-gdal'
+
+    implementation 'org.apache.poi:poi:5.4.1'
+    implementation 'org.apache.poi:poi-ooxml:5.4.1'
+
+    implementation 'com.github.albfernandez:javadbf:1.14.1'
+    implementation 'com.github.miachm.sods:SODS:1.8.2'
+    implementation 'com.formdev:flatlaf:3.7'
+    implementation 'com.formdev:flatlaf-extras:3.7'
+    implementation 'com.formdev:flatlaf-intellij-themes:3.7'
+    implementation 'com.github.weisj:jsvg:1.7.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+        resources {
+            srcDirs = ['src']
+            includes = ['icons/**']
+        }
+    }
+}
+
+application {
+    mainClass = 'ar.com.catgis.Main'
+}
