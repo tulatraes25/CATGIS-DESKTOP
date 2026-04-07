@@ -144,6 +144,10 @@ public class OpenAttributeTableAction extends AbstractAction {
             JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
             return;
         }
+        if (VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
+            JOptionPane.showMessageDialog(null, buildReadOnlyMessage(layer));
+            return;
+        }
 
         AttributeTableWindow window = openTable(layer);
         if (window != null) {
@@ -155,6 +159,10 @@ public class OpenAttributeTableAction extends AbstractAction {
         Layer layer = CatgisDesktopApp.layersPanel.getSelectedLayer();
         if (layer == null) {
             JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            return;
+        }
+        if (VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
+            JOptionPane.showMessageDialog(null, buildReadOnlyMessage(layer));
             return;
         }
 
@@ -237,6 +245,45 @@ public class OpenAttributeTableAction extends AbstractAction {
 
         if (data == null) {
             try {
+                if (layer instanceof PostgisLayer) {
+                    PostgisConnectionInfo info = PostgisConnectionStore.applyStoredPassword(((PostgisLayer) layer).toConnectionInfo());
+                    if (info == null || info.getPassword().isBlank()) {
+                        info = PostgisConnectionStore.promptForPassword(
+                                CatgisDesktopApp.getMainFrameSafe(),
+                                ((PostgisLayer) layer).toConnectionInfo(),
+                                "Ingresá la clave para abrir la tabla de la capa PostGIS."
+                        );
+                        if (info == null) {
+                            return null;
+                        }
+                    }
+                    data = PostgisLoader.loadLayerData((PostgisLayer) layer, info);
+                    if (data != null) {
+                        layer.setSourceName(data.getSourceName());
+                        layer.setFeatureCount(data.getFeatureCount());
+                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                    }
+                    return data;
+                }
+                if (layer instanceof GeoPackageLayer) {
+                    data = GeoPackageLoader.loadLayerData((GeoPackageLayer) layer);
+                    if (data != null) {
+                        layer.setSourceName(data.getSourceName());
+                        layer.setFeatureCount(data.getFeatureCount());
+                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                    }
+                    return data;
+                }
+                if (layer instanceof OnlineWfsLayer) {
+                    data = WfsFeatureLoader.loadLayerData((OnlineWfsLayer) layer);
+                    if (data != null) {
+                        layer.setSourceName(data.getSourceName());
+                        layer.setFeatureCount(data.getFeatureCount());
+                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                    }
+                    return data;
+                }
+
                 String path = layer.getPath() != null ? layer.getPath().toLowerCase() : "";
 
                 if (path.endsWith(".shp")) {
@@ -257,10 +304,23 @@ public class OpenAttributeTableAction extends AbstractAction {
                 }
             } catch (Exception ex) {
                 ex.printStackTrace();
+                if (layer instanceof PostgisLayer) {
+                    JOptionPane.showMessageDialog(
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            PostgisErrorSupport.toUserMessage(ex, ((PostgisLayer) layer).toConnectionInfo()),
+                            "PostGIS",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
             }
         }
 
         return data;
+    }
+
+    private static String buildReadOnlyMessage(Layer layer) {
+        String reason = VectorLayerUtils.getReadOnlyVectorLayerReason(layer);
+        return !reason.isBlank() ? reason : "La capa seleccionada esta en modo lectura.";
     }
 
     private static ShapefileData invokeLoader(Class<?> clazz, String path, String[] methodNames) throws Exception {

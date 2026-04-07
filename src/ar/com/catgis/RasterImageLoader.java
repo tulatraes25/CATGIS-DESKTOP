@@ -5,6 +5,7 @@ import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
+import java.awt.image.RenderedImage;
 import java.awt.image.Raster;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -146,7 +147,7 @@ public class RasterImageLoader {
             return loadWithGeoToolsSafe(cacheTif, displaySize, file.getAbsolutePath(), mode, projectCRS, forcedSourceCRS);
         }
 
-        if (isTiff(lowerName)) {
+        if (isGeoToolsRaster(lowerName)) {
             return loadWithGeoToolsSafe(file, displaySize, file.getAbsolutePath(), mode, projectCRS, forcedSourceCRS);
         }
 
@@ -231,7 +232,9 @@ public class RasterImageLoader {
             GridCoverage2D displayCoverage = reprojectCoverageIfNeeded(sourceAwareCoverage, effectiveSourceCRS, targetCRS);
 
             BufferedImage raw = renderedToBuffered(displayCoverage);
-            int bandCount = raw.getRaster().getNumBands();
+            int bandCount = displayCoverage.getRenderedImage() != null && displayCoverage.getRenderedImage().getSampleModel() != null
+                    ? displayCoverage.getRenderedImage().getSampleModel().getNumBands()
+                    : raw.getRaster().getNumBands();
             BufferedImage displayImage = prepareDisplayImage(raw, targetDisplaySize);
             Envelope env = extractEnvelopeByReflection(displayCoverage, raw);
             String displayCRS = displayCoverage != sourceAwareCoverage && !targetCRS.isBlank()
@@ -255,6 +258,15 @@ public class RasterImageLoader {
 
     private static boolean isTiff(String name) {
         return name.endsWith(".tif") || name.endsWith(".tiff");
+    }
+
+    private static boolean isGeoToolsRaster(String name) {
+        return isTiff(name)
+                || name.endsWith(".asc")
+                || name.endsWith(".adf")
+                || name.endsWith(".grd")
+                || name.endsWith(".bil")
+                || name.endsWith(".flt");
     }
 
     private static File getOrCreateImgCache(File imgFile, int outsize, String mode) throws IOException {
@@ -517,18 +529,70 @@ public class RasterImageLoader {
     }
 
     private static BufferedImage renderedToBuffered(GridCoverage2D coverage) {
-        java.awt.image.RenderedImage ri = coverage.getRenderedImage();
+        RenderedImage ri = coverage.getRenderedImage();
 
         if (ri instanceof BufferedImage) {
             return (BufferedImage) ri;
         }
 
-        BufferedImage out = new BufferedImage(ri.getWidth(), ri.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = out.createGraphics();
         try {
-            g.drawRenderedImage(ri, new AffineTransform());
-        } finally {
-            g.dispose();
+            BufferedImage out = new BufferedImage(ri.getWidth(), ri.getHeight(), BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = out.createGraphics();
+            try {
+                g.drawRenderedImage(ri, new AffineTransform());
+            } finally {
+                g.dispose();
+            }
+            return out;
+        } catch (RuntimeException ex) {
+            return renderRasterFallback(ri);
+        }
+    }
+
+    private static BufferedImage renderRasterFallback(RenderedImage image) {
+        Raster raster = image.getData();
+        int width = raster.getWidth();
+        int height = raster.getHeight();
+        int numBands = Math.max(1, raster.getNumBands());
+        int usedBands = Math.min(numBands, 3);
+        double[] mins = new double[usedBands];
+        double[] maxs = new double[usedBands];
+        for (int i = 0; i < usedBands; i++) {
+            mins[i] = Double.POSITIVE_INFINITY;
+            maxs[i] = Double.NEGATIVE_INFINITY;
+        }
+
+        int stepX = Math.max(1, width / 512);
+        int stepY = Math.max(1, height / 512);
+        for (int y = 0; y < height; y += stepY) {
+            for (int x = 0; x < width; x += stepX) {
+                for (int b = 0; b < usedBands; b++) {
+                    double value = raster.getSampleDouble(x, y, b);
+                    if (Double.isNaN(value) || Double.isInfinite(value)) {
+                        continue;
+                    }
+                    if (value < mins[b]) mins[b] = value;
+                    if (value > maxs[b]) maxs[b] = value;
+                }
+            }
+        }
+
+        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int r;
+                int g;
+                int b;
+                if (numBands == 1) {
+                    int v = stretchDouble(raster.getSampleDouble(x, y, 0), mins[0], maxs[0]);
+                    r = g = b = v;
+                } else {
+                    r = stretchDouble(raster.getSampleDouble(x, y, 0), mins[0], maxs[0]);
+                    g = stretchDouble(raster.getSampleDouble(x, y, Math.min(1, usedBands - 1)), mins[Math.min(1, usedBands - 1)], maxs[Math.min(1, usedBands - 1)]);
+                    b = stretchDouble(raster.getSampleDouble(x, y, Math.min(2, usedBands - 1)), mins[Math.min(2, usedBands - 1)], maxs[Math.min(2, usedBands - 1)]);
+                }
+                out.setRGB(x, y, (r << 16) | (g << 8) | b);
+            }
         }
         return out;
     }
@@ -642,6 +706,16 @@ public class RasterImageLoader {
             return 0;
         }
 
+        double scaled = (value - min) * 255.0 / (max - min);
+        if (scaled < 0) scaled = 0;
+        if (scaled > 255) scaled = 255;
+        return (int) Math.round(scaled);
+    }
+
+    private static int stretchDouble(double value, double min, double max) {
+        if (!Double.isFinite(value) || !Double.isFinite(min) || !Double.isFinite(max) || max <= min) {
+            return 0;
+        }
         double scaled = (value - min) * 255.0 / (max - min);
         if (scaled < 0) scaled = 0;
         if (scaled > 255) scaled = 255;

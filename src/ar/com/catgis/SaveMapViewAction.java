@@ -24,8 +24,7 @@ public class SaveMapViewAction extends AbstractAction {
             return;
         }
 
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Salvar vista del mapa");
+        JFileChooser chooser = FileChooserSupport.createChooser("export-image", "Salvar vista del mapa");
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.addChoosableFileFilter(new FileNameExtensionFilter("PNG (*.png)", "png"));
         chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPG (*.jpg, *.jpeg)", "jpg", "jpeg"));
@@ -39,6 +38,7 @@ public class SaveMapViewAction extends AbstractAction {
         if (file == null) {
             return;
         }
+        FileChooserSupport.rememberSelection("export-image", chooser);
 
         String lower = file.getName().toLowerCase();
         String format = "png";

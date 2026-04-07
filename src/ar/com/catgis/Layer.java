@@ -5,6 +5,99 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class Layer {
+    public enum PointSymbolStyle {
+        CIRCLE("Circulo"),
+        SQUARE("Cuadrado"),
+        DIAMOND("Rombo"),
+        TRIANGLE("Triangulo"),
+        TARGET("Objetivo"),
+        PIN("Pin"),
+        FLAG("Bandera"),
+        STAR("Estrella"),
+        WELL("Pozo");
+
+        private final String label;
+
+        PointSymbolStyle(String label) {
+            this.label = label;
+        }
+
+        public static PointSymbolStyle fromValue(String value) {
+            if (value != null) {
+                for (PointSymbolStyle style : values()) {
+                    if (style.name().equalsIgnoreCase(value.trim())) {
+                        return style;
+                    }
+                }
+            }
+            return CIRCLE;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    public enum LineSymbolStyle {
+        SOLID("Solida"),
+        DASHED("Discontinua"),
+        DOTTED("Punteada"),
+        DASH_DOT("Trazo y punto");
+
+        private final String label;
+
+        LineSymbolStyle(String label) {
+            this.label = label;
+        }
+
+        public static LineSymbolStyle fromValue(String value) {
+            if (value != null) {
+                for (LineSymbolStyle style : values()) {
+                    if (style.name().equalsIgnoreCase(value.trim())) {
+                        return style;
+                    }
+                }
+            }
+            return SOLID;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    public enum PolygonFillStyle {
+        SOLID("Solido"),
+        DIAGONAL_HATCH("Trama diagonal"),
+        CROSS_HATCH("Trama cruzada"),
+        DOTS("Punteado"),
+        OUTLINE_ONLY("Solo contorno");
+
+        private final String label;
+
+        PolygonFillStyle(String label) {
+            this.label = label;
+        }
+
+        public static PolygonFillStyle fromValue(String value) {
+            if (value != null) {
+                for (PolygonFillStyle style : values()) {
+                    if (style.name().equalsIgnoreCase(value.trim())) {
+                        return style;
+                    }
+                }
+            }
+            return SOLID;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
     private String name;
     private String path;
     private String type;
@@ -21,6 +114,11 @@ public class Layer {
     private float lineWidth = 1.5f;
     private Color pointColor = Color.BLUE;
     private int pointSize = 8;
+    private PointSymbolStyle pointSymbolStyle = PointSymbolStyle.CIRCLE;
+    private LineSymbolStyle lineSymbolStyle = LineSymbolStyle.SOLID;
+    private PolygonFillStyle polygonFillStyle = PolygonFillStyle.SOLID;
+    private final CategorizedSymbology lineCategorizedSymbology = new CategorizedSymbology();
+    private final CategorizedSymbology polygonCategorizedSymbology = new CategorizedSymbology();
 
     private String sourceCRS = "";
 
@@ -154,6 +252,44 @@ public class Layer {
         if (pointSize > 0) {
             this.pointSize = pointSize;
         }
+    }
+
+    public PointSymbolStyle getPointSymbolStyle() {
+        return pointSymbolStyle;
+    }
+
+    public void setPointSymbolStyle(PointSymbolStyle pointSymbolStyle) {
+        if (pointSymbolStyle != null) {
+            this.pointSymbolStyle = pointSymbolStyle;
+        }
+    }
+
+    public LineSymbolStyle getLineSymbolStyle() {
+        return lineSymbolStyle;
+    }
+
+    public void setLineSymbolStyle(LineSymbolStyle lineSymbolStyle) {
+        if (lineSymbolStyle != null) {
+            this.lineSymbolStyle = lineSymbolStyle;
+        }
+    }
+
+    public PolygonFillStyle getPolygonFillStyle() {
+        return polygonFillStyle;
+    }
+
+    public void setPolygonFillStyle(PolygonFillStyle polygonFillStyle) {
+        if (polygonFillStyle != null) {
+            this.polygonFillStyle = polygonFillStyle;
+        }
+    }
+
+    public CategorizedSymbology getLineCategorizedSymbology() {
+        return lineCategorizedSymbology;
+    }
+
+    public CategorizedSymbology getPolygonCategorizedSymbology() {
+        return polygonCategorizedSymbology;
     }
 
     public String getSourceCRS() {

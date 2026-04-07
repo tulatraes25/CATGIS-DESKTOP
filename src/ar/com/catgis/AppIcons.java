@@ -66,9 +66,19 @@ public final class AppIcons {
     public static Icon removeVertexIcon() { return svg("remove-vertex"); }
     public static Icon joinVerticesIcon() { return svg("join-vertices"); }
     public static Icon rectangleIcon() { return svg("rectangle"); }
+    public static Icon circleIcon() { return svg("circle"); }
+    public static Icon circleThreePointsIcon() { return svg("circle-3p"); }
     public static Icon moveFeatureIcon() { return svg("move-feature"); }
     public static Icon increaseAreaIcon() { return svg("increase-area"); }
     public static Icon decreaseAreaIcon() { return svg("decrease-area"); }
+    public static Icon extendLineIcon() { return svg("extend-line"); }
+    public static Icon shortenLineIcon() { return svg("shorten-line"); }
+    public static Icon parallelIcon() { return svg("parallel"); }
+    public static Icon perpendicularIcon() { return svg("perpendicular"); }
+    public static Icon toolboxIcon() { return svg("toolbox"); }
+    public static Icon basemapIcon() { return svg("basemap"); }
+    public static Icon imageryIcon() { return svg("imagery"); }
+    public static Icon wmsIcon() { return svg("wms"); }
 
     private static Icon svg(String name) {
         String resourcePath = "icons/" + name + ".svg";

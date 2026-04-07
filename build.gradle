@@ -1,3 +1,12 @@
+import javax.imageio.ImageIO
+import java.awt.BasicStroke
+import java.awt.Color
+import java.awt.Font
+import java.awt.FontMetrics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+
 plugins {
     id 'java'
     id 'application'
@@ -22,7 +31,14 @@ dependencies {
     implementation 'org.geotools:gt-referencing'
     implementation 'org.geotools:gt-epsg-hsql'
     implementation 'org.geotools:gt-geotiff'
+    implementation 'org.geotools:gt-arcgrid'
     implementation 'org.geotools:gt-imageio-ext-gdal'
+    implementation 'org.geotools:gt-process-raster'
+    implementation 'org.geotools:gt-wfs-ng'
+    implementation 'org.geotools:gt-geopkg'
+    implementation 'org.geotools.jdbc:gt-jdbc-postgis:34.0'
+    implementation 'org.postgresql:postgresql:42.7.3'
+    implementation 'org.apache.pdfbox:pdfbox:3.0.3'
 
     implementation 'org.apache.poi:poi:5.4.1'
     implementation 'org.apache.poi:poi-ooxml:5.4.1'
@@ -47,12 +63,446 @@ sourceSets {
             srcDirs = ['src']
         }
         resources {
-            srcDirs = ['src']
-            includes = ['icons/**']
+            srcDirs = ['src', '.']
+            includes = ['icons/**', 'splash_catgis.png']
         }
     }
 }
 
 application {
     mainClass = 'ar.com.catgis.Main'
+}
+
+tasks.named('startScripts') {
+    doLast {
+        windowsScript.text = windowsScript.text.replaceFirst(
+                /(?m)^set CLASSPATH=.*$/,
+                java.util.regex.Matcher.quoteReplacement('set CLASSPATH=%APP_HOME%\\lib\\*')
+        )
+        unixScript.text = unixScript.text.replaceFirst(
+                /(?m)^CLASSPATH=.*$/,
+                java.util.regex.Matcher.quoteReplacement('CLASSPATH=$APP_HOME/lib/*')
+        )
+    }
+}
+
+def windowsHost = System.getProperty('os.name', '').toLowerCase().contains('windows')
+def installerDisplayName = 'CATGIS Desktop Review'
+def installerVersion = '1.0.0'
+def installerVendor = 'Lic Claudio Alejandro Tula'
+def installerDescription = 'CATGIS Desktop - version review/beta no final para evaluacion profesional.'
+def installerCopyright = 'Copyright (c) 2026 Claudio Alejandro Tula'
+def installerMenuGroup = 'CATGIS'
+def installerInstallDir = 'CATGIS Desktop Review'
+def bundledWixBinDir = new File(rootDir.parentFile, 'tools/wix314/bin')
+def bundledInnoCompiler = new File(rootDir.parentFile, 'tools/innosetup6/ISCC.exe')
+def javaHomeProvider = javaToolchains.launcherFor {
+    languageVersion = JavaLanguageVersion.of(21)
+}.map { it.metadata.installationPath.asFile }
+
+tasks.register('generateWindowsInstallerAssets') {
+    def outputDirProvider = layout.buildDirectory.dir('installer/windows/resources')
+    outputs.dir(outputDirProvider)
+
+    doLast {
+        System.setProperty('java.awt.headless', 'true')
+
+        File outputDir = outputDirProvider.get().asFile
+        outputDir.mkdirs()
+
+        File pngFile = new File(outputDir, 'catgis-installer-icon.png')
+        File icoFile = new File(outputDir, 'catgis-installer-icon.ico')
+
+        BufferedImage pngImage = createBrandIconImage(512)
+        ImageIO.write(pngImage, 'png', pngFile)
+
+        List<BufferedImage> icoImages = [16, 24, 32, 48, 64, 128, 256].collect { createBrandIconImage(it) }
+        writeIcoFile(icoFile, icoImages)
+    }
+}
+
+tasks.register('prepareWindowsInstallerInput', Sync) {
+    dependsOn installDist
+    def outputDirProvider = layout.buildDirectory.dir('installer/windows/input')
+    from(layout.buildDirectory.dir("install/${project.name}/lib"))
+    into(outputDirProvider)
+}
+
+tasks.register('packageWindowsAppImage') {
+    dependsOn 'prepareWindowsInstallerInput', 'generateWindowsInstallerAssets'
+    def outputDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
+    outputs.dir(outputDirProvider)
+
+    doLast {
+        if (!windowsHost) {
+            throw new GradleException('El empaquetado Windows solo puede ejecutarse sobre Windows.')
+        }
+
+        File outputDir = outputDirProvider.get().asFile
+        File inputDir = layout.buildDirectory.dir('installer/windows/input').get().asFile
+        File resourcesDir = layout.buildDirectory.dir('installer/windows/resources').get().asFile
+        File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage.exe')
+        File mainJar = inputDir.listFiles()?.find { it.name.startsWith("${project.name}-") && it.name.endsWith('.jar') }
+
+        if (!jpackageExe.exists()) {
+            throw new GradleException("No se encontro jpackage en ${jpackageExe.absolutePath}.")
+        }
+        if (mainJar == null) {
+            throw new GradleException("No se encontro el jar principal de CATGIS dentro de ${inputDir.absolutePath}.")
+        }
+
+        delete outputDir
+        outputDir.mkdirs()
+
+        exec {
+            commandLine(
+                    jpackageExe.absolutePath,
+                    '--type', 'app-image',
+                    '--input', inputDir.absolutePath,
+                    '--dest', outputDir.absolutePath,
+                    '--name', installerDisplayName,
+                    '--main-jar', mainJar.name,
+                    '--main-class', 'ar.com.catgis.Main',
+                    '--app-version', installerVersion,
+                    '--vendor', installerVendor,
+                    '--description', installerDescription,
+                    '--copyright', installerCopyright,
+                    '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
+                    '--verbose'
+            )
+        }
+    }
+}
+
+tasks.register('packageWindowsJpackageExeInstaller') {
+    dependsOn 'packageWindowsAppImage'
+    def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
+    outputs.dir(outputDirProvider)
+
+    doLast {
+        if (!windowsHost) {
+            throw new GradleException('El instalador Windows .exe solo puede generarse sobre Windows.')
+        }
+
+        File wixBinDir = project.ext.resolveWixBinDir.call()
+        if (wixBinDir == null) {
+            throw new GradleException('No se puede generar el .exe porque falta WiX Toolset 3.x (candle.exe y light.exe). La app-image con runtime ya queda disponible; agrega WiX al PATH o en C:\\CATGIS\\tools\\wix314\\bin y vuelve a ejecutar packageWindowsExeInstaller.')
+        }
+
+        File outputDir = outputDirProvider.get().asFile
+        File appImageDir = new File(layout.buildDirectory.dir('installer/windows/app-image').get().asFile, installerDisplayName)
+        File resourcesDir = layout.buildDirectory.dir('installer/windows/resources').get().asFile
+        File licenseFile = file('packaging/windows/CATGIS_REVIEW_LICENSE.rtf')
+        File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage.exe')
+
+        if (!appImageDir.exists()) {
+            throw new GradleException("No se encontro la app-image esperada en ${appImageDir.absolutePath}.")
+        }
+        if (!licenseFile.exists()) {
+            throw new GradleException("No se encontro la licencia de instalacion en ${licenseFile.absolutePath}.")
+        }
+
+        delete outputDir
+        outputDir.mkdirs()
+
+        exec {
+            environment 'PATH', wixBinDir.absolutePath + File.pathSeparator + (System.getenv('PATH') ?: '')
+            commandLine(
+                    jpackageExe.absolutePath,
+                    '--type', 'exe',
+                    '--dest', outputDir.absolutePath,
+                    '--name', installerDisplayName,
+                    '--app-image', appImageDir.absolutePath,
+                    '--app-version', installerVersion,
+                    '--vendor', installerVendor,
+                    '--description', installerDescription,
+                    '--copyright', installerCopyright,
+                    '--license-file', licenseFile.absolutePath,
+                    '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
+                    '--win-shortcut',
+                    '--win-menu',
+                    '--win-menu-group', installerMenuGroup,
+                    '--win-dir-chooser',
+                    '--win-shortcut-prompt',
+                    '--install-dir', installerInstallDir,
+                    '--verbose'
+            )
+        }
+    }
+}
+
+tasks.register('packageWindowsExeInstaller') {
+    dependsOn 'packageWindowsAppImage', 'generateWindowsInstallerAssets'
+    def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
+    outputs.dir(outputDirProvider)
+
+    doLast {
+        if (!windowsHost) {
+            throw new GradleException('El instalador Windows .exe solo puede generarse sobre Windows.')
+        }
+
+        File innoCompiler = project.ext.resolveInnoCompiler.call()
+        if (innoCompiler == null || !innoCompiler.exists()) {
+            throw new GradleException('No se puede generar el .exe bilingue porque falta Inno Setup 6 (ISCC.exe). Instala o copia Inno Setup en C:\\CATGIS\\tools\\innosetup6\\ISCC.exe y vuelve a ejecutar packageWindowsExeInstaller.')
+        }
+
+        File outputDir = outputDirProvider.get().asFile
+        File appImageDir = new File(layout.buildDirectory.dir('installer/windows/app-image').get().asFile, installerDisplayName)
+        File resourcesDir = layout.buildDirectory.dir('installer/windows/resources').get().asFile
+        File licenseFile = file('packaging/windows/CATGIS_REVIEW_LICENSE.rtf')
+        File issFile = file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss')
+
+        if (!appImageDir.exists()) {
+            throw new GradleException("No se encontro la app-image esperada en ${appImageDir.absolutePath}.")
+        }
+        if (!licenseFile.exists()) {
+            throw new GradleException("No se encontro la licencia de instalacion en ${licenseFile.absolutePath}.")
+        }
+        if (!issFile.exists()) {
+            throw new GradleException("No se encontro el script de Inno Setup en ${issFile.absolutePath}.")
+        }
+
+        delete outputDir
+        outputDir.mkdirs()
+
+        exec {
+            commandLine(
+                    innoCompiler.absolutePath,
+                    "/DAppImageDir=${appImageDir.absolutePath}",
+                    "/DOutputDir=${outputDir.absolutePath}",
+                    "/DInstallerName=${installerDisplayName}",
+                    "/DInstallerVersion=${installerVersion}",
+                    "/DInstallerPublisher=${installerVendor}",
+                    "/DInstallerExeName=${installerDisplayName}-${installerVersion}",
+                    "/DInstallerLicense=${licenseFile.absolutePath}",
+                    "/DInstallerIcon=${new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath}",
+                    "/DInstallerGroup=${installerMenuGroup}",
+                    "/DInstallerDir=${installerInstallDir}",
+                    issFile.absolutePath
+            )
+        }
+    }
+}
+
+ext.resolveWixBinDir = {
+    if (bundledWixBinDir.exists()) {
+        File candle = new File(bundledWixBinDir, 'candle.exe')
+        File light = new File(bundledWixBinDir, 'light.exe')
+        if (candle.exists() && light.exists()) {
+            return bundledWixBinDir
+        }
+    }
+
+    String candle = findExecutableOnPath('candle.exe')
+    String light = findExecutableOnPath('light.exe')
+    if (candle && light) {
+        return new File(candle).parentFile
+    }
+    return null
+}
+
+ext.resolveInnoCompiler = {
+    if (bundledInnoCompiler.exists()) {
+        return bundledInnoCompiler
+    }
+
+    for (String path : [
+            'C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe',
+            'C:\\Program Files\\Inno Setup 6\\ISCC.exe'
+    ]) {
+        File candidate = new File(path)
+        if (candidate.exists()) {
+            return candidate
+        }
+    }
+    return null
+}
+
+tasks.register('packageWindowsDistribution') {
+    dependsOn 'packageWindowsAppImage'
+    doLast {
+        if (windowsHost && project.ext.resolveInnoCompiler.call() != null) {
+            logger.lifecycle('Inno Setup detectado: ejecuta packageWindowsExeInstaller para generar el instalador .exe bilingue.')
+        } else if (windowsHost && project.ext.resolveWixBinDir.call() != null) {
+            logger.lifecycle('WiX detectado: ejecuta packageWindowsJpackageExeInstaller si necesitas el instalador .exe estandar de jpackage.')
+        } else {
+            logger.lifecycle('No se detecto Inno Setup ni WiX. Se genero la app-image con runtime embebido en build/installer/windows/app-image y el proyecto quedo listo para generar el .exe cuando se instale un compilador de setup.')
+        }
+    }
+}
+
+String findExecutableOnPath(String executableName) {
+    String path = System.getenv('PATH') ?: ''
+    for (String entry : path.split(java.io.File.pathSeparator)) {
+        if (!entry) {
+            continue
+        }
+        File candidate = new File(entry, executableName)
+        if (candidate.exists()) {
+            return candidate.absolutePath
+        }
+    }
+    return null
+}
+
+BufferedImage createBrandIconImage(int size) {
+    BufferedImage splashSource = loadSplashSourceImage()
+    if (splashSource != null) {
+        return createSplashBasedIconImage(splashSource, size)
+    }
+
+    return createFallbackBrandIconImage(size)
+}
+
+BufferedImage loadSplashSourceImage() {
+    File splashFile = file('splash_catgis.png')
+    if (!splashFile.exists()) {
+        return null
+    }
+    try {
+        return ImageIO.read(splashFile)
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
+BufferedImage createSplashBasedIconImage(BufferedImage splash, int size) {
+    BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+    Graphics2D g2 = image.createGraphics()
+    try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+
+        int crop = Math.min(splash.width, splash.height)
+        int srcX = (splash.width - crop) / 2
+        int srcY = (splash.height - crop) / 2
+
+        g2.drawImage(splash, 0, 0, size, size, srcX, srcY, srcX + crop, srcY + crop, null)
+
+        g2.setColor(new Color(9, 23, 43, 42))
+        g2.fillRect(0, 0, size, size)
+
+        float borderStroke = Math.max(2f, ((float) size) / 22f)
+        g2.setColor(new Color(255, 255, 255, 205))
+        g2.setStroke(new BasicStroke(borderStroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND))
+        int inset = Math.max(1, Math.round(borderStroke))
+        int borderSize = size - (inset * 2) - 1
+        int borderArc = Math.max(8, (int) Math.round(size / 4d))
+        g2.drawRoundRect(inset, inset, borderSize, borderSize, borderArc, borderArc)
+
+        int badgeWidth = Math.max(18, (int) Math.round(size * 0.44d))
+        int badgeHeight = Math.max(16, (int) Math.round(size * 0.22d))
+        int badgeMargin = Math.max(4, (int) Math.round(size / 18d))
+        int badgeX = size - badgeWidth - badgeMargin
+        int badgeY = size - badgeHeight - badgeMargin
+        int badgeArc = Math.max(8, (int) Math.round(badgeHeight / 2d))
+
+        g2.setColor(new Color(20, 96, 182, 230))
+        g2.fillRoundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeArc, badgeArc)
+        g2.setColor(new Color(255, 255, 255, 240))
+        float badgeStroke = Math.max(1.5f, ((float) size) / 64f)
+        g2.setStroke(new BasicStroke(badgeStroke))
+        g2.drawRoundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeArc, badgeArc)
+
+        String text = size >= 48 ? 'CAT' : 'C'
+        int fontSize = Math.max(9, size >= 48 ? (int) Math.round(size * 0.115d) : (int) Math.round(size * 0.26d))
+        Font font = new Font('SansSerif', Font.BOLD, fontSize)
+        g2.setFont(font)
+        FontMetrics metrics = g2.getFontMetrics()
+        int textX = badgeX + (badgeWidth - metrics.stringWidth(text)) / 2
+        int textY = badgeY + ((badgeHeight - metrics.getHeight()) / 2) + metrics.getAscent()
+        g2.setColor(Color.WHITE)
+        g2.drawString(text, textX, textY)
+    } finally {
+        g2.dispose()
+    }
+    return image
+}
+
+BufferedImage createFallbackBrandIconImage(int size) {
+    BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+    Graphics2D g2 = image.createGraphics()
+    try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+
+        int arc = Math.max(8, (int) (size / 3))
+        g2.setColor(new Color(20, 96, 182))
+        g2.fillRoundRect(0, 0, size - 1, size - 1, arc, arc)
+
+        g2.setColor(new Color(255, 255, 255, 52))
+        int glossyX = (int) (size / 10)
+        int glossyY = (int) (size / 10)
+        int glossyWidth = (int) (size - (size / 5))
+        int glossyHeight = (int) (size / 3)
+        g2.fillRoundRect(glossyX, glossyY, glossyWidth, glossyHeight, arc, arc)
+
+        g2.setColor(new Color(245, 158, 11))
+        float strokeWidth = Math.max(2f, ((float) size) / 12f)
+        g2.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND))
+        int underlineY = (int) Math.round(size * 0.78d)
+        g2.drawLine((int) Math.round(size * 0.18d), underlineY, (int) Math.round(size * 0.82d), underlineY)
+
+        String text = size >= 48 ? 'CAT' : 'C'
+        int fontSize = size >= 48 ? (int) (size / 3) : (int) (size / 2)
+        Font font = new Font('SansSerif', Font.BOLD, fontSize)
+        g2.setFont(font)
+        FontMetrics metrics = g2.getFontMetrics()
+        int x = (size - metrics.stringWidth(text)) / 2
+        int y = (size - metrics.getHeight()) / 2 + metrics.getAscent()
+        g2.setColor(Color.WHITE)
+        g2.drawString(text, x, y)
+    } finally {
+        g2.dispose()
+    }
+    return image
+}
+
+void writeIcoFile(File output, List<BufferedImage> images) {
+    output.parentFile.mkdirs()
+    List<byte[]> pngImages = images.collect { image ->
+        ByteArrayOutputStream pngBytes = new ByteArrayOutputStream()
+        ImageIO.write(image, 'png', pngBytes)
+        pngBytes.toByteArray()
+    }
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream()
+    writeLeShort(out, 0)
+    writeLeShort(out, 1)
+    writeLeShort(out, pngImages.size())
+
+    int offset = 6 + (16 * pngImages.size())
+    images.eachWithIndex { BufferedImage image, int index ->
+        int width = image.width >= 256 ? 0 : image.width
+        int height = image.height >= 256 ? 0 : image.height
+        byte[] pngBytes = pngImages[index]
+
+        out.write(width)
+        out.write(height)
+        out.write(0)
+        out.write(0)
+        writeLeShort(out, 1)
+        writeLeShort(out, 32)
+        writeLeInt(out, pngBytes.length)
+        writeLeInt(out, offset)
+        offset += pngBytes.length
+    }
+
+    pngImages.each { out.write(it) }
+    output.bytes = out.toByteArray()
+}
+
+void writeLeShort(ByteArrayOutputStream out, int value) {
+    out.write(value & 0xFF)
+    out.write((value >> 8) & 0xFF)
+}
+
+void writeLeInt(ByteArrayOutputStream out, int value) {
+    out.write(value & 0xFF)
+    out.write((value >> 8) & 0xFF)
+    out.write((value >> 16) & 0xFF)
+    out.write((value >> 24) & 0xFF)
 }

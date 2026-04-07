@@ -39,6 +39,8 @@ public class AttributeTableWindow extends JFrame {
     private boolean selectionSyncInProgress = false;
     private final JButton editButton;
     private final JButton applyButton;
+    private final JButton calculatorButton;
+    private final JButton assignValueButton;
     private final List<Class<?>> columnTypes = new ArrayList<>();
 
     public AttributeTableWindow(Layer layer, ShapefileData data, List<String> columnNames, List<Object[]> rows) {
@@ -152,8 +154,8 @@ public class AttributeTableWindow extends JFrame {
         editButton = createIconButton(AppIcons.attrEditIcon(), "Habilitar edición", new Color(234, 179, 8));
         applyButton = createIconButton(AppIcons.attrApplyIcon(), "Aplicar cambios", new Color(16, 185, 129));
         JButton queryButton = createIconButton(AppIcons.identifyIcon(), "Constructor de consultas", new Color(37, 99, 235));
-        JButton calculatorButton = createIconButton(AppIcons.attrCalculatorIcon(), "Calculadora de campos", new Color(139, 92, 246));
-        JButton assignValueButton = createIconButton(AppIcons.attrAssignIcon(), "Asignar valor a un campo", new Color(14, 165, 233));
+        calculatorButton = createIconButton(AppIcons.attrCalculatorIcon(), "Calculadora de campos", new Color(139, 92, 246));
+        assignValueButton = createIconButton(AppIcons.attrAssignIcon(), "Asignar valor a un campo", new Color(14, 165, 233));
         JButton closeButton = createIconButton(AppIcons.attrCloseIcon(), "Cerrar", new Color(107, 114, 128));
 
         copyButton.addActionListener(e -> copySelectedRow());
@@ -255,7 +257,7 @@ public class AttributeTableWindow extends JFrame {
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(Color.WHITE);
-        Font font = new Font("SansSerif", Font.BOLD, "≡".equals(glyph) ? 13 : 14);
+        Font font = new Font("SansSerif", Font.BOLD, "â‰¡".equals(glyph) ? 13 : 14);
         g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
         int x = Math.max(0, (w - fm.stringWidth(glyph)) / 2);
@@ -314,11 +316,28 @@ public class AttributeTableWindow extends JFrame {
 
 
     void openFieldCalculator() {
+        if (isReadOnlyLayer()) {
+            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            return;
+        }
         FieldCalculatorDialog.open(this);
     }
 
     void openAssignValueDialog() {
+        if (isReadOnlyLayer()) {
+            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            return;
+        }
         AssignValueDialog.open(this);
+    }
+
+    private boolean isReadOnlyLayer() {
+        return VectorLayerUtils.isReadOnlyVectorLayer(layer);
+    }
+
+    private String getReadOnlyMessage() {
+        String reason = VectorLayerUtils.getReadOnlyVectorLayerReason(layer);
+        return !reason.isBlank() ? reason : "La capa seleccionada esta en modo lectura.";
     }
 
     int getColumnCountSafe() {
@@ -483,7 +502,7 @@ public class AttributeTableWindow extends JFrame {
         try {
             return formatDoubleLiteral(Double.parseDouble(text));
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("El campo '" + fieldName + "' no es numérico en la fila " + (row + 1) + ".");
+            throw new IllegalArgumentException("El campo '" + fieldName + "' no es numÃ©rico en la fila " + (row + 1) + ".");
         }
     }
 
@@ -537,15 +556,15 @@ public class AttributeTableWindow extends JFrame {
 
     int applyFieldCalculation(int targetColumn, String expression, boolean onlySelectedRow) {
         if (targetColumn < 0 || targetColumn >= rawColumnNames.size()) {
-            throw new IllegalArgumentException("Campo destino inválido.");
+            throw new IllegalArgumentException("Campo destino invÃ¡lido.");
         }
         if (!isColumnEditableByConfig(targetColumn)) {
-            throw new IllegalArgumentException("El campo destino no está marcado como editable.");
+            throw new IllegalArgumentException("El campo destino no estÃ¡ marcado como editable.");
         }
 
         String expr = expression != null ? expression.trim() : "";
         if (expr.isEmpty()) {
-            throw new IllegalArgumentException("La expresión está vacía.");
+            throw new IllegalArgumentException("La expresiÃ³n estÃ¡ vacÃ­a.");
         }
 
         if (table.isEditing()) {
@@ -577,7 +596,7 @@ public class AttributeTableWindow extends JFrame {
 
         applyChanges();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Cálculo aplicado sobre el campo: " + model.getColumnName(targetColumn));
+            CatgisDesktopApp.statusBar.setMessage("CÃ¡lculo aplicado sobre el campo: " + model.getColumnName(targetColumn));
         }
         statusLabel.setText("Calculadora de campos aplicada sobre: " + model.getColumnName(targetColumn));
         return rows.size();
@@ -585,10 +604,10 @@ public class AttributeTableWindow extends JFrame {
 
     int assignConstantValue(int targetColumn, String value, boolean onlySelectedRows) {
         if (targetColumn < 0 || targetColumn >= rawColumnNames.size()) {
-            throw new IllegalArgumentException("Campo destino inválido.");
+            throw new IllegalArgumentException("Campo destino invÃ¡lido.");
         }
         if (!isColumnEditableByConfig(targetColumn)) {
-            throw new IllegalArgumentException("El campo destino no está marcado como editable.");
+            throw new IllegalArgumentException("El campo destino no estÃ¡ marcado como editable.");
         }
 
         List<Integer> rows = new ArrayList<>();
@@ -711,6 +730,10 @@ public class AttributeTableWindow extends JFrame {
     }
 
     private void toggleEditMode() {
+        if (isReadOnlyLayer()) {
+            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            return;
+        }
         if (table.isEditing()) {
             table.getCellEditor().stopCellEditing();
         }
@@ -727,6 +750,21 @@ public class AttributeTableWindow extends JFrame {
     }
 
     private void updateEditControls() {
+        if (isReadOnlyLayer()) {
+            editMode = false;
+            editButton.setToolTipText(getReadOnlyMessage());
+            editButton.setBackground(new Color(107, 114, 128));
+            editButton.setEnabled(false);
+            applyButton.setEnabled(false);
+            applyButton.setBackground(new Color(156, 163, 175));
+            calculatorButton.setEnabled(false);
+            assignValueButton.setEnabled(false);
+            statusLabel.setText(getReadOnlyMessage());
+            return;
+        }
+        editButton.setEnabled(true);
+        calculatorButton.setEnabled(true);
+        assignValueButton.setEnabled(true);
         if (editMode) {
             editButton.setToolTipText("Bloquear edición");
             editButton.setBackground(new Color(217, 119, 6));
@@ -804,6 +842,10 @@ public class AttributeTableWindow extends JFrame {
     }
 
     private void applyChanges() {
+        if (isReadOnlyLayer()) {
+            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            return;
+        }
         if (!editMode) {
             JOptionPane.showMessageDialog(this, "Primero habilitá la edición para poder aplicar cambios.");
             return;
@@ -954,7 +996,7 @@ public class AttributeTableWindow extends JFrame {
                 return Short.parseShort(text);
             }
             if (targetType == Boolean.class || targetType == boolean.class) {
-                return text.equalsIgnoreCase("true") || text.equalsIgnoreCase("si") || text.equalsIgnoreCase("sí") || text.equals("1");
+                return text.equalsIgnoreCase("true") || text.equalsIgnoreCase("si") || text.equalsIgnoreCase("sÃ­") || text.equals("1");
             }
         } catch (Exception ex) {
             throw new IllegalArgumentException(
@@ -1001,7 +1043,7 @@ public class AttributeTableWindow extends JFrame {
             double x = parseExpression();
             skipSpaces();
             if (pos < input.length()) {
-                throw new IllegalArgumentException("Token inválido cerca de: " + input.substring(pos));
+                throw new IllegalArgumentException("Token invÃ¡lido cerca de: " + input.substring(pos));
             }
             return x;
         }
@@ -1039,11 +1081,11 @@ public class AttributeTableWindow extends JFrame {
                 if (eat('*')) x *= parsePower();
                 else if (eat('/')) {
                     double divisor = parsePower();
-                    if (divisor == 0d) throw new IllegalArgumentException("División por cero.");
+                    if (divisor == 0d) throw new IllegalArgumentException("DivisiÃ³n por cero.");
                     x /= divisor;
                 } else if (eat('%')) {
                     double divisor = parsePower();
-                    if (divisor == 0d) throw new IllegalArgumentException("División por cero.");
+                    if (divisor == 0d) throw new IllegalArgumentException("DivisiÃ³n por cero.");
                     x %= divisor;
                 } else return x;
             }
@@ -1067,7 +1109,7 @@ public class AttributeTableWindow extends JFrame {
 
             if (eat('(')) {
                 x = parseExpression();
-                if (!eat(')')) throw new IllegalArgumentException("Falta cerrar paréntesis.");
+                if (!eat(')')) throw new IllegalArgumentException("Falta cerrar parÃ©ntesis.");
                 return x;
             }
 
@@ -1088,7 +1130,7 @@ public class AttributeTableWindow extends JFrame {
                 }
 
                 if (!eat('(')) {
-                    throw new IllegalArgumentException("Función inválida: " + name);
+                    throw new IllegalArgumentException("FunciÃ³n invÃ¡lida: " + name);
                 }
 
                 java.util.List<Double> args = new java.util.ArrayList<>();
@@ -1096,12 +1138,12 @@ public class AttributeTableWindow extends JFrame {
                     do {
                         args.add(parseExpression());
                     } while (eat(','));
-                    if (!eat(')')) throw new IllegalArgumentException("Falta cerrar paréntesis en la función " + name + ".");
+                    if (!eat(')')) throw new IllegalArgumentException("Falta cerrar parÃ©ntesis en la funciÃ³n " + name + ".");
                 }
                 return applyFunction(name, args);
             }
 
-            throw new IllegalArgumentException("Expresión inválida.");
+            throw new IllegalArgumentException("ExpresiÃ³n invÃ¡lida.");
         }
 
         private boolean isIdentifierStart(int c) {
@@ -1131,13 +1173,13 @@ public class AttributeTableWindow extends JFrame {
                 case "pow": requireArgs(name, args, 2); return Math.pow(args.get(0), args.get(1));
                 case "min": requireArgs(name, args, 2); return Math.min(args.get(0), args.get(1));
                 case "max": requireArgs(name, args, 2); return Math.max(args.get(0), args.get(1));
-                default: throw new IllegalArgumentException("Función no soportada: " + name);
+                default: throw new IllegalArgumentException("FunciÃ³n no soportada: " + name);
             }
         }
 
         private void requireArgs(String name, java.util.List<Double> args, int expected) {
             if (args.size() != expected) {
-                throw new IllegalArgumentException("La función " + name + " requiere " + expected + " parámetro(s).");
+                throw new IllegalArgumentException("La funciÃ³n " + name + " requiere " + expected + " parÃ¡metro(s).");
             }
         }
     }

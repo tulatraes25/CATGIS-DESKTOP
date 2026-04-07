@@ -135,6 +135,6 @@ public class PinLayerBuilder {
         int minutes = (int) minFloat;
         double secFloat = (minFloat - minutes) * 60.0;
 
-        return String.format(Locale.US, "%d° %d' %.2f\" %s", degrees, minutes, secFloat, hemi);
+        return String.format(Locale.US, "%d\u00B0 %d' %.2f\" %s", degrees, minutes, secFloat, hemi);
     }
 }

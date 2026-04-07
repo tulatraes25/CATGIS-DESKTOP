@@ -1,6 +1,5 @@
 package ar.com.catgis;
 
-import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JWindow;
 import javax.swing.SwingConstants;
@@ -13,9 +12,6 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
-import java.io.File;
-import java.net.URL;
-
 public class SplashScreenWindow extends JWindow {
 
     private static final int SPLASH_WIDTH = 1100;
@@ -66,28 +62,7 @@ public class SplashScreenWindow extends JWindow {
     }
 
     private Image loadSplashImage() {
-        String[] candidates = {
-                "splash_catgis.png",
-                "imagen de inicio.png",
-                "catgis_splash.png",
-                "catgis_inicio.png"
-        };
-
-        for (String candidate : candidates) {
-            File file = new File(candidate);
-            if (file.exists()) {
-                return new ImageIcon(file.getAbsolutePath()).getImage();
-            }
-        }
-
-        for (String candidate : candidates) {
-            URL url = SplashScreenWindow.class.getResource("/" + candidate);
-            if (url != null) {
-                return new ImageIcon(url).getImage();
-            }
-        }
-
-        return null;
+        return AppBranding.loadSplashImage();
     }
 
     private static class ImagePanel extends JLabel {

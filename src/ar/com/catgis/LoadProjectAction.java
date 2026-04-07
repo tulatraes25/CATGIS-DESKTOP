@@ -24,8 +24,7 @@ public class LoadProjectAction extends AbstractAction {
             return;
         }
 
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Abrir proyecto CATGIS");
+        JFileChooser chooser = FileChooserSupport.createChooser("project-open", "Abrir proyecto CATGIS");
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.setFileFilter(new FileNameExtensionFilter("Proyectos CATGIS (*.catgis)", "catgis"));
 
@@ -35,6 +34,8 @@ public class LoadProjectAction extends AbstractAction {
         }
 
         File file = chooser.getSelectedFile();
+        FileChooserSupport.rememberSelection("project-open", chooser);
+        FileChooserSupport.rememberSelection("project-save", chooser);
 
         if (file == null || !file.getName().toLowerCase().endsWith(".catgis")) {
             JOptionPane.showMessageDialog(null, "Seleccione un archivo .catgis válido.");
@@ -70,6 +71,14 @@ public class LoadProjectAction extends AbstractAction {
                         if (!code.isEmpty()) {
                             loadedProject.setProjectCRS(code);
                         }
+                    }
+                    continue;
+                }
+
+                if (line.startsWith("PROJECT_META|")) {
+                    String[] metaParts = line.split("\\|", -1);
+                    if (metaParts.length >= 3) {
+                        applyProjectMetadata(loadedProject, metaParts[1].trim(), metaParts[2].trim());
                     }
                     continue;
                 }
@@ -142,13 +151,64 @@ public class LoadProjectAction extends AbstractAction {
     }
 
     private static void loadLayerData(Layer layer) {
-        if (layer == null || layer.getPath() == null || layer.getPath().isBlank()) {
+        if (layer == null) {
             return;
         }
 
-        String path = layer.getPath().trim().toLowerCase();
-
+        if (layer instanceof OnlineTileLayer) {
+            CatgisDesktopApp.mapPanel.addOrUpdateOnlineTileLayer((OnlineTileLayer) layer);
+            return;
+        }
+        if (layer instanceof OnlineWmsLayer) {
+            CatgisDesktopApp.mapPanel.addOrUpdateOnlineWmsLayer((OnlineWmsLayer) layer);
+            return;
+        }
         try {
+            if (layer instanceof PostgisLayer) {
+                PostgisConnectionInfo info = PostgisConnectionStore.applyStoredPassword(((PostgisLayer) layer).toConnectionInfo());
+                if (info == null || info.getPassword().isBlank()) {
+                    info = PostgisConnectionStore.promptForPassword(
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            ((PostgisLayer) layer).toConnectionInfo(),
+                            "Ingresá la clave para reconstruir la capa PostGIS guardada en el proyecto."
+                    );
+                    if (info == null) {
+                        return;
+                    }
+                }
+                ShapefileData data = PostgisLoader.loadLayerData((PostgisLayer) layer, info);
+                if (data != null) {
+                    layer.setSourceName(data.getSourceName());
+                    layer.setFeatureCount(data.getFeatureCount());
+                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                }
+                return;
+            }
+            if (layer instanceof GeoPackageLayer) {
+                ShapefileData data = GeoPackageLoader.loadLayerData((GeoPackageLayer) layer);
+                if (data != null) {
+                    layer.setSourceName(data.getSourceName());
+                    layer.setFeatureCount(data.getFeatureCount());
+                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                }
+                return;
+            }
+            if (layer instanceof OnlineWfsLayer) {
+                ShapefileData data = WfsFeatureLoader.loadLayerData((OnlineWfsLayer) layer);
+                if (data != null) {
+                    layer.setSourceName(data.getSourceName());
+                    layer.setFeatureCount(data.getFeatureCount());
+                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                }
+                return;
+            }
+
+            if (layer.getPath() == null || layer.getPath().isBlank()) {
+                return;
+            }
+
+            String path = layer.getPath().trim().toLowerCase();
+
             if (isRasterLayer(layer)) {
                 File rasterFile = new File(layer.getPath());
                 LocalRasterData rasterData;
@@ -208,6 +268,15 @@ public class LoadProjectAction extends AbstractAction {
         } catch (Exception ex) {
             ex.printStackTrace();
             System.out.println("No se pudo cargar la capa desde proyecto: " + layer.getPath());
+            if (layer instanceof PostgisLayer) {
+                JOptionPane.showMessageDialog(
+                        CatgisDesktopApp.getMainFrameSafe(),
+                        "No se pudo reconstruir la capa PostGIS \"" + layer.getName() + "\".\n"
+                                + PostgisErrorSupport.toUserMessage(ex, ((PostgisLayer) layer).toConnectionInfo()),
+                        "PostGIS",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
         }
     }
 
@@ -224,9 +293,31 @@ public class LoadProjectAction extends AbstractAction {
             String name = parts[1].trim();
             String path = parts[2].trim();
 
-            Layer layer = isRasterType(type, path)
-                    ? new RasterLayer(name, path)
-                    : new Layer(name, path, type);
+            Layer layer;
+            if ("ONLINE_TILE".equalsIgnoreCase(type)) {
+                OnlineTileLayer tile = new OnlineTileLayer(name);
+                tile.setPath(path);
+                layer = tile;
+            } else if ("ONLINE_WMS".equalsIgnoreCase(type)) {
+                OnlineWmsLayer wms = new OnlineWmsLayer(name);
+                wms.setPath(path);
+                layer = wms;
+            } else if ("ONLINE_WFS".equalsIgnoreCase(type)) {
+                OnlineWfsLayer wfs = new OnlineWfsLayer(name);
+                wfs.setPath(path);
+                layer = wfs;
+            } else if ("POSTGIS".equalsIgnoreCase(type)) {
+                PostgisLayer postgis = new PostgisLayer(name);
+                postgis.setPath(path);
+                layer = postgis;
+            } else if ("GEOPACKAGE".equalsIgnoreCase(type)) {
+                GeoPackageLayer geoPackage = new GeoPackageLayer(name, path);
+                layer = geoPackage;
+            } else {
+                layer = isRasterType(type, path)
+                        ? new RasterLayer(name, path)
+                        : new Layer(name, path, type);
+            }
 
             if (parts.length > 3) {
                 layer.setVisible(Boolean.parseBoolean(parts[3].trim()));
@@ -293,40 +384,215 @@ public class LoadProjectAction extends AbstractAction {
                 layer.setSourceCRS(parts[12].trim());
             }
 
+            int payloadStart = 13;
+            if (parts.length > 15 && looksLikeStyleSection(parts, 13)) {
+                layer.setPointSymbolStyle(Layer.PointSymbolStyle.fromValue(parts[13].trim()));
+                layer.setLineSymbolStyle(Layer.LineSymbolStyle.fromValue(parts[14].trim()));
+                layer.setPolygonFillStyle(Layer.PolygonFillStyle.fromValue(parts[15].trim()));
+                payloadStart = 16;
+                if (parts.length > 17 && looksLikeThemeSection(parts, 16)) {
+                    layer.getLineCategorizedSymbology().clearRules();
+                    mergeSymbology(layer.getLineCategorizedSymbology(), LayerSymbologyCodec.decodeCategorizedSymbology(parts[16].trim()));
+                    layer.getPolygonCategorizedSymbology().clearRules();
+                    mergeSymbology(layer.getPolygonCategorizedSymbology(), LayerSymbologyCodec.decodeCategorizedSymbology(parts[17].trim()));
+                    payloadStart = 18;
+                }
+            }
+
             if (layer instanceof RasterLayer) {
                 RasterLayer raster = (RasterLayer) layer;
-                if (parts.length > 13) {
+                if (parts.length > payloadStart) {
                     try {
-                        raster.setOpacity(Float.parseFloat(parts[13].trim().replace(",", ".")));
+                        raster.setOpacity(Float.parseFloat(parts[payloadStart].trim().replace(",", ".")));
                     } catch (Exception ignored) {
                     }
                 }
-                if (parts.length > 14) {
-                    raster.setGrayscale(Boolean.parseBoolean(parts[14].trim()));
+                if (parts.length > payloadStart + 1) {
+                    raster.setGrayscale(Boolean.parseBoolean(parts[payloadStart + 1].trim()));
                 }
-                if (parts.length > 15) {
-                    raster.setAutoContrast(Boolean.parseBoolean(parts[15].trim()));
+                if (parts.length > payloadStart + 2) {
+                    raster.setAutoContrast(Boolean.parseBoolean(parts[payloadStart + 2].trim()));
                 }
-                if (parts.length > 16) {
+                if (parts.length > payloadStart + 3) {
                     try {
-                        raster.setRedBand(Integer.parseInt(parts[16].trim()));
+                        raster.setRedBand(Integer.parseInt(parts[payloadStart + 3].trim()));
                     } catch (Exception ignored) {
                     }
                 }
-                if (parts.length > 17) {
+                if (parts.length > payloadStart + 4) {
                     try {
-                        raster.setGreenBand(Integer.parseInt(parts[17].trim()));
+                        raster.setGreenBand(Integer.parseInt(parts[payloadStart + 4].trim()));
                     } catch (Exception ignored) {
                     }
                 }
-                if (parts.length > 18) {
+                if (parts.length > payloadStart + 5) {
                     try {
-                        raster.setBlueBand(Integer.parseInt(parts[18].trim()));
+                        raster.setBlueBand(Integer.parseInt(parts[payloadStart + 5].trim()));
                     } catch (Exception ignored) {
                     }
                 }
-                if (parts.length > 19) {
-                    raster.setRasterMode(parts[19].trim());
+                if (parts.length > payloadStart + 6) {
+                    raster.setRasterMode(parts[payloadStart + 6].trim());
+                }
+            }
+
+            if (layer instanceof OnlineTileLayer) {
+                OnlineTileLayer tile = (OnlineTileLayer) layer;
+                if (parts.length > payloadStart + 7) {
+                    tile.setSourceId(parts[payloadStart + 7].trim());
+                }
+                if (parts.length > payloadStart + 8) {
+                    tile.setProviderName(parts[payloadStart + 8].trim());
+                }
+                if (parts.length > payloadStart + 9) {
+                    tile.setUrlTemplate(parts[payloadStart + 9].trim());
+                }
+                if (parts.length > payloadStart + 10) {
+                    try {
+                        tile.setMinZoom(Integer.parseInt(parts[payloadStart + 10].trim()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (parts.length > payloadStart + 11) {
+                    try {
+                        tile.setMaxZoom(Integer.parseInt(parts[payloadStart + 11].trim()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (parts.length > payloadStart + 12) {
+                    tile.setAttribution(parts[payloadStart + 12].trim());
+                }
+                if (parts.length > payloadStart + 13) {
+                    tile.setTermsUrl(parts[payloadStart + 13].trim());
+                }
+                if (parts.length > payloadStart + 14) {
+                    tile.setRequiresApiKey(Boolean.parseBoolean(parts[payloadStart + 14].trim()));
+                }
+            }
+
+            if (layer instanceof OnlineWmsLayer) {
+                OnlineWmsLayer wms = (OnlineWmsLayer) layer;
+                if (parts.length > payloadStart + 7) {
+                    wms.setSourceId(parts[payloadStart + 7].trim());
+                }
+                if (parts.length > payloadStart + 8) {
+                    wms.setProviderName(parts[payloadStart + 8].trim());
+                }
+                if (parts.length > payloadStart + 9) {
+                    wms.setServiceUrl(parts[payloadStart + 9].trim());
+                }
+                if (parts.length > payloadStart + 10) {
+                    wms.setLayerNames(parts[payloadStart + 10].trim());
+                }
+                if (parts.length > payloadStart + 11) {
+                    wms.setStyleNames(parts[payloadStart + 11].trim());
+                }
+                if (parts.length > payloadStart + 12) {
+                    wms.setRequestCrs(parts[payloadStart + 12].trim());
+                }
+                if (parts.length > payloadStart + 13) {
+                    wms.setVersion(parts[payloadStart + 13].trim());
+                }
+                if (parts.length > payloadStart + 14) {
+                    wms.setImageFormat(parts[payloadStart + 14].trim());
+                }
+                if (parts.length > payloadStart + 15) {
+                    wms.setTransparent(Boolean.parseBoolean(parts[payloadStart + 15].trim()));
+                }
+                if (parts.length > payloadStart + 16) {
+                    wms.setAttribution(parts[payloadStart + 16].trim());
+                }
+                if (parts.length > payloadStart + 17) {
+                    wms.setTermsUrl(parts[payloadStart + 17].trim());
+                }
+                String extentCrs = parts.length > payloadStart + 18 ? parts[payloadStart + 18].trim() : "";
+                if (parts.length > payloadStart + 22) {
+                    try {
+                        double minX = Double.parseDouble(parts[payloadStart + 19].trim().replace(",", "."));
+                        double minY = Double.parseDouble(parts[payloadStart + 20].trim().replace(",", "."));
+                        double maxX = Double.parseDouble(parts[payloadStart + 21].trim().replace(",", "."));
+                        double maxY = Double.parseDouble(parts[payloadStart + 22].trim().replace(",", "."));
+                        wms.setExtent(minX, minY, maxX, maxY, extentCrs);
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+
+            if (layer instanceof OnlineWfsLayer) {
+                OnlineWfsLayer wfs = (OnlineWfsLayer) layer;
+                if (parts.length > payloadStart) {
+                    wfs.setProviderName(parts[payloadStart].trim());
+                }
+                if (parts.length > payloadStart + 1) {
+                    wfs.setServiceUrl(parts[payloadStart + 1].trim());
+                }
+                if (parts.length > payloadStart + 2) {
+                    wfs.setTypeName(parts[payloadStart + 2].trim());
+                }
+                if (parts.length > payloadStart + 3) {
+                    wfs.setTypeTitle(parts[payloadStart + 3].trim());
+                }
+                if (parts.length > payloadStart + 4) {
+                    wfs.setRequestCrs(parts[payloadStart + 4].trim());
+                }
+                if (parts.length > payloadStart + 5) {
+                    wfs.setVersion(parts[payloadStart + 5].trim());
+                }
+                if (parts.length > payloadStart + 6) {
+                    wfs.setReadOnly(Boolean.parseBoolean(parts[payloadStart + 6].trim()));
+                }
+            }
+
+            if (layer instanceof GeoPackageLayer) {
+                GeoPackageLayer geoPackage = (GeoPackageLayer) layer;
+                if (parts.length > payloadStart) {
+                    geoPackage.setTableName(parts[payloadStart].trim());
+                }
+                if (parts.length > payloadStart + 1) {
+                    geoPackage.setIdentifier(parts[payloadStart + 1].trim());
+                }
+                if (parts.length > payloadStart + 2) {
+                    geoPackage.setDescription(parts[payloadStart + 2].trim());
+                }
+                if (parts.length > payloadStart + 3) {
+                    geoPackage.setGeometryTypeLabel(parts[payloadStart + 3].trim());
+                }
+                if (parts.length > payloadStart + 4) {
+                    geoPackage.setReadOnly(Boolean.parseBoolean(parts[payloadStart + 4].trim()));
+                }
+            }
+
+            if (layer instanceof PostgisLayer) {
+                PostgisLayer postgis = (PostgisLayer) layer;
+                if (parts.length > payloadStart) {
+                    postgis.setHost(parts[payloadStart].trim());
+                }
+                if (parts.length > payloadStart + 1) {
+                    try {
+                        postgis.setPort(Integer.parseInt(parts[payloadStart + 1].trim()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                if (parts.length > payloadStart + 2) {
+                    postgis.setDatabaseName(parts[payloadStart + 2].trim());
+                }
+                if (parts.length > payloadStart + 3) {
+                    postgis.setSchemaName(parts[payloadStart + 3].trim());
+                }
+                if (parts.length > payloadStart + 4) {
+                    postgis.setUserName(parts[payloadStart + 4].trim());
+                }
+                if (parts.length > payloadStart + 5) {
+                    postgis.setTypeName(parts[payloadStart + 5].trim());
+                }
+                if (parts.length > payloadStart + 6) {
+                    postgis.setTableName(parts[payloadStart + 6].trim());
+                }
+                if (parts.length > payloadStart + 7) {
+                    postgis.setGeometryTypeLabel(parts[payloadStart + 7].trim());
+                }
+                if (parts.length > payloadStart + 8) {
+                    postgis.setReadOnly(Boolean.parseBoolean(parts[payloadStart + 8].trim()));
                 }
             }
 
@@ -334,6 +600,25 @@ public class LoadProjectAction extends AbstractAction {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        }
+    }
+
+    private static void applyProjectMetadata(Project project, String key, String value) {
+        if (project == null || key == null) {
+            return;
+        }
+        switch (key) {
+            case "STUDY_NAME" -> project.setStudyName(value);
+            case "COMPANY_NAME" -> project.setCompanyName(value);
+            case "CARTOGRAPHER_NAME" -> project.setCartographerName(value);
+            case "IMAGE_SOURCE" -> project.setImageSource(value);
+            case "COORDINATE_REFERENCE" -> project.setCoordinateReference(value);
+            case "LEGEND_TITLE" -> project.setLegendTitle(value);
+            case "LEGEND_SUBTITLE" -> project.setLegendSubtitle(value);
+            case "LOGO_PATH" -> project.setLogoPath(value);
+            case "LAYOUT_IMAGE_PATH" -> project.setLayoutImagePath(value);
+            default -> {
+            }
         }
     }
 
@@ -364,9 +649,62 @@ public class LoadProjectAction extends AbstractAction {
         return null;
     }
 
+    private static boolean looksLikeStyleSection(String[] parts, int start) {
+        if (parts == null || parts.length <= start + 2) {
+            return false;
+        }
+        return isPointStyle(parts[start]) && isLineStyle(parts[start + 1]) && isPolygonStyle(parts[start + 2]);
+    }
+
+    private static boolean looksLikeThemeSection(String[] parts, int start) {
+        if (parts == null || parts.length <= start + 1) {
+            return false;
+        }
+        return isEncodedTheme(parts[start]) || isEncodedTheme(parts[start + 1]);
+    }
+
+    private static boolean isEncodedTheme(String value) {
+        return value != null && ("-".equals(value.trim()) || value.contains("~"));
+    }
+
+    private static void mergeSymbology(CategorizedSymbology target, CategorizedSymbology source) {
+        if (target == null || source == null) {
+            return;
+        }
+        target.setFieldName(source.getFieldName());
+        target.setLegendTitle(source.getLegendTitle());
+        target.setLegendSubtitle(source.getLegendSubtitle());
+        target.getRules().clear();
+        target.getRules().putAll(source.getRules());
+    }
+
+    private static boolean isPointStyle(String value) {
+        return enumContains(Layer.PointSymbolStyle.values(), value);
+    }
+
+    private static boolean isLineStyle(String value) {
+        return enumContains(Layer.LineSymbolStyle.values(), value);
+    }
+
+    private static boolean isPolygonStyle(String value) {
+        return enumContains(Layer.PolygonFillStyle.values(), value);
+    }
+
+    private static <E extends Enum<E>> boolean enumContains(E[] values, String value) {
+        if (value == null) {
+            return false;
+        }
+        for (E enumValue : values) {
+            if (enumValue.name().equalsIgnoreCase(value.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isRasterType(String type, String path) {
         String t = type != null ? type.trim().toUpperCase() : "";
-        if (t.contains("RASTER")) {
+        if (t.contains("RASTER") || t.contains("ONLINE_TILE") || t.contains("ONLINE_WMS")) {
             return true;
         }
         String p = path != null ? path.trim().toLowerCase() : "";

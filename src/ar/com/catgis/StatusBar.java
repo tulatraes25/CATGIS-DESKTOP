@@ -29,11 +29,11 @@ public class StatusBar extends JPanel {
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         leftPanel.setOpaque(false);
 
-        messageDotLabel = new JLabel("●");
+        messageDotLabel = new JLabel("\u25CF");
         messageDotLabel.setForeground(new Color(32, 158, 82));
         messageDotLabel.setFont(messageDotLabel.getFont().deriveFont(Font.BOLD, 11f));
 
-        messageLabel = new JLabel("Listo");
+        messageLabel = new JLabel(I18n.t("Listo"));
         messageLabel.setFont(messageLabel.getFont().deriveFont(Font.PLAIN, 11.5f));
         messageLabel.setForeground(new Color(45, 55, 72));
 
@@ -63,13 +63,13 @@ public class StatusBar extends JPanel {
     }
 
     public void setMessage(String message) {
-        String text = message != null && !message.isBlank() ? message : "Listo";
+        String text = message != null && !message.isBlank() ? message : I18n.t("Listo");
         messageLabel.setText(text);
 
         String lower = text.toLowerCase();
         if (lower.contains("error")) {
             messageDotLabel.setForeground(new Color(220, 38, 38));
-        } else if (lower.contains("advert") || lower.contains("aviso") || lower.contains("atención")) {
+        } else if (lower.contains("advert") || lower.contains("aviso") || lower.contains("atenci\u00F3n")) {
             messageDotLabel.setForeground(new Color(234, 179, 8));
         } else {
             messageDotLabel.setForeground(new Color(32, 158, 82));

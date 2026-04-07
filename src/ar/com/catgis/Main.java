@@ -8,6 +8,8 @@ public class Main {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             installLookAndFeel();
+            I18n.initialize();
+            AppBranding.applyTaskbarIcon();
 
             SplashScreenWindow splash = new SplashScreenWindow();
             splash.showFor(2800, () -> {

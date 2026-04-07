@@ -12,10 +12,10 @@ public class AddLayerDialog extends JDialog {
     private final JButton browseButton;
     private final JButton acceptButton;
     private final JButton cancelButton;
-    private File selectedFile;
+    private File[] selectedFiles = new File[0];
 
     private AddLayerDialog(Window owner) {
-        super(owner, "Cargar datos", ModalityType.APPLICATION_MODAL);
+        super(owner, I18n.t("Cargar datos"), ModalityType.APPLICATION_MODAL);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
@@ -26,29 +26,30 @@ public class AddLayerDialog extends JDialog {
         gc.anchor = GridBagConstraints.WEST;
         gc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel formatLabel = new JLabel("Formato:");
+        JLabel formatLabel = new JLabel(I18n.t("Formato:"));
         formatCombo = new JComboBox<>(new FormatOption[]{
-                new FormatOption("Fichero shape", "shp"),
-                new FormatOption("GeoJSON", "geojson"),
-                new FormatOption("KML", "kml"),
-                new FormatOption("Fichero de imagen", "image"),
-                new FormatOption("Ficheros DXF", "dxf"),
-                new FormatOption("Todos los soportados", "all")
+                new FormatOption(I18n.t("Fichero shape"), "shp"),
+                new FormatOption(I18n.t("GeoPackage"), "gpkg"),
+                new FormatOption(I18n.t("GeoJSON"), "geojson"),
+                new FormatOption(I18n.t("KML"), "kml"),
+                new FormatOption(I18n.t("Fichero de imagen"), "image"),
+                new FormatOption(I18n.t("Ficheros DXF"), "dxf"),
+                new FormatOption(I18n.t("Todos los soportados"), "all")
         });
 
-        JLabel fileLabel = new JLabel("Archivo:");
+        JLabel fileLabel = new JLabel(I18n.t("Archivo:"));
         selectedFileField = new JTextField();
         selectedFileField.setEditable(false);
 
-        browseButton = new JButton("Buscar...");
+        browseButton = new JButton(I18n.t("Buscar..."));
         browseButton.addActionListener(e -> chooseFile());
 
-        JLabel hintLabel = new JLabel("<html><span style='color:#555555'>Selecciona el formato y luego el archivo a incorporar al proyecto actual.</span></html>");
+        JLabel hintLabel = new JLabel("<html><span style='color:#555555'>" + I18n.t("Selecciona el formato y luego el archivo a incorporar al proyecto actual.") + "</span></html>");
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        acceptButton = new JButton("Aceptar");
+        acceptButton = new JButton(I18n.t("Aceptar"));
         acceptButton.addActionListener(e -> onAccept());
-        cancelButton = new JButton("Cancelar");
+        cancelButton = new JButton(I18n.t("Cancelar"));
         cancelButton.addActionListener(e -> dispose());
         buttonPanel.add(acceptButton);
         buttonPanel.add(cancelButton);
@@ -71,7 +72,7 @@ public class AddLayerDialog extends JDialog {
         add(content, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
 
-        getRootPane().setDefaultButton(acceptButton);
+        DialogKeyboardSupport.install(this, acceptButton, this::dispose);
         setResizable(false);
         pack();
         setSize(Math.max(getWidth(), 640), getHeight());
@@ -84,76 +85,98 @@ public class AddLayerDialog extends JDialog {
     }
 
     private void chooseFile() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Cargar datos");
+        JFileChooser chooser = FileChooserSupport.createChooser("open-layer-data", "Cargar datos");
         chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setMultiSelectionEnabled(true);
 
         FormatOption selected = (FormatOption) formatCombo.getSelectedItem();
         if (selected == null) {
-            selected = new FormatOption("Todos los soportados", "all");
+            selected = new FormatOption(I18n.t("Todos los soportados"), "all");
         }
 
         configureChooserForFormat(chooser, selected);
 
         int result = chooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            selectedFile = chooser.getSelectedFile();
-            selectedFileField.setText(selectedFile != null ? selectedFile.getAbsolutePath() : "");
+            File[] files = chooser.getSelectedFiles();
+            if (files == null || files.length == 0) {
+                File file = chooser.getSelectedFile();
+                files = file != null ? new File[]{file} : new File[0];
+            }
+            if (files.length > 0) {
+                selectedFiles = files;
+                FileChooserSupport.rememberSelection("open-layer-data", chooser);
+                selectedFileField.setText(buildSelectionLabel(files));
+            }
         }
     }
 
     private void onAccept() {
-        if (selectedFile == null) {
-            JOptionPane.showMessageDialog(this, "Primero selecciona un archivo.", "Cargar datos", JOptionPane.WARNING_MESSAGE);
+        if (selectedFiles.length == 0) {
+            JOptionPane.showMessageDialog(this, I18n.t("Primero selecciona uno o varios archivos."), I18n.t("Cargar datos"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         FormatOption selected = (FormatOption) formatCombo.getSelectedItem();
         if (selected == null) {
-            JOptionPane.showMessageDialog(this, "No se pudo determinar el formato seleccionado.", "Cargar datos", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.t("No se pudo determinar el formato seleccionado."), I18n.t("Cargar datos"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        boolean loaded = OpenFileAction.openSelectedFile(selectedFile, selected.key, this);
+        boolean loaded = OpenFileAction.openSelectedFiles(selectedFiles, selected.key, this);
         if (loaded) {
             dispose();
         }
     }
 
+    private String buildSelectionLabel(File[] files) {
+        if (files == null || files.length == 0) {
+            return "";
+        }
+        if (files.length == 1) {
+            return files[0].getAbsolutePath();
+        }
+        return I18n.format("{0} archivos seleccionados | {1}", files.length, files[0].getName());
+    }
+
     private void configureChooserForFormat(JFileChooser chooser, FormatOption option) {
         switch (option.key) {
             case "shp":
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("Fichero shape (*.shp)", "shp"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Fichero shape (*.shp)"), "shp"));
+                break;
+            case "gpkg":
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoPackage (*.gpkg)"), "gpkg"));
                 break;
             case "geojson":
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson, *.json)", "geojson", "json"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoJSON (*.geojson, *.json)"), "geojson", "json"));
                 break;
             case "kml":
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("KML (*.kml)", "kml"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML (*.kml)"), "kml"));
                 break;
             case "image":
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
-                        "Fichero de imagen (*.tif, *.tiff, *.img, *.jpg, *.jpeg, *.png, *.bmp, *.gif)",
-                        "tif", "tiff", "img", "jpg", "jpeg", "png", "bmp", "gif"
+                        I18n.t("Fichero raster (*.tif, *.tiff, *.img, *.asc, *.jpg, *.jpeg, *.png, *.bmp, *.gif)"),
+                        "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif"
                 ));
                 break;
             case "dxf":
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("Ficheros DXF (*.dxf)", "dxf"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Ficheros DXF (*.dxf)"), "dxf"));
                 break;
             case "all":
             default:
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
-                        "Todos los archivos GIS soportados",
-                        "shp", "geojson", "json", "kml", "tif", "tiff", "img", "jpg", "jpeg", "png", "bmp", "gif", "dxf"
+                        I18n.t("Todos los archivos GIS soportados"),
+                        "shp", "gpkg", "geojson", "json", "kml", "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif", "dxf"
                 ));
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("Fichero shape (*.shp)", "shp"));
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson, *.json)", "geojson", "json"));
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("KML (*.kml)", "kml"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Fichero shape (*.shp)"), "shp"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoPackage (*.gpkg)"), "gpkg"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoJSON (*.geojson, *.json)"), "geojson", "json"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML (*.kml)"), "kml"));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
-                        "Fichero de imagen (*.tif, *.tiff, *.img, *.jpg, *.jpeg, *.png, *.bmp, *.gif)",
-                        "tif", "tiff", "img", "jpg", "jpeg", "png", "bmp", "gif"
+                        I18n.t("Fichero raster (*.tif, *.tiff, *.img, *.asc, *.jpg, *.jpeg, *.png, *.bmp, *.gif)"),
+                        "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif"
                 ));
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter("Ficheros DXF (*.dxf)", "dxf"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Ficheros DXF (*.dxf)"), "dxf"));
                 break;
         }
     }

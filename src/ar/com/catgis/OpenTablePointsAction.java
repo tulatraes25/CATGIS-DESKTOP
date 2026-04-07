@@ -9,8 +9,7 @@ import java.util.List;
 public class OpenTablePointsAction {
 
     public static void openTablePoints() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Abrir tabla de coordenadas");
+        JFileChooser chooser = FileChooserSupport.createChooser("table-open", "Abrir tabla de coordenadas");
         chooser.setAcceptAllFileFilterUsed(true);
 
         FileNameExtensionFilter allTables = new FileNameExtensionFilter(
@@ -37,6 +36,7 @@ public class OpenTablePointsAction {
         }
 
         File file = chooser.getSelectedFile();
+        FileChooserSupport.rememberSelection("table-open", chooser);
         if (file == null) {
             return;
         }

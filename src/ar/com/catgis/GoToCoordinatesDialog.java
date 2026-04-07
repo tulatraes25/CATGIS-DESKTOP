@@ -69,7 +69,7 @@ public class GoToCoordinatesDialog extends JDialog {
         JLabel title = new JLabel("Buscar por coordenadas");
         title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD, 16f));
 
-        JLabel subtitle = new JLabel("<html><span style='color:#555555'>Centrá el mapa ingresando coordenadas planas, geográficas en decimal o en grados, minutos y segundos.</span></html>");
+        JLabel subtitle = new JLabel("<html><span style='color:#555555'>CentrÃ¡ el mapa ingresando coordenadas planas, geogrÃ¡ficas en decimal o en grados, minutos y segundos.</span></html>");
         subtitle.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
         north.add(title);
@@ -134,7 +134,7 @@ public class GoToCoordinatesDialog extends JDialog {
         JPanel latPanel = new JPanel(new GridLayout(1, 8, 6, 6));
         latPanel.add(new JLabel("Lat"));
         latPanel.add(latDegField);
-        latPanel.add(new JLabel("°"));
+        latPanel.add(new JLabel("\u00B0"));
         latPanel.add(latMinField);
         latPanel.add(new JLabel("'"));
         latPanel.add(latSecField);
@@ -144,7 +144,7 @@ public class GoToCoordinatesDialog extends JDialog {
         JPanel lonPanel = new JPanel(new GridLayout(1, 8, 6, 6));
         lonPanel.add(new JLabel("Lon"));
         lonPanel.add(lonDegField);
-        lonPanel.add(new JLabel("°"));
+        lonPanel.add(new JLabel("\u00B0"));
         lonPanel.add(lonMinField);
         lonPanel.add(new JLabel("'"));
         lonPanel.add(lonSecField);
@@ -165,7 +165,7 @@ public class GoToCoordinatesDialog extends JDialog {
                 double y = parseNumber(planarYField.getText(), "Y");
                 String sourceCrs = planarCrsField.getText().trim();
                 if (sourceCrs.isEmpty()) {
-                    throw new IllegalArgumentException("Ingresá el CRS de las coordenadas planas.");
+                    throw new IllegalArgumentException("IngresÃ¡ el CRS de las coordenadas planas.");
                 }
                 projectXY = transformToProject(x, y, sourceCrs);
 
@@ -201,12 +201,12 @@ public class GoToCoordinatesDialog extends JDialog {
     private double parseNumber(String text, String label) {
         String clean = text != null ? text.trim().replace(",", ".") : "";
         if (clean.isEmpty()) {
-            throw new IllegalArgumentException("Ingresá " + label + ".");
+            throw new IllegalArgumentException("IngresÃ¡ " + label + ".");
         }
         try {
             return Double.parseDouble(clean);
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Valor inválido para " + label + ".");
+            throw new IllegalArgumentException("Valor invÃ¡lido para " + label + ".");
         }
     }
 

@@ -39,12 +39,12 @@ public class CRSSelectorDialog extends JDialog {
         JPanel topPanel = new JPanel(new BorderLayout(6, 6));
 
         JPanel searchPanel = new JPanel(new BorderLayout(6, 6));
-        searchPanel.add(new JLabel("Buscar CRS (nombre o EPSG):"), BorderLayout.NORTH);
+        searchPanel.add(new JLabel(I18n.t("Buscar CRS (nombre o EPSG):")), BorderLayout.NORTH);
         txtSearch = new JTextField();
         searchPanel.add(txtSearch, BorderLayout.CENTER);
 
         JPanel manualPanel = new JPanel(new BorderLayout(6, 6));
-        manualPanel.add(new JLabel("Ingresar manualmente (ej: EPSG:22182 o 22182):"), BorderLayout.NORTH);
+        manualPanel.add(new JLabel(I18n.t("Ingresar manualmente (ej: EPSG:22182 o 22182):")), BorderLayout.NORTH);
         txtManualEPSG = new JTextField();
         if (currentCode != null && !currentCode.isBlank()) {
             txtManualEPSG.setText(CRSDefinitions.normalizeCode(currentCode));
@@ -61,9 +61,9 @@ public class CRSSelectorDialog extends JDialog {
         JScrollPane scrollPane = new JScrollPane(crsList);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnApplySelected = new JButton("Aplicar selección");
-        JButton btnApplyManual = new JButton("Aplicar manual");
-        JButton btnCancel = new JButton("Cancelar");
+        JButton btnApplySelected = new JButton(I18n.t("Aplicar seleccion"));
+        JButton btnApplyManual = new JButton(I18n.t("Aplicar manual"));
+        JButton btnCancel = new JButton(I18n.t("Cancelar"));
 
         btnApplySelected.addActionListener(e -> applySelected());
         btnApplyManual.addActionListener(e -> applyManual());
@@ -118,13 +118,13 @@ public class CRSSelectorDialog extends JDialog {
     private void applySelected() {
         String selectedLabel = crsList.getSelectedValue();
         if (selectedLabel == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un CRS de la lista.");
+            JOptionPane.showMessageDialog(this, I18n.t("Seleccione un CRS de la lista."));
             return;
         }
 
         String code = CRSDefinitions.createCRSMap().get(selectedLabel);
         if (code == null || code.isBlank()) {
-            JOptionPane.showMessageDialog(this, "No se pudo determinar el EPSG seleccionado.");
+            JOptionPane.showMessageDialog(this, I18n.t("No se pudo determinar el EPSG seleccionado."));
             return;
         }
 
@@ -139,7 +139,7 @@ public class CRSSelectorDialog extends JDialog {
         String manual = CRSDefinitions.normalizeCode(txtManualEPSG.getText());
 
         if (manual.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Ingrese un código EPSG.");
+            JOptionPane.showMessageDialog(this, I18n.t("Ingrese un codigo EPSG."));
             return;
         }
 

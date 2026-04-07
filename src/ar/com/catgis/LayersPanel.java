@@ -232,6 +232,7 @@ public class LayersPanel extends JPanel {
 
     private JPopupMenu buildVectorPopup(Layer selectedLayer) {
         JPopupMenu popupMenu = new JPopupMenu();
+        boolean readOnlyVector = VectorLayerUtils.isReadOnlyVectorLayer(selectedLayer);
 
         JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.propertiesIcon());
         propertiesItem.setEnabled(false);
@@ -240,7 +241,8 @@ public class LayersPanel extends JPanel {
 
         addCommonTopItems(popupMenu, selectedLayer, "Ocultar capa", "Mostrar capa");
 
-        JMenuItem editItem = createMenuItem("Editar vector", AppIcons.attrEditIcon());
+        JMenuItem editItem = createMenuItem(readOnlyVector ? "Capa en solo lectura" : "Editar vector", AppIcons.attrEditIcon());
+        editItem.setEnabled(!readOnlyVector);
         editItem.addActionListener(ev -> openVectorEditing(selectedLayer));
         popupMenu.add(editItem);
 
@@ -285,6 +287,20 @@ public class LayersPanel extends JPanel {
         exportItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
         advancedMenu.add(exportItem);
 
+        if (selectedLayer instanceof OnlineWfsLayer) {
+            JMenuItem infoItem = createMenuItem("Informacion del servicio...", AppIcons.propertiesIcon());
+            infoItem.addActionListener(ev -> showOnlineWfsInfo((OnlineWfsLayer) selectedLayer));
+            advancedMenu.add(infoItem);
+        } else if (selectedLayer instanceof PostgisLayer) {
+            JMenuItem infoItem = createMenuItem("Informacion PostGIS...", AppIcons.propertiesIcon());
+            infoItem.addActionListener(ev -> showPostgisInfo((PostgisLayer) selectedLayer));
+            advancedMenu.add(infoItem);
+        } else if (selectedLayer instanceof GeoPackageLayer) {
+            JMenuItem infoItem = createMenuItem("Informacion GeoPackage...", AppIcons.propertiesIcon());
+            infoItem.addActionListener(ev -> showGeoPackageInfo((GeoPackageLayer) selectedLayer));
+            advancedMenu.add(infoItem);
+        }
+
         JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
         renameItem.addActionListener(ev -> renameLayer(selectedLayer));
         advancedMenu.add(renameItem);
@@ -310,6 +326,10 @@ public class LayersPanel extends JPanel {
     }
 
     private JPopupMenu buildRasterPopup(Layer selectedLayer) {
+        if (selectedLayer instanceof OnlineTileLayer || selectedLayer instanceof OnlineWmsLayer) {
+            return buildOnlineRasterPopup(selectedLayer);
+        }
+
         JPopupMenu popupMenu = new JPopupMenu();
 
         JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.propertiesIcon());
@@ -347,6 +367,10 @@ public class LayersPanel extends JPanel {
         realItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_REAL));
         popupMenu.add(realItem);
 
+        JMenuItem contourItem = createMenuItem(I18n.t("Generar curvas de nivel..."), AppIcons.propertiesIcon());
+        contourItem.addActionListener(ev -> ContourGenerationDialog.open(selectedLayer));
+        popupMenu.add(contourItem);
+
         JMenu advancedMenu = new JMenu("Configuracion avanzada");
         advancedMenu.setIcon(AppIcons.crsIcon());
 
@@ -357,6 +381,33 @@ public class LayersPanel extends JPanel {
         JMenuItem setCRSItem = createMenuItem("Definir CRS de capa", AppIcons.crsIcon());
         setCRSItem.addActionListener(ev -> defineLayerCRS(selectedLayer));
         advancedMenu.add(setCRSItem);
+
+        JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
+        renameItem.addActionListener(ev -> renameLayer(selectedLayer));
+        advancedMenu.add(renameItem);
+
+        popupMenu.add(advancedMenu);
+        popupMenu.addSeparator();
+        addCommonBottomItems(popupMenu, selectedLayer);
+        return popupMenu;
+    }
+
+    private JPopupMenu buildOnlineRasterPopup(Layer selectedLayer) {
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.propertiesIcon());
+        propertiesItem.setEnabled(false);
+        popupMenu.add(propertiesItem);
+        popupMenu.addSeparator();
+
+        addCommonTopItems(popupMenu, selectedLayer, "Ocultar capa online", "Mostrar capa online");
+
+        JMenuItem infoItem = createMenuItem("Informacion de servicio...", AppIcons.propertiesIcon());
+        infoItem.addActionListener(ev -> showRasterInfo(selectedLayer));
+        popupMenu.add(infoItem);
+
+        JMenu advancedMenu = new JMenu("Configuracion");
+        advancedMenu.setIcon(AppIcons.crsIcon());
 
         JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
         renameItem.addActionListener(ev -> renameLayer(selectedLayer));
@@ -599,6 +650,19 @@ public class LayersPanel extends JPanel {
     }
 
     private void showRasterInfo(Layer layer) {
+        if (layer instanceof OnlineTileLayer) {
+            showOnlineTileInfo((OnlineTileLayer) layer);
+            return;
+        }
+        if (layer instanceof OnlineWmsLayer) {
+            showOnlineWmsInfo((OnlineWmsLayer) layer);
+            return;
+        }
+        if (layer instanceof OnlineWfsLayer) {
+            showOnlineWfsInfo((OnlineWfsLayer) layer);
+            return;
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append("Capa: ").append(layer.getName()).append("\n");
         sb.append("Tipo: Raster\n");
@@ -891,6 +955,101 @@ public class LayersPanel extends JPanel {
         }
     }
 
+    private void showOnlineTileInfo(OnlineTileLayer layer) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(layer.getName()).append("\n");
+        sb.append("Tipo: Mapa base online\n");
+        sb.append("Proveedor: ").append(layer.getProviderName() != null && !layer.getProviderName().isBlank() ? layer.getProviderName() : "-").append("\n");
+        sb.append("Servicio: ").append(layer.getServiceType()).append("\n");
+        sb.append("CRS origen: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "-").append("\n");
+        sb.append("Zoom soportado: ").append(layer.getMinZoom()).append(" - ").append(layer.getMaxZoom()).append("\n");
+        sb.append("Plantilla URL: ").append(layer.getUrlTemplate() != null && !layer.getUrlTemplate().isBlank() ? layer.getUrlTemplate() : "-").append("\n");
+        sb.append("Atribucion: ").append(layer.getAttribution() != null && !layer.getAttribution().isBlank() ? layer.getAttribution() : "-").append("\n");
+        if (layer.getTermsUrl() != null && !layer.getTermsUrl().isBlank()) {
+            sb.append("Referencia: ").append(layer.getTermsUrl()).append("\n");
+        }
+        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion mapa base online", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showOnlineWmsInfo(OnlineWmsLayer layer) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(layer.getName()).append("\n");
+        sb.append("Tipo: WMS remoto\n");
+        sb.append("Proveedor: ").append(layer.getProviderName() != null && !layer.getProviderName().isBlank() ? layer.getProviderName() : "-").append("\n");
+        sb.append("Servicio: ").append(layer.getServiceUrl() != null && !layer.getServiceUrl().isBlank() ? layer.getServiceUrl() : "-").append("\n");
+        sb.append("Capas: ").append(layer.getLayerNames() != null && !layer.getLayerNames().isBlank() ? layer.getLayerNames() : "-").append("\n");
+        sb.append("CRS pedido: ").append(layer.getRequestCrs() != null && !layer.getRequestCrs().isBlank() ? layer.getRequestCrs() : "-").append("\n");
+        sb.append("Formato: ").append(layer.getImageFormat() != null && !layer.getImageFormat().isBlank() ? layer.getImageFormat() : "-").append("\n");
+        sb.append("Version WMS: ").append(layer.getVersion() != null && !layer.getVersion().isBlank() ? layer.getVersion() : "-").append("\n");
+        if (layer.getStyleNames() != null && !layer.getStyleNames().isBlank()) {
+            sb.append("Estilos: ").append(layer.getStyleNames()).append("\n");
+        }
+        if (layer.getAttribution() != null && !layer.getAttribution().isBlank()) {
+            sb.append("Atribucion: ").append(layer.getAttribution()).append("\n");
+        }
+        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion WMS", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showOnlineWfsInfo(OnlineWfsLayer layer) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(layer.getName()).append("\n");
+        sb.append("Tipo: WFS remoto\n");
+        sb.append("Proveedor: ").append(layer.getProviderName() != null && !layer.getProviderName().isBlank() ? layer.getProviderName() : "-").append("\n");
+        sb.append("Servicio: ").append(layer.getServiceUrl() != null && !layer.getServiceUrl().isBlank() ? layer.getServiceUrl() : "-").append("\n");
+        sb.append("Feature type: ").append(layer.getTypeName() != null && !layer.getTypeName().isBlank() ? layer.getTypeName() : "-").append("\n");
+        if (layer.getTypeTitle() != null && !layer.getTypeTitle().isBlank()) {
+            sb.append("Titulo: ").append(layer.getTypeTitle()).append("\n");
+        }
+        sb.append("CRS pedido: ").append(layer.getRequestCrs() != null && !layer.getRequestCrs().isBlank() ? layer.getRequestCrs() : "-").append("\n");
+        sb.append("Version WFS: ").append(layer.getVersion() != null && !layer.getVersion().isBlank() ? layer.getVersion() : "-").append("\n");
+        sb.append("Modo: ").append(layer.isReadOnly() ? "Solo lectura" : "Editable").append("\n");
+        sb.append("Elementos cargados: ").append(layer.getFeatureCount()).append("\n");
+        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion WFS", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showPostgisInfo(PostgisLayer layer) {
+        String geometryLabel = layer.getGeometryTypeLabel();
+        if (geometryLabel == null || geometryLabel.isBlank()) {
+            geometryLabel = layer.getType() != null ? layer.getType() : "-";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(layer.getName()).append("\n");
+        sb.append("Tipo: PostGIS\n");
+        sb.append("Conexion: ").append(layer.getHost() != null && !layer.getHost().isBlank() ? layer.getHost() : "-").append(":").append(layer.getPort()).append("\n");
+        sb.append("Base: ").append(layer.getDatabaseName() != null && !layer.getDatabaseName().isBlank() ? layer.getDatabaseName() : "-").append("\n");
+        sb.append("Schema: ").append(layer.getSchemaName() != null && !layer.getSchemaName().isBlank() ? layer.getSchemaName() : "-").append("\n");
+        sb.append("Usuario: ").append(layer.getUserName() != null && !layer.getUserName().isBlank() ? layer.getUserName() : "-").append("\n");
+        sb.append("Tabla/feature type: ").append(layer.getTypeName() != null && !layer.getTypeName().isBlank() ? layer.getTypeName() : "-").append("\n");
+        sb.append("Geometria: ").append(geometryLabel).append("\n");
+        sb.append("CRS: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "-").append("\n");
+        sb.append("Modo: ").append(layer.isReadOnly() ? "Solo lectura" : "Editable").append("\n");
+        sb.append("Elementos cargados: ").append(layer.getFeatureCount()).append("\n");
+        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion PostGIS", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showGeoPackageInfo(GeoPackageLayer layer) {
+        String geometryLabel = layer.getGeometryTypeLabel();
+        if (geometryLabel == null || geometryLabel.isBlank()) {
+            geometryLabel = layer.getType() != null ? layer.getType() : "-";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(layer.getName()).append("\n");
+        sb.append("Tipo: GeoPackage\n");
+        sb.append("Archivo: ").append(layer.getPath() != null && !layer.getPath().isBlank() ? layer.getPath() : "-").append("\n");
+        sb.append("Tabla interna: ").append(layer.getTableName() != null && !layer.getTableName().isBlank() ? layer.getTableName() : "-").append("\n");
+        if (layer.getIdentifier() != null && !layer.getIdentifier().isBlank()) {
+            sb.append("Identificador: ").append(layer.getIdentifier()).append("\n");
+        }
+        if (layer.getDescription() != null && !layer.getDescription().isBlank()) {
+            sb.append("Descripcion: ").append(layer.getDescription()).append("\n");
+        }
+        sb.append("Geometria: ").append(geometryLabel).append("\n");
+        sb.append("CRS: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "-").append("\n");
+        sb.append("Modo: ").append(layer.isReadOnly() ? "Solo lectura" : "Editable").append("\n");
+        sb.append("Elementos cargados: ").append(layer.getFeatureCount()).append("\n");
+        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion GeoPackage", JOptionPane.INFORMATION_MESSAGE);
+    }
+
     private double invokeDouble(Object target, String methodName) throws Exception {
         Method m = target.getClass().getMethod(methodName);
         Object value = m.invoke(target);
@@ -981,6 +1140,34 @@ public class LayersPanel extends JPanel {
 
         private String buildMetaText(Layer layer) {
             String crsInfo = formatCRSInfo(layer);
+            if (layer instanceof OnlineTileLayer) {
+                OnlineTileLayer online = (OnlineTileLayer) layer;
+                String hidden = layer.isVisible() ? "" : " | Oculta";
+                return "Mapa base online | " + (online.getProviderName() != null && !online.getProviderName().isBlank() ? online.getProviderName() : layer.getName())
+                        + " | " + crsInfo + hidden;
+            }
+            if (layer instanceof OnlineWmsLayer) {
+                OnlineWmsLayer wms = (OnlineWmsLayer) layer;
+                String hidden = layer.isVisible() ? "" : " | Oculta";
+                return "WMS | " + (wms.getProviderName() != null && !wms.getProviderName().isBlank() ? wms.getProviderName() : layer.getName())
+                        + " | " + crsInfo + hidden;
+            }
+            if (layer instanceof OnlineWfsLayer) {
+                OnlineWfsLayer wfs = (OnlineWfsLayer) layer;
+                String hidden = layer.isVisible() ? "" : " | Oculta";
+                return "WFS | " + resolveGeometryTypeLabel(layer) + " | " + layer.getFeatureCount()
+                        + " elementos | " + crsInfo + " | Solo lectura"
+                        + (wfs.getProviderName() != null && !wfs.getProviderName().isBlank() ? " | " + wfs.getProviderName() : "")
+                        + hidden;
+            }
+            if (layer instanceof GeoPackageLayer) {
+                GeoPackageLayer geoPackage = (GeoPackageLayer) layer;
+                String hidden = layer.isVisible() ? "" : " | Oculta";
+                return "GeoPackage | " + resolveGeometryTypeLabel(layer) + " | " + layer.getFeatureCount()
+                        + " elementos | " + crsInfo + " | Solo lectura"
+                        + (geoPackage.getTableName() != null && !geoPackage.getTableName().isBlank() ? " | " + geoPackage.getTableName() : "")
+                        + hidden;
+            }
             if (isRasterLayer(layer)) {
                 String hidden = layer.isVisible() ? "" : " | Oculta";
                 return "Raster | " + crsInfo + hidden;
@@ -1038,6 +1225,38 @@ public class LayersPanel extends JPanel {
             String geometryType = resolveGeometryTypeFromData(layer);
             if (geometryType != null) {
                 return geometryType;
+            }
+
+            if (layer instanceof GeoPackageLayer) {
+                String geometryLabel = ((GeoPackageLayer) layer).getGeometryTypeLabel();
+                if (geometryLabel != null && !geometryLabel.isBlank()) {
+                    String upper = geometryLabel.toUpperCase();
+                    if (upper.contains("POINT") || upper.contains("PUNTO")) {
+                        return "PUNTO";
+                    }
+                    if (upper.contains("LINE")) {
+                        return "LINEA";
+                    }
+                    if (upper.contains("POLYGON") || upper.contains("POLIG")) {
+                        return "POLIGONO";
+                    }
+                }
+            }
+
+            if (layer instanceof PostgisLayer) {
+                String geometryLabel = ((PostgisLayer) layer).getGeometryTypeLabel();
+                if (geometryLabel != null && !geometryLabel.isBlank()) {
+                    String upper = geometryLabel.toUpperCase();
+                    if (upper.contains("POINT") || upper.contains("PUNTO")) {
+                        return "PUNTO";
+                    }
+                    if (upper.contains("LINE")) {
+                        return "LINEA";
+                    }
+                    if (upper.contains("POLYGON") || upper.contains("POLIG")) {
+                        return "POLIGONO";
+                    }
+                }
             }
 
             String rawType = layer.getType() != null ? layer.getType().toUpperCase() : "";

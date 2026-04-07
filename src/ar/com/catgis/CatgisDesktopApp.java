@@ -5,16 +5,17 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
-import javax.swing.JOptionPane;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FlowLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -25,9 +26,15 @@ public class CatgisDesktopApp extends JFrame {
     public static StatusBar statusBar;
     public static Project currentProject;
     public static FloatingVectorEditToolbar floatingVectorEditToolbar;
+    public static OnlineConnectionsToolbar onlineConnectionsToolbar;
+    public static CartographyToolbar cartographyToolbar;
+    public static TopographyToolbar topographyToolbar;
     private static JLabel sidebarTitleLabel;
     private static JLabel sidebarSubtitleLabel;
+    private static JLabel sidebarOrderHintLabel;
     private static JLabel sidebarBadgeLabel;
+    private static JLabel mapTitleLabel;
+    private static JLabel mapSubtitleLabel;
     private static JLabel mapStatusHintLabel;
 
     public CatgisDesktopApp() {
@@ -37,11 +44,16 @@ public class CatgisDesktopApp extends JFrame {
         setMinimumSize(new Dimension(1100, 720));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        AppBranding.applyFrameBranding(this);
 
+        ModuleRegistry.initializeDefaults();
         mapPanel = new MapPanel();
         layersPanel = new LayersPanel();
         statusBar = new StatusBar();
         floatingVectorEditToolbar = new FloatingVectorEditToolbar();
+        onlineConnectionsToolbar = new OnlineConnectionsToolbar();
+        cartographyToolbar = new CartographyToolbar();
+        topographyToolbar = new TopographyToolbar();
 
         setJMenuBar(new MainMenuBar());
         add(buildTopContainer(), BorderLayout.NORTH);
@@ -59,7 +71,7 @@ public class CatgisDesktopApp extends JFrame {
         topContainer.setBackground(new Color(245, 247, 250));
         topContainer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(218, 223, 230)),
-                BorderFactory.createEmptyBorder(4, 8, 6, 8)
+                BorderFactory.createEmptyBorder(3, 6, 4, 6)
         ));
 
         JPanel mainToolsRow = new JPanel(new BorderLayout());
@@ -74,7 +86,22 @@ public class CatgisDesktopApp extends JFrame {
         editToolsRow.setAlignmentX(LEFT_ALIGNMENT);
         editToolsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
+        JPanel servicesRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        servicesRow.setOpaque(false);
+        servicesRow.add(topographyToolbar);
+        servicesRow.add(onlineConnectionsToolbar);
+        servicesRow.setAlignmentX(LEFT_ALIGNMENT);
+        servicesRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+
+        JPanel cartographyRow = new JPanel(new BorderLayout());
+        cartographyRow.setOpaque(false);
+        cartographyRow.add(cartographyToolbar, BorderLayout.CENTER);
+        cartographyRow.setAlignmentX(LEFT_ALIGNMENT);
+        cartographyRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+
         topContainer.add(mainToolsRow);
+        topContainer.add(cartographyRow);
+        topContainer.add(servicesRow);
         topContainer.add(editToolsRow);
         return topContainer;
     }
@@ -83,14 +110,14 @@ public class CatgisDesktopApp extends JFrame {
         JPanel centerContainer = new JPanel(new BorderLayout(10, 10));
         centerContainer.setOpaque(true);
         centerContainer.setBackground(new Color(240, 243, 247));
-        centerContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        centerContainer.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 buildLeftSidebar(),
                 buildMapContainer()
         );
-        splitPane.setDividerLocation(320);
+        splitPane.setDividerLocation(300);
         splitPane.setResizeWeight(0.0);
         splitPane.setBorder(null);
         splitPane.setOpaque(false);
@@ -108,9 +135,9 @@ public class CatgisDesktopApp extends JFrame {
         sidebar.setBackground(Color.WHITE);
         sidebar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(220, 224, 230)),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        sidebar.setPreferredSize(new Dimension(320, 100));
+        sidebar.setPreferredSize(new Dimension(300, 100));
 
         sidebar.add(buildSidebarHeader(), BorderLayout.NORTH);
 
@@ -129,15 +156,20 @@ public class CatgisDesktopApp extends JFrame {
         header.setOpaque(false);
         header.setBorder(BorderFactory.createEmptyBorder(0, 2, 6, 2));
 
-        sidebarTitleLabel = new JLabel("Gestor de proyecto");
+        sidebarTitleLabel = new JLabel(I18n.t("Gestor de proyecto"));
         sidebarTitleLabel.setFont(sidebarTitleLabel.getFont().deriveFont(Font.BOLD, 17f));
         sidebarTitleLabel.setForeground(new Color(28, 37, 54));
         sidebarTitleLabel.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Gestión visual de capas y accesos rápidos");
+        JLabel subtitle = new JLabel(I18n.t("Gestion visual de capas y accesos rapidos"));
         subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 11.5f));
         subtitle.setForeground(new Color(106, 116, 130));
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
+
+        JLabel orderHint = new JLabel(I18n.t("Arriba = frente | Abajo = fondo"));
+        orderHint.setFont(orderHint.getFont().deriveFont(Font.BOLD, 10.5f));
+        orderHint.setForeground(new Color(33, 120, 210));
+        orderHint.setAlignmentX(LEFT_ALIGNMENT);
 
         JPanel badgePanel = new JPanel(new BorderLayout());
         badgePanel.setOpaque(false);
@@ -152,6 +184,7 @@ public class CatgisDesktopApp extends JFrame {
         badge.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
         sidebarBadgeLabel = badge;
         sidebarSubtitleLabel = subtitle;
+        sidebarOrderHintLabel = orderHint;
 
         JPanel badgeWrap = new JPanel(new BorderLayout());
         badgeWrap.setOpaque(false);
@@ -161,6 +194,8 @@ public class CatgisDesktopApp extends JFrame {
         header.add(sidebarTitleLabel);
         header.add(Box.createVerticalStrut(2));
         header.add(sidebarSubtitleLabel);
+        header.add(Box.createVerticalStrut(3));
+        header.add(sidebarOrderHintLabel);
         header.add(Box.createVerticalStrut(8));
         header.add(badgePanel);
 
@@ -173,7 +208,7 @@ public class CatgisDesktopApp extends JFrame {
         mapContainer.setBackground(Color.WHITE);
         mapContainer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(220, 224, 230)),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
 
         mapContainer.add(buildMapHeader(), BorderLayout.NORTH);
@@ -194,22 +229,22 @@ public class CatgisDesktopApp extends JFrame {
         header.setOpaque(false);
         header.setBorder(BorderFactory.createEmptyBorder(0, 2, 6, 2));
 
-        JLabel title = new JLabel("Vista de mapa");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 17f));
-        title.setForeground(new Color(28, 37, 54));
+        mapTitleLabel = new JLabel(I18n.t("Vista de mapa"));
+        mapTitleLabel.setFont(mapTitleLabel.getFont().deriveFont(Font.BOLD, 17f));
+        mapTitleLabel.setForeground(new Color(28, 37, 54));
 
-        JLabel subtitle = new JLabel("Exploración, edición y análisis visual");
-        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 11.5f));
-        subtitle.setForeground(new Color(106, 116, 130));
+        mapSubtitleLabel = new JLabel(I18n.t("Exploracion, edicion y analisis visual"));
+        mapSubtitleLabel.setFont(mapSubtitleLabel.getFont().deriveFont(Font.PLAIN, 11.5f));
+        mapSubtitleLabel.setForeground(new Color(106, 116, 130));
 
         JPanel left = new JPanel();
         left.setOpaque(false);
         left.setLayout(new BoxLayout(left, BoxLayout.Y_AXIS));
-        left.add(title);
+        left.add(mapTitleLabel);
         left.add(Box.createVerticalStrut(2));
-        left.add(subtitle);
+        left.add(mapSubtitleLabel);
 
-        JLabel statusHint = new JLabel("Proyecto activo");
+        JLabel statusHint = new JLabel(I18n.t("Proyecto activo"));
         statusHint.setOpaque(true);
         statusHint.setBackground(new Color(236, 245, 255));
         statusHint.setForeground(new Color(33, 120, 210));
@@ -224,7 +259,7 @@ public class CatgisDesktopApp extends JFrame {
 
     private void initializeProjectAtStartup() {
         if (currentProject == null) {
-            currentProject = new Project("Proyecto actual");
+            currentProject = new Project(I18n.t("Proyecto actual"));
         }
 
         SwingUtilities.invokeLater(() -> {
@@ -243,14 +278,14 @@ public class CatgisDesktopApp extends JFrame {
         final String fallbackCode = currentCode;
 
         CRSSelectorDialog.open(
-                "Seleccione el CRS inicial del proyecto",
+                I18n.t("Seleccione el CRS inicial del proyecto"),
                 currentCode,
                 code -> {
                     String finalCode = (code != null && !code.isBlank()) ? code : fallbackCode;
                     currentProject.setProjectCRS(finalCode);
 
                     if (statusBar != null) {
-                        statusBar.setMessage("CRS inicial del proyecto: " + CRSDefinitions.getLabelForCode(finalCode));
+                        statusBar.setMessage(I18n.format("CRS inicial del proyecto: {0}", CRSDefinitions.getLabelForCode(finalCode)));
                     }
 
                     if (mapPanel != null) {
@@ -270,13 +305,13 @@ public class CatgisDesktopApp extends JFrame {
             return;
         }
 
-        String projectName = currentProject.getName() != null ? currentProject.getName() : "Proyecto actual";
+        String projectName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");
         String crs = currentProject.getProjectCRS() != null && !currentProject.getProjectCRS().isBlank()
                 ? currentProject.getProjectCRS()
                 : "EPSG:4326";
         String dirtyPrefix = currentProject.isModified() ? "* " : "";
 
-        frame.setTitle("CATGIS Desktop - " + dirtyPrefix + projectName + " - " + CRSDefinitions.getLabelForCode(crs));
+        frame.setTitle(I18n.format("CATGIS Desktop - {0}{1} - {2}", dirtyPrefix, projectName, CRSDefinitions.getLabelForCode(crs)));
         refreshProjectHeader();
     }
 
@@ -287,23 +322,32 @@ public class CatgisDesktopApp extends JFrame {
 
         String projectName = currentProject.getName() != null && !currentProject.getName().isBlank()
                 ? currentProject.getName()
-                : "Proyecto actual";
+                : I18n.t("Proyecto actual");
         String crs = currentProject.getProjectCRS() != null && !currentProject.getProjectCRS().isBlank()
                 ? currentProject.getProjectCRS()
                 : "EPSG:4326";
         int layerCount = currentProject.getLayers() != null ? currentProject.getLayers().size() : 0;
 
         if (sidebarTitleLabel != null) {
-            sidebarTitleLabel.setText("Gestor de proyecto");
+            sidebarTitleLabel.setText(I18n.t("Gestor de proyecto"));
         }
         if (sidebarSubtitleLabel != null) {
             sidebarSubtitleLabel.setText(projectName + " | " + CRSDefinitions.getLabelForCode(crs));
         }
+        if (sidebarOrderHintLabel != null) {
+            sidebarOrderHintLabel.setText(I18n.t("Arriba = frente | Abajo = fondo"));
+        }
         if (sidebarBadgeLabel != null) {
             sidebarBadgeLabel.setText(currentProject.isModified() ? "CATGIS *" : "CATGIS");
         }
+        if (mapTitleLabel != null) {
+            mapTitleLabel.setText(I18n.t("Vista de mapa"));
+        }
+        if (mapSubtitleLabel != null) {
+            mapSubtitleLabel.setText(I18n.t("Exploracion, edicion y analisis visual"));
+        }
         if (mapStatusHintLabel != null) {
-            mapStatusHintLabel.setText(projectName + " | " + layerCount + " capas");
+            mapStatusHintLabel.setText(I18n.format("{0} | {1} capas", projectName, layerCount));
         }
     }
 
@@ -329,25 +373,25 @@ public class CatgisDesktopApp extends JFrame {
 
     public static void renameCurrentProject() {
         if (currentProject == null) {
-            currentProject = new Project("Proyecto actual");
+            currentProject = new Project(I18n.t("Proyecto actual"));
         }
 
-        String currentName = currentProject.getName() != null ? currentProject.getName() : "Proyecto actual";
-        String newName = JOptionPane.showInputDialog(getMainFrame(), "Nombre del proyecto:", currentName);
+        String currentName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");
+        String newName = JOptionPane.showInputDialog(getMainFrame(), I18n.t("Nombre del proyecto:"), currentName);
         if (newName == null) {
             return;
         }
 
         String trimmed = newName.trim();
         if (trimmed.isEmpty()) {
-            JOptionPane.showMessageDialog(getMainFrame(), "El nombre del proyecto no puede quedar vacío.");
+            JOptionPane.showMessageDialog(getMainFrame(), I18n.t("El nombre del proyecto no puede quedar vacio."));
             return;
         }
 
         currentProject.setName(trimmed);
         markProjectDirty();
         if (statusBar != null) {
-            statusBar.setMessage("Proyecto renombrado: " + trimmed);
+            statusBar.setMessage(I18n.format("Proyecto renombrado: {0}", trimmed));
         }
         refreshProjectHeader();
     }
@@ -363,12 +407,12 @@ public class CatgisDesktopApp extends JFrame {
             return true;
         }
 
-        String projectName = currentProject.getName() != null ? currentProject.getName() : "Proyecto actual";
-        Object[] options = {"Guardar", "No guardar", "Cancelar"};
+        String projectName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");
+        Object[] options = {I18n.t("Guardar"), I18n.t("No guardar"), I18n.t("Cancelar")};
         int result = JOptionPane.showOptionDialog(
                 getMainFrame(),
-                "El proyecto \"" + projectName + "\" tiene cambios sin guardar.\n\n¿Querés guardar antes de " + actionLabel + "?",
-                "Cambios sin guardar",
+                I18n.format("El proyecto \"{0}\" tiene cambios sin guardar.\n\n¿Queres guardar antes de {1}?", projectName, actionLabel),
+                I18n.t("Cambios sin guardar"),
                 JOptionPane.YES_NO_CANCEL_OPTION,
                 JOptionPane.WARNING_MESSAGE,
                 null,
@@ -389,7 +433,7 @@ public class CatgisDesktopApp extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (confirmProjectContinuation("cerrar CATGIS")) {
+                if (confirmProjectContinuation(I18n.t("cerrar CATGIS"))) {
                     dispose();
                 }
             }

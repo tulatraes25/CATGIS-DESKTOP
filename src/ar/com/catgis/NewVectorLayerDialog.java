@@ -180,7 +180,7 @@ public class NewVectorLayerDialog extends JDialog {
         add(content, BorderLayout.CENTER);
         add(footer, BorderLayout.SOUTH);
 
-        getRootPane().setDefaultButton(acceptButton);
+        DialogKeyboardSupport.install(this, acceptButton, this::dispose);
         setSize(720, 430);
         setLocationRelativeTo(owner);
     }
@@ -203,13 +203,15 @@ public class NewVectorLayerDialog extends JDialog {
     }
 
     private void choosePath() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Guardar nueva capa shapefile");
+        JFileChooser chooser = FileChooserSupport.createChooser("vector-save", "Guardar nueva capa shapefile");
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.setFileFilter(new FileNameExtensionFilter("Shapefile (*.shp)", "shp"));
 
         String suggestedName = sanitizeFileName(nameField.getText());
-        chooser.setSelectedFile(new File((suggestedName.isBlank() ? "nueva_capa" : suggestedName) + ".shp"));
+        chooser.setSelectedFile(FileChooserSupport.resolveSuggestedFile(
+                "vector-save",
+                new File((suggestedName.isBlank() ? "nueva_capa" : suggestedName) + ".shp")
+        ));
 
         int result = chooser.showSaveDialog(this);
         if (result != JFileChooser.APPROVE_OPTION) {
@@ -220,6 +222,7 @@ public class NewVectorLayerDialog extends JDialog {
         if (!file.getName().toLowerCase(Locale.ROOT).endsWith(".shp")) {
             file = new File(file.getAbsolutePath() + ".shp");
         }
+        FileChooserSupport.rememberFile("vector-save", file);
         pathField.setText(file.getAbsolutePath());
     }
 

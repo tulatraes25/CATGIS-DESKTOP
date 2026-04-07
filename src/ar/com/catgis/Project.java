@@ -9,6 +9,15 @@ public class Project {
     private String projectCRS;
     private File projectFile;
     private boolean modified;
+    private String studyName = "";
+    private String companyName = "";
+    private String cartographerName = "";
+    private String imageSource = "";
+    private String coordinateReference = "";
+    private String legendTitle = "Leyenda";
+    private String legendSubtitle = "Capas visibles del mapa";
+    private String logoPath = "";
+    private String layoutImagePath = "";
     private final List<Layer> layers = new ArrayList<>();
 
     public Project() {
@@ -56,6 +65,80 @@ public class Project {
 
     public void setModified(boolean modified) {
         this.modified = modified;
+    }
+
+    public String getStudyName() {
+        return studyName;
+    }
+
+    public void setStudyName(String studyName) {
+        this.studyName = studyName != null ? studyName.trim() : "";
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName != null ? companyName.trim() : "";
+    }
+
+    public String getCartographerName() {
+        return cartographerName;
+    }
+
+    public void setCartographerName(String cartographerName) {
+        this.cartographerName = cartographerName != null ? cartographerName.trim() : "";
+    }
+
+    public String getImageSource() {
+        return imageSource;
+    }
+
+    public void setImageSource(String imageSource) {
+        this.imageSource = imageSource != null ? imageSource.trim() : "";
+    }
+
+    public String getCoordinateReference() {
+        return coordinateReference;
+    }
+
+    public void setCoordinateReference(String coordinateReference) {
+        this.coordinateReference = coordinateReference != null ? coordinateReference.trim() : "";
+    }
+
+    public String getLegendTitle() {
+        return legendTitle;
+    }
+
+    public void setLegendTitle(String legendTitle) {
+        this.legendTitle = legendTitle != null && !legendTitle.isBlank() ? legendTitle.trim() : "Leyenda";
+    }
+
+    public String getLegendSubtitle() {
+        return legendSubtitle;
+    }
+
+    public void setLegendSubtitle(String legendSubtitle) {
+        this.legendSubtitle = legendSubtitle != null && !legendSubtitle.isBlank()
+                ? legendSubtitle.trim()
+                : "Capas visibles del mapa";
+    }
+
+    public String getLogoPath() {
+        return logoPath;
+    }
+
+    public void setLogoPath(String logoPath) {
+        this.logoPath = logoPath != null ? logoPath.trim() : "";
+    }
+
+    public String getLayoutImagePath() {
+        return layoutImagePath;
+    }
+
+    public void setLayoutImagePath(String layoutImagePath) {
+        this.layoutImagePath = layoutImagePath != null ? layoutImagePath.trim() : "";
     }
 
     public List<Layer> getLayers() {

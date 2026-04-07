@@ -46,7 +46,13 @@ public class FloatingVectorEditToolbar extends JPanel {
     private final JToggleButton btnMultiPoint;
     private final JToggleButton btnLine;
     private final JButton btnContinueLine;
+    private final JButton btnExtendLine;
+    private final JButton btnShortenLine;
+    private final JButton btnParallel;
+    private final JButton btnPerpendicular;
     private final JButton btnRectangle;
+    private final JButton btnCircle;
+    private final JButton btnCircle3P;
     private final JToggleButton btnPolygon;
     private final JButton btnMoveFeature;
     private final JToggleButton btnMoveVertex;
@@ -205,10 +211,58 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnLine.addActionListener(e -> activateDrawMode("LINE"));
 
         btnContinueLine = createActionButton("Continuar edicion de linea", AppIcons.lineIcon());
-        btnContinueLine.addActionListener(e -> showPendingTool("Continuar linea", "La base visual ya esta, pero todavia falta el motor para continuar una linea existente desde su ultimo vertice."));
+        btnContinueLine.addActionListener(e -> {
+            if (!ensureFeatureSelection("continuar la linea")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.enableContinueLineMode();
+            refreshState();
+        });
+
+        btnExtendLine = createActionButton("Extender linea", AppIcons.extendLineIcon());
+        btnExtendLine.addActionListener(e -> {
+            if (!ensureFeatureSelection("extender la linea")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.activateExtendLineMode();
+            refreshState();
+        });
+
+        btnShortenLine = createActionButton("Acortar linea", AppIcons.shortenLineIcon());
+        btnShortenLine.addActionListener(e -> {
+            if (!ensureFeatureSelection("acortar la linea")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.activateShortenLineMode();
+            refreshState();
+        });
+
+        btnParallel = createActionButton("Linea paralela / desplazamiento lateral", AppIcons.parallelIcon());
+        btnParallel.addActionListener(e -> {
+            if (!ensureFeatureSelection("crear una paralela")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.activateParallelLineMode();
+            refreshState();
+        });
+
+        btnPerpendicular = createActionButton("Linea perpendicular", AppIcons.perpendicularIcon());
+        btnPerpendicular.addActionListener(e -> {
+            if (!ensureFeatureSelection("crear una perpendicular")) {
+                return;
+            }
+            CatgisDesktopApp.mapPanel.activatePerpendicularLineMode();
+            refreshState();
+        });
 
         btnRectangle = createActionButton("Dibujar rectangulo", AppIcons.rectangleIcon());
-        btnRectangle.addActionListener(e -> showPendingTool("Dibujar rectangulo", "La herramienta ya esta prevista en la paleta, pero todavia falta el flujo de dos esquinas para crear el rectangulo."));
+        btnRectangle.addActionListener(e -> activateDrawMode("RECTANGLE"));
+
+        btnCircle = createActionButton("Dibujar circulo", AppIcons.circleIcon());
+        btnCircle.addActionListener(e -> activateDrawMode("CIRCLE"));
+
+        btnCircle3P = createActionButton("Dibujar circulo por 3 puntos", AppIcons.circleThreePointsIcon());
+        btnCircle3P.addActionListener(e -> activateDrawMode("CIRCLE_3P"));
 
         btnPolygon = createToggleButton("Dibujar poligono", AppIcons.polygonIcon());
         btnPolygon.addActionListener(e -> activateDrawMode("POLYGON"));
@@ -232,7 +286,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnRemoveVertex.addActionListener(e -> activateRemoveVertexMode());
 
         btnJoinVertices = createActionButton("Unir vertices", AppIcons.joinVerticesIcon());
-        btnJoinVertices.addActionListener(e -> showPendingTool("Unir vertices", "Todavia falta la operacion para soldar vertices o llevarlos al vertice seleccionado."));
+        btnJoinVertices.addActionListener(e -> activateJoinVerticesMode());
 
         btnCut = createActionButton("Dividir linea o cortar geometria", AppIcons.cutIcon());
         btnCut.addActionListener(e -> activateCutFeatureMode());
@@ -262,7 +316,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         });
 
         btnAdjacentPolygon = createActionButton("Generar poligono adyacente", AppIcons.polygonIcon());
-        btnAdjacentPolygon.addActionListener(e -> showPendingTool("Poligono adyacente", "La paleta ya reserva esta herramienta, pero todavia falta el motor de construccion adyacente estilo Kosmo."));
+        btnAdjacentPolygon.addActionListener(e -> activateAdjacentPolygonMode());
 
         btnMerge = createActionButton("Unir elementos", AppIcons.saveIcon());
         btnMerge.addActionListener(e -> {
@@ -365,11 +419,11 @@ public class FloatingVectorEditToolbar extends JPanel {
         strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Puntos", btnPoint, btnMultiPoint));
         strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Lineas", btnLine, btnContinueLine, btnCut));
+        strip.add(createSection("Lineas", btnLine, btnContinueLine, btnExtendLine, btnShortenLine, btnParallel, btnPerpendicular, btnCut));
         strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Vertices", btnMoveVertex, btnAddVertex, btnRemoveVertex, btnJoinVertices));
         strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Poligonos", btnRectangle, btnPolygon, btnSplitPolygon, btnHole, btnIncreaseArea, btnDecreaseArea, btnAdjacentPolygon));
+        strip.add(createSection("Poligonos", btnRectangle, btnCircle, btnCircle3P, btnPolygon, btnSplitPolygon, btnHole, btnIncreaseArea, btnDecreaseArea, btnAdjacentPolygon));
         strip.add(Box.createHorizontalStrut(2));
         strip.add(createSection("Sesion", btnUndo, btnRedo, btnMerge, btnExplode, btnOptions, btnSaveChanges, btnFinish, btnCancel));
 
@@ -379,6 +433,15 @@ public class FloatingVectorEditToolbar extends JPanel {
     public void refreshState() {
         MapPanel map = CatgisDesktopApp.mapPanel;
         if (map == null) {
+            return;
+        }
+        boolean cadModuleEnabled = ModuleRegistry.isModuleEnabled(ModuleRegistry.MODULE_CAD);
+        if (!cadModuleEnabled) {
+            setCadControlsEnabled(false);
+            updateSectionHighlight(pointSectionPanel, pointSectionLabel, false);
+            updateSectionHighlight(lineSectionPanel, lineSectionLabel, false);
+            updateSectionHighlight(polygonSectionPanel, polygonSectionLabel, false);
+            updateSectionHighlight(vertexSectionPanel, vertexSectionLabel, false);
             return;
         }
 
@@ -395,6 +458,8 @@ public class FloatingVectorEditToolbar extends JPanel {
         boolean hasVectorSelection = selectionCount > 0;
         boolean hasEditingLayer = editingLayer != null;
         boolean hasEditableTarget = getPreferredEditingLayer() != null;
+        boolean selectedLayerReadOnly = map.isReadOnlyVectorLayer(selectedLayer);
+        boolean editingLayerReadOnly = map.isReadOnlyVectorLayer(editingLayer);
         boolean editingActive = map.isFeatureEditMode();
         boolean editDirty = map.hasFeatureEditChanges();
         boolean pointSelection = selectedFeature != null
@@ -406,6 +471,9 @@ public class FloatingVectorEditToolbar extends JPanel {
                 && (selectedFeature.getDefaultGeometry() instanceof Polygon || selectedFeature.getDefaultGeometry() instanceof MultiPolygon);
         boolean linearOrPolygonalSelection = lineSelection || polygonSelection;
         Layer geometryContextLayer = editingLayer != null ? editingLayer : selectedLayer;
+        if (map.isReadOnlyVectorLayer(geometryContextLayer)) {
+            geometryContextLayer = null;
+        }
         boolean geometryContextActive = geometryContextLayer != null;
         boolean editingPointLayer = isPointLayer(geometryContextLayer);
         boolean editingLineLayer = isLineLayer(geometryContextLayer);
@@ -429,27 +497,33 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnZoomSelected.setEnabled(hasVectorSelection);
         btnCopy.setEnabled(hasVectorSelection);
         btnCopyToEditingLayer.setEnabled(hasVectorSelection && hasEditableTarget);
-        btnPaste.setEnabled(hasEditingLayer && map.hasCopiedFeature());
-        btnDeleteSelection.setEnabled(hasVectorSelection);
+        btnPaste.setEnabled(hasEditingLayer && !editingLayerReadOnly && map.hasCopiedFeature());
+        btnDeleteSelection.setEnabled(hasVectorSelection && !selectedLayerReadOnly);
         btnClearSelection.setEnabled(hasVectorSelection || hasEditingLayer);
         btnEditAttributes.setEnabled(hasEditingLayer || hasVectorSelection);
         btnPoint.setEnabled(canDrawPoint);
         btnMultiPoint.setEnabled(canDrawPoint);
         btnLine.setEnabled(canDrawLine);
-        btnContinueLine.setEnabled(lineSelection);
+        btnContinueLine.setEnabled(lineSelection && !selectedLayerReadOnly);
+        btnExtendLine.setEnabled(lineSelection && !selectedLayerReadOnly);
+        btnShortenLine.setEnabled(lineSelection && !selectedLayerReadOnly);
+        btnParallel.setEnabled(lineSelection && !selectedLayerReadOnly);
+        btnPerpendicular.setEnabled(lineSelection && !selectedLayerReadOnly);
         btnRectangle.setEnabled(canDrawPolygon);
+        btnCircle.setEnabled(canDrawPolygon);
+        btnCircle3P.setEnabled(canDrawPolygon);
         btnPolygon.setEnabled(canDrawPolygon);
-        btnMoveFeature.setEnabled(hasVectorSelection);
-        btnMoveVertex.setEnabled(linearOrPolygonalSelection);
-        btnAddVertex.setEnabled(linearOrPolygonalSelection);
-        btnRemoveVertex.setEnabled(linearOrPolygonalSelection);
-        btnJoinVertices.setEnabled(linearOrPolygonalSelection);
-        btnCut.setEnabled(linearOrPolygonalSelection);
-        btnSplitPolygon.setEnabled(polygonSelection);
-        btnHole.setEnabled(polygonSelection);
-        btnIncreaseArea.setEnabled(polygonSelection);
-        btnDecreaseArea.setEnabled(polygonSelection);
-        btnAdjacentPolygon.setEnabled(polygonSelection);
+        btnMoveFeature.setEnabled(hasVectorSelection && !selectedLayerReadOnly);
+        btnMoveVertex.setEnabled(linearOrPolygonalSelection && !selectedLayerReadOnly);
+        btnAddVertex.setEnabled(linearOrPolygonalSelection && !selectedLayerReadOnly);
+        btnRemoveVertex.setEnabled(linearOrPolygonalSelection && !selectedLayerReadOnly);
+        btnJoinVertices.setEnabled(linearOrPolygonalSelection && !selectedLayerReadOnly);
+        btnCut.setEnabled(linearOrPolygonalSelection && !selectedLayerReadOnly);
+        btnSplitPolygon.setEnabled(polygonSelection && !selectedLayerReadOnly);
+        btnHole.setEnabled(polygonSelection && !selectedLayerReadOnly);
+        btnIncreaseArea.setEnabled(polygonSelection && !selectedLayerReadOnly);
+        btnDecreaseArea.setEnabled(polygonSelection && !selectedLayerReadOnly);
+        btnAdjacentPolygon.setEnabled(polygonSelection && !selectedLayerReadOnly);
         btnMerge.setEnabled(map.canMergeSelectedFeatures());
         btnExplode.setEnabled(map.canExplodeSelectedFeatures());
         btnUndo.setEnabled(map.canUndoFeatureEdit());
@@ -463,6 +537,50 @@ public class FloatingVectorEditToolbar extends JPanel {
         updateSectionHighlight(lineSectionPanel, lineSectionLabel, geometryContextActive && editingLineLayer);
         updateSectionHighlight(polygonSectionPanel, polygonSectionLabel, geometryContextActive && editingPolygonLayer);
         updateSectionHighlight(vertexSectionPanel, vertexSectionLabel, geometryContextActive && lineOrPolygonContext && !editingPointLayer);
+    }
+
+    private void setCadControlsEnabled(boolean enabled) {
+        btnMove.setEnabled(enabled);
+        btnSelect.setEnabled(enabled);
+        btnSnap.setEnabled(enabled);
+        btnZoomSelected.setEnabled(enabled);
+        btnCopy.setEnabled(enabled);
+        btnCopyToEditingLayer.setEnabled(enabled);
+        btnPaste.setEnabled(enabled);
+        btnDeleteSelection.setEnabled(enabled);
+        btnClearSelection.setEnabled(enabled);
+        btnEditAttributes.setEnabled(enabled);
+        btnPoint.setEnabled(enabled);
+        btnMultiPoint.setEnabled(enabled);
+        btnLine.setEnabled(enabled);
+        btnContinueLine.setEnabled(enabled);
+        btnExtendLine.setEnabled(enabled);
+        btnShortenLine.setEnabled(enabled);
+        btnParallel.setEnabled(enabled);
+        btnPerpendicular.setEnabled(enabled);
+        btnRectangle.setEnabled(enabled);
+        btnCircle.setEnabled(enabled);
+        btnCircle3P.setEnabled(enabled);
+        btnPolygon.setEnabled(enabled);
+        btnMoveFeature.setEnabled(enabled);
+        btnMoveVertex.setEnabled(enabled);
+        btnAddVertex.setEnabled(enabled);
+        btnRemoveVertex.setEnabled(enabled);
+        btnJoinVertices.setEnabled(enabled);
+        btnCut.setEnabled(enabled);
+        btnSplitPolygon.setEnabled(enabled);
+        btnHole.setEnabled(enabled);
+        btnIncreaseArea.setEnabled(enabled);
+        btnDecreaseArea.setEnabled(enabled);
+        btnAdjacentPolygon.setEnabled(enabled);
+        btnMerge.setEnabled(enabled);
+        btnExplode.setEnabled(enabled);
+        btnUndo.setEnabled(enabled);
+        btnRedo.setEnabled(enabled);
+        btnOptions.setEnabled(enabled);
+        btnSaveChanges.setEnabled(enabled);
+        btnFinish.setEnabled(enabled);
+        btnCancel.setEnabled(enabled);
     }
 
     private boolean isPointLayer(Layer layer) {
@@ -573,17 +691,18 @@ public class FloatingVectorEditToolbar extends JPanel {
             return;
         }
 
-        Layer layer = getPreferredEditingLayer();
-        if (layer != null) {
-            CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
-        }
-
         if ("POINT".equalsIgnoreCase(mode)) {
             CatgisDesktopApp.mapPanel.enableDrawPointMode();
         } else if ("MULTIPOINT".equalsIgnoreCase(mode)) {
             CatgisDesktopApp.mapPanel.enableDrawMultiPointMode();
         } else if ("LINE".equalsIgnoreCase(mode)) {
             CatgisDesktopApp.mapPanel.enableDrawLineMode();
+        } else if ("CIRCLE".equalsIgnoreCase(mode)) {
+            CatgisDesktopApp.mapPanel.enableDrawCircleMode();
+        } else if ("CIRCLE_3P".equalsIgnoreCase(mode)) {
+            CatgisDesktopApp.mapPanel.enableDrawCircleThreePointMode();
+        } else if ("RECTANGLE".equalsIgnoreCase(mode)) {
+            CatgisDesktopApp.mapPanel.enableDrawRectangleMode();
         } else if ("POLYGON".equalsIgnoreCase(mode)) {
             CatgisDesktopApp.mapPanel.enableDrawPolygonMode();
         }
@@ -593,14 +712,21 @@ public class FloatingVectorEditToolbar extends JPanel {
 
     private Layer getPreferredEditingLayer() {
         if (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
-            return CatgisDesktopApp.mapPanel.getEditingLayerRef();
+            Layer editing = CatgisDesktopApp.mapPanel.getEditingLayerRef();
+            if (!CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(editing)) {
+                return editing;
+            }
         }
         if (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedLayerRef() != null) {
-            return CatgisDesktopApp.mapPanel.getSelectedLayerRef();
+            Layer selected = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
+            if (!CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(selected)) {
+                return selected;
+            }
         }
         if (CatgisDesktopApp.layersPanel != null) {
             Layer selected = CatgisDesktopApp.layersPanel.getSelectedLayer();
-            if (selected != null && !(selected instanceof RasterLayer)) {
+            if (selected != null && !(selected instanceof RasterLayer)
+                    && (CatgisDesktopApp.mapPanel == null || !CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(selected))) {
                 return selected;
             }
         }
@@ -646,6 +772,14 @@ public class FloatingVectorEditToolbar extends JPanel {
         refreshState();
     }
 
+    private void activateJoinVerticesMode() {
+        if (!ensureFeatureSelection("unir vertices")) {
+            return;
+        }
+        CatgisDesktopApp.mapPanel.activateJoinVerticesMode();
+        refreshState();
+    }
+
     private void activateCutFeatureMode() {
         if (!ensureFeatureSelection("cortar la geometria")) {
             return;
@@ -659,6 +793,14 @@ public class FloatingVectorEditToolbar extends JPanel {
             return;
         }
         CatgisDesktopApp.mapPanel.activateHoleMode();
+        refreshState();
+    }
+
+    private void activateAdjacentPolygonMode() {
+        if (!ensureFeatureSelection("generar un poligono adyacente")) {
+            return;
+        }
+        CatgisDesktopApp.mapPanel.activateAdjacentPolygonMode();
         refreshState();
     }
 
@@ -684,15 +826,6 @@ public class FloatingVectorEditToolbar extends JPanel {
         }
         CatgisDesktopApp.mapPanel.enableFeatureEdit(layer, feature);
         return true;
-    }
-
-    private void showPendingTool(String toolName, String detail) {
-        JOptionPane.showMessageDialog(
-                this,
-                toolName + " todavia esta en construccion.\n\n" + detail,
-                "Edicion vectorial",
-                JOptionPane.INFORMATION_MESSAGE
-        );
     }
 
     private JPanel createSection(String title, AbstractButton... buttons) {

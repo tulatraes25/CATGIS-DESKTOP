@@ -21,73 +21,76 @@ public class MainToolBar extends JToolBar {
         setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         setRollover(true);
 
-        JButton btnAbrirProyecto = createButton("Abrir proyecto", AppIcons.projectIcon());
+        JButton btnAbrirProyecto = createButton(I18n.t("Abrir proyecto"), AppIcons.projectIcon());
         btnAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
 
-        JButton btnAgregarCapa = createButton("Agregar capa al proyecto actual", createOpenLayerIcon());
+        JButton btnAgregarCapa = createButton(I18n.t("Agregar capa al proyecto actual"), createOpenLayerIcon());
         btnAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
 
-        JButton btnNuevaCapaVectorial = createButton("Crear nueva capa vectorial", createNewVectorLayerIcon());
+        JButton btnNuevaCapaVectorial = createButton(I18n.t("Crear nueva capa vectorial"), createNewVectorLayerIcon());
         btnNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
 
-        JButton btnTablaPuntos = createButton("Importar tabla de puntos", AppIcons.importTableIcon());
+        JButton btnTablaPuntos = createButton(I18n.t("Importar tabla de puntos"), AppIcons.importTableIcon());
         btnTablaPuntos.addActionListener(e -> OpenTablePointsAction.openTablePoints());
 
-        JButton btnGuardar = createButton("Guardar proyecto", AppIcons.saveIcon());
+        JButton btnGuardar = createButton(I18n.t("Guardar proyecto"), AppIcons.saveIcon());
         btnGuardar.addActionListener(e -> SaveProjectAction.saveProject());
 
-        JButton btnGuardarComo = createButton("Guardar proyecto como...", AppIcons.attrCopyIcon());
+        JButton btnGuardarComo = createButton(I18n.t("Guardar proyecto como..."), AppIcons.attrCopyIcon());
         btnGuardarComo.addActionListener(e -> SaveProjectAction.saveProjectAs());
 
-        JButton btnSalvarVista = createButton("Salvar vista del mapa", createCameraIcon());
+        JButton btnSalvarVista = createButton(I18n.t("Salvar vista del mapa"), createCameraIcon());
         btnSalvarVista.addActionListener(e -> SaveMapViewAction.saveCurrentView());
 
-        JButton btnZoomMas = createButton("Acercar", AppIcons.zoomInIcon());
+        JButton btnModulos = createButton(I18n.t("Gestor de modulos"), AppIcons.propertiesIcon());
+        btnModulos.addActionListener(e -> ModuleManagerDialog.open());
+
+        JButton btnZoomMas = createButton(I18n.t("Acercar"), AppIcons.zoomInIcon());
         btnZoomMas.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomIn());
 
-        JButton btnZoomMenos = createButton("Alejar", AppIcons.zoomOutIcon());
+        JButton btnZoomMenos = createButton(I18n.t("Alejar"), AppIcons.zoomOutIcon());
         btnZoomMenos.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomOut());
 
-        JButton btnZoomCapa = createButton("Zoom a capa seleccionada", AppIcons.zoomLayerIcon());
+        JButton btnZoomCapa = createButton(I18n.t("Zoom a capa seleccionada"), AppIcons.zoomLayerIcon());
         btnZoomCapa.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomToSelectedLayerPublic());
 
-        JButton btnZoomTodo = createButton("Zoom a todas las capas", AppIcons.zoomAllIcon());
+        JButton btnZoomTodo = createButton(I18n.t("Zoom a todas las capas"), AppIcons.zoomAllIcon());
         btnZoomTodo.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomToAllLayers());
 
-        JButton btnVistaAnterior = createButton("Vista anterior", AppIcons.viewPreviousIcon());
+        JButton btnVistaAnterior = createButton(I18n.t("Vista anterior"), AppIcons.viewPreviousIcon());
         btnVistaAnterior.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomPrevious());
 
-        JButton btnVistaSiguiente = createButton("Vista siguiente", AppIcons.viewNextIcon());
+        JButton btnVistaSiguiente = createButton(I18n.t("Vista siguiente"), AppIcons.viewNextIcon());
         btnVistaSiguiente.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomNext());
 
-        JButton btnMover = createButton("Desplazar mapa", AppIcons.panIcon());
+        JButton btnMover = createButton(I18n.t("Desplazar mapa"), AppIcons.panIcon());
         btnMover.addActionListener(e -> CatgisDesktopApp.mapPanel.enablePanMode());
 
-        JButton btnIdentificar = createButton("Consultar entidades", AppIcons.identifyIcon());
+        JButton btnIdentificar = createButton(I18n.t("Consultar entidades"), AppIcons.identifyIcon());
         btnIdentificar.addActionListener(e -> CatgisDesktopApp.mapPanel.enableIdentifyMode());
 
-        JButton btnBuscarCoord = createButton("Buscar por coordenadas", createSearchXYIcon());
+        JButton btnBuscarCoord = createButton(I18n.t("Buscar por coordenadas"), createSearchXYIcon());
         btnBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
 
-        JButton btnPunto = createButton("Dibujar puntos", AppIcons.pointIcon());
+        JButton btnPunto = createButton(I18n.t("Dibujar puntos"), AppIcons.pointIcon());
         btnPunto.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawPointMode());
 
-        JButton btnMultiPunto = createButton("Dibujar multipunto", AppIcons.multiPointIcon());
+        JButton btnMultiPunto = createButton(I18n.t("Dibujar multipunto"), AppIcons.multiPointIcon());
         btnMultiPunto.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawMultiPointMode());
 
-        JButton btnLinea = createButton("Dibujar líneas", AppIcons.lineIcon());
+        JButton btnLinea = createButton(I18n.t("Dibujar lineas"), AppIcons.lineIcon());
         btnLinea.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawLineMode());
 
-        JButton btnPoligono = createButton("Dibujar polígonos", AppIcons.polygonIcon());
+        JButton btnPoligono = createButton(I18n.t("Dibujar poligonos"), AppIcons.polygonIcon());
         btnPoligono.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawPolygonMode());
 
-        JButton btnMedirDist = createButton("Medir distancia", AppIcons.distanceIcon());
+        JButton btnMedirDist = createButton(I18n.t("Medir distancia"), AppIcons.distanceIcon());
         btnMedirDist.addActionListener(e -> CatgisDesktopApp.mapPanel.enableMeasureDistanceMode());
 
-        JButton btnMedirArea = createButton("Medir área", AppIcons.areaIcon());
+        JButton btnMedirArea = createButton(I18n.t("Medir area"), AppIcons.areaIcon());
         btnMedirArea.addActionListener(e -> CatgisDesktopApp.mapPanel.enableMeasureAreaMode());
 
-        JButton btnTerminar = createButton("Finalizar dibujo o medición", AppIcons.finishIcon());
+        JButton btnTerminar = createButton(I18n.t("Finalizar dibujo o medicion"), AppIcons.finishIcon());
         btnTerminar.addActionListener(e -> {
             if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
                 CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
@@ -96,7 +99,7 @@ public class MainToolBar extends JToolBar {
             }
         });
 
-        JButton btnCancelar = createButton("Cancelar dibujo o medición", AppIcons.cancelIcon());
+        JButton btnCancelar = createButton(I18n.t("Cancelar dibujo o medicion"), AppIcons.cancelIcon());
         btnCancelar.addActionListener(e -> {
             if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
                 CatgisDesktopApp.mapPanel.cancelCurrentMeasurement();
@@ -105,13 +108,13 @@ public class MainToolBar extends JToolBar {
             }
         });
 
-        JButton btnTabla = createButton("Abrir tabla de atributos", AppIcons.tableIcon());
+        JButton btnTabla = createButton(I18n.t("Abrir tabla de atributos"), AppIcons.tableIcon());
         btnTabla.addActionListener(e -> OpenAttributeTableAction.openAttributeTable());
 
-        JButton btnCRS = createButton("Conversor de coordenadas", createConverterIcon());
+        JButton btnCRS = createButton(I18n.t("Conversor de coordenadas"), createConverterIcon());
         btnCRS.addActionListener(e -> CoordinateConverterDialog.openDialog());
 
-        JButton btnProjectCRS = createButton("Definir CRS del proyecto", createProjectCrsIcon());
+        JButton btnProjectCRS = createButton(I18n.t("Definir CRS del proyecto"), createProjectCrsIcon());
         btnProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
 
         add(btnAbrirProyecto);
@@ -121,6 +124,7 @@ public class MainToolBar extends JToolBar {
         add(btnGuardar);
         add(btnGuardarComo);
         add(btnSalvarVista);
+        add(btnModulos);
         addSeparator();
         add(btnZoomMas);
         add(btnZoomMenos);

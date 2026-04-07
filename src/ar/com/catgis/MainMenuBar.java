@@ -2,9 +2,12 @@ package ar.com.catgis;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.ButtonGroup;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -19,12 +22,16 @@ import java.awt.image.BufferedImage;
 public class MainMenuBar extends JMenuBar {
 
     public MainMenuBar() {
-        JMenu menuArchivo = new JMenu("Archivo");
-        JMenu menuEdicion = new JMenu("Edicion");
-        JMenu menuVista = new JMenu("Vista");
-        JMenu menuHerramientas = new JMenu("Herramientas");
-        JMenu menuVentana = new JMenu("Ventana");
-        JMenu menuProyecto = new JMenu("Proyecto");
+        JMenu menuArchivo = new JMenu(I18n.t("Archivo"));
+        JMenu menuEdicion = new JMenu(I18n.t("Edicion"));
+        JMenu menuCad = new JMenu("CAD");
+        JMenu menuVista = new JMenu(I18n.t("Vista"));
+        JMenu menuHerramientas = new JMenu(I18n.t("Herramientas"));
+        JMenu menuCartografia = new JMenu(I18n.t("Cartografia"));
+        JMenu menuModulos = new ModulesMenu();
+        JMenu menuVentana = new JMenu(I18n.t("Ventana"));
+        JMenu menuProyecto = new JMenu(I18n.t("Proyecto"));
+        JMenu menuAyuda = new JMenu(I18n.t("Ayuda"));
         int menuMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 
         JMenuItem itemNuevoProyecto = createItem("Nuevo proyecto", createNewProjectIcon());
@@ -36,6 +43,12 @@ public class MainMenuBar extends JMenuBar {
 
         JMenuItem itemAgregarCapa = createItem("Agregar capa", createOpenLayerIcon());
         itemAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
+
+        JMenuItem itemDemOnline = createItem("DEM online...", AppIcons.propertiesIcon());
+        itemDemOnline.addActionListener(e -> OnlineDemDownloadDialog.open());
+
+        JMenuItem itemCargarDem = createItem("Cargar datos DEM...", AppIcons.openIcon());
+        itemCargarDem.addActionListener(e -> DemLocalLoadAction.openDialog());
 
         JMenuItem itemNuevaCapaVectorial = createItem("Nueva capa vectorial", createNewVectorLayerIcon());
         itemNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
@@ -57,12 +70,41 @@ public class MainMenuBar extends JMenuBar {
         menuArchivo.add(itemNuevoProyecto);
         menuArchivo.add(itemAbrirProyecto);
         menuArchivo.add(itemAgregarCapa);
+        menuArchivo.add(itemDemOnline);
+        menuArchivo.add(itemCargarDem);
         menuArchivo.add(itemNuevaCapaVectorial);
         menuArchivo.add(itemAbrirTabla);
         menuArchivo.addSeparator();
         menuArchivo.add(itemGuardarProyecto);
         menuArchivo.add(itemGuardarProyectoComo);
         menuArchivo.add(itemSalvarVista);
+
+        JMenuItem itemCompositorCartografico = createItem("Abrir compositor cartografico...", AppIcons.projectIcon());
+        itemCompositorCartografico.addActionListener(e -> MapLayoutComposerDialog.open());
+
+        JMenuItem itemSimbologiaCapa = createItem("Simbologia de capa seleccionada...", AppIcons.propertiesIcon());
+        itemSimbologiaCapa.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            if (layer == null) {
+                JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa para editar su simbologia."));
+                return;
+            }
+            LayerPropertiesDialog.open(layer);
+        });
+
+        JMenuItem itemTematicaCampo = createItem("Simbologia por campo...", AppIcons.propertiesIcon());
+        itemTematicaCampo.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            if (layer == null) {
+                JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa de lineas o poligonos."));
+                return;
+            }
+            CategorizedSymbologyDialog.open(layer);
+        });
+
+        menuCartografia.add(itemCompositorCartografico);
+        menuCartografia.add(itemSimbologiaCapa);
+        menuCartografia.add(itemTematicaCampo);
 
         JMenuItem itemCortar = createItem("Cortar selección", AppIcons.cutIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_X, menuMask));
@@ -144,6 +186,14 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
+        JMenuItem itemUnirVertices = createItem("Unir vértices", AppIcons.joinVerticesIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_U, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemUnirVertices.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.activateJoinVerticesMode();
+            }
+        });
+
         JMenuItem itemGuardarEdicion = createItem("Guardar cambios de edición", AppIcons.saveIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_G, menuMask));
         itemGuardarEdicion.addActionListener(e -> {
@@ -183,6 +233,72 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
+        JMenuItem itemContinuarLinea = createItem("Continuar linea", AppIcons.lineIcon());
+        itemContinuarLinea.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.enableContinueLineMode();
+            }
+        });
+
+        JMenuItem itemRectangulo = createItem("Rectangulo", AppIcons.rectangleIcon());
+        itemRectangulo.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.enableDrawRectangleMode();
+            }
+        });
+
+        JMenuItem itemCirculo = createItem("Circulo", AppIcons.circleIcon());
+        itemCirculo.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.enableDrawCircleMode();
+            }
+        });
+
+        JMenuItem itemCirculo3P = createItem("Circulo por 3 puntos", AppIcons.circleThreePointsIcon());
+        itemCirculo3P.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.enableDrawCircleThreePointMode();
+            }
+        });
+
+        JMenuItem itemExtenderLinea = createItem("Extender linea", AppIcons.extendLineIcon());
+        itemExtenderLinea.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.activateExtendLineMode();
+            }
+        });
+
+        JMenuItem itemAcortarLinea = createItem("Acortar linea", AppIcons.shortenLineIcon());
+        itemAcortarLinea.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.activateShortenLineMode();
+            }
+        });
+
+        JMenuItem itemParalela = createItem("Paralela / desplazamiento lateral", AppIcons.parallelIcon());
+        itemParalela.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.activateParallelLineMode();
+            }
+        });
+
+        JMenuItem itemPerpendicular = createItem("Perpendicular", AppIcons.perpendicularIcon());
+        itemPerpendicular.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel != null) {
+                CatgisDesktopApp.mapPanel.activatePerpendicularLineMode();
+            }
+        });
+
+        menuCad.add(itemContinuarLinea);
+        menuCad.add(itemExtenderLinea);
+        menuCad.add(itemAcortarLinea);
+        menuCad.add(itemParalela);
+        menuCad.add(itemPerpendicular);
+        menuCad.addSeparator();
+        menuCad.add(itemRectangulo);
+        menuCad.add(itemCirculo);
+        menuCad.add(itemCirculo3P);
+
         menuEdicion.add(itemCortar);
         menuEdicion.add(itemCopiar);
         menuEdicion.add(itemCopiarACapaEditable);
@@ -194,6 +310,8 @@ public class MainMenuBar extends JMenuBar {
         menuEdicion.addSeparator();
         menuEdicion.add(itemMoverSeleccion);
         menuEdicion.add(itemCortarGeometria);
+        menuEdicion.add(itemUnirVertices);
+        menuEdicion.add(menuCad);
         menuEdicion.add(itemUnirElementos);
         menuEdicion.add(itemExplotar);
         menuEdicion.addSeparator();
@@ -298,9 +416,13 @@ public class MainMenuBar extends JMenuBar {
         menuHerramientas.add(itemIdentificar);
         menuHerramientas.add(itemBuscarCoord);
         menuHerramientas.addSeparator();
+        JMenuItem itemRectanguloDibujo = createItem("Dibujar rectangulo", AppIcons.rectangleIcon());
+        itemRectanguloDibujo.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawRectangleMode());
+
         menuHerramientas.add(itemPunto);
         menuHerramientas.add(itemMultiPunto);
         menuHerramientas.add(itemLinea);
+        menuHerramientas.add(itemRectanguloDibujo);
         menuHerramientas.add(itemPoligono);
         menuHerramientas.addSeparator();
         menuHerramientas.add(itemMedirDist);
@@ -344,12 +466,28 @@ public class MainMenuBar extends JMenuBar {
         menuProyecto.add(itemRenombrarProyecto);
         menuProyecto.add(itemProjectCRS);
 
+        JMenuItem itemPanelAyuda = createItem("Panel de ayuda", createHelpIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
+        itemPanelAyuda.addActionListener(e -> HelpCenterDialog.open());
+
+        JMenuItem itemAcercaDe = createItem("Acerca de CATGIS", createAboutIcon());
+        itemAcercaDe.addActionListener(e -> AboutCatgisDialog.open());
+
+        menuAyuda.add(itemPanelAyuda);
+        menuAyuda.addSeparator();
+        menuAyuda.add(buildLanguageMenu());
+        menuAyuda.addSeparator();
+        menuAyuda.add(itemAcercaDe);
+
         add(menuArchivo);
         add(menuEdicion);
         add(menuVista);
         add(menuHerramientas);
+        add(menuCartografia);
+        add(menuModulos);
         add(menuVentana);
         add(menuProyecto);
+        add(menuAyuda);
     }
 
     private JMenuItem createItem(String text, Icon icon) {
@@ -357,11 +495,44 @@ public class MainMenuBar extends JMenuBar {
     }
 
     private JMenuItem createItem(String text, Icon icon, KeyStroke accelerator) {
-        JMenuItem item = new JMenuItem(text, icon);
+        JMenuItem item = new JMenuItem(I18n.t(text), icon);
         if (accelerator != null) {
             item.setAccelerator(accelerator);
         }
         return item;
+    }
+
+    private JMenu buildLanguageMenu() {
+        JMenu languageMenu = new JMenu(I18n.languageMenuLabel());
+
+        JRadioButtonMenuItem spanishItem = new JRadioButtonMenuItem(I18n.languageSelectionLabel(I18n.Language.SPANISH));
+        JRadioButtonMenuItem englishItem = new JRadioButtonMenuItem(I18n.languageSelectionLabel(I18n.Language.ENGLISH));
+        ButtonGroup group = new ButtonGroup();
+        group.add(spanishItem);
+        group.add(englishItem);
+
+        spanishItem.setSelected(I18n.getCurrentLanguage() == I18n.Language.SPANISH);
+        englishItem.setSelected(I18n.getCurrentLanguage() == I18n.Language.ENGLISH);
+
+        spanishItem.addActionListener(e -> updateLanguage(I18n.Language.SPANISH));
+        englishItem.addActionListener(e -> updateLanguage(I18n.Language.ENGLISH));
+
+        languageMenu.add(spanishItem);
+        languageMenu.add(englishItem);
+        return languageMenu;
+    }
+
+    private void updateLanguage(I18n.Language language) {
+        if (I18n.getCurrentLanguage() == language) {
+            return;
+        }
+        I18n.setLanguage(language);
+        JOptionPane.showMessageDialog(
+                CatgisDesktopApp.getMainFrameSafe(),
+                I18n.t("Idioma actualizado. Reinicia CATGIS para ver el cambio en toda la interfaz."),
+                I18n.languageMenuLabel(),
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private Layer getPreferredVectorLayer() {
@@ -505,7 +676,7 @@ public class MainMenuBar extends JMenuBar {
         g.fillRoundRect(2, 2, 12, 12, 3, 3);
         g.setColor(Color.WHITE);
         g.setFont(new Font("SansSerif", Font.BOLD, 11));
-        g.drawString("Σ", 4, 12);
+        g.drawString("ÃƒÅ½Ã‚Â£", 4, 12);
         g.dispose();
         return new ImageIcon(img);
     }
@@ -560,6 +731,34 @@ public class MainMenuBar extends JMenuBar {
         g.drawLine(2, 10, 14, 10);
         g.setColor(new Color(255, 196, 0));
         g.fillOval(10, 2, 4, 4);
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private Icon createHelpIcon() {
+        int w = 16, h = 16;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(33, 120, 210));
+        g.fillRoundRect(2, 2, 12, 12, 4, 4);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g.drawString("?", 5, 12);
+        g.dispose();
+        return new ImageIcon(img);
+    }
+
+    private Icon createAboutIcon() {
+        int w = 16, h = 16;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(20, 96, 182));
+        g.fillOval(2, 2, 12, 12);
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("SansSerif", Font.BOLD, 10));
+        g.drawString("i", 6, 12);
         g.dispose();
         return new ImageIcon(img);
     }

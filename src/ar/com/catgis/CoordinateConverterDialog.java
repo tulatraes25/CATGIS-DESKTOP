@@ -206,7 +206,7 @@ public class CoordinateConverterDialog extends JDialog {
 
     private double parseNumber(String text) {
         if (text == null || text.trim().isEmpty()) {
-            throw new RuntimeException("Ingrese un valor numérico.");
+            throw new RuntimeException("Ingrese un valor numÃ©rico.");
         }
         return Double.parseDouble(text.trim().replace(",", "."));
     }
@@ -229,6 +229,6 @@ public class CoordinateConverterDialog extends JDialog {
         int minutes = (int) minFloat;
         double secFloat = (minFloat - minutes) * 60.0;
 
-        return String.format(Locale.US, "%d° %d' %.2f\" %s", degrees, minutes, secFloat, hemi);
+        return String.format(Locale.US, "%d\u00B0 %d' %.2f\" %s", degrees, minutes, secFloat, hemi);
     }
 }
