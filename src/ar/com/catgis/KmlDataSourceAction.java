@@ -10,9 +10,9 @@ public final class KmlDataSourceAction {
     }
 
     public static void openKmlDataSource() {
-        JFileChooser chooser = FileChooserSupport.createChooser("open-layer-data", "Origen de datos KML");
+        JFileChooser chooser = FileChooserSupport.createChooser("open-layer-data", "Origen de datos KML / KMZ");
         chooser.setAcceptAllFileFilterUsed(false);
-        chooser.setFileFilter(new FileNameExtensionFilter("KML (*.kml)", "kml"));
+        chooser.setFileFilter(new FileNameExtensionFilter("KML / KMZ (*.kml, *.kmz)", "kml", "kmz"));
 
         int result = chooser.showOpenDialog(CatgisDesktopApp.getMainFrameSafe());
         if (result != JFileChooser.APPROVE_OPTION) {
@@ -25,6 +25,6 @@ public final class KmlDataSourceAction {
             return;
         }
 
-        OpenFileAction.openSelectedFile(file, "KML", CatgisDesktopApp.getMainFrameSafe());
+        OpenFileAction.openSelectedFile(file, "KML/KMZ", CatgisDesktopApp.getMainFrameSafe());
     }
 }

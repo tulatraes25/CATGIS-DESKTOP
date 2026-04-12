@@ -30,7 +30,7 @@ public class MainToolBar extends JToolBar {
         JButton btnNuevaCapaVectorial = createButton(I18n.t("Crear nueva capa vectorial"), createNewVectorLayerIcon());
         btnNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
 
-        JButton btnTablaPuntos = createButton(I18n.t("Importar tabla de puntos"), AppIcons.importTableIcon());
+        JButton btnTablaPuntos = createButton(I18n.t("Cargar tabla externa"), AppIcons.importTableIcon());
         btnTablaPuntos.addActionListener(e -> OpenTablePointsAction.openTablePoints());
 
         JButton btnGuardar = createButton(I18n.t("Guardar proyecto"), AppIcons.saveIcon());

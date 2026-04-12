@@ -4,12 +4,11 @@ import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
-import java.util.List;
 
 public class OpenTablePointsAction {
 
     public static void openTablePoints() {
-        JFileChooser chooser = FileChooserSupport.createChooser("table-open", "Abrir tabla de coordenadas");
+        JFileChooser chooser = FileChooserSupport.createChooser("table-open", "Cargar tabla externa");
         chooser.setAcceptAllFileFilterUsed(true);
 
         FileNameExtensionFilter allTables = new FileNameExtensionFilter(
@@ -30,7 +29,7 @@ public class OpenTablePointsAction {
         chooser.addChoosableFileFilter(odsFilter);
         chooser.setFileFilter(allTables);
 
-        int result = chooser.showOpenDialog(null);
+        int result = chooser.showOpenDialog(CatgisDesktopApp.getMainFrameSafe());
         if (result != JFileChooser.APPROVE_OPTION) {
             return;
         }
@@ -42,82 +41,19 @@ public class OpenTablePointsAction {
         }
 
         try {
-            String lower = file.getName().toLowerCase();
-            TablePointData data;
-
-            if (lower.endsWith(".csv")) {
-                data = CsvTableReader.read(file);
-
-            } else if (lower.endsWith(".xlsx")) {
-                List<String> sheetNames = XlsxTableReader.getSheetNames(file);
-                int selectedIndex = chooseSheet("Seleccione la hoja de Excel", sheetNames);
-                if (selectedIndex < 0) {
-                    return;
-                }
-                data = XlsxTableReader.read(file, selectedIndex);
-
-            } else if (lower.endsWith(".xls")) {
-                List<String> sheetNames = XlsTableReader.getSheetNames(file);
-                int selectedIndex = chooseSheet("Seleccione la hoja de Excel XLS", sheetNames);
-                if (selectedIndex < 0) {
-                    return;
-                }
-                data = XlsTableReader.read(file, selectedIndex);
-
-            } else if (lower.endsWith(".dbf")) {
-                data = DbfTableReader.read(file);
-
-            } else if (lower.endsWith(".ods")) {
-                List<String> sheetNames = OdsTableReader.getSheetNames(file);
-                int selectedIndex = chooseSheet("Seleccione la hoja ODS", sheetNames);
-                if (selectedIndex < 0) {
-                    return;
-                }
-                data = OdsTableReader.read(file, selectedIndex);
-
-            } else {
-                JOptionPane.showMessageDialog(
-                        null,
-                        "Formato no soportado todavía.\nUse CSV, XLSX, XLS, DBF u ODS."
-                );
+            TablePointData data = TableDataSupport.read(file, CatgisDesktopApp.getMainFrameSafe());
+            if (data == null) {
                 return;
             }
-
-            TablePointImportDialog.open(file, data);
-
+            CsvDataSourceDialog.open(file, data);
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al abrir tabla: " + ex.getMessage());
+            JOptionPane.showMessageDialog(
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "Error al abrir tabla: " + ex.getMessage(),
+                    "Tabla externa",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
-    }
-
-    private static int chooseSheet(String title, List<String> sheetNames) {
-        if (sheetNames == null || sheetNames.isEmpty()) {
-            JOptionPane.showMessageDialog(null, "No se encontraron hojas disponibles.");
-            return -1;
-        }
-
-        Object selected = JOptionPane.showInputDialog(
-                null,
-                "Seleccione la hoja a importar:",
-                title,
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                sheetNames.toArray(),
-                sheetNames.get(0)
-        );
-
-        if (selected == null) {
-            return -1;
-        }
-
-        String selectedName = selected.toString();
-        for (int i = 0; i < sheetNames.size(); i++) {
-            if (sheetNames.get(i).equals(selectedName)) {
-                return i;
-            }
-        }
-
-        return -1;
     }
 }

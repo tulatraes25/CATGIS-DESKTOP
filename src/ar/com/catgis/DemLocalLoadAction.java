@@ -20,7 +20,7 @@ public class DemLocalLoadAction extends AbstractAction {
     }
 
     public static void openDialog(Component parent) {
-        JFileChooser chooser = FileChooserSupport.createChooser("open-dem-data", I18n.t("Cargar datos DEM"));
+        JFileChooser chooser = FileChooserSupport.createChooser("open-dem-data", I18n.t("Cargar DEM local"));
         chooser.setMultiSelectionEnabled(true);
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.addChoosableFileFilter(new FileNameExtensionFilter(

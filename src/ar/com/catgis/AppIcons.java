@@ -79,6 +79,8 @@ public final class AppIcons {
     public static Icon basemapIcon() { return svg("basemap"); }
     public static Icon imageryIcon() { return svg("imagery"); }
     public static Icon wmsIcon() { return svg("wms"); }
+    public static Icon drainageIcon() { return svg("drainage"); }
+    public static Icon terrainAnalysisIcon() { return svg("terrain-analysis"); }
 
     private static Icon svg(String name) {
         String resourcePath = "icons/" + name + ".svg";

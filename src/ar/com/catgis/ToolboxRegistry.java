@@ -88,11 +88,22 @@ public final class ToolboxRegistry {
                 "spatial_join",
                 "Spatial Join",
                 "Relacion espacial",
-                "Transfiere atributos desde una capa B hacia la capa A segun interseccion espacial.",
+                "Conserva la geometria de A y agrega atributos desde B por primera coincidencia o resumen.",
                 ToolboxOutputType.VECTOR_LAYER,
                 GeoprocessingAssistantDialog.OP_SPATIAL_JOIN
         ).addInput(ToolboxInputType.VECTOR_ANY)
                 .addInput(ToolboxInputType.VECTOR_ANY)
+                .addParameter(new ToolboxParameter("output", "Salida", ToolboxParameterType.OUTPUT_NAME, true, "Nombre de la nueva capa")));
+
+        register(new ToolboxAlgorithm(
+                "union",
+                "Union geometrica",
+                "Superposicion",
+                "Parte dos capas poligonales en piezas de overlay y conserva atributos de ambas.",
+                ToolboxOutputType.VECTOR_LAYER,
+                GeoprocessingAssistantDialog.OP_UNION
+        ).addInput(ToolboxInputType.VECTOR_POLYGON)
+                .addInput(ToolboxInputType.VECTOR_POLYGON)
                 .addParameter(new ToolboxParameter("output", "Salida", ToolboxParameterType.OUTPUT_NAME, true, "Nombre de la nueva capa")));
     }
 

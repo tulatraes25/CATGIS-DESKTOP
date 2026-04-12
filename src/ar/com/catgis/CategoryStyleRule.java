@@ -9,6 +9,8 @@ public class CategoryStyleRule {
     private Layer.LineSymbolStyle lineStyle;
     private float lineWidth;
     private Layer.PolygonFillStyle polygonFillStyle;
+    private Layer.PointSymbolStyle pointSymbolStyle;
+    private int pointSize;
 
     public CategoryStyleRule(String value) {
         this.value = value != null ? value : "(sin valor)";
@@ -17,6 +19,8 @@ public class CategoryStyleRule {
         this.lineStyle = Layer.LineSymbolStyle.SOLID;
         this.lineWidth = 1.5f;
         this.polygonFillStyle = Layer.PolygonFillStyle.SOLID;
+        this.pointSymbolStyle = Layer.PointSymbolStyle.CIRCLE;
+        this.pointSize = 9;
     }
 
     public String getValue() {
@@ -70,6 +74,26 @@ public class CategoryStyleRule {
     public void setPolygonFillStyle(Layer.PolygonFillStyle polygonFillStyle) {
         if (polygonFillStyle != null) {
             this.polygonFillStyle = polygonFillStyle;
+        }
+    }
+
+    public Layer.PointSymbolStyle getPointSymbolStyle() {
+        return pointSymbolStyle;
+    }
+
+    public void setPointSymbolStyle(Layer.PointSymbolStyle pointSymbolStyle) {
+        if (pointSymbolStyle != null) {
+            this.pointSymbolStyle = pointSymbolStyle;
+        }
+    }
+
+    public int getPointSize() {
+        return pointSize;
+    }
+
+    public void setPointSize(int pointSize) {
+        if (pointSize > 0) {
+            this.pointSize = pointSize;
         }
     }
 }

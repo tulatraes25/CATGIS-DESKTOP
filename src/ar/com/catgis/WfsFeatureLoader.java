@@ -54,7 +54,7 @@ public final class WfsFeatureLoader {
             Query query = new Query(typeName);
             String requestCrs = CRSDefinitions.normalizeCode(layer.getRequestCrs());
             if (!requestCrs.isBlank()) {
-                query.setCoordinateSystemReproject(CRS.decode(requestCrs, true));
+                query.setCoordinateSystemReproject(CRSDefinitions.decode(requestCrs, true));
             }
 
             org.geotools.data.simple.SimpleFeatureCollection featureCollection = source.getFeatures(query);

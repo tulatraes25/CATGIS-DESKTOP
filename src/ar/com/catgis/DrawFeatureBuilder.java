@@ -185,7 +185,7 @@ public class DrawFeatureBuilder {
         typeBuilder.setName(safeTypeName(layerName));
 
         if (crsCode != null && !crsCode.isBlank()) {
-            CoordinateReferenceSystem crs = CRS.decode(CRSDefinitions.normalizeCode(crsCode), true);
+            CoordinateReferenceSystem crs = CRSDefinitions.decode(crsCode, true);
             typeBuilder.setCRS(crs);
         }
 

@@ -5,6 +5,7 @@ import java.awt.Font
 import java.awt.FontMetrics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 
 plugins {
@@ -48,7 +49,12 @@ dependencies {
     implementation 'com.formdev:flatlaf:3.7'
     implementation 'com.formdev:flatlaf-extras:3.7'
     implementation 'com.formdev:flatlaf-intellij-themes:3.7'
-    implementation 'com.github.weisj:jsvg:1.7.0'
+    implementation 'com.github.weisj:jsvg:2.0.0'
+    implementation 'org.apache.logging.log4j:log4j-api:2.23.1'
+    runtimeOnly 'org.apache.logging.log4j:log4j-core:2.23.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 java {
@@ -61,16 +67,22 @@ sourceSets {
     main {
         java {
             srcDirs = ['src']
+            exclude 'test/**'
         }
         resources {
             srcDirs = ['src', '.']
-            includes = ['icons/**', 'splash_catgis.png']
+            includes = ['icons/**', 'help/**', 'splash_catgis.png']
         }
     }
 }
 
 application {
     mainClass = 'ar.com.catgis.Main'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    systemProperty 'java.awt.headless', 'true'
 }
 
 tasks.named('startScripts') {
@@ -87,13 +99,14 @@ tasks.named('startScripts') {
 }
 
 def windowsHost = System.getProperty('os.name', '').toLowerCase().contains('windows')
-def installerDisplayName = 'CATGIS Desktop Review'
+def installerDisplayName = 'CATGIS Desktop'
 def installerVersion = '1.0.0'
+def installerStableExeBaseName = 'CATGIS Desktop Review-1.0.0'
 def installerVendor = 'Lic Claudio Alejandro Tula'
-def installerDescription = 'CATGIS Desktop - version review/beta no final para evaluacion profesional.'
+def installerDescription = 'CATGIS Desktop - beta final funcional para validacion y distribucion controlada.'
 def installerCopyright = 'Copyright (c) 2026 Claudio Alejandro Tula'
 def installerMenuGroup = 'CATGIS'
-def installerInstallDir = 'CATGIS Desktop Review'
+def installerInstallDir = 'CATGIS Desktop'
 def bundledWixBinDir = new File(rootDir.parentFile, 'tools/wix314/bin')
 def bundledInnoCompiler = new File(rootDir.parentFile, 'tools/innosetup6/ISCC.exe')
 def javaHomeProvider = javaToolchains.launcherFor {
@@ -131,6 +144,12 @@ tasks.register('prepareWindowsInstallerInput', Sync) {
 tasks.register('packageWindowsAppImage') {
     dependsOn 'prepareWindowsInstallerInput', 'generateWindowsInstallerAssets'
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
+    def inputDirProvider = layout.buildDirectory.dir('installer/windows/input')
+    def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
+    inputs.dir(inputDirProvider)
+    inputs.dir(resourcesDirProvider)
+    inputs.file(file('packaging/windows/CATGIS_BETA_LICENSE.rtf'))
+    inputs.file(file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss'))
     outputs.dir(outputDirProvider)
 
     doLast {
@@ -139,8 +158,8 @@ tasks.register('packageWindowsAppImage') {
         }
 
         File outputDir = outputDirProvider.get().asFile
-        File inputDir = layout.buildDirectory.dir('installer/windows/input').get().asFile
-        File resourcesDir = layout.buildDirectory.dir('installer/windows/resources').get().asFile
+        File inputDir = inputDirProvider.get().asFile
+        File resourcesDir = resourcesDirProvider.get().asFile
         File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage.exe')
         File mainJar = inputDir.listFiles()?.find { it.name.startsWith("${project.name}-") && it.name.endsWith('.jar') }
 
@@ -177,6 +196,11 @@ tasks.register('packageWindowsAppImage') {
 tasks.register('packageWindowsJpackageExeInstaller') {
     dependsOn 'packageWindowsAppImage'
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
+    def appImageDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
+    def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
+    inputs.dir(appImageDirProvider)
+    inputs.dir(resourcesDirProvider)
+    inputs.file(file('packaging/windows/CATGIS_BETA_LICENSE.rtf'))
     outputs.dir(outputDirProvider)
 
     doLast {
@@ -190,9 +214,9 @@ tasks.register('packageWindowsJpackageExeInstaller') {
         }
 
         File outputDir = outputDirProvider.get().asFile
-        File appImageDir = new File(layout.buildDirectory.dir('installer/windows/app-image').get().asFile, installerDisplayName)
-        File resourcesDir = layout.buildDirectory.dir('installer/windows/resources').get().asFile
-        File licenseFile = file('packaging/windows/CATGIS_REVIEW_LICENSE.rtf')
+        File appImageDir = new File(appImageDirProvider.get().asFile, installerDisplayName)
+        File resourcesDir = resourcesDirProvider.get().asFile
+        File licenseFile = file('packaging/windows/CATGIS_BETA_LICENSE.rtf')
         File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage.exe')
 
         if (!appImageDir.exists()) {
@@ -200,6 +224,13 @@ tasks.register('packageWindowsJpackageExeInstaller') {
         }
         if (!licenseFile.exists()) {
             throw new GradleException("No se encontro la licencia de instalacion en ${licenseFile.absolutePath}.")
+        }
+
+        File appImageExe = new File(appImageDir, "${installerDisplayName}.exe")
+        if (project.ext.resolveSigningConfig.call() != null) {
+            signWindowsBinary(project, appImageExe)
+        } else {
+            logger.lifecycle('Firma digital no configurada: la app-image y el instalador se generan sin firma.')
         }
 
         delete outputDir
@@ -228,12 +259,32 @@ tasks.register('packageWindowsJpackageExeInstaller') {
                     '--verbose'
             )
         }
+
+        File generatedInstallerExe = new File(outputDir, "${installerDisplayName}-${installerVersion}.exe")
+        File installerExe = new File(outputDir, "${installerStableExeBaseName}.exe")
+        if (!generatedInstallerExe.equals(installerExe) && generatedInstallerExe.exists()) {
+            if (installerExe.exists()) {
+                installerExe.delete()
+            }
+            if (!generatedInstallerExe.renameTo(installerExe)) {
+                throw new GradleException("No se pudo renombrar el instalador a ${installerExe.absolutePath}.")
+            }
+        }
+        if (project.ext.resolveSigningConfig.call() != null) {
+            signWindowsBinary(project, installerExe)
+        }
     }
 }
 
 tasks.register('packageWindowsExeInstaller') {
     dependsOn 'packageWindowsAppImage', 'generateWindowsInstallerAssets'
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
+    def appImageDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
+    def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
+    inputs.dir(appImageDirProvider)
+    inputs.dir(resourcesDirProvider)
+    inputs.file(file('packaging/windows/CATGIS_BETA_LICENSE.rtf'))
+    inputs.file(file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss'))
     outputs.dir(outputDirProvider)
 
     doLast {
@@ -247,9 +298,9 @@ tasks.register('packageWindowsExeInstaller') {
         }
 
         File outputDir = outputDirProvider.get().asFile
-        File appImageDir = new File(layout.buildDirectory.dir('installer/windows/app-image').get().asFile, installerDisplayName)
-        File resourcesDir = layout.buildDirectory.dir('installer/windows/resources').get().asFile
-        File licenseFile = file('packaging/windows/CATGIS_REVIEW_LICENSE.rtf')
+        File appImageDir = new File(appImageDirProvider.get().asFile, installerDisplayName)
+        File resourcesDir = resourcesDirProvider.get().asFile
+        File licenseFile = file('packaging/windows/CATGIS_BETA_LICENSE.rtf')
         File issFile = file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss')
 
         if (!appImageDir.exists()) {
@@ -260,6 +311,13 @@ tasks.register('packageWindowsExeInstaller') {
         }
         if (!issFile.exists()) {
             throw new GradleException("No se encontro el script de Inno Setup en ${issFile.absolutePath}.")
+        }
+
+        File appImageExe = new File(appImageDir, "${installerDisplayName}.exe")
+        if (project.ext.resolveSigningConfig.call() != null) {
+            signWindowsBinary(project, appImageExe)
+        } else {
+            logger.lifecycle('Firma digital no configurada: la app-image y el instalador se generan sin firma.')
         }
 
         delete outputDir
@@ -273,13 +331,18 @@ tasks.register('packageWindowsExeInstaller') {
                     "/DInstallerName=${installerDisplayName}",
                     "/DInstallerVersion=${installerVersion}",
                     "/DInstallerPublisher=${installerVendor}",
-                    "/DInstallerExeName=${installerDisplayName}-${installerVersion}",
+                    "/DInstallerExeName=${installerStableExeBaseName}",
                     "/DInstallerLicense=${licenseFile.absolutePath}",
                     "/DInstallerIcon=${new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath}",
                     "/DInstallerGroup=${installerMenuGroup}",
                     "/DInstallerDir=${installerInstallDir}",
                     issFile.absolutePath
             )
+        }
+
+        File installerExe = new File(outputDir, "${installerStableExeBaseName}.exe")
+        if (project.ext.resolveSigningConfig.call() != null) {
+            signWindowsBinary(project, installerExe)
         }
     }
 }
@@ -318,6 +381,77 @@ ext.resolveInnoCompiler = {
     return null
 }
 
+ext.resolveSignTool = {
+    List<File> candidates = []
+
+    String envPath = System.getenv('CATGIS_SIGNTOOL_EXE') ?: System.getenv('SIGNTOOL_EXE')
+    if (envPath) {
+        candidates << new File(envPath)
+    }
+
+    File bundledWindowsKits = new File(rootDir.parentFile, 'tools/windows-kits')
+    if (bundledWindowsKits.exists()) {
+        candidates.addAll(project.fileTree(bundledWindowsKits) {
+            include '**/signtool.exe'
+        }.files.sort { a, b -> b.absolutePath <=> a.absolutePath })
+    }
+
+    for (String basePath : [
+            'C:\\Program Files (x86)\\Windows Kits\\10\\bin',
+            'C:\\Program Files\\Windows Kits\\10\\bin'
+    ]) {
+        File baseDir = new File(basePath)
+        if (baseDir.exists()) {
+            candidates.addAll(project.fileTree(baseDir) {
+                include '**/x64/signtool.exe'
+                include '**/signtool.exe'
+            }.files.sort { a, b -> b.absolutePath <=> a.absolutePath })
+        }
+    }
+
+    String onPath = findExecutableOnPath('signtool.exe')
+    if (onPath) {
+        candidates << new File(onPath)
+    }
+
+    return candidates.find { it.exists() }
+}
+
+ext.resolveSigningConfig = {
+    String pfxPath = System.getenv('CATGIS_SIGN_PFX') ?: System.getenv('CATGIS_SIGN_CERT_FILE')
+    String pfxPassword = System.getenv('CATGIS_SIGN_PFX_PASSWORD') ?: ''
+    String thumbprint = System.getenv('CATGIS_SIGN_THUMBPRINT') ?: ''
+    String timestampUrl = System.getenv('CATGIS_SIGN_TIMESTAMP_URL') ?: 'http://timestamp.digicert.com'
+
+    if (!pfxPath && !thumbprint) {
+        return null
+    }
+
+    return [
+            pfxFile     : pfxPath ? file(pfxPath) : null,
+            pfxPassword : pfxPassword,
+            thumbprint  : thumbprint,
+            timestampUrl: timestampUrl
+    ]
+}
+
+tasks.register('printWindowsSigningStatus') {
+    doLast {
+        File signTool = project.ext.resolveSignTool.call()
+        Map signingConfig = project.ext.resolveSigningConfig.call()
+
+        logger.lifecycle("signtool: ${signTool != null ? signTool.absolutePath : 'NO DISPONIBLE'}")
+        if (signingConfig == null) {
+            logger.lifecycle('Firma digital: no configurada. Define CATGIS_SIGN_PFX o CATGIS_SIGN_THUMBPRINT para firmar.')
+        } else if (signingConfig.pfxFile != null) {
+            logger.lifecycle("Firma digital configurada con PFX: ${signingConfig.pfxFile.absolutePath}")
+        } else {
+            logger.lifecycle("Firma digital configurada con thumbprint: ${signingConfig.thumbprint}")
+        }
+        logger.lifecycle("Timestamp URL: ${signingConfig?.timestampUrl ?: 'N/A'}")
+    }
+}
+
 tasks.register('packageWindowsDistribution') {
     dependsOn 'packageWindowsAppImage'
     doLast {
@@ -345,7 +479,60 @@ String findExecutableOnPath(String executableName) {
     return null
 }
 
+boolean signWindowsBinary(Project project, File targetFile) {
+    Map signingConfig = project.ext.resolveSigningConfig.call()
+    if (signingConfig == null) {
+        project.logger.lifecycle("Firma digital no configurada para ${targetFile.absolutePath}.")
+        return false
+    }
+
+    File signTool = project.ext.resolveSignTool.call()
+    if (signTool == null || !signTool.exists()) {
+        throw new GradleException('No se encontro signtool.exe. Instala Windows SDK o define CATGIS_SIGNTOOL_EXE para firmar digitalmente los artefactos Windows.')
+    }
+    if (!targetFile.exists()) {
+        throw new GradleException("No se encontro el archivo a firmar en ${targetFile.absolutePath}.")
+    }
+    if (signingConfig.pfxFile != null && !signingConfig.pfxFile.exists()) {
+        throw new GradleException("No se encontro el certificado PFX en ${signingConfig.pfxFile.absolutePath}.")
+    }
+
+    List<String> command = [
+            signTool.absolutePath,
+            'sign',
+            '/fd', 'SHA256'
+    ]
+
+    if (signingConfig.timestampUrl) {
+        command.addAll(['/tr', signingConfig.timestampUrl, '/td', 'SHA256'])
+    }
+
+    if (signingConfig.pfxFile != null) {
+        command.addAll(['/f', signingConfig.pfxFile.absolutePath])
+        if (signingConfig.pfxPassword) {
+            command.addAll(['/p', signingConfig.pfxPassword])
+        }
+    } else if (signingConfig.thumbprint) {
+        command.addAll(['/sha1', signingConfig.thumbprint])
+    } else {
+        throw new GradleException('La configuracion de firma es invalida: falta PFX o thumbprint.')
+    }
+
+    command.add(targetFile.absolutePath)
+
+    project.logger.lifecycle("Firmando ${targetFile.name} con ${signTool.absolutePath}")
+    project.exec {
+        commandLine(command)
+    }
+    return true
+}
+
 BufferedImage createBrandIconImage(int size) {
+    BufferedImage installerSource = loadInstallerIconSourceImage()
+    if (installerSource != null) {
+        return createDirectSourceIconImage(installerSource, size)
+    }
+
     BufferedImage splashSource = loadSplashSourceImage()
     if (splashSource != null) {
         return createSplashBasedIconImage(splashSource, size)
@@ -354,16 +541,44 @@ BufferedImage createBrandIconImage(int size) {
     return createFallbackBrandIconImage(size)
 }
 
+BufferedImage loadInstallerIconSourceImage() {
+    return readOptionalImage(file('packaging/windows/catgis-installer-source.png'))
+}
+
 BufferedImage loadSplashSourceImage() {
-    File splashFile = file('splash_catgis.png')
-    if (!splashFile.exists()) {
+    return readOptionalImage(file('splash_catgis.png'))
+}
+
+BufferedImage readOptionalImage(File imageFile) {
+    if (!imageFile.exists()) {
         return null
     }
     try {
-        return ImageIO.read(splashFile)
+        return ImageIO.read(imageFile)
     } catch (Exception ignored) {
         return null
     }
+}
+
+BufferedImage createDirectSourceIconImage(BufferedImage source, int size) {
+    BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+    Graphics2D g2 = image.createGraphics()
+    try {
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+
+        int crop = Math.min(source.width, source.height)
+        int srcX = (source.width - crop) / 2
+        int srcY = (source.height - crop) / 2
+        double inset = Math.max(0d, size * 0.02d)
+        double arc = Math.max(10d, size * 0.24d)
+        g2.setClip(new RoundRectangle2D.Double(inset, inset, size - (inset * 2d), size - (inset * 2d), arc, arc))
+        g2.drawImage(source, 0, 0, size, size, srcX, srcY, srcX + crop, srcY + crop, null)
+    } finally {
+        g2.dispose()
+    }
+    return image
 }
 
 BufferedImage createSplashBasedIconImage(BufferedImage splash, int size) {

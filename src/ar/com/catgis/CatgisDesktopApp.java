@@ -26,7 +26,6 @@ public class CatgisDesktopApp extends JFrame {
     public static StatusBar statusBar;
     public static Project currentProject;
     public static FloatingVectorEditToolbar floatingVectorEditToolbar;
-    public static OnlineConnectionsToolbar onlineConnectionsToolbar;
     public static CartographyToolbar cartographyToolbar;
     public static TopographyToolbar topographyToolbar;
     private static JLabel sidebarTitleLabel;
@@ -50,8 +49,12 @@ public class CatgisDesktopApp extends JFrame {
         mapPanel = new MapPanel();
         layersPanel = new LayersPanel();
         statusBar = new StatusBar();
+        statusBar.setScaleApplyListener(value -> {
+            if (mapPanel != null) {
+                mapPanel.applyRequestedScale(value);
+            }
+        });
         floatingVectorEditToolbar = new FloatingVectorEditToolbar();
-        onlineConnectionsToolbar = new OnlineConnectionsToolbar();
         cartographyToolbar = new CartographyToolbar();
         topographyToolbar = new TopographyToolbar();
 
@@ -59,9 +62,15 @@ public class CatgisDesktopApp extends JFrame {
         add(buildTopContainer(), BorderLayout.NORTH);
         add(buildCenterContainer(), BorderLayout.CENTER);
         add(statusBar, BorderLayout.SOUTH);
+        FileDropSupport.install(getRootPane(), mapPanel, layersPanel);
 
         initializeProjectAtStartup();
         installWindowCloseHandler();
+        SwingUtilities.invokeLater(() -> {
+            if (mapPanel != null) {
+                mapPanel.refreshStatusBarScale();
+            }
+        });
     }
 
     private JPanel buildTopContainer() {
@@ -89,7 +98,6 @@ public class CatgisDesktopApp extends JFrame {
         JPanel servicesRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         servicesRow.setOpaque(false);
         servicesRow.add(topographyToolbar);
-        servicesRow.add(onlineConnectionsToolbar);
         servicesRow.setAlignmentX(LEFT_ALIGNMENT);
         servicesRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 

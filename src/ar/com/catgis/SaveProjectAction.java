@@ -27,7 +27,7 @@ public class SaveProjectAction extends AbstractAction {
             return saveProjectAs();
         }
 
-        return saveProjectToFile(targetFile);
+        return saveProjectToFile(targetFile, true);
     }
 
     public static boolean saveProjectAs() {
@@ -64,10 +64,10 @@ public class SaveProjectAction extends AbstractAction {
             }
         }
 
-        return saveProjectToFile(file);
+        return saveProjectToFile(file, true);
     }
 
-    private static boolean saveProjectToFile(File file) {
+    static boolean saveProjectToFile(File file, boolean showDialogs) {
         if (!persistVectorLayers()) {
             return false;
         }
@@ -97,6 +97,31 @@ public class SaveProjectAction extends AbstractAction {
             writer.newLine();
             writer.write("PROJECT_META|LAYOUT_IMAGE_PATH|" + safe(CatgisDesktopApp.currentProject.getLayoutImagePath()));
             writer.newLine();
+            writer.write("PROJECT_META|CATMAP_NORTH_STYLE|" + safe(CatgisDesktopApp.currentProject.getCatmapNorthStyle()));
+            writer.newLine();
+            writer.write("PROJECT_META|CATMAP_SHOW_NORTH|" + CatgisDesktopApp.currentProject.isCatmapShowNorth());
+            writer.newLine();
+            for (CatmapLayoutItem item : CatgisDesktopApp.currentProject.getCatmapItems()) {
+                if (item != null) {
+                    writer.write("PROJECT_LAYOUT_ITEM|" + safe(item.encode()));
+                    writer.newLine();
+                }
+            }
+            for (CatmapLegendItem item : CatgisDesktopApp.currentProject.getCatmapLegendItems()) {
+                if (item != null) {
+                    writer.write("PROJECT_LEGEND_ITEM|" + safe(item.encode()));
+                    writer.newLine();
+                }
+            }
+            for (LayerGroup group : CatgisDesktopApp.currentProject.getLayerGroups()) {
+                if (group != null) {
+                    writer.write("PROJECT_LAYER_GROUP|"
+                            + safe(group.getName()) + "|"
+                            + group.isVisible() + "|"
+                            + group.isExpanded());
+                    writer.newLine();
+                }
+            }
 
             writer.write("VIEW|"
                     + CatgisDesktopApp.mapPanel.getViewMinX() + "|"
@@ -120,11 +145,15 @@ public class SaveProjectAction extends AbstractAction {
                 CatgisDesktopApp.statusBar.setMessage("Proyecto guardado: " + file.getAbsolutePath());
             }
 
-            JOptionPane.showMessageDialog(null, "Proyecto guardado correctamente.");
+            if (showDialogs) {
+                JOptionPane.showMessageDialog(null, "Proyecto guardado correctamente.");
+            }
             return true;
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al guardar proyecto: " + ex.getMessage());
+            if (showDialogs) {
+                JOptionPane.showMessageDialog(null, "Error al guardar proyecto: " + ex.getMessage());
+            }
             return false;
         }
     }
@@ -147,8 +176,10 @@ public class SaveProjectAction extends AbstractAction {
         String pointStyle = safe(layer.getPointSymbolStyle().name());
         String lineStyle = safe(layer.getLineSymbolStyle().name());
         String polygonStyle = safe(layer.getPolygonFillStyle().name());
+        String pointTheme = "POINT_THEME=" + safe(LayerSymbologyCodec.encodeCategorizedSymbology(layer.getPointCategorizedSymbology()));
         String lineTheme = safeOrPlaceholder(LayerSymbologyCodec.encodeCategorizedSymbology(layer.getLineCategorizedSymbology()));
         String polygonTheme = safeOrPlaceholder(LayerSymbologyCodec.encodeCategorizedSymbology(layer.getPolygonCategorizedSymbology()));
+        String pointGraphic = "POINT_ICON=" + safe(layer.getPointGraphicSymbol());
 
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(type).append("]")
@@ -168,7 +199,14 @@ public class SaveProjectAction extends AbstractAction {
                 .append("|").append(lineStyle)
                 .append("|").append(polygonStyle)
                 .append("|").append(lineTheme)
-                .append("|").append(polygonTheme);
+                .append("|").append(polygonTheme)
+                .append("|").append(pointGraphic)
+                .append("|").append(pointTheme);
+
+        if (layer instanceof GpxLayer) {
+            GpxLayer gpx = (GpxLayer) layer;
+            sb.append("|").append("GPX_KIND=").append(safe(gpx.getContentKind().name()));
+        }
 
         if (layer instanceof RasterLayer) {
             RasterLayer raster = (RasterLayer) layer;
@@ -179,6 +217,10 @@ public class SaveProjectAction extends AbstractAction {
               .append("|").append(raster.getGreenBand())
               .append("|").append(raster.getBlueBand())
               .append("|").append(safe(raster.getRasterMode()));
+            if (raster.isDerivedLayer()) {
+                sb.append("|").append("DERIVED_OP=").append(safe(raster.getDerivedOperation()))
+                  .append("|").append("DERIVED_ARGS=").append(safe(raster.getDerivedParameters()));
+            }
         }
 
         if (layer instanceof OnlineTileLayer) {
@@ -246,6 +288,31 @@ public class SaveProjectAction extends AbstractAction {
               .append("|").append(postgis.isReadOnly());
         }
 
+        if (layer.isInGroup()) {
+            sb.append("|").append("GROUP=").append(safe(layer.getGroupName()));
+        }
+        if (layer.getSourceName() != null && !layer.getSourceName().isBlank()) {
+            sb.append("|").append("SOURCE_NAME=").append(safe(layer.getSourceName()));
+        }
+        if (CadLayerSupport.isCadLayer(layer) || layer.hasCadPlacementAdjustment()) {
+            sb.append("|").append("CAD_SHIFT_X=").append(layer.getCadOffsetX());
+            sb.append("|").append("CAD_SHIFT_Y=").append(layer.getCadOffsetY());
+            sb.append("|").append("CAD_SCALE=").append(layer.getCadScale());
+            sb.append("|").append("CAD_ROT=").append(layer.getCadRotationDegrees());
+            sb.append("|").append("CAD_GEOREF_METHOD=").append(safe(layer.getCadGeoreferenceMethod()));
+            sb.append("|").append("CAD_GEOREF_M00=").append(layer.getCadGeorefM00());
+            sb.append("|").append("CAD_GEOREF_M01=").append(layer.getCadGeorefM01());
+            sb.append("|").append("CAD_GEOREF_M02=").append(layer.getCadGeorefM02());
+            sb.append("|").append("CAD_GEOREF_M10=").append(layer.getCadGeorefM10());
+            sb.append("|").append("CAD_GEOREF_M11=").append(layer.getCadGeorefM11());
+            sb.append("|").append("CAD_GEOREF_M12=").append(layer.getCadGeorefM12());
+            sb.append("|").append("CAD_GEOREF_RES_MEAN=").append(layer.getCadGeorefResidualMean());
+            sb.append("|").append("CAD_GEOREF_RES_MAX=").append(layer.getCadGeorefResidualMax());
+            sb.append("|").append("CAD_GEOREF_REF_COUNT=").append(layer.getCadGeorefReferenceCount());
+            sb.append("|").append("CAD_GEOREF_CHECK_COUNT=").append(layer.getCadGeorefCheckCount());
+            sb.append("|").append("CAD_HIDDEN_LAYERS=").append(safe(layer.getCadHiddenInternalLayersEncoded()));
+        }
+
         return sb.toString();
     }
 
@@ -295,6 +362,10 @@ public class SaveProjectAction extends AbstractAction {
             if (layer == null || layer instanceof RasterLayer || VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
                 continue;
             }
+            if (TopographyWorkflowSupport.isTransientTopographyVector(layer)
+                    && !ExportVectorLayerAction.hasSupportedVectorPath(layer)) {
+                continue;
+            }
 
             ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
             if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
@@ -307,7 +378,7 @@ public class SaveProjectAction extends AbstractAction {
             } else {
                 JOptionPane.showMessageDialog(
                         CatgisDesktopApp.getMainFrameSafe(),
-                        "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegÃ­ dÃ³nde guardarla antes de guardar el proyecto.",
+                        "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegí dónde guardarla antes de guardar el proyecto.",
                         "Guardar capa vectorial",
                         JOptionPane.INFORMATION_MESSAGE
                 );
@@ -338,3 +409,4 @@ public class SaveProjectAction extends AbstractAction {
         return normalized.isBlank() ? "-" : normalized;
     }
 }
+

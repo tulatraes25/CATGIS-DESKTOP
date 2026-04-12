@@ -31,9 +31,10 @@ public class AddLayerDialog extends JDialog {
                 new FormatOption(I18n.t("Fichero shape"), "shp"),
                 new FormatOption(I18n.t("GeoPackage"), "gpkg"),
                 new FormatOption(I18n.t("GeoJSON"), "geojson"),
-                new FormatOption(I18n.t("KML"), "kml"),
+                new FormatOption(I18n.t("GPX"), "gpx"),
+                new FormatOption(I18n.t("KML / KMZ"), "kml"),
                 new FormatOption(I18n.t("Fichero de imagen"), "image"),
-                new FormatOption(I18n.t("Ficheros DXF"), "dxf"),
+                new FormatOption(I18n.t("CAD DWG / DXF"), "dxf"),
                 new FormatOption(I18n.t("Todos los soportados"), "all")
         });
 
@@ -150,8 +151,11 @@ public class AddLayerDialog extends JDialog {
             case "geojson":
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoJSON (*.geojson, *.json)"), "geojson", "json"));
                 break;
+            case "gpx":
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GPX (*.gpx)"), "gpx"));
+                break;
             case "kml":
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML (*.kml)"), "kml"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML / KMZ (*.kml, *.kmz)"), "kml", "kmz"));
                 break;
             case "image":
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
@@ -160,23 +164,24 @@ public class AddLayerDialog extends JDialog {
                 ));
                 break;
             case "dxf":
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Ficheros DXF (*.dxf)"), "dxf"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("CAD DWG / DXF (*.dwg, *.dxf)"), "dwg", "dxf"));
                 break;
             case "all":
             default:
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
                         I18n.t("Todos los archivos GIS soportados"),
-                        "shp", "gpkg", "geojson", "json", "kml", "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif", "dxf"
+                        "shp", "gpkg", "geojson", "json", "gpx", "kml", "kmz", "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif", "dwg", "dxf"
                 ));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Fichero shape (*.shp)"), "shp"));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoPackage (*.gpkg)"), "gpkg"));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoJSON (*.geojson, *.json)"), "geojson", "json"));
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML (*.kml)"), "kml"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GPX (*.gpx)"), "gpx"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML / KMZ (*.kml, *.kmz)"), "kml", "kmz"));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
                         I18n.t("Fichero raster (*.tif, *.tiff, *.img, *.asc, *.jpg, *.jpeg, *.png, *.bmp, *.gif)"),
                         "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif"
                 ));
-                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Ficheros DXF (*.dxf)"), "dxf"));
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("CAD DWG / DXF (*.dwg, *.dxf)"), "dwg", "dxf"));
                 break;
         }
     }

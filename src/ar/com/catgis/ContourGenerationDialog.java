@@ -24,9 +24,13 @@ public class ContourGenerationDialog extends JDialog {
     private final JComboBox<Layer> rasterCombo;
     private final JTextField intervalField;
     private final JTextField indexEveryField;
+    private final JCheckBox excludeZeroCheck;
+    private final JCheckBox minElevationCheck;
+    private final JTextField minElevationField;
     private final JTextField outputNameField;
     private final JCheckBox simplifyCheck;
     private final JCheckBox smoothCheck;
+    private final JLabel technicalHintLabel;
 
     public ContourGenerationDialog(Frame owner, Layer rasterLayer) {
         super(owner, I18n.t("Generar curvas de nivel..."), true);
@@ -42,10 +46,32 @@ public class ContourGenerationDialog extends JDialog {
         }
         intervalField = new JTextField("10", 16);
         indexEveryField = new JTextField("5", 16);
+        excludeZeroCheck = new JCheckBox("Excluir curvas <= 0 m (costa / mar)", false);
+        minElevationCheck = new JCheckBox("Usar umbral minimo personalizado", false);
+        minElevationField = new JTextField("0", 16);
+        minElevationField.setEnabled(false);
         outputNameField = new JTextField("Curvas " + intervalField.getText().trim() + "m - " + resolveRasterLabel(), 26);
         simplifyCheck = new JCheckBox(I18n.t("Simplificar lineas"), true);
         smoothCheck = new JCheckBox(I18n.t("Suavizar lineas"), false);
-        rasterCombo.addActionListener(e -> updateDefaultOutputName());
+        technicalHintLabel = new JLabel();
+        excludeZeroCheck.addActionListener(e -> {
+            if (excludeZeroCheck.isSelected()) {
+                minElevationCheck.setSelected(false);
+                minElevationField.setEnabled(false);
+            }
+            updateTechnicalHint();
+        });
+        minElevationCheck.addActionListener(e -> {
+            if (minElevationCheck.isSelected()) {
+                excludeZeroCheck.setSelected(false);
+            }
+            minElevationField.setEnabled(minElevationCheck.isSelected());
+            updateTechnicalHint();
+        });
+        rasterCombo.addActionListener(e -> {
+            updateDefaultOutputName();
+            updateTechnicalHint();
+        });
         intervalField.addActionListener(e -> updateDefaultOutputName());
         intervalField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -63,6 +89,23 @@ public class ContourGenerationDialog extends JDialog {
                 updateDefaultOutputName();
             }
         });
+        minElevationField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateTechnicalHint();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateTechnicalHint();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updateTechnicalHint();
+            }
+        });
+        updateTechnicalHint();
 
         add(buildForm(), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
@@ -92,6 +135,24 @@ public class ContourGenerationDialog extends JDialog {
         panel.add(new JLabel(I18n.t("Curva indice cada:")), gc);
         gc.gridy++;
         panel.add(indexEveryField, gc);
+
+        gc.gridy++;
+        panel.add(new JLabel("Filtro costero / umbral de cota (m):"), gc);
+        gc.gridy++;
+        panel.add(excludeZeroCheck, gc);
+        gc.gridy++;
+        panel.add(minElevationCheck, gc);
+        gc.gridy++;
+        panel.add(minElevationField, gc);
+        gc.gridy++;
+        JLabel filterHelp = new JLabel("<html><div style='width:270px'>"
+                + "Util para limpiar curvas en mar, playa o sectores donde el DEM mete ruido cercano a 0 m. "
+                + "Si no quieres filtrar, deja esta opcion desactivada."
+                + "</div></html>");
+        panel.add(filterHelp, gc);
+        gc.gridy++;
+        technicalHintLabel.setBorder(BorderFactory.createTitledBorder(I18n.t("Lectura tecnica")));
+        panel.add(technicalHintLabel, gc);
 
         gc.gridy++;
         panel.add(new JLabel(I18n.t("Nombre de capa resultante:")), gc);
@@ -148,6 +209,20 @@ public class ContourGenerationDialog extends JDialog {
             return;
         }
 
+        final Double minimumElevation;
+        if (minElevationCheck.isSelected()) {
+            try {
+                minimumElevation = Double.parseDouble(minElevationField.getText().trim().replace(",", "."));
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "La cota minima debe ser numerica.");
+                return;
+            }
+        } else if (excludeZeroCheck.isSelected()) {
+            minimumElevation = 0d;
+        } else {
+            minimumElevation = null;
+        }
+
         final String outputName = outputNameField.getText().trim();
         if (outputName.isBlank()) {
             JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un nombre para la capa de curvas."));
@@ -163,7 +238,8 @@ public class ContourGenerationDialog extends JDialog {
                         indexEvery,
                         outputName,
                         simplifyCheck.isSelected(),
-                        smoothCheck.isSelected()
+                        smoothCheck.isSelected(),
+                        minimumElevation
                 );
             }
 
@@ -198,6 +274,22 @@ public class ContourGenerationDialog extends JDialog {
         outputNameField.setText("Curvas " + intervalText + "m - " + resolveRasterLabel());
     }
 
+    private void updateTechnicalHint() {
+        String filterText;
+        if (minElevationCheck.isSelected()) {
+            filterText = "Filtro activo: se excluyen curvas <= " + (minElevationField.getText() != null ? minElevationField.getText().trim() : "0") + " m.";
+        } else if (excludeZeroCheck.isSelected()) {
+            filterText = "Filtro activo: se excluyen curvas <= 0 m para limpiar costa y mar.";
+        } else {
+            filterText = "Filtro desactivado: se generan curvas en todo el rango del DEM.";
+        }
+        technicalHintLabel.setText("<html><div style='width:320px'>"
+                + filterText
+                + "<br><br>"
+                + TopographyWorkflowSupport.buildRasterOperationalGuidanceFragment((Layer) rasterCombo.getSelectedItem(), "contours")
+                + "</div></html>");
+    }
+
     private void addResultLayer(ContourGenerationService.GeneratedContourLayer result) {
         if (result == null) {
             return;
@@ -205,13 +297,17 @@ public class ContourGenerationDialog extends JDialog {
         if (CatgisDesktopApp.currentProject == null) {
             CatgisDesktopApp.currentProject = new Project(I18n.t("Proyecto actual"));
         }
+        ShapefileData projectedData = TopographyWorkflowSupport.projectVectorDataToCurrentProject(result.layer(), result.data());
+        result.layer().setSourceName(projectedData.getSourceName());
+        result.layer().setFeatureCount(projectedData.getFeatureCount());
         CatgisDesktopApp.currentProject.addLayer(result.layer());
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.addLayer(result.layer());
             CatgisDesktopApp.layersPanel.selectLayer(result.layer());
         }
         if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.layer(), result.data());
+            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.layer(), projectedData);
+            TopographyWorkflowSupport.normalizeTopographyOverlayOrder();
             CatgisDesktopApp.mapPanel.showOpenedFile(result.layer().getName());
         }
         CatgisDesktopApp.markProjectDirty();

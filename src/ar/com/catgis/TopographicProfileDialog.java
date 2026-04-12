@@ -5,6 +5,7 @@ import org.locationtech.jts.geom.LineString;
 
 import javax.swing.BorderFactory;
 import javax.swing.JColorChooser;
+import javax.swing.JCheckBox;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -33,6 +34,7 @@ import java.awt.RenderingHints;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.ArrayList;
@@ -47,6 +49,8 @@ public class TopographicProfileDialog extends JDialog {
     private final JTextField sampleCountField;
     private final JSpinner xGridLinesSpinner;
     private final JSpinner yGridLinesSpinner;
+    private final JCheckBox smoothProfileCheck;
+    private final JComboBox<ProfileSmoothPreset> smoothingPresetCombo;
     private final JButton lineColorButton;
     private final JLabel lineSummaryLabel;
     private final JLabel statsLabel;
@@ -80,6 +84,9 @@ public class TopographicProfileDialog extends JDialog {
         chartStyle = ProfileChartStyle.defaultStyle();
         xGridLinesSpinner = new JSpinner(new SpinnerNumberModel(chartStyle.xGridLines(), 1, 10, 1));
         yGridLinesSpinner = new JSpinner(new SpinnerNumberModel(chartStyle.yGridLines(), 1, 5, 1));
+        smoothProfileCheck = new JCheckBox(I18n.t("Suavizar grafico (solo visual)"), chartStyle.smoothCurve());
+        smoothingPresetCombo = new JComboBox<>(ProfileSmoothPreset.values());
+        smoothingPresetCombo.setSelectedItem(ProfileSmoothPreset.fromPasses(chartStyle.smoothingPasses()));
         lineColorButton = new JButton();
         lineSummaryLabel = new JLabel(I18n.t("Todavia no hay una linea de perfil definida."));
         lineSummaryLabel.setForeground(new Color(76, 85, 99));
@@ -95,6 +102,8 @@ public class TopographicProfileDialog extends JDialog {
         configureColorButton(chartStyle.lineColor());
         xGridLinesSpinner.addChangeListener(e -> updateChartStyleFromControls());
         yGridLinesSpinner.addChangeListener(e -> updateChartStyleFromControls());
+        smoothProfileCheck.addActionListener(e -> updateChartStyleFromControls());
+        smoothingPresetCombo.addActionListener(e -> updateChartStyleFromControls());
 
         add(buildContent(), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
@@ -166,6 +175,11 @@ public class TopographicProfileDialog extends JDialog {
         panel.add(lineColorButton, gc);
 
         gc.gridy++;
+        panel.add(smoothProfileCheck, gc);
+        gc.gridy++;
+        panel.add(smoothingPresetCombo, gc);
+
+        gc.gridy++;
         panel.add(new JLabel(I18n.t("Trazado del perfil:")), gc);
         gc.gridy++;
 
@@ -189,6 +203,7 @@ public class TopographicProfileDialog extends JDialog {
         gc.gridy++;
         JLabel helpLabel = new JLabel("<html><div style='width:240px'>"
                 + I18n.t("Puedes usar una linea ya seleccionada en el mapa o capturar una polilinea directamente sobre la vista actual. Termina con clic derecho o Esc para cancelar.")
+                + "<br><br>" + I18n.t("El suavizado solo mejora la lectura visual del grafico exportado o mostrado. No altera las cotas del DEM ni los valores del perfil.")
                 + "</div></html>");
         helpLabel.setForeground(new Color(97, 106, 120));
         panel.add(helpLabel, gc);
@@ -300,10 +315,13 @@ public class TopographicProfileDialog extends JDialog {
             return;
         }
         int vertexCount = profileLineGeometry.getCoordinates() != null ? profileLineGeometry.getCoordinates().length : 0;
+        double distanceMeters = TopographicProfileService.estimateLineDistanceMeters(profileLineGeometry, profileLineCrs);
         lineSummaryLabel.setText("<html><div style='width:230px'><b>"
                 + (profileLineDescription != null ? profileLineDescription : I18n.t("Perfil topografico"))
-                + "</b><br>" + I18n.t("Longitud geometrica: ")
-                + String.format(Locale.US, "%.2f", profileLineGeometry.getLength())
+                + "</b><br>" + I18n.t("Longitud estimada: ")
+                + formatDistance(distanceMeters)
+                + "<br>" + I18n.t("CRS de referencia: ")
+                + (profileLineCrs != null && !profileLineCrs.isBlank() ? profileLineCrs : "--")
                 + "<br>" + I18n.t("Vertices del perfil: ") + vertexCount
                 + "</div></html>");
     }
@@ -496,6 +514,11 @@ public class TopographicProfileDialog extends JDialog {
                 ((Number) xGridLinesSpinner.getValue()).intValue(),
                 ((Number) yGridLinesSpinner.getValue()).intValue()
         );
+        ProfileSmoothPreset preset = (ProfileSmoothPreset) smoothingPresetCombo.getSelectedItem();
+        chartStyle = chartStyle.withSmoothing(
+                smoothProfileCheck.isSelected(),
+                preset != null ? preset.passes() : ProfileSmoothPreset.MEDIA.passes()
+        );
         chartPanel.setChartStyle(chartStyle);
         chartPanel.repaint();
     }
@@ -509,14 +532,56 @@ public class TopographicProfileDialog extends JDialog {
         double distanceKm = result.totalDistanceMeters() / 1000d;
         Double startElevation = firstValidElevation(result);
         Double endElevation = lastValidElevation(result);
+        double relief = result.maxElevation() - result.minElevation();
+        double gain = calculateElevationGain(result);
+        double loss = calculateElevationLoss(result);
         return "<html><b>" + I18n.t("DEM:") + "</b> " + result.rasterLayer().getName()
                 + " | <b>" + I18n.t("Distancia:") + "</b> " + String.format(Locale.US, "%.2f km", distanceKm)
                 + " | <b>" + I18n.t("Min:") + "</b> " + String.format(Locale.US, "%.2f m", result.minElevation())
                 + " | <b>" + I18n.t("Max:") + "</b> " + String.format(Locale.US, "%.2f m", result.maxElevation())
+                + " | <b>" + I18n.t("Relieve:") + "</b> " + String.format(Locale.US, "%.2f m", relief)
+                + " | <b>" + I18n.t("Subida acumulada:") + "</b> " + String.format(Locale.US, "%.2f m", gain)
+                + " | <b>" + I18n.t("Bajada acumulada:") + "</b> " + String.format(Locale.US, "%.2f m", loss)
                 + " | <b>" + I18n.t("Inicio:") + "</b> " + formatElevation(startElevation)
                 + " | <b>" + I18n.t("Fin:") + "</b> " + formatElevation(endElevation)
                 + " | <b>" + I18n.t("Muestras validas:") + "</b> " + result.validSampleCount()
                 + "</html>";
+    }
+
+    private static double calculateElevationGain(TopographicProfileService.ProfileResult result) {
+        if (result == null || result.samples() == null) {
+            return 0d;
+        }
+        double gain = 0d;
+        Double previous = null;
+        for (TopographicProfileService.ProfileSample sample : result.samples()) {
+            if (sample == null || !sample.valid() || !Double.isFinite(sample.elevation())) {
+                continue;
+            }
+            if (previous != null && sample.elevation() > previous) {
+                gain += sample.elevation() - previous;
+            }
+            previous = sample.elevation();
+        }
+        return gain;
+    }
+
+    private static double calculateElevationLoss(TopographicProfileService.ProfileResult result) {
+        if (result == null || result.samples() == null) {
+            return 0d;
+        }
+        double loss = 0d;
+        Double previous = null;
+        for (TopographicProfileService.ProfileSample sample : result.samples()) {
+            if (sample == null || !sample.valid() || !Double.isFinite(sample.elevation())) {
+                continue;
+            }
+            if (previous != null && sample.elevation() < previous) {
+                loss += previous - sample.elevation();
+            }
+            previous = sample.elevation();
+        }
+        return loss;
     }
 
     private static Double firstValidElevation(TopographicProfileService.ProfileResult result) {
@@ -561,6 +626,16 @@ public class TopographicProfileDialog extends JDialog {
         return String.format(Locale.US, "%.2f m", elevation);
     }
 
+    private static String formatDistance(double meters) {
+        if (!Double.isFinite(meters)) {
+            return "--";
+        }
+        if (meters >= 1000d) {
+            return String.format(Locale.US, "%.2f km", meters / 1000d);
+        }
+        return String.format(Locale.US, "%.0f m", meters);
+    }
+
     public static void open() {
         if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
             TopographyWorkflowSupport.showNoRasterMessage();
@@ -571,26 +646,70 @@ public class TopographicProfileDialog extends JDialog {
         dialog.setVisible(true);
     }
 
-    private record ProfileChartStyle(int xGridLines, int yGridLines, Color lineColor) {
+    private record ProfileChartStyle(int xGridLines, int yGridLines, Color lineColor, boolean smoothCurve, int smoothingPasses) {
         private static ProfileChartStyle defaultStyle() {
-            return new ProfileChartStyle(5, 3, new Color(67, 56, 202));
+            return new ProfileChartStyle(6, 4, new Color(21, 101, 192), true, ProfileSmoothPreset.MEDIA.passes());
         }
 
         private ProfileChartStyle withLineColor(Color updatedLineColor) {
-            return new ProfileChartStyle(xGridLines, yGridLines, updatedLineColor != null ? updatedLineColor : lineColor);
+            return new ProfileChartStyle(xGridLines, yGridLines, updatedLineColor != null ? updatedLineColor : lineColor, smoothCurve, smoothingPasses);
         }
 
         private ProfileChartStyle withGridLines(int updatedXGridLines, int updatedYGridLines) {
             return new ProfileChartStyle(
                     Math.max(1, Math.min(10, updatedXGridLines)),
                     Math.max(1, Math.min(5, updatedYGridLines)),
-                    lineColor
+                    lineColor,
+                    smoothCurve,
+                    smoothingPasses
+            );
+        }
+
+        private ProfileChartStyle withSmoothing(boolean enabled, int passes) {
+            return new ProfileChartStyle(
+                    xGridLines,
+                    yGridLines,
+                    lineColor,
+                    enabled,
+                    Math.max(1, Math.min(4, passes))
             );
         }
 
         private Color fillColor() {
-            Color base = lineColor != null ? lineColor : new Color(67, 56, 202);
-            return new Color(base.getRed(), base.getGreen(), base.getBlue(), 42);
+            Color base = lineColor != null ? lineColor : new Color(21, 101, 192);
+            return new Color(base.getRed(), base.getGreen(), base.getBlue(), 52);
+        }
+    }
+
+    private enum ProfileSmoothPreset {
+        LIGERA("Suavidad ligera", 1),
+        MEDIA("Suavidad media", 2),
+        FUERTE("Suavidad fuerte", 3);
+
+        private final String label;
+        private final int passes;
+
+        ProfileSmoothPreset(String label, int passes) {
+            this.label = label;
+            this.passes = passes;
+        }
+
+        private int passes() {
+            return passes;
+        }
+
+        private static ProfileSmoothPreset fromPasses(int passes) {
+            for (ProfileSmoothPreset preset : values()) {
+                if (preset.passes == passes) {
+                    return preset;
+                }
+            }
+            return MEDIA;
+        }
+
+        @Override
+        public String toString() {
+            return label;
         }
     }
 
@@ -694,51 +813,60 @@ public class TopographicProfileDialog extends JDialog {
                 g2.drawLine(left, top, left, bottom);
 
                 Path2D profilePath = new Path2D.Double();
-                Path2D fillPath = new Path2D.Double();
-                boolean segmentOpen = false;
-                double firstX = 0d;
-                double lastX = 0d;
+                List<List<Point2D.Double>> segments = new ArrayList<>();
+                List<Point2D.Double> currentSegment = new ArrayList<>();
+                Point2D.Double minPoint = null;
+                Point2D.Double maxPoint = null;
+                double minPointElevation = Double.POSITIVE_INFINITY;
+                double maxPointElevation = Double.NEGATIVE_INFINITY;
 
                 for (TopographicProfileService.ProfileSample sample : profileResult.samples()) {
-                    if (sample == null) {
-                        continue;
-                    }
-                    if (!sample.valid()) {
-                        if (segmentOpen) {
-                            fillPath.lineTo(lastX, bottom);
-                            fillPath.lineTo(firstX, bottom);
-                            fillPath.closePath();
-                            segmentOpen = false;
+                    if (sample == null || !sample.valid()) {
+                        if (currentSegment.size() >= 2) {
+                            segments.add(currentSegment);
                         }
+                        currentSegment = new ArrayList<>();
                         continue;
                     }
 
                     double x = left + ((sample.distanceMeters() / maxDistance) * (right - left));
                     double y = bottom - (((sample.elevation() - paddedMin) / paddedRange) * (bottom - top));
-                    if (!segmentOpen) {
-                        profilePath.moveTo(x, y);
-                        fillPath.moveTo(x, bottom);
-                        fillPath.lineTo(x, y);
-                        firstX = x;
-                        segmentOpen = true;
-                    } else {
-                        profilePath.lineTo(x, y);
-                        fillPath.lineTo(x, y);
+                    Point2D.Double point = new Point2D.Double(x, y);
+                    currentSegment.add(point);
+                    if (sample.elevation() < minPointElevation) {
+                        minPointElevation = sample.elevation();
+                        minPoint = point;
                     }
-                    lastX = x;
+                    if (sample.elevation() > maxPointElevation) {
+                        maxPointElevation = sample.elevation();
+                        maxPoint = point;
+                    }
                 }
-
-                if (segmentOpen) {
-                    fillPath.lineTo(lastX, bottom);
-                    fillPath.lineTo(firstX, bottom);
-                    fillPath.closePath();
+                if (currentSegment.size() >= 2) {
+                    segments.add(currentSegment);
                 }
 
                 g2.setColor(chartStyle != null ? chartStyle.fillColor() : new Color(139, 92, 246, 42));
-                g2.fill(fillPath);
+                for (List<Point2D.Double> segment : segments) {
+                    List<Point2D.Double> renderedPoints = renderPoints(segment);
+                    if (renderedPoints.size() < 2) {
+                        continue;
+                    }
+                    Path2D fillPath = buildAreaPath(renderedPoints, bottom);
+                    g2.fill(fillPath);
+                    Path2D segmentPath = buildLinePath(renderedPoints);
+                    profilePath.append(segmentPath, false);
+                }
                 g2.setColor(chartStyle != null && chartStyle.lineColor() != null ? chartStyle.lineColor() : new Color(67, 56, 202));
                 g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.draw(profilePath);
+
+                if (maxPoint != null) {
+                    drawValueMarker(g2, maxPoint, String.format(Locale.US, "Max %.1f m", maxPointElevation), new Color(22, 101, 52));
+                }
+                if (minPoint != null) {
+                    drawValueMarker(g2, minPoint, String.format(Locale.US, "Min %.1f m", minPointElevation), new Color(30, 64, 175));
+                }
 
                 g2.setColor(new Color(76, 85, 99));
                 g2.drawString(I18n.t("Distancia"), right - 54, height - 12);
@@ -754,6 +882,80 @@ public class TopographicProfileDialog extends JDialog {
             g2.setFont(g2.getFont().deriveFont(Font.PLAIN, 14f));
             int width = g2.getFontMetrics().stringWidth(text);
             g2.drawString(text, Math.max(18, (getWidth() - width) / 2), Math.max(30, getHeight() / 2));
+        }
+
+        private List<Point2D.Double> renderPoints(List<Point2D.Double> originalPoints) {
+            if (originalPoints == null || originalPoints.size() < 3 || chartStyle == null || !chartStyle.smoothCurve()) {
+                return originalPoints != null ? originalPoints : List.of();
+            }
+            List<Point2D.Double> points = new ArrayList<>(originalPoints.size());
+            for (Point2D.Double point : originalPoints) {
+                points.add(new Point2D.Double(point.x, point.y));
+            }
+            for (int pass = 0; pass < chartStyle.smoothingPasses(); pass++) {
+                List<Point2D.Double> next = new ArrayList<>(points.size());
+                next.add(new Point2D.Double(points.get(0).x, points.get(0).y));
+                for (int i = 1; i < points.size() - 1; i++) {
+                    Point2D.Double previous = points.get(i - 1);
+                    Point2D.Double current = points.get(i);
+                    Point2D.Double following = points.get(i + 1);
+                    double smoothedY = (previous.y + current.y + following.y) / 3d;
+                    next.add(new Point2D.Double(current.x, smoothedY));
+                }
+                Point2D.Double last = points.get(points.size() - 1);
+                next.add(new Point2D.Double(last.x, last.y));
+                points = next;
+            }
+            return points;
+        }
+
+        private Path2D buildLinePath(List<Point2D.Double> points) {
+            Path2D path = new Path2D.Double();
+            if (points == null || points.isEmpty()) {
+                return path;
+            }
+            Point2D.Double first = points.get(0);
+            path.moveTo(first.x, first.y);
+            for (int i = 1; i < points.size(); i++) {
+                Point2D.Double point = points.get(i);
+                path.lineTo(point.x, point.y);
+            }
+            return path;
+        }
+
+        private Path2D buildAreaPath(List<Point2D.Double> points, int bottom) {
+            Path2D area = buildLinePath(points);
+            if (points == null || points.isEmpty()) {
+                return area;
+            }
+            Point2D.Double last = points.get(points.size() - 1);
+            Point2D.Double first = points.get(0);
+            area.lineTo(last.x, bottom);
+            area.lineTo(first.x, bottom);
+            area.closePath();
+            return area;
+        }
+
+        private void drawValueMarker(Graphics2D g2, Point2D.Double point, String label, Color accent) {
+            if (point == null || label == null || label.isBlank()) {
+                return;
+            }
+            int radius = 4;
+            g2.setColor(Color.WHITE);
+            g2.fillOval((int) Math.round(point.x) - radius - 1, (int) Math.round(point.y) - radius - 1, (radius * 2) + 2, (radius * 2) + 2);
+            g2.setColor(accent);
+            g2.fillOval((int) Math.round(point.x) - radius, (int) Math.round(point.y) - radius, radius * 2, radius * 2);
+
+            g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));
+            int labelWidth = g2.getFontMetrics().stringWidth(label);
+            int boxX = (int) Math.round(Math.max(10, Math.min(getWidth() - labelWidth - 18, point.x - (labelWidth / 2.0) - 8)));
+            int boxY = (int) Math.round(Math.max(10, point.y - 28));
+            g2.setColor(new Color(255, 255, 255, 236));
+            g2.fillRoundRect(boxX, boxY, labelWidth + 16, 20, 12, 12);
+            g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 180));
+            g2.drawRoundRect(boxX, boxY, labelWidth + 16, 20, 12, 12);
+            g2.setColor(new Color(33, 37, 41));
+            g2.drawString(label, boxX + 8, boxY + 14);
         }
 
         private String formatDistanceLabel(double distanceMeters) {

@@ -9,6 +9,8 @@ public class RasterLayer extends Layer {
     private int greenBand = 1;
     private int blueBand = 2;
     private String rasterMode = "preview";
+    private String derivedOperation = "";
+    private String derivedParameters = "";
 
     public RasterLayer(String name, String path) {
         super(name, path, "RASTER");
@@ -84,5 +86,25 @@ public class RasterLayer extends Layer {
 
     public void setPreviewMode(boolean previewMode) {
         this.rasterMode = previewMode ? "preview" : "real";
+    }
+
+    public String getDerivedOperation() {
+        return derivedOperation;
+    }
+
+    public void setDerivedOperation(String derivedOperation) {
+        this.derivedOperation = derivedOperation != null ? derivedOperation.trim() : "";
+    }
+
+    public String getDerivedParameters() {
+        return derivedParameters;
+    }
+
+    public void setDerivedParameters(String derivedParameters) {
+        this.derivedParameters = derivedParameters != null ? derivedParameters.trim() : "";
+    }
+
+    public boolean isDerivedLayer() {
+        return derivedOperation != null && !derivedOperation.isBlank();
     }
 }

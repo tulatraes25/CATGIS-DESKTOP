@@ -11,13 +11,16 @@ import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
+import javax.swing.JComponent;
 import javax.swing.JCheckBox;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+import javax.swing.JButton;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -27,6 +30,8 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -48,15 +53,20 @@ import javax.swing.BorderFactory;
 import javax.swing.SwingWorker;
 import java.awt.BorderLayout;
 import java.awt.event.MouseEvent;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class LayersPanel extends JPanel {
 
-    private final DefaultListModel<Layer> model;
-    private final JList<Layer> layerList;
+    private final DefaultListModel<Object> model;
+    private final JList<Object> layerList;
+    private final JButton newGroupButton;
     private int dragSourceIndex = -1;
     private int dragTargetInsertIndex = -1;
     private boolean dragReorderActive = false;
@@ -66,8 +76,15 @@ public class LayersPanel extends JPanel {
 
         model = new DefaultListModel<>();
         layerList = new JList<>(model);
-        layerList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        layerList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         layerList.setCellRenderer(new LayerCellRenderer());
+
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        topBar.setBorder(BorderFactory.createEmptyBorder(4, 4, 0, 4));
+        newGroupButton = new JButton("Nuevo grupo", AppIcons.openIcon());
+        newGroupButton.addActionListener(e -> createNewGroupFromSelection());
+        topBar.add(newGroupButton);
+        add(topBar, BorderLayout.NORTH);
 
         JScrollPane scrollPane = new JScrollPane(layerList);
         add(scrollPane, BorderLayout.CENTER);
@@ -77,41 +94,76 @@ public class LayersPanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 int index = layerList.locationToIndex(e.getPoint());
                 if (index < 0) {
+                    if (e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger()) {
+                        showEmptyAreaPopup(e);
+                    }
                     return;
                 }
 
                 Rectangle bounds = layerList.getCellBounds(index, index);
-                if (bounds == null) {
+                if (bounds == null || !bounds.contains(e.getPoint())) {
+                    if (e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger()) {
+                        showEmptyAreaPopup(e);
+                    }
                     return;
                 }
 
-                layerList.setSelectedIndex(index);
-                Layer selectedLayer = model.get(index);
+                Object selectedValue = model.get(index);
+                Layer selectedLayer = asLayer(selectedValue);
+                LayerGroup selectedGroup = asGroup(selectedValue);
 
-                int relativeX = e.getX() - bounds.x;
-                if (e.getButton() == MouseEvent.BUTTON1 && relativeX >= 8 && relativeX <= 28) {
+                if (e.getButton() == MouseEvent.BUTTON1 && isVisibilityToggleHit(e, bounds)) {
                     dragSourceIndex = -1;
                     dragTargetInsertIndex = -1;
                     dragReorderActive = false;
-                    selectedLayer.setVisible(!selectedLayer.isVisible());
+                    if (!layerList.isSelectedIndex(index)) {
+                        layerList.setSelectedIndex(index);
+                    }
+                    if (selectedGroup != null) {
+                        selectedGroup.setVisible(!selectedGroup.isVisible());
+                    } else if (selectedLayer != null) {
+                        selectedLayer.setVisible(!selectedLayer.isVisible());
+                    } else {
+                        return;
+                    }
+                    CatgisDesktopApp.markProjectDirty();
                     refreshLayerList();
                     CatgisDesktopApp.mapPanel.repaint();
 
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage(
-                                "Capa " + (selectedLayer.isVisible() ? "visible" : "oculta") + ": " + selectedLayer.getName()
-                        );
+                        if (selectedGroup != null) {
+                            CatgisDesktopApp.statusBar.setMessage(
+                                    "Grupo " + (selectedGroup.isVisible() ? "visible" : "oculto") + ": " + selectedGroup.getName()
+                            );
+                        } else {
+                            CatgisDesktopApp.statusBar.setMessage(
+                                    "Capa " + (selectedLayer.isVisible() ? "visible" : "oculta") + ": " + selectedLayer.getName()
+                            );
+                        }
                     }
                     return;
                 }
 
                 if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1) {
-                    CatgisDesktopApp.mapPanel.zoomToLayer(selectedLayer);
+                    if (selectedGroup != null) {
+                        selectedGroup.setExpanded(!selectedGroup.isExpanded());
+                        CatgisDesktopApp.markProjectDirty();
+                        refreshLayerList();
+                    } else if (selectedLayer != null) {
+                        CatgisDesktopApp.mapPanel.zoomToLayer(selectedLayer);
+                    }
                     return;
                 }
 
                 if (e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger()) {
-                    showLayerPopup(e, selectedLayer);
+                    updateSelectionForPopup(index);
+                    if (selectedGroup != null) {
+                        showGroupPopup(e, selectedGroup);
+                    } else if (selectedLayer != null) {
+                        showLayerPopup(e, selectedLayer);
+                    } else {
+                        showEmptyAreaPopup(e);
+                    }
                 }
             }
 
@@ -123,8 +175,22 @@ public class LayersPanel extends JPanel {
                 if (e.isPopupTrigger()) {
                     int index = layerList.locationToIndex(e.getPoint());
                     if (index >= 0) {
-                        layerList.setSelectedIndex(index);
-                        showLayerPopup(e, model.get(index));
+                        Rectangle bounds = layerList.getCellBounds(index, index);
+                        if (bounds == null || !bounds.contains(e.getPoint())) {
+                            showEmptyAreaPopup(e);
+                            return;
+                        }
+                        updateSelectionForPopup(index);
+                        Object value = model.get(index);
+                        Layer layer = asLayer(value);
+                        LayerGroup group = asGroup(value);
+                        if (group != null) {
+                            showGroupPopup(e, group);
+                        } else if (layer != null) {
+                            showLayerPopup(e, layer);
+                        }
+                    } else {
+                        showEmptyAreaPopup(e);
                     }
                     return;
                 }
@@ -133,8 +199,8 @@ public class LayersPanel extends JPanel {
                     int index = layerList.locationToIndex(e.getPoint());
                     if (index >= 0) {
                         Rectangle bounds = layerList.getCellBounds(index, index);
-                        int relativeX = bounds != null ? e.getX() - bounds.x : -1;
-                        if (!(relativeX >= 8 && relativeX <= 28)) {
+                        boolean selectionModifier = e.isControlDown() || e.isShiftDown() || e.isMetaDown();
+                        if (bounds != null && !isVisibilityToggleHit(e, bounds) && !selectionModifier && asLayer(model.get(index)) != null) {
                             dragSourceIndex = index;
                         }
                     }
@@ -148,7 +214,7 @@ public class LayersPanel extends JPanel {
                             ? dragTargetInsertIndex
                             : resolveDropInsertIndex(e.getPoint());
                     if (dropIndex >= 0) {
-                        reorderLayerByDrag(dragSourceIndex, dropIndex);
+                        handleLayerDrop(dragSourceIndex, e.getPoint(), dropIndex);
                     }
                     dragSourceIndex = -1;
                     dragTargetInsertIndex = -1;
@@ -164,8 +230,22 @@ public class LayersPanel extends JPanel {
                 if (e.isPopupTrigger()) {
                     int index = layerList.locationToIndex(e.getPoint());
                     if (index >= 0) {
-                        layerList.setSelectedIndex(index);
-                        showLayerPopup(e, model.get(index));
+                        Rectangle bounds = layerList.getCellBounds(index, index);
+                        if (bounds == null || !bounds.contains(e.getPoint())) {
+                            showEmptyAreaPopup(e);
+                            return;
+                        }
+                        updateSelectionForPopup(index);
+                        Object value = model.get(index);
+                        Layer layer = asLayer(value);
+                        LayerGroup group = asGroup(value);
+                        if (group != null) {
+                            showGroupPopup(e, group);
+                        } else if (layer != null) {
+                            showLayerPopup(e, layer);
+                        }
+                    } else {
+                        showEmptyAreaPopup(e);
                     }
                 }
             }
@@ -181,25 +261,44 @@ public class LayersPanel extends JPanel {
         };
         layerList.addMouseListener(layerMouseAdapter);
         layerList.addMouseMotionListener(layerMouseAdapter);
+        configureKeyboardShortcuts();
     }
 
     public void addLayer(Layer layer) {
-        model.addElement(layer);
         refreshLayerList();
     }
 
     public void removeLayer(Layer layer) {
-        model.removeElement(layer);
         refreshLayerList();
     }
 
     public void clearLayers() {
         model.clear();
-        refreshLayerList();
     }
 
     public Layer getSelectedLayer() {
-        return layerList.getSelectedValue();
+        Layer direct = asLayer(layerList.getSelectedValue());
+        if (direct != null) {
+            return direct;
+        }
+        for (Object value : layerList.getSelectedValuesList()) {
+            Layer layer = asLayer(value);
+            if (layer != null) {
+                return layer;
+            }
+        }
+        return null;
+    }
+
+    public List<Layer> getSelectedLayers() {
+        List<Layer> selected = new ArrayList<>();
+        for (Object value : layerList.getSelectedValuesList()) {
+            Layer layer = asLayer(value);
+            if (layer != null) {
+                selected.add(layer);
+            }
+        }
+        return selected;
     }
 
     public void selectLayer(Layer layer) {
@@ -215,7 +314,63 @@ public class LayersPanel extends JPanel {
     }
 
     public void refreshLayerList() {
+        List<Object> previousSelection = new ArrayList<>(layerList.getSelectedValuesList());
+        model.clear();
+        Project project = CatgisDesktopApp.currentProject;
+        if (project == null) {
+            layerList.repaint();
+            return;
+        }
+
+        for (Layer layer : project.getUngroupedLayers()) {
+            if (layer != null) {
+                model.addElement(layer);
+            }
+        }
+
+        for (LayerGroup group : project.getLayerGroups()) {
+            if (group == null) {
+                continue;
+            }
+            model.addElement(group);
+            if (group.isExpanded()) {
+                for (Layer layer : project.getLayersForGroup(group.getName())) {
+                    if (layer != null) {
+                        model.addElement(layer);
+                    }
+                }
+            }
+        }
+
+        restoreSelection(previousSelection);
         layerList.repaint();
+    }
+
+    private void configureKeyboardShortcuts() {
+        layerList.getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
+                "removeSelectedProjectLayers"
+        );
+        layerList.getActionMap().put("removeSelectedProjectLayers", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                removeSelectedLayersFromList();
+            }
+        });
+    }
+
+    private boolean isVisibilityToggleHit(MouseEvent e, Rectangle bounds) {
+        int relativeX = e.getX() - bounds.x;
+        return relativeX >= 8 && relativeX <= 28;
+    }
+
+    private void updateSelectionForPopup(int index) {
+        if (index < 0) {
+            return;
+        }
+        if (!layerList.isSelectedIndex(index)) {
+            layerList.setSelectedIndex(index);
+        }
     }
 
     private void showLayerPopup(MouseEvent e, Layer selectedLayer) {
@@ -230,11 +385,75 @@ public class LayersPanel extends JPanel {
         popupMenu.show(layerList, e.getX(), e.getY());
     }
 
+    private void showGroupPopup(MouseEvent e, LayerGroup selectedGroup) {
+        if (selectedGroup == null) {
+            return;
+        }
+
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        JMenuItem titleItem = createMenuItem(selectedGroup.getName(), AppIcons.openIcon());
+        titleItem.setEnabled(false);
+        popupMenu.add(titleItem);
+        popupMenu.addSeparator();
+
+        JMenuItem toggleVisibilityItem = createMenuItem(
+                selectedGroup.isVisible() ? "Ocultar grupo" : "Mostrar grupo",
+                selectedGroup.isVisible() ? AppIcons.hiddenIcon() : AppIcons.visibleIcon()
+        );
+        toggleVisibilityItem.addActionListener(ev -> {
+            selectedGroup.setVisible(!selectedGroup.isVisible());
+            CatgisDesktopApp.markProjectDirty();
+            refreshLayerList();
+            CatgisDesktopApp.mapPanel.repaint();
+        });
+        popupMenu.add(toggleVisibilityItem);
+
+        JMenuItem expandItem = createMenuItem(
+                selectedGroup.isExpanded() ? "Contraer grupo" : "Expandir grupo",
+                selectedGroup.isExpanded() ? AppIcons.downIcon() : AppIcons.openIcon()
+        );
+        expandItem.addActionListener(ev -> {
+            selectedGroup.setExpanded(!selectedGroup.isExpanded());
+            CatgisDesktopApp.markProjectDirty();
+            refreshLayerList();
+        });
+        popupMenu.add(expandItem);
+
+        JMenuItem renameItem = createMenuItem("Renombrar grupo", AppIcons.renameIcon());
+        renameItem.addActionListener(ev -> renameGroup(selectedGroup));
+        popupMenu.add(renameItem);
+
+        JMenuItem moveUpItem = createMenuItem("Subir grupo", AppIcons.upIcon());
+        moveUpItem.addActionListener(ev -> moveGroup(selectedGroup, -1));
+        popupMenu.add(moveUpItem);
+
+        JMenuItem moveDownItem = createMenuItem("Bajar grupo", AppIcons.downIcon());
+        moveDownItem.addActionListener(ev -> moveGroup(selectedGroup, 1));
+        popupMenu.add(moveDownItem);
+
+        popupMenu.addSeparator();
+
+        JMenuItem removeItem = createMenuItem("Quitar grupo (mantener capas)", AppIcons.removeIcon());
+        removeItem.addActionListener(ev -> removeGroup(selectedGroup));
+        popupMenu.add(removeItem);
+
+        popupMenu.show(layerList, e.getX(), e.getY());
+    }
+
+    private void showEmptyAreaPopup(MouseEvent e) {
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem newGroupItem = createMenuItem("Nuevo grupo", AppIcons.openIcon());
+        newGroupItem.addActionListener(ev -> createNewGroupFromSelection());
+        popupMenu.add(newGroupItem);
+        popupMenu.show(layerList, e.getX(), e.getY());
+    }
+
     private JPopupMenu buildVectorPopup(Layer selectedLayer) {
         JPopupMenu popupMenu = new JPopupMenu();
         boolean readOnlyVector = VectorLayerUtils.isReadOnlyVectorLayer(selectedLayer);
 
-        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.propertiesIcon());
+        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.imageryIcon());
         propertiesItem.setEnabled(false);
         popupMenu.add(propertiesItem);
         popupMenu.addSeparator();
@@ -282,6 +501,24 @@ public class LayersPanel extends JPanel {
         JMenuItem setCRSItem = createMenuItem("Definir CRS de capa", AppIcons.crsIcon());
         setCRSItem.addActionListener(ev -> defineLayerCRS(selectedLayer));
         advancedMenu.add(setCRSItem);
+
+        if (CadLayerSupport.isCadLayer(selectedLayer)) {
+            JMenuItem cadGeorefItem = createMenuItem("Georreferenciar CAD por puntos...", AppIcons.crsIcon());
+            cadGeorefItem.addActionListener(ev -> georeferenceCadLayer(selectedLayer));
+            advancedMenu.add(cadGeorefItem);
+
+            JMenuItem cadPlacementItem = createMenuItem("Ajuste CAD...", AppIcons.moveFeatureIcon());
+            cadPlacementItem.addActionListener(ev -> editCadPlacement(selectedLayer));
+            advancedMenu.add(cadPlacementItem);
+
+            JMenuItem cadInternalLayersItem = createMenuItem("Capas internas CAD...", AppIcons.tableIcon());
+            cadInternalLayersItem.addActionListener(ev -> CadWorkflowSupport.openCadInternalLayers(this, selectedLayer));
+            advancedMenu.add(cadInternalLayersItem);
+
+            JMenuItem cadDiagItem = createMenuItem("Diagnostico DWG/CAD...", AppIcons.propertiesIcon());
+            cadDiagItem.addActionListener(ev -> CadIntegrationDialog.open());
+            advancedMenu.add(cadDiagItem);
+        }
 
         JMenuItem exportItem = createMenuItem("Exportar capa", AppIcons.exportIcon());
         exportItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
@@ -339,31 +576,32 @@ public class LayersPanel extends JPanel {
 
         addCommonTopItems(popupMenu, selectedLayer, "Ocultar raster", "Mostrar raster");
 
-        JMenuItem rasterInfoItem = createMenuItem("Informacion raster...", AppIcons.propertiesIcon());
+        JMenuItem rasterInfoItem = createMenuItem("Informacion raster...", AppIcons.identifyIcon());
         rasterInfoItem.addActionListener(ev -> showRasterInfo(selectedLayer));
         popupMenu.add(rasterInfoItem);
 
-        JMenuItem displayItem = createMenuItem("Ajustes de visualizacion...", AppIcons.propertiesIcon());
+        JMenuItem displayItem = createMenuItem("Ajustes de visualizacion...", AppIcons.attrEditIcon());
         displayItem.addActionListener(ev -> openRasterDisplaySettings(selectedLayer));
         popupMenu.add(displayItem);
 
+        boolean derivedRaster = isDerivedRasterLayer(selectedLayer);
         String currentMode = getRasterMode(selectedLayer);
-        JMenuItem currentModeItem = createMenuItem("Modo actual: " + getRasterModeLabel(currentMode), AppIcons.propertiesIcon());
+        JMenuItem currentModeItem = createMenuItem("Modo actual: " + getRasterModeLabel(currentMode), AppIcons.zoomLayerIcon());
         currentModeItem.setEnabled(false);
         popupMenu.add(currentModeItem);
 
-        JMenuItem quickItem = createMenuItem("Vista rapida", AppIcons.propertiesIcon());
-        quickItem.setEnabled(!RasterImageLoader.MODE_PREVIEW.equalsIgnoreCase(currentMode));
+        JMenuItem quickItem = createMenuItem("Vista rapida", AppIcons.zoomOutIcon());
+        quickItem.setEnabled(!derivedRaster && !RasterImageLoader.MODE_PREVIEW.equalsIgnoreCase(currentMode));
         quickItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_PREVIEW));
         popupMenu.add(quickItem);
 
-        JMenuItem virtualItem = createMenuItem("Zoom virtual", AppIcons.propertiesIcon());
-        virtualItem.setEnabled(!RasterImageLoader.MODE_VIRTUAL.equalsIgnoreCase(currentMode));
+        JMenuItem virtualItem = createMenuItem("Zoom virtual", AppIcons.zoomLayerIcon());
+        virtualItem.setEnabled(!derivedRaster && !RasterImageLoader.MODE_VIRTUAL.equalsIgnoreCase(currentMode));
         virtualItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_VIRTUAL));
         popupMenu.add(virtualItem);
 
-        JMenuItem realItem = createMenuItem("Zoom real", AppIcons.propertiesIcon());
-        realItem.setEnabled(!RasterImageLoader.MODE_REAL.equalsIgnoreCase(currentMode));
+        JMenuItem realItem = createMenuItem("Zoom real", AppIcons.zoomInIcon());
+        realItem.setEnabled(!derivedRaster && !RasterImageLoader.MODE_REAL.equalsIgnoreCase(currentMode));
         realItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_REAL));
         popupMenu.add(realItem);
 
@@ -371,8 +609,20 @@ public class LayersPanel extends JPanel {
         contourItem.addActionListener(ev -> ContourGenerationDialog.open(selectedLayer));
         popupMenu.add(contourItem);
 
+        JMenuItem drainageItem = createMenuItem(I18n.t("Generar escorrentias..."), AppIcons.drainageIcon());
+        drainageItem.addActionListener(ev -> DrainageExtractionDialog.open(selectedLayer));
+        popupMenu.add(drainageItem);
+
+        JMenuItem terrainAnalysisItem = createMenuItem(I18n.t("Analisis topohidrologico..."), AppIcons.terrainAnalysisIcon());
+        terrainAnalysisItem.addActionListener(ev -> TerrainHydrologyAnalysisDialog.open(selectedLayer));
+        popupMenu.add(terrainAnalysisItem);
+
+        JMenuItem basinOutletItem = createMenuItem(I18n.t("Cuenca desde outlet..."), AppIcons.pointIcon());
+        basinOutletItem.addActionListener(ev -> BasinFromOutletDialog.open(selectedLayer));
+        popupMenu.add(basinOutletItem);
+
         JMenu advancedMenu = new JMenu("Configuracion avanzada");
-        advancedMenu.setIcon(AppIcons.crsIcon());
+        advancedMenu.setIcon(AppIcons.toolboxIcon());
 
         JMenuItem viewCRSItem = createMenuItem("Ver CRS de capa", AppIcons.crsIcon());
         viewCRSItem.addActionListener(ev -> showLayerCRS(selectedLayer));
@@ -395,19 +645,19 @@ public class LayersPanel extends JPanel {
     private JPopupMenu buildOnlineRasterPopup(Layer selectedLayer) {
         JPopupMenu popupMenu = new JPopupMenu();
 
-        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.propertiesIcon());
+        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.imageryIcon());
         propertiesItem.setEnabled(false);
         popupMenu.add(propertiesItem);
         popupMenu.addSeparator();
 
         addCommonTopItems(popupMenu, selectedLayer, "Ocultar capa online", "Mostrar capa online");
 
-        JMenuItem infoItem = createMenuItem("Informacion de servicio...", AppIcons.propertiesIcon());
+        JMenuItem infoItem = createMenuItem("Informacion de servicio...", AppIcons.identifyIcon());
         infoItem.addActionListener(ev -> showRasterInfo(selectedLayer));
         popupMenu.add(infoItem);
 
         JMenu advancedMenu = new JMenu("Configuracion");
-        advancedMenu.setIcon(AppIcons.crsIcon());
+        advancedMenu.setIcon(AppIcons.toolboxIcon());
 
         JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
         renameItem.addActionListener(ev -> renameLayer(selectedLayer));
@@ -438,21 +688,211 @@ public class LayersPanel extends JPanel {
     }
 
     private void addCommonBottomItems(JPopupMenu popupMenu, Layer selectedLayer) {
+        List<Layer> popupTargetLayers = resolvePopupTargetLayers(selectedLayer);
+        boolean multipleSelection = popupTargetLayers.size() > 1;
+
+        JMenuItem newGroupItem = createMenuItem(
+                multipleSelection ? I18n.format("Crear grupo con seleccion ({0})", popupTargetLayers.size()) : "Crear grupo con capa",
+                AppIcons.openIcon()
+        );
+        newGroupItem.addActionListener(ev -> createNewGroupForLayers(popupTargetLayers));
+        popupMenu.add(newGroupItem);
+
+        JMenu moveToGroupMenu = new JMenu("Mover a grupo");
+        moveToGroupMenu.setIcon(AppIcons.openIcon());
+        populateMoveToGroupMenu(moveToGroupMenu, popupTargetLayers);
+        popupMenu.add(moveToGroupMenu);
+
+        JMenuItem ungroupItem = createMenuItem("Sacar del grupo", AppIcons.removeIcon());
+        ungroupItem.setEnabled(popupTargetLayers.stream().anyMatch(Layer::isInGroup));
+        ungroupItem.addActionListener(ev -> removeLayersFromGroup(popupTargetLayers));
+        popupMenu.add(ungroupItem);
+
+        popupMenu.addSeparator();
+
         JMenuItem moveUpItem = createMenuItem("Subir", AppIcons.upIcon());
         moveUpItem.addActionListener(ev -> moveLayerUp(selectedLayer));
+        moveUpItem.setEnabled(!multipleSelection);
         popupMenu.add(moveUpItem);
 
         JMenuItem moveDownItem = createMenuItem("Bajar", AppIcons.downIcon());
         moveDownItem.addActionListener(ev -> moveLayerDown(selectedLayer));
+        moveDownItem.setEnabled(!multipleSelection);
         popupMenu.add(moveDownItem);
 
-        JMenuItem removeItem = createMenuItem("Quitar", AppIcons.removeIcon());
-        removeItem.addActionListener(ev -> removeSelectedLayer(selectedLayer));
+        String removeLabel = multipleSelection
+                ? I18n.format("Quitar seleccionadas ({0})", popupTargetLayers.size())
+                : I18n.t("Quitar");
+        JMenuItem removeItem = createMenuItem(removeLabel, AppIcons.removeIcon());
+        removeItem.addActionListener(ev -> removeLayersFromProject(popupTargetLayers));
         popupMenu.add(removeItem);
     }
 
     private JMenuItem createMenuItem(String text, javax.swing.Icon icon) {
         return new JMenuItem(text, icon);
+    }
+
+    private Layer asLayer(Object value) {
+        return value instanceof Layer ? (Layer) value : null;
+    }
+
+    private LayerGroup asGroup(Object value) {
+        return value instanceof LayerGroup ? (LayerGroup) value : null;
+    }
+
+    private void restoreSelection(List<Object> previousSelection) {
+        if (previousSelection == null || previousSelection.isEmpty()) {
+            return;
+        }
+
+        List<Integer> indices = new ArrayList<>();
+        for (Object selected : previousSelection) {
+            for (int i = 0; i < model.size(); i++) {
+                Object current = model.get(i);
+                if (selected instanceof Layer layer && current == layer) {
+                    indices.add(i);
+                    break;
+                }
+                if (selected instanceof LayerGroup group && current instanceof LayerGroup currentGroup
+                        && group.getName().equalsIgnoreCase(currentGroup.getName())) {
+                    indices.add(i);
+                    break;
+                }
+            }
+        }
+        if (!indices.isEmpty()) {
+            int[] values = indices.stream().mapToInt(Integer::intValue).toArray();
+            layerList.setSelectedIndices(values);
+        }
+    }
+
+    private void createNewGroupFromSelection() {
+        createNewGroupForLayers(getSelectedLayers());
+    }
+
+    private void createNewGroupForLayers(List<Layer> layers) {
+        if (CatgisDesktopApp.currentProject == null) {
+            return;
+        }
+        String name = JOptionPane.showInputDialog(this, "Nombre del grupo:", "Nuevo grupo");
+        if (name == null) {
+            return;
+        }
+        String trimmed = name.trim();
+        if (trimmed.isBlank()) {
+            JOptionPane.showMessageDialog(this, "Ingresa un nombre valido para el grupo.", "Grupos de capas", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        LayerGroup group = CatgisDesktopApp.currentProject.addLayerGroup(trimmed);
+        if (layers != null) {
+            for (Layer layer : layers) {
+                CatgisDesktopApp.currentProject.assignLayerToGroup(layer, group.getName());
+            }
+        }
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+    }
+
+    private void populateMoveToGroupMenu(JMenu menu, List<Layer> layers) {
+        if (CatgisDesktopApp.currentProject == null) {
+            menu.setEnabled(false);
+            return;
+        }
+        if (CatgisDesktopApp.currentProject.getLayerGroups().isEmpty()) {
+            JMenuItem empty = createMenuItem("No hay grupos todavia", AppIcons.openIcon());
+            empty.setEnabled(false);
+            menu.add(empty);
+            return;
+        }
+        for (LayerGroup group : CatgisDesktopApp.currentProject.getLayerGroups()) {
+            JMenuItem item = createMenuItem(group.getName(), AppIcons.openIcon());
+            item.addActionListener(ev -> moveLayersToGroup(layers, group.getName()));
+            menu.add(item);
+        }
+    }
+
+    private void moveLayersToGroup(List<Layer> layers, String groupName) {
+        if (CatgisDesktopApp.currentProject == null || layers == null || layers.isEmpty()) {
+            return;
+        }
+        for (Layer layer : layers) {
+            CatgisDesktopApp.currentProject.assignLayerToGroup(layer, groupName);
+        }
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+        CatgisDesktopApp.mapPanel.repaint();
+    }
+
+    private void removeLayersFromGroup(List<Layer> layers) {
+        if (CatgisDesktopApp.currentProject == null || layers == null || layers.isEmpty()) {
+            return;
+        }
+        for (Layer layer : layers) {
+            if (layer != null) {
+                layer.setGroupName("");
+            }
+        }
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+    }
+
+    private void renameGroup(LayerGroup group) {
+        if (group == null || CatgisDesktopApp.currentProject == null) {
+            return;
+        }
+        String newName = JOptionPane.showInputDialog(this, "Nuevo nombre del grupo:", group.getName());
+        if (newName == null) {
+            return;
+        }
+        if (newName.trim().isBlank()) {
+            JOptionPane.showMessageDialog(this, "Ingresa un nombre valido para el grupo.", "Grupos de capas", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        CatgisDesktopApp.currentProject.renameLayerGroup(group.getName(), newName.trim());
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+    }
+
+    private void removeGroup(LayerGroup group) {
+        if (group == null || CatgisDesktopApp.currentProject == null) {
+            return;
+        }
+        int option = JOptionPane.showConfirmDialog(
+                this,
+                "Se quitara el grupo \"" + group.getName() + "\".\nLas capas quedaran sueltas en el proyecto.\n\nQueres continuar?",
+                "Quitar grupo",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        if (option != JOptionPane.YES_OPTION) {
+            return;
+        }
+        CatgisDesktopApp.currentProject.removeLayerGroup(group.getName(), true);
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+    }
+
+    private void moveGroup(LayerGroup group, int delta) {
+        if (group == null || CatgisDesktopApp.currentProject == null) {
+            return;
+        }
+        List<LayerGroup> groups = new ArrayList<>(CatgisDesktopApp.currentProject.getLayerGroups());
+        int index = groups.indexOf(group);
+        int target = index + delta;
+        if (index < 0 || target < 0 || target >= groups.size()) {
+            return;
+        }
+        groups.remove(index);
+        groups.add(target, group);
+        List<String> orderedNames = new ArrayList<>();
+        for (LayerGroup value : groups) {
+            if (value != null) {
+                orderedNames.add(value.getName());
+            }
+        }
+        CatgisDesktopApp.currentProject.setLayerGroupOrder(orderedNames);
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
     }
 
     private boolean isRasterLayer(Layer layer) {
@@ -506,29 +946,71 @@ public class LayersPanel extends JPanel {
                 ? CRSDefinitions.getLabelForCode(CatgisDesktopApp.currentProject.getProjectCRS())
                 : "-";
 
-        String text = "CRS de la capa: " + source + "\nCRS del proyecto: " + project;
-        JOptionPane.showMessageDialog(this, text, "CRS de capa", JOptionPane.INFORMATION_MESSAGE);
+        StringBuilder text = new StringBuilder();
+        text.append("CRS de la capa: ").append(source).append("\n");
+        text.append("CRS del proyecto: ").append(project);
+        if (CadLayerSupport.isCadLayer(layer)) {
+            text.append("\nGeorreferenciacion CAD: ").append(CadGeoreferenceSupport.buildDetailedSummary(layer));
+            text.append("\nAjuste CAD: ").append(CadPlacementSupport.buildPlacementSummary(layer));
+            text.append("\nCapas internas CAD: ").append(CadLayerSupport.buildCadInternalLayerFilterLabel(layer));
+        }
+        JOptionPane.showMessageDialog(this, text.toString(), "CRS de capa", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void defineLayerCRS(Layer layer) {
+        if (CadLayerSupport.isCadLayer(layer)) {
+            CadCrsAssignmentDialog.Result result = CadCrsAssignmentDialog.chooseForLayer(this, layer);
+            if (!result.approved()) {
+                return;
+            }
+            applyLayerCrsChange(layer, result.sourceCrs());
+            return;
+        }
         CRSSelectorDialog.open("Definir CRS de capa", layer.getSourceCRS(), code -> {
-            layer.setSourceCRS(code);
-            CatgisDesktopApp.markProjectDirty();
-            refreshLayerList();
-
-            if (isRasterLayer(layer)) {
-                reloadRasterMode(layer, getRasterMode(layer), true, true);
-            } else {
-                CatgisDesktopApp.mapPanel.resetView();
-                CatgisDesktopApp.mapPanel.repaint();
-            }
-
-            if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
-                        "CRS de capa actualizado: " + layer.getName() + " -> " + CRSDefinitions.getLabelForCode(code)
-                );
-            }
+            applyLayerCrsChange(layer, code);
         });
+    }
+
+    private void editCadPlacement(Layer layer) {
+        java.awt.Frame owner = CatgisDesktopApp.getMainFrame();
+        CadPlacementSupport.Result result = CadPlacementDialog.open(owner, layer);
+        if (!result.approved()) {
+            return;
+        }
+        layer.setCadOffsetX(result.offsetX());
+        layer.setCadOffsetY(result.offsetY());
+        layer.setCadScale(result.scale());
+        layer.setCadRotationDegrees(result.rotationDegrees());
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+        CatgisDesktopApp.mapPanel.resetView();
+        CatgisDesktopApp.mapPanel.repaint();
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage("Ajuste CAD actualizado: " + layer.getName() + " -> " + CadPlacementSupport.buildPlacementSummary(layer));
+        }
+    }
+
+    private void georeferenceCadLayer(Layer layer) {
+        CadWorkflowSupport.openGeoreferenceWorkflow(this, layer);
+    }
+
+    private void applyLayerCrsChange(Layer layer, String code) {
+        layer.setSourceCRS(code);
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+
+        if (isRasterLayer(layer)) {
+            reloadRasterMode(layer, getRasterMode(layer), true, true);
+        } else {
+            CatgisDesktopApp.mapPanel.resetView();
+            CatgisDesktopApp.mapPanel.repaint();
+        }
+
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage(
+                    "CRS de capa actualizado: " + layer.getName() + " -> " + CadLayerSupport.formatSourceCrsLabel(code)
+            );
+        }
     }
 
     private void renameLayer(Layer layer) {
@@ -542,23 +1024,63 @@ public class LayersPanel extends JPanel {
     }
 
     private void moveLayerUp(Layer layer) {
-        int index = model.indexOf(layer);
-        if (index > 0) {
-            model.remove(index);
-            model.add(index - 1, layer);
-            layerList.setSelectedIndex(index - 1);
-            applyLayerOrderFromModel();
-        }
+        moveLayerWithinGroup(layer, -1);
     }
 
     private void moveLayerDown(Layer layer) {
-        int index = model.indexOf(layer);
-        if (index >= 0 && index < model.size() - 1) {
-            model.remove(index);
-            model.add(index + 1, layer);
-            layerList.setSelectedIndex(index + 1);
-            applyLayerOrderFromModel();
+        moveLayerWithinGroup(layer, 1);
+    }
+
+    private void moveLayerWithinGroup(Layer layer, int delta) {
+        if (layer == null || CatgisDesktopApp.currentProject == null) {
+            return;
         }
+        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        List<Layer> siblings = new ArrayList<>();
+        for (Layer candidate : ordered) {
+            if (candidate == null) {
+                continue;
+            }
+            if (sameGroup(candidate, layer)) {
+                siblings.add(candidate);
+            }
+        }
+        int siblingIndex = siblings.indexOf(layer);
+        int targetIndex = siblingIndex + delta;
+        if (siblingIndex < 0 || targetIndex < 0 || targetIndex >= siblings.size()) {
+            return;
+        }
+        Layer target = siblings.get(targetIndex);
+        moveLayerNearTarget(layer, target, delta > 0);
+    }
+
+    private void moveLayerNearTarget(Layer layer, Layer target, boolean afterTarget) {
+        if (layer == null || target == null || CatgisDesktopApp.currentProject == null || layer == target) {
+            return;
+        }
+        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        if (!ordered.remove(layer)) {
+            return;
+        }
+        int targetIndex = ordered.indexOf(target);
+        if (targetIndex < 0) {
+            ordered.add(layer);
+        } else {
+            ordered.add(afterTarget ? targetIndex + 1 : targetIndex, layer);
+        }
+        CatgisDesktopApp.currentProject.setLayerOrder(ordered);
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.reorderLayers(ordered);
+        }
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+        selectLayer(layer);
+    }
+
+    private boolean sameGroup(Layer a, Layer b) {
+        String groupA = a != null ? a.getGroupName() : "";
+        String groupB = b != null ? b.getGroupName() : "";
+        return groupA.equalsIgnoreCase(groupB);
     }
 
     private int resolveDropInsertIndex(java.awt.Point point) {
@@ -592,8 +1114,17 @@ public class LayersPanel extends JPanel {
         return Math.max(0, index);
     }
 
-    private void reorderLayerByDrag(int sourceIndex, int insertIndex) {
+    private void handleLayerDrop(int sourceIndex, java.awt.Point point, int insertIndex) {
         if (sourceIndex < 0 || sourceIndex >= model.size()) {
+            return;
+        }
+
+        if (layerList.getSelectedIndices().length > 1) {
+            return;
+        }
+
+        Layer sourceLayer = asLayer(model.get(sourceIndex));
+        if (sourceLayer == null) {
             return;
         }
 
@@ -601,25 +1132,120 @@ public class LayersPanel extends JPanel {
             return;
         }
 
-        Layer layer = model.get(sourceIndex);
-        if (layer == null) {
+        Object directTarget = resolveDropTarget(point);
+        if (directTarget instanceof LayerGroup targetGroup) {
+            moveLayerIntoGroup(sourceLayer, targetGroup);
+            return;
+        }
+        if (directTarget instanceof Layer targetLayer) {
+            moveLayerToMatchTarget(sourceLayer, targetLayer, insertIndex > sourceIndex);
             return;
         }
 
-        model.remove(sourceIndex);
-        if (insertIndex > sourceIndex) {
-            insertIndex--;
+        Layer targetLayer = null;
+        int normalizedInsert = Math.max(0, Math.min(insertIndex, model.size() - 1));
+        for (int probe = normalizedInsert; probe >= 0; probe--) {
+            targetLayer = asLayer(model.get(probe));
+            if (targetLayer != null) {
+                break;
+            }
         }
-        insertIndex = Math.max(0, Math.min(insertIndex, model.size()));
-        model.add(insertIndex, layer);
-        layerList.setSelectedIndex(insertIndex);
-        applyLayerOrderFromModel();
+        if (targetLayer != null && sourceLayer != targetLayer) {
+            moveLayerToMatchTarget(sourceLayer, targetLayer, insertIndex > sourceIndex);
+            return;
+        }
+
+        if (point != null && isDropBeforeAllRows(point)) {
+            sourceLayer.setGroupName("");
+            moveLayerToTopOfUngrouped(sourceLayer);
+        }
+    }
+
+    private Object resolveDropTarget(java.awt.Point point) {
+        if (point == null) {
+            return null;
+        }
+        int index = layerList.locationToIndex(point);
+        if (index < 0 || index >= model.size()) {
+            return null;
+        }
+        Rectangle bounds = layerList.getCellBounds(index, index);
+        if (bounds == null || !bounds.contains(point)) {
+            return null;
+        }
+        return model.get(index);
+    }
+
+    private boolean isDropBeforeAllRows(java.awt.Point point) {
+        if (point == null || model.isEmpty()) {
+            return false;
+        }
+        Rectangle firstBounds = layerList.getCellBounds(0, 0);
+        return firstBounds != null && point.y < firstBounds.y;
+    }
+
+    private void moveLayerToMatchTarget(Layer sourceLayer, Layer targetLayer, boolean afterTarget) {
+        if (sourceLayer == null || targetLayer == null) {
+            return;
+        }
+        sourceLayer.setGroupName(targetLayer.getGroupName());
+        moveLayerNearTarget(sourceLayer, targetLayer, afterTarget);
+    }
+
+    private void moveLayerIntoGroup(Layer sourceLayer, LayerGroup targetGroup) {
+        if (sourceLayer == null || targetGroup == null || CatgisDesktopApp.currentProject == null) {
+            return;
+        }
+
+        sourceLayer.setGroupName(targetGroup.getName());
+        targetGroup.setExpanded(true);
+
+        List<Layer> groupLayers = CatgisDesktopApp.currentProject.getLayersForGroup(targetGroup.getName());
+        Layer anchor = null;
+        for (Layer layer : groupLayers) {
+            if (layer != null && layer != sourceLayer) {
+                anchor = layer;
+            }
+        }
+
+        if (anchor != null) {
+            moveLayerNearTarget(sourceLayer, anchor, true);
+            return;
+        }
+
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+        selectLayer(sourceLayer);
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.repaint();
+        }
+    }
+
+    private void moveLayerToTopOfUngrouped(Layer sourceLayer) {
+        if (sourceLayer == null || CatgisDesktopApp.currentProject == null) {
+            return;
+        }
+        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        if (!ordered.remove(sourceLayer)) {
+            return;
+        }
+        ordered.add(0, sourceLayer);
+        CatgisDesktopApp.currentProject.setLayerOrder(ordered);
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.reorderLayers(ordered);
+        }
+        CatgisDesktopApp.markProjectDirty();
+        refreshLayerList();
+        selectLayer(sourceLayer);
     }
 
     private void applyLayerOrderFromModel() {
         List<Layer> orderedLayers = new java.util.ArrayList<>();
         for (int i = 0; i < model.size(); i++) {
-            orderedLayers.add(model.getElementAt(i));
+            Layer layer = asLayer(model.getElementAt(i));
+            if (layer != null && !orderedLayers.contains(layer)) {
+                orderedLayers.add(layer);
+            }
         }
 
         if (CatgisDesktopApp.currentProject != null) {
@@ -637,16 +1263,119 @@ public class LayersPanel extends JPanel {
         if (layer == null) {
             return;
         }
+        removeLayersFromProject(List.of(layer));
+    }
 
-        model.removeElement(layer);
+    private List<Layer> resolvePopupTargetLayers(Layer selectedLayer) {
+        List<Layer> selectedLayers = getOrderedSelectedLayers();
+        if (selectedLayer != null && selectedLayers.size() > 1 && selectedLayers.contains(selectedLayer)) {
+            return selectedLayers;
+        }
+        return selectedLayer == null ? List.of() : List.of(selectedLayer);
+    }
 
-        if (CatgisDesktopApp.currentProject != null) {
-            CatgisDesktopApp.currentProject.getLayers().remove(layer);
+    private List<Layer> getOrderedSelectedLayers() {
+        List<Layer> ordered = new ArrayList<>();
+        for (int index : layerList.getSelectedIndices()) {
+            if (index >= 0 && index < model.size()) {
+                Layer layer = asLayer(model.getElementAt(index));
+                if (layer != null) {
+                    ordered.add(layer);
+                }
+            }
+        }
+        return ordered;
+    }
+
+    private void removeSelectedLayersFromList() {
+        removeLayersFromProject(getOrderedSelectedLayers());
+    }
+
+    private void removeLayersFromProject(Collection<Layer> layersToRemove) {
+        removeLayersFromProject(layersToRemove, true);
+    }
+
+    private void removeLayersFromProject(Collection<Layer> layersToRemove, boolean askForConfirmation) {
+        List<Layer> orderedLayers = new ArrayList<>();
+        for (Layer layer : layersToRemove) {
+            if (layer != null && model.contains(layer) && !orderedLayers.contains(layer)) {
+                orderedLayers.add(layer);
+            }
+        }
+        if (orderedLayers.isEmpty()) {
+            return;
         }
 
-        CatgisDesktopApp.mapPanel.removeLayer(layer);
+        if (askForConfirmation && !confirmLayerRemoval(orderedLayers)) {
+            return;
+        }
+
+        int[] selectedIndices = layerList.getSelectedIndices();
+        int fallbackIndex = selectedIndices.length == 0 ? model.indexOf(orderedLayers.get(0)) : selectedIndices[0];
+
+        for (Layer layer : orderedLayers) {
+            model.removeElement(layer);
+            if (CatgisDesktopApp.currentProject != null) {
+                CatgisDesktopApp.currentProject.removeLayer(layer);
+            }
+            OpenAttributeTableAction.closeOpenWindow(layer);
+        }
+
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.removeLayers(orderedLayers);
+        }
+
+        restoreSelectionAfterRemoval(fallbackIndex);
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
+
+        if (CatgisDesktopApp.statusBar != null) {
+            if (orderedLayers.size() == 1) {
+                CatgisDesktopApp.statusBar.setMessage(I18n.format("Capa quitada: {0}", orderedLayers.get(0).getName()));
+            } else {
+                CatgisDesktopApp.statusBar.setMessage(I18n.format("{0} capas quitadas del proyecto.", orderedLayers.size()));
+            }
+        }
+    }
+
+    private boolean confirmLayerRemoval(List<Layer> layersToRemove) {
+        boolean removesEditingLayer = false;
+        if (CatgisDesktopApp.mapPanel != null) {
+            Layer editingLayer = CatgisDesktopApp.mapPanel.getEditingLayerRef();
+            removesEditingLayer = editingLayer != null && layersToRemove.contains(editingLayer);
+        }
+
+        if (layersToRemove.size() == 1 && !removesEditingLayer) {
+            return true;
+        }
+
+        String message;
+        if (layersToRemove.size() == 1) {
+            message = I18n.t("La capa seleccionada esta en edicion activa. Si la quitas, CATGIS cerrara esa sesion de edicion.\n\nQueres continuar?");
+        } else if (removesEditingLayer) {
+            message = I18n.format("Vas a quitar {0} capas, incluida una capa en edicion activa.\nCATGIS cerrara esa sesion de edicion y quitara las capas del proyecto.\n\nQueres continuar?", layersToRemove.size());
+        } else {
+            message = I18n.format("Vas a quitar {0} capas del proyecto.\n\nQueres continuar?", layersToRemove.size());
+        }
+
+        int option = JOptionPane.showConfirmDialog(
+                this,
+                message,
+                I18n.t("Quitar capas"),
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        return option == JOptionPane.YES_OPTION;
+    }
+
+    private void restoreSelectionAfterRemoval(int fallbackIndex) {
+        if (model.isEmpty()) {
+            layerList.clearSelection();
+            return;
+        }
+        int normalized = Math.max(0, Math.min(fallbackIndex, model.size() - 1));
+        layerList.setSelectedIndex(normalized);
+        layerList.ensureIndexIsVisible(normalized);
     }
 
     private void showRasterInfo(Layer layer) {
@@ -670,6 +1399,9 @@ public class LayersPanel extends JPanel {
         sb.append("CRS: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank()
                 ? CRSDefinitions.getLabelForCode(layer.getSourceCRS()) : "Desconocido").append("\n");
         sb.append("Modo: ").append(getRasterModeLabel(getRasterMode(layer))).append("\n");
+        if (isDerivedRasterLayer(layer) && layer instanceof RasterLayer rasterLayer) {
+            sb.append("Derivado: ").append(rasterLayer.getDerivedOperation()).append("\n");
+        }
 
         Object raster = getRasterDataFromMapPanel(layer);
         if (raster != null) {
@@ -741,6 +1473,9 @@ public class LayersPanel extends JPanel {
     }
 
     private String getRasterMode(Layer layer) {
+        if (isDerivedRasterLayer(layer)) {
+            return "derived";
+        }
         if (layer instanceof RasterLayer) {
             return ((RasterLayer) layer).getRasterMode();
         }
@@ -759,6 +1494,9 @@ public class LayersPanel extends JPanel {
     }
 
     private String getRasterModeLabel(String mode) {
+        if ("derived".equalsIgnoreCase(mode)) {
+            return "Derivado";
+        }
         if (RasterImageLoader.MODE_REAL.equalsIgnoreCase(mode)) {
             return "Zoom real";
         }
@@ -774,6 +1512,15 @@ public class LayersPanel extends JPanel {
 
     private void reloadRasterMode(Layer layer, String mode, boolean forceReload, boolean resetViewAfterLoad) {
         if (layer == null || !isRasterLayer(layer)) {
+            return;
+        }
+        if (isDerivedRasterLayer(layer)) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "La capa raster seleccionada es derivada del DEM y no cambia entre Vista rapida / Virtual / Real.\nVolvela a generar desde el analisis topohidrologico si queres recalcularla.",
+                    "Raster derivado",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
             return;
         }
 
@@ -870,6 +1617,10 @@ public class LayersPanel extends JPanel {
 
         worker.execute();
         progressDialog.setVisible(true);
+    }
+
+    private boolean isDerivedRasterLayer(Layer layer) {
+        return layer instanceof RasterLayer rasterLayer && rasterLayer.isDerivedLayer();
     }
 
     private JDialog createRasterProgressDialog(String message) {
@@ -1103,9 +1854,40 @@ public class LayersPanel extends JPanel {
 
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            if (value instanceof LayerGroup group) {
+                boolean groupVisible = group.isVisible();
+                int memberCount = CatgisDesktopApp.currentProject != null
+                        ? CatgisDesktopApp.currentProject.getLayersForGroup(group.getName()).size()
+                        : 0;
+
+                Color bg = isSelected ? new Color(225, 235, 248) : new Color(246, 248, 252);
+                Color fg = new Color(30, 38, 52);
+                Color metaFg = new Color(95, 106, 122);
+
+                panel.setBackground(bg);
+                leftPanel.setBackground(bg);
+                centerPanel.setBackground(bg);
+
+                visibleCheck.setSelected(groupVisible);
+                iconLabel.setIcon(AppIcons.openIcon());
+                nameLabel.setText((group.isExpanded() ? "▾ " : "▸ ") + group.getName());
+                nameLabel.setForeground(fg);
+                metaLabel.setText("Grupo | " + memberCount + " capas" + (groupVisible ? "" : " | Oculto"));
+                metaLabel.setForeground(metaFg);
+
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(isSelected ? new Color(120, 160, 220) : new Color(214, 220, 228)),
+                        BorderFactory.createEmptyBorder(5, 6, 5, 6)
+                ));
+                return panel;
+            }
+
             Layer layer = (Layer) value;
             boolean missingCrs = hasMissingCRS(layer);
             boolean editingLayer = CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isLayerArmedForEditing(layer);
+            boolean effectiveVisible = CatgisDesktopApp.currentProject == null
+                    ? layer.isVisible()
+                    : CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer);
 
             Color bg = editingLayer
                     ? new Color(255, 239, 239)
@@ -1123,8 +1905,8 @@ public class LayersPanel extends JPanel {
 
             visibleCheck.setSelected(layer.isVisible());
             iconLabel.setIcon(resolveLayerIcon(layer));
-            nameLabel.setText(layer.getName());
-            nameLabel.setForeground(fg);
+            nameLabel.setText((layer.isInGroup() ? "   " : "") + layer.getName());
+            nameLabel.setForeground(effectiveVisible ? fg : new Color(120, 120, 120));
             metaLabel.setText(buildMetaText(layer));
             metaLabel.setForeground(metaFg);
 
@@ -1132,7 +1914,7 @@ public class LayersPanel extends JPanel {
                     BorderFactory.createLineBorder(editingLayer
                             ? new Color(220, 90, 90)
                             : (isSelected ? new Color(120, 160, 220) : new Color(230, 230, 230))),
-                    BorderFactory.createEmptyBorder(5, 6, 5, 6)
+                    BorderFactory.createEmptyBorder(5, layer.isInGroup() ? 18 : 6, 5, 6)
             ));
 
             return panel;
@@ -1142,19 +1924,19 @@ public class LayersPanel extends JPanel {
             String crsInfo = formatCRSInfo(layer);
             if (layer instanceof OnlineTileLayer) {
                 OnlineTileLayer online = (OnlineTileLayer) layer;
-                String hidden = layer.isVisible() ? "" : " | Oculta";
+                String hidden = buildVisibilitySuffix(layer);
                 return "Mapa base online | " + (online.getProviderName() != null && !online.getProviderName().isBlank() ? online.getProviderName() : layer.getName())
                         + " | " + crsInfo + hidden;
             }
             if (layer instanceof OnlineWmsLayer) {
                 OnlineWmsLayer wms = (OnlineWmsLayer) layer;
-                String hidden = layer.isVisible() ? "" : " | Oculta";
+                String hidden = buildVisibilitySuffix(layer);
                 return "WMS | " + (wms.getProviderName() != null && !wms.getProviderName().isBlank() ? wms.getProviderName() : layer.getName())
                         + " | " + crsInfo + hidden;
             }
             if (layer instanceof OnlineWfsLayer) {
                 OnlineWfsLayer wfs = (OnlineWfsLayer) layer;
-                String hidden = layer.isVisible() ? "" : " | Oculta";
+                String hidden = buildVisibilitySuffix(layer);
                 return "WFS | " + resolveGeometryTypeLabel(layer) + " | " + layer.getFeatureCount()
                         + " elementos | " + crsInfo + " | Solo lectura"
                         + (wfs.getProviderName() != null && !wfs.getProviderName().isBlank() ? " | " + wfs.getProviderName() : "")
@@ -1162,15 +1944,22 @@ public class LayersPanel extends JPanel {
             }
             if (layer instanceof GeoPackageLayer) {
                 GeoPackageLayer geoPackage = (GeoPackageLayer) layer;
-                String hidden = layer.isVisible() ? "" : " | Oculta";
+                String hidden = buildVisibilitySuffix(layer);
                 return "GeoPackage | " + resolveGeometryTypeLabel(layer) + " | " + layer.getFeatureCount()
                         + " elementos | " + crsInfo + " | Solo lectura"
                         + (geoPackage.getTableName() != null && !geoPackage.getTableName().isBlank() ? " | " + geoPackage.getTableName() : "")
                         + hidden;
             }
             if (isRasterLayer(layer)) {
-                String hidden = layer.isVisible() ? "" : " | Oculta";
+                String hidden = buildVisibilitySuffix(layer);
                 return "Raster | " + crsInfo + hidden;
+            }
+            if (CadLayerSupport.isCadLayer(layer)) {
+                String hidden = buildVisibilitySuffix(layer);
+                return resolveGeometryTypeLabel(layer) + " CAD | " + layer.getFeatureCount() + " elementos | "
+                        + crsInfo + " | " + CadGeoreferenceSupport.buildDetailedSummary(layer)
+                        + " | " + CadPlacementSupport.buildPlacementSummary(layer)
+                        + " | " + CadLayerSupport.buildCadInternalLayerFilterLabel(layer) + hidden;
             }
 
             String type = resolveGeometryTypeLabel(layer);
@@ -1178,11 +1967,24 @@ public class LayersPanel extends JPanel {
             String labelInfo = layer.isLabelsVisible()
                     ? " | Etiquetas: " + (layer.getLabelField() != null ? layer.getLabelField() : "Si")
                     : "";
-            String hidden = layer.isVisible() ? "" : " | Oculta";
+            String hidden = buildVisibilitySuffix(layer);
             String editing = (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isLayerArmedForEditing(layer))
                     ? " | En edicion"
                     : "";
             return type + " | " + count + " elementos | " + crsInfo + editing + labelInfo + hidden;
+        }
+
+        private String buildVisibilitySuffix(Layer layer) {
+            if (layer == null) {
+                return "";
+            }
+            if (!layer.isVisible()) {
+                return " | Oculta";
+            }
+            if (CatgisDesktopApp.currentProject != null && !CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer)) {
+                return " | Oculta por grupo";
+            }
+            return "";
         }
 
         private String formatCRSInfo(Layer layer) {

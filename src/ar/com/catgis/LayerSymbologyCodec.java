@@ -28,7 +28,9 @@ public final class LayerSymbologyCodec {
                     .append(colorToText(rule.getSecondaryColor())).append('>')
                     .append(rule.getLineStyle().name()).append('>')
                     .append(rule.getLineWidth()).append('>')
-                    .append(rule.getPolygonFillStyle().name());
+                    .append(rule.getPolygonFillStyle().name()).append('>')
+                    .append(rule.getPointSymbolStyle().name()).append('>')
+                    .append(rule.getPointSize());
         }
 
         return encode(symbology.getFieldName()) + "~"
@@ -79,8 +81,17 @@ public final class LayerSymbologyCodec {
                 } catch (Exception ignored) {
                 }
                 rule.setPolygonFillStyle(Layer.PolygonFillStyle.fromValue(fields[5]));
-            } else {
+            } else if (fields.length >= 5) {
                 rule.setPolygonFillStyle(Layer.PolygonFillStyle.fromValue(fields[4]));
+            }
+            if (fields.length >= 7) {
+                rule.setPointSymbolStyle(Layer.PointSymbolStyle.fromValue(fields[6]));
+            }
+            if (fields.length >= 8) {
+                try {
+                    rule.setPointSize(Integer.parseInt(fields[7]));
+                } catch (Exception ignored) {
+                }
             }
         }
         return symbology;

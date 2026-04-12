@@ -1,92 +1,137 @@
 package ar.com.catgis;
 
-import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.MathTransform;
-import org.geotools.referencing.CRS;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
-import java.awt.GridLayout;
-import java.util.LinkedHashMap;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.util.Locale;
 
 public class CoordinateConverterDialog extends JDialog {
 
-    private final JTextField txtX;
-    private final JTextField txtY;
-    private final JComboBox<String> cmbSource;
-    private final JComboBox<String> cmbTarget;
-    private final JTextField txtSourceManual;
-    private final JTextField txtTargetManual;
+    private JTextField txtX;
+    private JTextField txtY;
+    private JButton btnSource;
+    private JButton btnTarget;
+    private JTextField txtSourceManual;
+    private JTextField txtTargetManual;
     private final JTextArea resultArea;
-    private final LinkedHashMap<String, String> crsMap;
+    private String sourceCode = "EPSG:4326";
+    private String targetCode = "EPSG:32720";
 
     public CoordinateConverterDialog() {
         this(null, null);
     }
 
     public CoordinateConverterDialog(Double x, Double y) {
-        setTitle("Conversor de coordenadas / EPSG");
+        setTitle("Conversor de coordenadas / CRS");
         setModal(false);
-        setSize(650, 460);
-        setLocationRelativeTo(null);
+        setSize(760, 560);
+        setLocationRelativeTo(CatgisDesktopApp.getMainFrameSafe());
         setLayout(new BorderLayout(8, 8));
 
-        crsMap = CRSDefinitions.createCRSMap();
+        JPanel content = new JPanel(new BorderLayout(8, 8));
+        content.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        content.setBackground(new Color(245, 247, 250));
 
-        JPanel formPanel = new JPanel(new GridLayout(8, 2, 6, 6));
-        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        content.add(buildHeader(), BorderLayout.NORTH);
+        content.add(buildForm(x, y), BorderLayout.CENTER);
+        content.add(buildFooter(), BorderLayout.SOUTH);
 
-        txtX = new JTextField();
-        txtY = new JTextField();
+        resultArea = new JTextArea();
+        resultArea.setEditable(false);
+        resultArea.setLineWrap(true);
+        resultArea.setWrapStyleWord(true);
+        resultArea.setRows(10);
+        resultArea.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Resultado"),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
 
-        if (x != null) {
-            txtX.setText(formatNumber(x));
-        }
-        if (y != null) {
-            txtY.setText(formatNumber(y));
-        }
+        add(content, BorderLayout.CENTER);
+        add(new JScrollPane(resultArea), BorderLayout.SOUTH);
+        syncButtonsFromCodes();
+    }
 
-        cmbSource = new JComboBox<>(crsMap.keySet().toArray(new String[0]));
-        cmbTarget = new JComboBox<>(crsMap.keySet().toArray(new String[0]));
+    private JPanel buildHeader() {
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        panel.setOpaque(false);
 
-        cmbSource.setSelectedItem(CRSDefinitions.getLabelForCode("EPSG:4326"));
-        cmbTarget.setSelectedItem(CRSDefinitions.getLabelForCode("EPSG:32720"));
+        JLabel title = new JLabel("Conversor tecnico de coordenadas");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+        title.setForeground(new Color(21, 40, 74));
 
-        txtSourceManual = new JTextField("EPSG:4326");
-        txtTargetManual = new JTextField("EPSG:32720");
+        JLabel subtitle = new JLabel(
+                "<html>Usa el selector CRS moderno para origen y destino, o pega un codigo/definicion manual cuando haga falta.</html>"
+        );
+        subtitle.setForeground(new Color(72, 86, 104));
+        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 12.5f));
 
-        formPanel.add(new JLabel("X / Longitud / Este:"));
-        formPanel.add(txtX);
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(subtitle, BorderLayout.SOUTH);
+        return panel;
+    }
 
-        formPanel.add(new JLabel("Y / Latitud / Norte:"));
-        formPanel.add(txtY);
+    private JPanel buildForm(Double x, Double y) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 226, 236)),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
 
-        formPanel.add(new JLabel("CRS origen (lista):"));
-        formPanel.add(cmbSource);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.insets = new Insets(4, 0, 4, 8);
+        gc.anchor = GridBagConstraints.WEST;
 
-        formPanel.add(new JLabel("CRS destino (lista):"));
-        formPanel.add(cmbTarget);
+        txtX = new JTextField(x != null ? formatNumber(x) : "", 24);
+        txtY = new JTextField(y != null ? formatNumber(y) : "", 24);
 
-        formPanel.add(new JLabel("CRS origen manual:"));
-        formPanel.add(txtSourceManual);
+        btnSource = new JButton();
+        btnSource.addActionListener(e -> openSourceSelector());
+        btnTarget = new JButton();
+        btnTarget.addActionListener(e -> openTargetSelector());
 
-        formPanel.add(new JLabel("CRS destino manual:"));
-        formPanel.add(txtTargetManual);
+        txtSourceManual = new JTextField(sourceCode, 24);
+        txtTargetManual = new JTextField(targetCode, 24);
 
-        formPanel.add(new JLabel("Ayuda:"));
-        formPanel.add(new JLabel("Lat/Long: EPSG:4326"));
+        addField(panel, gc, "X / Longitud / Este", txtX);
+        addField(panel, gc, "Y / Latitud / Norte", txtY);
+        addField(panel, gc, "CRS origen", btnSource);
+        addField(panel, gc, "CRS destino", btnTarget);
+        addField(panel, gc, "CRS origen manual", txtSourceManual);
+        addField(panel, gc, "CRS destino manual", txtTargetManual);
 
-        JPanel buttonPanel = new JPanel();
+        JLabel help = new JLabel("<html>Ejemplos: <b>EPSG:4326</b>, <b>EPSG:22182</b>, <b>EPSG:4490</b> o una definicion WKT.</html>");
+        help.setForeground(new Color(91, 103, 121));
+        help.setFont(help.getFont().deriveFont(Font.PLAIN, 11.2f));
+        gc.gridx = 0;
+        gc.gridwidth = 2;
+        gc.insets = new Insets(8, 0, 0, 0);
+        panel.add(help, gc);
+
+        return panel;
+    }
+
+    private JPanel buildFooter() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panel.setOpaque(false);
 
         JButton btnConvert = new JButton("Convertir");
         btnConvert.addActionListener(e -> convertCoordinates());
@@ -94,27 +139,31 @@ public class CoordinateConverterDialog extends JDialog {
         JButton btnSwap = new JButton("Invertir X/Y");
         btnSwap.addActionListener(e -> swapCoordinates());
 
-        JButton btnUseSelected = new JButton("Usar CRS de listas");
-        btnUseSelected.addActionListener(e -> syncManualWithSelected());
-
         JButton btnClose = new JButton("Cerrar");
         btnClose.addActionListener(e -> dispose());
 
-        buttonPanel.add(btnConvert);
-        buttonPanel.add(btnSwap);
-        buttonPanel.add(btnUseSelected);
-        buttonPanel.add(btnClose);
+        panel.add(btnConvert);
+        panel.add(btnSwap);
+        panel.add(btnClose);
+        return panel;
+    }
 
-        resultArea = new JTextArea();
-        resultArea.setEditable(false);
-        resultArea.setLineWrap(true);
-        resultArea.setWrapStyleWord(true);
-        resultArea.setBorder(BorderFactory.createTitledBorder("Resultado"));
-        resultArea.setRows(10);
+    private void addField(JPanel panel, GridBagConstraints gc, String label, java.awt.Component component) {
+        JLabel jLabel = new JLabel(label);
+        jLabel.setFont(jLabel.getFont().deriveFont(Font.BOLD, 12f));
+        jLabel.setForeground(new Color(55, 65, 81));
 
-        add(formPanel, BorderLayout.NORTH);
-        add(buttonPanel, BorderLayout.CENTER);
-        add(resultArea, BorderLayout.SOUTH);
+        gc.gridx = 0;
+        gc.gridwidth = 1;
+        gc.weightx = 0;
+        gc.fill = GridBagConstraints.NONE;
+        panel.add(jLabel, gc);
+
+        gc.gridx = 1;
+        gc.weightx = 1;
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(component, gc);
+        gc.gridy++;
     }
 
     public static void openDialog() {
@@ -125,16 +174,25 @@ public class CoordinateConverterDialog extends JDialog {
         SwingUtilities.invokeLater(() -> new CoordinateConverterDialog(x, y).setVisible(true));
     }
 
-    private void syncManualWithSelected() {
-        Object source = cmbSource.getSelectedItem();
-        Object target = cmbTarget.getSelectedItem();
+    private void openSourceSelector() {
+        CRSSelectorDialog.open("CRS origen", sourceCode, code -> {
+            sourceCode = code;
+            txtSourceManual.setText(code);
+            syncButtonsFromCodes();
+        });
+    }
 
-        if (source != null) {
-            txtSourceManual.setText(crsMap.get(source.toString()));
-        }
-        if (target != null) {
-            txtTargetManual.setText(crsMap.get(target.toString()));
-        }
+    private void openTargetSelector() {
+        CRSSelectorDialog.open("CRS destino", targetCode, code -> {
+            targetCode = code;
+            txtTargetManual.setText(code);
+            syncButtonsFromCodes();
+        });
+    }
+
+    private void syncButtonsFromCodes() {
+        btnSource.setText(CRSDefinitions.getLabelForCode(sourceCode));
+        btnTarget.setText(CRSDefinitions.getLabelForCode(targetCode));
     }
 
     private void swapCoordinates() {
@@ -149,13 +207,13 @@ public class CoordinateConverterDialog extends JDialog {
             double x = parseNumber(txtX.getText());
             double y = parseNumber(txtY.getText());
 
-            String sourceCode = CRSDefinitions.normalizeCode(txtSourceManual.getText());
-            String targetCode = CRSDefinitions.normalizeCode(txtTargetManual.getText());
+            sourceCode = CRSDefinitions.normalizeCode(txtSourceManual.getText());
+            targetCode = CRSDefinitions.normalizeCode(txtTargetManual.getText());
+            syncButtonsFromCodes();
 
-            CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRS.decode(targetCode, true);
-
-            MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
+            var sourceCRS = CRSDefinitions.decode(sourceCode, true);
+            var targetCRS = CRSDefinitions.decode(targetCode, true);
+            MathTransform transform = org.geotools.referencing.CRS.findMathTransform(sourceCRS, targetCRS, true);
 
             double[] sourceCoords = new double[]{x, y};
             double[] targetCoords = new double[2];
@@ -192,9 +250,7 @@ public class CoordinateConverterDialog extends JDialog {
             }
 
             resultArea.setText(sb.toString());
-
         } catch (Exception ex) {
-            ex.printStackTrace();
             JOptionPane.showMessageDialog(
                     this,
                     "Error al convertir coordenadas: " + ex.getMessage(),
@@ -206,7 +262,7 @@ public class CoordinateConverterDialog extends JDialog {
 
     private double parseNumber(String text) {
         if (text == null || text.trim().isEmpty()) {
-            throw new RuntimeException("Ingrese un valor numÃ©rico.");
+            throw new RuntimeException("Ingresa un valor numerico.");
         }
         return Double.parseDouble(text.trim().replace(",", "."));
     }
@@ -216,19 +272,12 @@ public class CoordinateConverterDialog extends JDialog {
     }
 
     private String toDms(double value, boolean latitude) {
-        String hemi;
-        if (latitude) {
-            hemi = value >= 0 ? "N" : "S";
-        } else {
-            hemi = value >= 0 ? "E" : "O";
-        }
-
+        String hemi = latitude ? (value >= 0 ? "N" : "S") : (value >= 0 ? "E" : "O");
         double abs = Math.abs(value);
         int degrees = (int) abs;
         double minFloat = (abs - degrees) * 60.0;
         int minutes = (int) minFloat;
         double secFloat = (minFloat - minutes) * 60.0;
-
-        return String.format(Locale.US, "%d\u00B0 %d' %.2f\" %s", degrees, minutes, secFloat, hemi);
+        return String.format(Locale.US, "%d° %d' %.2f\" %s", degrees, minutes, secFloat, hemi);
     }
 }

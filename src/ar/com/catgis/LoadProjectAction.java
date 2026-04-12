@@ -24,11 +24,13 @@ public class LoadProjectAction extends AbstractAction {
             return;
         }
 
-        JFileChooser chooser = FileChooserSupport.createChooser("project-open", "Abrir proyecto CATGIS");
+        File initialDirectory = FileChooserSupport.resolveInitialDirectoryHint("project-open");
+        JFileChooser chooser = initialDirectory != null ? new JFileChooser(initialDirectory) : new JFileChooser();
+        chooser.setDialogTitle("Abrir proyecto CATGIS");
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.setFileFilter(new FileNameExtensionFilter("Proyectos CATGIS (*.catgis)", "catgis"));
 
-        int result = chooser.showOpenDialog(null);
+        int result = chooser.showOpenDialog(CatgisDesktopApp.getMainFrameSafe());
         if (result != JFileChooser.APPROVE_OPTION) {
             return;
         }
@@ -36,18 +38,31 @@ public class LoadProjectAction extends AbstractAction {
         File file = chooser.getSelectedFile();
         FileChooserSupport.rememberSelection("project-open", chooser);
         FileChooserSupport.rememberSelection("project-save", chooser);
+        loadProjectFile(file);
+    }
+
+    public static boolean loadProjectFile(File file) {
+        return loadProjectFile(file, true);
+    }
+
+    static boolean loadProjectFile(File file, boolean showDialogs) {
+        java.awt.Component owner = CatgisDesktopApp.getMainFrameSafe();
 
         if (file == null || !file.getName().toLowerCase().endsWith(".catgis")) {
-            JOptionPane.showMessageDialog(null, "Seleccione un archivo .catgis válido.");
-            return;
+            if (showDialogs) {
+                JOptionPane.showMessageDialog(owner, "Seleccione un archivo .catgis valido.");
+            }
+            return false;
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String firstLine = reader.readLine();
 
             if (firstLine == null || !firstLine.trim().equals("CATGIS_PROJECT")) {
-                JOptionPane.showMessageDialog(null, "Archivo de proyecto inválido.");
-                return;
+                if (showDialogs) {
+                    JOptionPane.showMessageDialog(owner, "Archivo de proyecto invalido.");
+                }
+                return false;
             }
 
             Project loadedProject = new Project(stripExtension(file.getName()));
@@ -83,6 +98,43 @@ public class LoadProjectAction extends AbstractAction {
                     continue;
                 }
 
+                if (line.startsWith("PROJECT_LAYOUT_ITEM|")) {
+                    String[] itemParts = line.split("\\|", 2);
+                    if (itemParts.length >= 2) {
+                        CatmapLayoutItem item = CatmapLayoutItem.decode(itemParts[1].trim());
+                        if (item != null) {
+                            loadedProject.addCatmapItem(item);
+                        }
+                    }
+                    continue;
+                }
+
+                if (line.startsWith("PROJECT_LEGEND_ITEM|")) {
+                    String[] itemParts = line.split("\\|", 2);
+                    if (itemParts.length >= 2) {
+                        CatmapLegendItem item = CatmapLegendItem.decode(itemParts[1].trim());
+                        if (item != null) {
+                            loadedProject.addCatmapLegendItem(item);
+                        }
+                    }
+                    continue;
+                }
+
+                if (line.startsWith("PROJECT_LAYER_GROUP|")) {
+                    String[] groupParts = line.split("\\|", -1);
+                    if (groupParts.length >= 2) {
+                        LayerGroup group = new LayerGroup(groupParts[1].trim());
+                        if (groupParts.length >= 3) {
+                            group.setVisible(Boolean.parseBoolean(groupParts[2].trim()));
+                        }
+                        if (groupParts.length >= 4) {
+                            group.setExpanded(Boolean.parseBoolean(groupParts[3].trim()));
+                        }
+                        loadedProject.addLayerGroup(group);
+                    }
+                    continue;
+                }
+
                 if (line.startsWith("VIEW|")) {
                     String[] viewParts = line.split("\\|", -1);
                     if (viewParts.length >= 4) {
@@ -102,6 +154,9 @@ public class LoadProjectAction extends AbstractAction {
                     continue;
                 }
 
+                if (layer.isInGroup() && loadedProject.getLayerGroup(layer.getGroupName()) == null) {
+                    loadedProject.addLayerGroup(layer.getGroupName());
+                }
                 loadedProject.addLayer(layer);
             }
 
@@ -119,6 +174,7 @@ public class LoadProjectAction extends AbstractAction {
                 loadLayerData(layer);
             }
 
+            TopographyWorkflowSupport.normalizeTopographyOverlayOrder();
             CatgisDesktopApp.mapPanel.refreshLayerVisibility();
             CatgisDesktopApp.layersPanel.refreshLayerList();
             CatgisDesktopApp.markProjectClean();
@@ -129,11 +185,12 @@ public class LoadProjectAction extends AbstractAction {
             double finalSavedZoomFactor = savedZoomFactor;
 
             SwingUtilities.invokeLater(() -> {
-                if (finalViewLoaded) {
-                    CatgisDesktopApp.mapPanel.restoreView(finalSavedViewMinX, finalSavedViewMinY, finalSavedZoomFactor);
-                } else {
-                    CatgisDesktopApp.mapPanel.resetView();
-                }
+                CatgisDesktopApp.mapPanel.restoreViewOrReset(
+                        finalSavedViewMinX,
+                        finalSavedViewMinY,
+                        finalSavedZoomFactor,
+                        finalViewLoaded
+                );
                 CatgisDesktopApp.mapPanel.repaint();
             });
 
@@ -143,10 +200,16 @@ public class LoadProjectAction extends AbstractAction {
                 );
             }
 
-            JOptionPane.showMessageDialog(null, "Proyecto cargado correctamente.");
+            if (showDialogs) {
+                JOptionPane.showMessageDialog(owner, "Proyecto cargado correctamente.");
+            }
+            return true;
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(null, "Error al abrir proyecto: " + ex.getMessage());
+            if (showDialogs) {
+                JOptionPane.showMessageDialog(owner, "Error al abrir proyecto: " + ex.getMessage());
+            }
+            return false;
         }
     }
 
@@ -178,6 +241,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
                 ShapefileData data = PostgisLoader.loadLayerData((PostgisLayer) layer, info);
                 if (data != null) {
+                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
                     layer.setSourceName(data.getSourceName());
                     layer.setFeatureCount(data.getFeatureCount());
                     CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
@@ -187,6 +251,17 @@ public class LoadProjectAction extends AbstractAction {
             if (layer instanceof GeoPackageLayer) {
                 ShapefileData data = GeoPackageLoader.loadLayerData((GeoPackageLayer) layer);
                 if (data != null) {
+                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
+                    layer.setSourceName(data.getSourceName());
+                    layer.setFeatureCount(data.getFeatureCount());
+                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                }
+                return;
+            }
+            if (layer instanceof GpxLayer gpxLayer) {
+                ShapefileData data = GpxLoader.load(new File(layer.getPath()), gpxLayer.getContentKind());
+                if (data != null) {
+                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
                     layer.setSourceName(data.getSourceName());
                     layer.setFeatureCount(data.getFeatureCount());
                     CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
@@ -196,6 +271,7 @@ public class LoadProjectAction extends AbstractAction {
             if (layer instanceof OnlineWfsLayer) {
                 ShapefileData data = WfsFeatureLoader.loadLayerData((OnlineWfsLayer) layer);
                 if (data != null) {
+                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
                     layer.setSourceName(data.getSourceName());
                     layer.setFeatureCount(data.getFeatureCount());
                     CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
@@ -203,19 +279,29 @@ public class LoadProjectAction extends AbstractAction {
                 return;
             }
 
-            if (layer.getPath() == null || layer.getPath().isBlank()) {
-                return;
-            }
-
-            String path = layer.getPath().trim().toLowerCase();
+            String path = layer.getPath() != null ? layer.getPath().trim().toLowerCase() : "";
 
             if (isRasterLayer(layer)) {
+                if (path.isBlank()) {
+                    return;
+                }
                 File rasterFile = new File(layer.getPath());
                 LocalRasterData rasterData;
                 String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
                 String sourceCRS = layer.getSourceCRS();
                 if (layer instanceof RasterLayer) {
                     RasterLayer rasterLayer = (RasterLayer) layer;
+                    if (rasterLayer.isDerivedLayer()) {
+                        if (FloodScenarioService.OP_PRELIMINARY_FLOOD.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
+                            rasterData = FloodScenarioService.regenerateDerivedRasterData(rasterLayer);
+                        } else if (BooleanRiskService.OP_SLOPE_BOOLEAN_MASK.equalsIgnoreCase(rasterLayer.getDerivedOperation())
+                                || BooleanRiskService.OP_SOIL_BOOLEAN_MASK.equalsIgnoreCase(rasterLayer.getDerivedOperation())
+                                || BooleanRiskService.OP_PRELIMINARY_BOOLEAN_RISK.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
+                            rasterData = BooleanRiskService.regenerateDerivedRasterData(rasterLayer);
+                        } else {
+                            rasterData = TerrainHydrologyAnalysisService.regenerateDerivedRasterData(rasterLayer);
+                        }
+                    } else {
                     String mode = rasterLayer.getRasterMode();
                     if (RasterImageLoader.MODE_REAL.equalsIgnoreCase(mode)) {
                         rasterData = RasterImageLoader.loadReal(rasterFile, projectCRS, sourceCRS);
@@ -225,14 +311,13 @@ public class LoadProjectAction extends AbstractAction {
                         rasterData = RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
                         rasterLayer.setRasterMode(rasterData.getRasterMode());
                     }
+                    }
                 } else {
                     rasterData = RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
                 }
                 if (rasterData != null) {
+                    layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCRS));
                     CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
-                    if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
-                        layer.setSourceCRS(rasterData.getSourceCRS());
-                    }
                 }
                 return;
             }
@@ -243,17 +328,34 @@ public class LoadProjectAction extends AbstractAction {
 
             ShapefileData data = null;
 
+            if (TopographyWorkflowSupport.isTransientTopographyVector(layer)
+                    && (path.isBlank() || !ExportVectorLayerAction.hasSupportedVectorPath(layer))) {
+                data = TopographyWorkflowSupport.tryRestoreTransientTopographyVectorLayer(layer);
+                if (data != null) {
+                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+                }
+                return;
+            }
+
             if (path.endsWith(".shp")) {
                 data = loadShapefileCompat(layer.getPath());
                 if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
                     layer.setSourceCRS(ShapefileLoader.getCRSCode(new File(layer.getPath())));
+                }
+            } else if (path.endsWith(".dxf")) {
+                data = DxfLoader.load(new File(layer.getPath()));
+            } else if (path.endsWith(".dwg")) {
+                DwgImportSupport.ResolvedCadReference resolvedCad = DwgImportSupport.resolveDwgReference(new File(layer.getPath()), null, false);
+                if (resolvedCad != null && resolvedCad.dxfFile() != null) {
+                    data = DxfLoader.load(resolvedCad.dxfFile());
+                    layer.setSourceName(resolvedCad.resolutionMessage());
                 }
             } else if (path.endsWith(".geojson") || path.endsWith(".json")) {
                 data = loadGeoJsonCompat(layer.getPath());
                 if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
                     layer.setSourceCRS("EPSG:4326");
                 }
-            } else if (path.endsWith(".kml")) {
+            } else if (path.endsWith(".kml") || path.endsWith(".kmz")) {
                 data = loadKmlCompat(layer.getPath());
                 if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
                     layer.setSourceCRS("EPSG:4326");
@@ -261,6 +363,7 @@ public class LoadProjectAction extends AbstractAction {
             }
 
             if (data != null) {
+                data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
                 layer.setSourceName(data.getSourceName());
                 layer.setFeatureCount(data.getFeatureCount());
                 CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
@@ -310,6 +413,9 @@ public class LoadProjectAction extends AbstractAction {
                 PostgisLayer postgis = new PostgisLayer(name);
                 postgis.setPath(path);
                 layer = postgis;
+            } else if ("GPX".equalsIgnoreCase(type)) {
+                GpxLayer gpx = new GpxLayer(name, path, GpxLayer.ContentKind.WAYPOINTS);
+                layer = gpx;
             } else if ("GEOPACKAGE".equalsIgnoreCase(type)) {
                 GeoPackageLayer geoPackage = new GeoPackageLayer(name, path);
                 layer = geoPackage;
@@ -391,12 +497,28 @@ public class LoadProjectAction extends AbstractAction {
                 layer.setPolygonFillStyle(Layer.PolygonFillStyle.fromValue(parts[15].trim()));
                 payloadStart = 16;
                 if (parts.length > 17 && looksLikeThemeSection(parts, 16)) {
+                    layer.getPointCategorizedSymbology().clearRules();
                     layer.getLineCategorizedSymbology().clearRules();
                     mergeSymbology(layer.getLineCategorizedSymbology(), LayerSymbologyCodec.decodeCategorizedSymbology(parts[16].trim()));
                     layer.getPolygonCategorizedSymbology().clearRules();
                     mergeSymbology(layer.getPolygonCategorizedSymbology(), LayerSymbologyCodec.decodeCategorizedSymbology(parts[17].trim()));
                     payloadStart = 18;
                 }
+            }
+            if (parts.length > payloadStart && parts[payloadStart].startsWith("POINT_ICON=")) {
+                layer.setPointGraphicSymbol(parts[payloadStart].substring("POINT_ICON=".length()).trim());
+                payloadStart++;
+            }
+            if (parts.length > payloadStart && parts[payloadStart].startsWith("POINT_THEME=")) {
+                mergeSymbology(
+                        layer.getPointCategorizedSymbology(),
+                        LayerSymbologyCodec.decodeCategorizedSymbology(parts[payloadStart].substring("POINT_THEME=".length()).trim())
+                );
+                payloadStart++;
+            }
+            if (layer instanceof GpxLayer gpxLayer && parts.length > payloadStart && parts[payloadStart].startsWith("GPX_KIND=")) {
+                gpxLayer.setContentKind(GpxLayer.ContentKind.fromValue(parts[payloadStart].substring("GPX_KIND=".length()).trim()));
+                payloadStart++;
             }
 
             if (layer instanceof RasterLayer) {
@@ -433,6 +555,12 @@ public class LoadProjectAction extends AbstractAction {
                 }
                 if (parts.length > payloadStart + 6) {
                     raster.setRasterMode(parts[payloadStart + 6].trim());
+                }
+                if (parts.length > payloadStart + 7 && parts[payloadStart + 7].startsWith("DERIVED_OP=")) {
+                    raster.setDerivedOperation(parts[payloadStart + 7].substring("DERIVED_OP=".length()).trim());
+                }
+                if (parts.length > payloadStart + 8 && parts[payloadStart + 8].startsWith("DERIVED_ARGS=")) {
+                    raster.setDerivedParameters(parts[payloadStart + 8].substring("DERIVED_ARGS=".length()).trim());
                 }
             }
 
@@ -596,6 +724,91 @@ public class LoadProjectAction extends AbstractAction {
                 }
             }
 
+            for (String part : parts) {
+                if (part == null || part.isBlank()) {
+                    continue;
+                }
+                if (part.startsWith("GROUP=")) {
+                    layer.setGroupName(part.substring("GROUP=".length()).trim());
+                } else if (part.startsWith("CAD_SHIFT_X=")) {
+                    try {
+                        layer.setCadOffsetX(Double.parseDouble(part.substring("CAD_SHIFT_X=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_SHIFT_Y=")) {
+                    try {
+                        layer.setCadOffsetY(Double.parseDouble(part.substring("CAD_SHIFT_Y=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_SCALE=")) {
+                    try {
+                        layer.setCadScale(Double.parseDouble(part.substring("CAD_SCALE=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_ROT=")) {
+                    try {
+                        layer.setCadRotationDegrees(Double.parseDouble(part.substring("CAD_ROT=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_METHOD=")) {
+                    layer.setCadGeoreferenceMethod(part.substring("CAD_GEOREF_METHOD=".length()).trim());
+                } else if (part.startsWith("CAD_GEOREF_M00=")) {
+                    try {
+                        layer.setCadGeorefM00(Double.parseDouble(part.substring("CAD_GEOREF_M00=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_M01=")) {
+                    try {
+                        layer.setCadGeorefM01(Double.parseDouble(part.substring("CAD_GEOREF_M01=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_M02=")) {
+                    try {
+                        layer.setCadGeorefM02(Double.parseDouble(part.substring("CAD_GEOREF_M02=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_M10=")) {
+                    try {
+                        layer.setCadGeorefM10(Double.parseDouble(part.substring("CAD_GEOREF_M10=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_M11=")) {
+                    try {
+                        layer.setCadGeorefM11(Double.parseDouble(part.substring("CAD_GEOREF_M11=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_M12=")) {
+                    try {
+                        layer.setCadGeorefM12(Double.parseDouble(part.substring("CAD_GEOREF_M12=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_RES_MEAN=")) {
+                    try {
+                        layer.setCadGeorefResidualMean(Double.parseDouble(part.substring("CAD_GEOREF_RES_MEAN=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_RES_MAX=")) {
+                    try {
+                        layer.setCadGeorefResidualMax(Double.parseDouble(part.substring("CAD_GEOREF_RES_MAX=".length()).trim().replace(",", ".")));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_REF_COUNT=")) {
+                    try {
+                        layer.setCadGeorefReferenceCount(Integer.parseInt(part.substring("CAD_GEOREF_REF_COUNT=".length()).trim()));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_GEOREF_CHECK_COUNT=")) {
+                    try {
+                        layer.setCadGeorefCheckCount(Integer.parseInt(part.substring("CAD_GEOREF_CHECK_COUNT=".length()).trim()));
+                    } catch (Exception ignored) {
+                    }
+                } else if (part.startsWith("CAD_HIDDEN_LAYERS=")) {
+                    layer.setCadHiddenInternalLayersEncoded(part.substring("CAD_HIDDEN_LAYERS=".length()).trim());
+                } else if (part.startsWith("SOURCE_NAME=")) {
+                    layer.setSourceName(part.substring("SOURCE_NAME=".length()).trim());
+                }
+            }
+
             return layer;
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -617,6 +830,8 @@ public class LoadProjectAction extends AbstractAction {
             case "LEGEND_SUBTITLE" -> project.setLegendSubtitle(value);
             case "LOGO_PATH" -> project.setLogoPath(value);
             case "LAYOUT_IMAGE_PATH" -> project.setLayoutImagePath(value);
+            case "CATMAP_NORTH_STYLE" -> project.setCatmapNorthStyle(value);
+            case "CATMAP_SHOW_NORTH" -> project.setCatmapShowNorth(Boolean.parseBoolean(value));
             default -> {
             }
         }
@@ -675,7 +890,19 @@ public class LoadProjectAction extends AbstractAction {
         target.setLegendTitle(source.getLegendTitle());
         target.setLegendSubtitle(source.getLegendSubtitle());
         target.getRules().clear();
-        target.getRules().putAll(source.getRules());
+        for (CategoryStyleRule sourceRule : source.getRules().values()) {
+            if (sourceRule == null) {
+                continue;
+            }
+            CategoryStyleRule targetRule = target.getOrCreateRule(sourceRule.getValue());
+            targetRule.setPrimaryColor(sourceRule.getPrimaryColor());
+            targetRule.setSecondaryColor(sourceRule.getSecondaryColor());
+            targetRule.setLineStyle(sourceRule.getLineStyle());
+            targetRule.setLineWidth(sourceRule.getLineWidth());
+            targetRule.setPolygonFillStyle(sourceRule.getPolygonFillStyle());
+            targetRule.setPointSymbolStyle(sourceRule.getPointSymbolStyle());
+            targetRule.setPointSize(sourceRule.getPointSize());
+        }
     }
 
     private static boolean isPointStyle(String value) {
@@ -782,6 +1009,7 @@ public class LoadProjectAction extends AbstractAction {
             }
         }
 
-        throw new RuntimeException("No se encontró un método compatible en el loader para: " + path);
+        throw new RuntimeException("No se encontró un loader compatible para: " + path + ". Verificá que la capa siga soportada y que la ruta del proyecto apunte al archivo correcto.");
     }
 }
+

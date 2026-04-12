@@ -10,8 +10,11 @@ import org.locationtech.jts.geom.Geometry;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public class KmlLoader {
 
@@ -43,16 +46,12 @@ public class KmlLoader {
             throw new RuntimeException("No existe el archivo: " + file.getAbsolutePath());
         }
 
-        if (!file.getName().toLowerCase().endsWith(".kml")) {
-            throw new RuntimeException("El archivo no es KML: " + file.getAbsolutePath());
+        String lowerName = file.getName().toLowerCase();
+        if (!lowerName.endsWith(".kml") && !lowerName.endsWith(".kmz")) {
+            throw new RuntimeException("El archivo no es KML/KMZ: " + file.getAbsolutePath());
         }
 
-        Parser parser = new Parser(new KMLConfiguration());
-        Object parsed;
-
-        try (FileInputStream input = new FileInputStream(file)) {
-            parsed = parser.parse(input);
-        }
+        Object parsed = parseKmlContent(file);
 
         List<SimpleFeature> features = new ArrayList<>();
         collectSimpleFeatures(parsed, features);
@@ -114,6 +113,32 @@ public class KmlLoader {
             for (Object item : (Iterable<?>) obj) {
                 collectSimpleFeatures(item, features);
             }
+        }
+    }
+
+    private static Object parseKmlContent(File file) throws Exception {
+        Parser parser = new Parser(new KMLConfiguration());
+        String lowerName = file.getName().toLowerCase();
+        if (lowerName.endsWith(".kmz")) {
+            try (ZipFile zipFile = new ZipFile(file)) {
+                ZipEntry entry = zipFile.getEntry("doc.kml");
+                if (entry == null) {
+                    entry = zipFile.stream()
+                            .filter(item -> !item.isDirectory() && item.getName().toLowerCase().endsWith(".kml"))
+                            .findFirst()
+                            .orElse(null);
+                }
+                if (entry == null) {
+                    throw new RuntimeException("El KMZ no contiene un archivo KML.");
+                }
+                try (InputStream input = zipFile.getInputStream(entry)) {
+                    return parser.parse(input);
+                }
+            }
+        }
+
+        try (FileInputStream input = new FileInputStream(file)) {
+            return parser.parse(input);
         }
     }
 

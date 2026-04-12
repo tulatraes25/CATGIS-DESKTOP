@@ -10,6 +10,7 @@ public class FieldCalculatorDialog extends JDialog {
 
     private final AttributeTableWindow tableWindow;
     private final JTextArea expressionArea;
+    private final DefaultListModel<FieldItem> fieldModel;
     private final JList<FieldItem> fieldsList;
     private final JCheckBox onlySelectedRowsCheck;
     private final JLabel targetLabel;
@@ -34,7 +35,7 @@ public class FieldCalculatorDialog extends JDialog {
         title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
         title.setForeground(new Color(32, 42, 58));
 
-        JLabel subtitle = new JLabel("Doble clic en un campo para elegir cuál se modifica. Después armá la expresión.");
+        JLabel subtitle = new JLabel("Crea o elige un campo destino. Soporta calculos numericos y texto util con metricas en metros y m2.");
         subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 12f));
         subtitle.setForeground(new Color(95, 105, 120));
 
@@ -42,16 +43,7 @@ public class FieldCalculatorDialog extends JDialog {
         header.add(subtitle, BorderLayout.CENTER);
         add(header, BorderLayout.NORTH);
 
-        DefaultListModel<FieldItem> fieldModel = new DefaultListModel<>();
-        List<Integer> editableIndexes = tableWindow.getEditableColumnIndexes();
-        for (Integer idx : editableIndexes) {
-            fieldModel.addElement(new FieldItem(
-                    idx,
-                    tableWindow.getRawColumnNameAt(idx),
-                    tableWindow.getDisplayColumnNameAt(idx)
-            ));
-        }
-
+        fieldModel = new DefaultListModel<>();
         fieldsList = new JList<>(fieldModel);
         fieldsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         fieldsList.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -62,6 +54,7 @@ public class FieldCalculatorDialog extends JDialog {
                 }
             }
         });
+        reloadEditableFields();
 
         JPanel leftPanel = new JPanel(new BorderLayout(6, 6));
         leftPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -70,10 +63,20 @@ public class FieldCalculatorDialog extends JDialog {
         ));
         leftPanel.setBackground(Color.WHITE);
 
-        JLabel leftLabel = new JLabel("Campos (doble clic = modificar, botón Insertar campo = usar en la fórmula):");
+        JLabel leftLabel = new JLabel("Campos editables:");
         leftLabel.setFont(leftLabel.getFont().deriveFont(Font.BOLD, 12f));
         leftPanel.add(leftLabel, BorderLayout.NORTH);
         leftPanel.add(new JScrollPane(fieldsList), BorderLayout.CENTER);
+
+        JPanel leftActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        leftActions.setOpaque(false);
+        JButton newFieldButton = new JButton("Nuevo campo...");
+        JButton insertFieldButton = new JButton("Insertar campo");
+        newFieldButton.addActionListener(e -> createField());
+        insertFieldButton.addActionListener(e -> insertSelectedField());
+        leftActions.add(newFieldButton);
+        leftActions.add(insertFieldButton);
+        leftPanel.add(leftActions, BorderLayout.SOUTH);
 
         JPanel exprPanel = new JPanel(new BorderLayout(6, 6));
         exprPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -89,9 +92,9 @@ public class FieldCalculatorDialog extends JDialog {
 
         JPanel exprTop = new JPanel(new BorderLayout(6, 4));
         exprTop.setOpaque(false);
-        exprTop.add(new JLabel("Expresión:"), BorderLayout.WEST);
+        exprTop.add(new JLabel("Expresion:"), BorderLayout.WEST);
 
-        JLabel examples = new JLabel("Ej.: =$length   |   =$area/10000   |   =[ancho]*$length   |   =round($length)");
+        JLabel examples = new JLabel("Ej.: =$length_km | =round($area_m2) | =concat(upper([nombre]), ' - ', trim([sector]))");
         examples.setForeground(new Color(95, 105, 120));
         examples.setFont(examples.getFont().deriveFont(Font.PLAIN, 11f));
         exprTop.add(examples, BorderLayout.SOUTH);
@@ -104,31 +107,33 @@ public class FieldCalculatorDialog extends JDialog {
                 "7", "8", "9", "/", "(", ")",
                 "4", "5", "6", "*", "+", "-",
                 "1", "2", "3", ".", "%", "^",
-                "0", "CE", "Insertar campo", "Área", "Longitud", "Perímetro",
-                "=", "X", "Y", "Probar", "", ""
+                "0", "CE", "Area m2", "Area ha", "Longitud m", "Longitud km",
+                "=", "X", "Y", "Perimetro m", "Perimetro km", "Probar"
         };
 
         for (String key : keys) {
-            if (key.isEmpty()) {
-                keypad.add(new JLabel());
-                continue;
-            }
             JButton button = new JButton(key);
             switch (key) {
                 case "CE":
                     button.addActionListener(e -> expressionArea.setText(""));
                     break;
-                case "Insertar campo":
-                    button.addActionListener(e -> insertSelectedField());
+                case "Area m2":
+                    button.addActionListener(e -> insertGeometryShortcut("$area_m2"));
                     break;
-                case "Área":
-                    button.addActionListener(e -> insertGeometryShortcut("$area"));
+                case "Area ha":
+                    button.addActionListener(e -> insertGeometryShortcut("$area_ha"));
                     break;
-                case "Longitud":
-                    button.addActionListener(e -> insertGeometryShortcut("$length"));
+                case "Longitud m":
+                    button.addActionListener(e -> insertGeometryShortcut("$length_m"));
                     break;
-                case "Perímetro":
-                    button.addActionListener(e -> insertGeometryShortcut("$perimeter"));
+                case "Longitud km":
+                    button.addActionListener(e -> insertGeometryShortcut("$length_km"));
+                    break;
+                case "Perimetro m":
+                    button.addActionListener(e -> insertGeometryShortcut("$perimeter_m"));
+                    break;
+                case "Perimetro km":
+                    button.addActionListener(e -> insertGeometryShortcut("$perimeter_km"));
                     break;
                 case "X":
                     button.addActionListener(e -> insertGeometryShortcut("$x"));
@@ -153,12 +158,22 @@ public class FieldCalculatorDialog extends JDialog {
         functions.setOpaque(false);
         addFunctionButton(functions, "abs(");
         addFunctionButton(functions, "round(");
+        addFunctionButton(functions, "floor(");
+        addFunctionButton(functions, "ceil(");
         addFunctionButton(functions, "sqrt(");
         addFunctionButton(functions, "pow(");
         addFunctionButton(functions, "min(");
         addFunctionButton(functions, "max(");
         addFunctionButton(functions, "sin(");
         addFunctionButton(functions, "cos(");
+        addFunctionButton(functions, "log10(");
+        addFunctionButton(functions, "concat(");
+        addFunctionButton(functions, "upper(");
+        addFunctionButton(functions, "lower(");
+        addFunctionButton(functions, "trim(");
+        addFunctionButton(functions, "replace(");
+        addFunctionButton(functions, "len(");
+        addFunctionButton(functions, "coalesce(");
 
         JPanel exprSouth = new JPanel(new BorderLayout(0, 6));
         exprSouth.setOpaque(false);
@@ -179,10 +194,9 @@ public class FieldCalculatorDialog extends JDialog {
 
         JPanel footerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         footerLeft.setOpaque(false);
-
         footerLeft.add(new JLabel("Modificando:"));
 
-        targetLabel = new JLabel("<ningún campo seleccionado>");
+        targetLabel = new JLabel("<ningun campo seleccionado>");
         targetLabel.setFont(targetLabel.getFont().deriveFont(Font.BOLD, 13f));
         targetLabel.setForeground(new Color(37, 99, 235));
         targetLabel.setOpaque(true);
@@ -226,10 +240,76 @@ public class FieldCalculatorDialog extends JDialog {
         panel.add(button);
     }
 
+    private void reloadEditableFields() {
+        fieldModel.clear();
+        List<Integer> editableIndexes = tableWindow.getEditableColumnIndexes();
+        for (Integer idx : editableIndexes) {
+            fieldModel.addElement(new FieldItem(
+                    idx,
+                    tableWindow.getRawColumnNameAt(idx),
+                    tableWindow.getDisplayColumnNameAt(idx)
+            ));
+        }
+    }
+
+    private void createField() {
+        JTextField nameField = new JTextField(18);
+        JTextField aliasField = new JTextField(18);
+        JComboBox<String> typeCombo = new JComboBox<>(new String[]{
+                "Double", "Integer", "Long", "Float", "String", "Boolean", "Date", "Timestamp"
+        });
+        typeCombo.setSelectedItem("Double");
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 8, 8));
+        panel.add(new JLabel("Nombre interno"));
+        panel.add(nameField);
+        panel.add(new JLabel("Alias / nombre visible"));
+        panel.add(aliasField);
+        panel.add(new JLabel("Tipo"));
+        panel.add(typeCombo);
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                panel,
+                "Crear campo nuevo",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        try {
+            int targetIndex = tableWindow.createField(
+                    nameField.getText(),
+                    String.valueOf(typeCombo.getSelectedItem()),
+                    aliasField.getText()
+            );
+            reloadEditableFields();
+            for (int i = 0; i < fieldModel.size(); i++) {
+                FieldItem item = fieldModel.getElementAt(i);
+                if (item.index == targetIndex) {
+                    fieldsList.setSelectedValue(item, true);
+                    setTargetField(item);
+                    break;
+                }
+            }
+            JOptionPane.showMessageDialog(this,
+                    "Campo creado. Ya podes usarlo como destino en la calculadora.",
+                    "Calculadora de campos",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "No se pudo crear el campo: " + ex.getMessage(),
+                    "Calculadora de campos",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void setTargetField(FieldItem item) {
         targetField = item;
         if (item == null) {
-            targetLabel.setText("<ningún campo seleccionado>");
+            targetLabel.setText("<ningun campo seleccionado>");
             targetLabel.setToolTipText(null);
             return;
         }
@@ -239,7 +319,7 @@ public class FieldCalculatorDialog extends JDialog {
             shown += " (" + item.rawName + ")";
         }
         targetLabel.setText(shown);
-        targetLabel.setToolTipText("Ese es el único campo que se va a modificar.");
+        targetLabel.setToolTipText("Ese es el unico campo que se va a modificar.");
     }
 
     private void insertSelectedField() {
@@ -285,25 +365,26 @@ public class FieldCalculatorDialog extends JDialog {
     private void testExpression() {
         int row = tableWindow.getSelectedModelRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Seleccioná una fila en la tabla para probar la expresión.");
+            JOptionPane.showMessageDialog(this, "Selecciona una fila en la tabla para probar la expresion.");
             return;
         }
 
         String expr = expressionArea.getText() != null ? expressionArea.getText().trim() : "";
         if (expr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribí una expresión primero.");
+            JOptionPane.showMessageDialog(this, "Escribe una expresion primero.");
             return;
         }
 
         try {
-            double value = tableWindow.evaluateExpressionForRow(expr, row);
+            int targetIndex = targetField != null ? targetField.index : -1;
+            Object value = tableWindow.evaluateExpressionPreview(expr, row, targetIndex);
             JOptionPane.showMessageDialog(this,
-                    "Resultado para la fila seleccionada: " + trimNumber(value),
-                    "Prueba de expresión",
+                    "Resultado para la fila seleccionada: " + trimValue(value),
+                    "Prueba de expresion",
                     JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
-                    "No se pudo evaluar la expresión: " + ex.getMessage(),
+                    "No se pudo evaluar la expresion: " + ex.getMessage(),
                     "Calculadora de campos",
                     JOptionPane.ERROR_MESSAGE);
         }
@@ -311,29 +392,43 @@ public class FieldCalculatorDialog extends JDialog {
 
     private void applyCalculation() {
         if (targetField == null) {
-            JOptionPane.showMessageDialog(this, "Elegí primero un campo con doble clic.");
+            JOptionPane.showMessageDialog(this, "Elige primero un campo destino.");
             return;
         }
 
         String expr = expressionArea.getText() != null ? expressionArea.getText().trim() : "";
         if (expr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribí una expresión antes de aplicar.");
+            JOptionPane.showMessageDialog(this, "Escribe una expresion antes de aplicar.");
             return;
         }
 
         try {
             int affected = tableWindow.applyFieldCalculation(targetField.index, expr, onlySelectedRowsCheck.isSelected());
             JOptionPane.showMessageDialog(this,
-                    "Cálculo aplicado correctamente sobre " + affected + " registro(s).",
+                    "Calculo aplicado correctamente sobre " + affected + " registro(s).",
                     "Calculadora de campos",
                     JOptionPane.INFORMATION_MESSAGE);
             dispose();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
-                    "No se pudo aplicar el cálculo: " + ex.getMessage(),
+                    "No se pudo aplicar el calculo: " + ex.getMessage(),
                     "Calculadora de campos",
                     JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private String trimValue(Object value) {
+        if (value == null) {
+            return "<null>";
+        }
+        if (!(value instanceof Number number)) {
+            return String.valueOf(value);
+        }
+        double numeric = number.doubleValue();
+        if (Math.rint(numeric) == numeric) {
+            return String.valueOf((long) numeric);
+        }
+        return String.format(Locale.US, "%s", numeric);
     }
 
     private String trimNumber(double value) {

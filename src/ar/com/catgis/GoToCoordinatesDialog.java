@@ -69,7 +69,7 @@ public class GoToCoordinatesDialog extends JDialog {
         JLabel title = new JLabel("Buscar por coordenadas");
         title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD, 16f));
 
-        JLabel subtitle = new JLabel("<html><span style='color:#555555'>CentrÃ¡ el mapa ingresando coordenadas planas, geogrÃ¡ficas en decimal o en grados, minutos y segundos.</span></html>");
+        JLabel subtitle = new JLabel("<html><span style='color:#555555'>Centrá el mapa ingresando coordenadas planas, geográficas en decimal o en grados, minutos y segundos.</span></html>");
         subtitle.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 
         north.add(title);
@@ -165,7 +165,7 @@ public class GoToCoordinatesDialog extends JDialog {
                 double y = parseNumber(planarYField.getText(), "Y");
                 String sourceCrs = planarCrsField.getText().trim();
                 if (sourceCrs.isEmpty()) {
-                    throw new IllegalArgumentException("IngresÃ¡ el CRS de las coordenadas planas.");
+                    throw new IllegalArgumentException("Ingresá el CRS de las coordenadas planas.");
                 }
                 projectXY = transformToProject(x, y, sourceCrs);
 
@@ -201,12 +201,12 @@ public class GoToCoordinatesDialog extends JDialog {
     private double parseNumber(String text, String label) {
         String clean = text != null ? text.trim().replace(",", ".") : "";
         if (clean.isEmpty()) {
-            throw new IllegalArgumentException("IngresÃ¡ " + label + ".");
+            throw new IllegalArgumentException("Ingresá " + label + ".");
         }
         try {
             return Double.parseDouble(clean);
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("Valor invÃ¡lido para " + label + ".");
+            throw new IllegalArgumentException("Valor inválido para " + label + ".");
         }
     }
 
@@ -230,8 +230,8 @@ public class GoToCoordinatesDialog extends JDialog {
             return new double[]{x, y};
         }
 
-        CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCrsCode, true);
-        CoordinateReferenceSystem targetCRS = CRS.decode(targetCode, true);
+        CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCrsCode, true);
+        CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
         MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
 
         GeometryFactory gf = new GeometryFactory();

@@ -30,13 +30,14 @@ public class CsvDataSourceDialog extends JDialog {
     private final JComboBox<String> cmbLabel;
     private final JButton btnCrs;
     private final JLabel lblModeHint;
+    private final JLabel lblTableSummary;
     private String selectedCrs = "EPSG:4326";
 
     public CsvDataSourceDialog(File file, TablePointData tableData) {
         this.file = file;
         this.tableData = tableData;
 
-        setTitle("Origen de datos CSV");
+        setTitle("Origen de datos tabulares");
         setModal(true);
         setSize(820, 520);
         setLocationRelativeTo(CatgisDesktopApp.getMainFrameSafe());
@@ -53,10 +54,13 @@ public class CsvDataSourceDialog extends JDialog {
         autoSelectFields(columns);
         selectedCrs = suggestCrs();
 
-        JPanel form = new JPanel(new GridLayout(6, 2, 6, 6));
+        JPanel form = new JPanel(new GridLayout(7, 2, 6, 6));
         form.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
-        form.add(new JLabel("Archivo CSV:"));
+        form.add(new JLabel("Archivo tabular:"));
         form.add(new JLabel(file != null ? file.getAbsolutePath() : "-"));
+        form.add(new JLabel("Resumen:"));
+        lblTableSummary = new JLabel(buildTableSummary());
+        form.add(lblTableSummary);
         form.add(new JLabel("Modo de carga:"));
         form.add(spatialCheck);
         form.add(new JLabel("Columna X:"));
@@ -128,7 +132,7 @@ public class CsvDataSourceDialog extends JDialog {
     }
 
     private void chooseCrs() {
-        CRSSelectorDialog.open("CRS del CSV", selectedCrs, code -> {
+        CRSSelectorDialog.open("CRS de la tabla", selectedCrs, code -> {
             if (code != null && !code.isBlank()) {
                 selectedCrs = code;
                 btnCrs.setText(CRSDefinitions.getLabelForCode(code));
@@ -143,8 +147,8 @@ public class CsvDataSourceDialog extends JDialog {
         cmbLabel.setEnabled(spatial);
         btnCrs.setEnabled(spatial);
         lblModeHint.setText(spatial
-                ? "Se cargara como puntos reutilizando el flujo espacial del proyecto."
-                : "Se abrira como tabla CSV dentro de CATGIS, sin geometria.");
+                ? "Se cargara como puntos reutilizando columnas X/Y y el CRS elegido."
+                : "Se abrira como tabla externa dentro de CATGIS, sin geometria.");
     }
 
     private void loadData() {
@@ -164,18 +168,24 @@ public class CsvDataSourceDialog extends JDialog {
             }
 
             ShapefileData data = TablePointLayerBuilder.build(tableData, xField, yField, selectedCrs, labelField);
-            String layerName = file != null ? file.getName() : "tabla_csv";
+            String layerName = file != null ? file.getName() : "tabla_externa";
             Layer layer = VectorLayerUtils.addResultLayer(layerName, data, null, selectedCrs, file != null ? file.getAbsolutePath() : "");
             if (layer != null) {
                 layer.setLabelsVisible(true);
                 layer.setLabelField(labelField);
             }
-            JOptionPane.showMessageDialog(this, "CSV cargado correctamente como capa de puntos.");
+            JOptionPane.showMessageDialog(this, "Tabla cargada correctamente como capa de puntos.");
             dispose();
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al cargar CSV: " + ex.getMessage(), "Origen de datos CSV", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error al cargar tabla: " + ex.getMessage(), "Origen de datos tabulares", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private String buildTableSummary() {
+        int columnCount = tableData != null ? tableData.getColumns().size() : 0;
+        int rowCount = tableData != null ? tableData.getRows().size() : 0;
+        return rowCount + " filas | " + columnCount + " campos";
     }
 
     private boolean hasLikelySpatialColumns(List<String> columns) {

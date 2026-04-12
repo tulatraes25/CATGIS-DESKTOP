@@ -16,13 +16,15 @@ import java.util.Vector;
 public class CsvPreviewDialog extends JDialog {
 
     public CsvPreviewDialog(File file, TablePointData data) {
-        setTitle("Vista previa CSV");
+        setTitle("Vista previa de tabla");
         setModal(false);
         setSize(780, 420);
         setLocationRelativeTo(CatgisDesktopApp.getMainFrameSafe());
         setLayout(new BorderLayout(8, 8));
 
-        JLabel header = new JLabel("Archivo: " + (file != null ? file.getAbsolutePath() : "-"));
+        int rowCount = data != null ? data.getRows().size() : 0;
+        int columnCount = data != null ? data.getColumns().size() : 0;
+        JLabel header = new JLabel("Archivo: " + (file != null ? file.getAbsolutePath() : "-") + " | " + rowCount + " filas | " + columnCount + " campos");
         header.setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
         add(header, BorderLayout.NORTH);
 

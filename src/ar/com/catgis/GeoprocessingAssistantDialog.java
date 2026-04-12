@@ -20,6 +20,7 @@ import org.locationtech.jts.geom.MultiPoint;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.operation.polygonize.Polygonizer;
 import org.locationtech.jts.operation.union.UnaryUnionOp;
 
 import javax.swing.BorderFactory;
@@ -33,6 +34,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -57,7 +59,17 @@ public class GeoprocessingAssistantDialog extends JDialog {
     public static final String OP_MERGE = "Merge";
     public static final String OP_DIFFERENCE = "Diferencia";
     public static final String OP_SPATIAL_JOIN = "Spatial Join";
-    public static final String OP_UNION = "Union geometrica (experimental)";
+    public static final String OP_UNION = "Union geometrica";
+
+    private static final String PARAMETER_TEXT_CARD = "text";
+    private static final String PARAMETER_SPATIAL_JOIN_CARD = "spatial-join";
+    private static final String SPATIAL_JOIN_MODE_FIRST = "Primera coincidencia";
+    private static final String SPATIAL_JOIN_MODE_SUMMARY = "Resumen util";
+    private static final String FIELD_JOIN_COUNT = "join_count";
+    private static final String FIELD_JOIN_MODE = "join_mode";
+    private static final String FIELD_SRC_A_COUNT = "src_a_cnt";
+    private static final String FIELD_SRC_B_COUNT = "src_b_cnt";
+    private static final String FIELD_OVERLAY_TYPE = "ov_type";
 
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
@@ -65,6 +77,9 @@ public class GeoprocessingAssistantDialog extends JDialog {
     private final JComboBox<LayerOption> comboLayerA;
     private final JComboBox<LayerOption> comboLayerB;
     private final JTextField txtParameter;
+    private final JComboBox<String> comboSpatialJoinMode;
+    private final JPanel parameterCardPanel;
+    private final CardLayout parameterCardLayout;
     private final JTextField txtOutput;
     private final JLabel lblLayerA;
     private final JLabel lblLayerB;
@@ -93,6 +108,11 @@ public class GeoprocessingAssistantDialog extends JDialog {
         comboLayerA = new JComboBox<>();
         comboLayerB = new JComboBox<>();
         txtParameter = new JTextField();
+        comboSpatialJoinMode = new JComboBox<>(new String[]{SPATIAL_JOIN_MODE_SUMMARY, SPATIAL_JOIN_MODE_FIRST});
+        parameterCardLayout = new CardLayout();
+        parameterCardPanel = new JPanel(parameterCardLayout);
+        parameterCardPanel.add(txtParameter, PARAMETER_TEXT_CARD);
+        parameterCardPanel.add(comboSpatialJoinMode, PARAMETER_SPATIAL_JOIN_CARD);
         txtOutput = new JTextField();
         lblLayerA = new JLabel("Capa A:");
         lblLayerB = new JLabel("Capa B:");
@@ -125,7 +145,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
         addRow(form, gbc, row++, "Operacion:", comboOperation);
         addRow(form, gbc, row++, lblLayerA, comboLayerA);
         addRow(form, gbc, row++, lblLayerB, comboLayerB);
-        addRow(form, gbc, row++, lblParameter, txtParameter);
+        addRow(form, gbc, row++, lblParameter, parameterCardPanel);
         addRow(form, gbc, row++, "Salida:", txtOutput);
 
         gbc.gridx = 0;
@@ -238,18 +258,26 @@ public class GeoprocessingAssistantDialog extends JDialog {
 
         comboLayerB.setEnabled(needsLayerB);
         lblLayerB.setEnabled(needsLayerB);
+        parameterCardPanel.setVisible(needsParameter);
         txtParameter.setEnabled(needsParameter);
+        comboSpatialJoinMode.setEnabled(needsParameter);
         lblParameter.setEnabled(needsParameter);
 
         if (OP_BUFFER.equals(operation)) {
             lblParameter.setText("Distancia:");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
             if (txtParameter.getText().isBlank()) {
                 txtParameter.setText("100");
             }
         } else if (OP_DISSOLVE.equals(operation)) {
             lblParameter.setText("Campo agrupador:");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
+        } else if (OP_SPATIAL_JOIN.equals(operation)) {
+            lblParameter.setText("Modo:");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_SPATIAL_JOIN_CARD);
         } else {
             lblParameter.setText("Parametro:");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
             if (!needsParameter) {
                 txtParameter.setText("");
             }
@@ -283,7 +311,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
     }
 
     private boolean needsParameter(String operation) {
-        return OP_BUFFER.equals(operation) || OP_DISSOLVE.equals(operation);
+        return OP_BUFFER.equals(operation) || OP_DISSOLVE.equals(operation) || OP_SPATIAL_JOIN.equals(operation);
     }
 
     private String resolveOperationDescription(String operation) {
@@ -306,9 +334,9 @@ public class GeoprocessingAssistantDialog extends JDialog {
             return "Resta una mascara poligonal B sobre la capa A. Mantiene los atributos de A y conserva el tipo geometrico cuando es posible.";
         }
         if (OP_SPATIAL_JOIN.equals(operation)) {
-            return "Copia atributos espaciales desde la capa B hacia la capa A segun interseccion. Conserva la geometria de A y agrega conteo de coincidencias.";
+            return "Conserva la geometria y atributos de A. Puede copiar la primera coincidencia de B o resumir multiples coincidencias de B con conteo, sumatoria, promedio, minimo, maximo y lista de valores.";
         }
-        return "Union geometrica experimental entre capas poligonales. Produce geometria agregada de ambas capas y esta pensada como paso previo a un toolbox mas amplio.";
+        return "Genera una union poligonal real entre A y B, parte las geometrias donde se superponen y conserva atributos de ambas capas.";
     }
 
     private String resolveCompatibilityMessage(String operation, LayerOption layerA, LayerOption layerB) {
@@ -337,9 +365,9 @@ public class GeoprocessingAssistantDialog extends JDialog {
                     : "Merge requiere dos capas del mismo tipo geometrico.";
         }
         if (OP_SPATIAL_JOIN.equals(operation)) {
-            return "Spatial Join conserva la geometria de A y trae atributos desde B segun interseccion.";
+            return "Spatial Join conserva la geometria de A y agrega atributos desde B en modo primera coincidencia o resumen con agregacion numerica y de texto.";
         }
-        return "Operacion experimental. Usar sobre capas poligonales.";
+        return "Union geometrica requiere dos capas poligonales y genera piezas de overlay con atributos de A y B.";
     }
 
     private String buildDefaultOutputName(String operation, LayerOption layerA, LayerOption layerB) {
@@ -398,7 +426,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
                     result = differenceLayer(layerA, layerB, outputName);
                     break;
                 case OP_SPATIAL_JOIN:
-                    result = spatialJoin(layerA, layerB, outputName);
+                    result = spatialJoin(layerA, layerB, outputName, getSpatialJoinMode());
                     break;
                 case OP_UNION:
                     result = unionLayers(layerA, layerB, outputName);
@@ -433,6 +461,11 @@ public class GeoprocessingAssistantDialog extends JDialog {
             throw new IllegalArgumentException("La distancia no puede ser 0.");
         }
         return parsed;
+    }
+
+    private String getSpatialJoinMode() {
+        Object selected = comboSpatialJoinMode.getSelectedItem();
+        return selected != null ? selected.toString() : SPATIAL_JOIN_MODE_SUMMARY;
     }
 
     private ShapefileData bufferLayer(LayerOption layerA, double distance, String outputName) throws Exception {
@@ -665,25 +698,23 @@ public class GeoprocessingAssistantDialog extends JDialog {
         return buildResultData(outputName, resultFeatures, resultType);
     }
 
-    private ShapefileData spatialJoin(LayerOption layerA, LayerOption layerB, String outputName) throws Exception {
-        Map<String, String> aFieldMap = new LinkedHashMap<>();
-        Map<String, String> bFieldMap = new LinkedHashMap<>();
-        SimpleFeatureType resultType = buildCombinedSchema(
+    private ShapefileData spatialJoin(LayerOption layerA, LayerOption layerB, String outputName, String joinMode) throws Exception {
+        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
+        boolean summaryMode = SPATIAL_JOIN_MODE_SUMMARY.equalsIgnoreCase(joinMode);
+        Map<String, SpatialJoinFieldSpec> joinFieldSpecs = new LinkedHashMap<>();
+        SimpleFeatureType resultType = buildSpatialJoinSchema(
                 outputName,
-                VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data),
+                targetCrs,
                 defaultGeometryBindingForFamily(layerA.family, true),
                 layerA.data.getSchema(),
-                "a",
-                aFieldMap,
                 layerB.data.getSchema(),
-                "b",
-                bFieldMap,
-                true
+                joinFieldSpecs,
+                summaryMode
         );
 
+        List<FeatureGeometryRef> referencesB = collectFeatureGeometryRefs(layerB, targetCrs);
         List<SimpleFeature> resultFeatures = new ArrayList<>();
         int index = 1;
-        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
 
         for (SimpleFeature featureA : layerA.data.getFeatures()) {
             Geometry geometryA = geometryOf(featureA);
@@ -691,28 +722,13 @@ public class GeoprocessingAssistantDialog extends JDialog {
                 continue;
             }
 
-            SimpleFeature matchFeature = null;
-            int matchCount = 0;
-            for (SimpleFeature featureB : layerB.data.getFeatures()) {
-                Geometry geometryB = reprojectGeometry(geometryOf(featureB), layerB.crsCode, targetCrs);
-                if (geometryB == null || geometryB.isEmpty()) {
-                    continue;
-                }
-                if (geometryA.intersects(geometryB)) {
-                    matchCount++;
-                    if (matchFeature == null) {
-                        matchFeature = featureB;
-                    }
-                }
-            }
-
+            List<FeatureGeometryRef> matches = findMatchingFeatureRefs(geometryA, referencesB);
             SimpleFeatureBuilder builder = new SimpleFeatureBuilder(resultType);
             builder.set("the_geom", adaptGeometryToFeatureType(geometryA.copy(), resultType));
-            fillPrefixedAttributes(builder, aFieldMap, featureA);
-            if (matchFeature != null) {
-                fillPrefixedAttributes(builder, bFieldMap, matchFeature);
-            }
-            builder.set("join_count", matchCount);
+            fillDirectAttributes(builder, layerA.data.getSchema(), featureA);
+            populateSpatialJoinAttributes(builder, joinFieldSpecs, matches, summaryMode);
+            builder.set(FIELD_JOIN_COUNT, matches.size());
+            builder.set(FIELD_JOIN_MODE, summaryMode ? "SUMMARY" : "FIRST");
             resultFeatures.add(builder.buildFeature(outputName + "." + index++));
         }
 
@@ -724,40 +740,50 @@ public class GeoprocessingAssistantDialog extends JDialog {
         ensurePolygonLayer(layerB, "Union geometrica");
 
         String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
-        List<Geometry> allGeometries = new ArrayList<>();
-        allGeometries.addAll(collectLayerGeometries(layerA, targetCrs));
-        allGeometries.addAll(collectLayerGeometries(layerB, targetCrs));
+        Map<String, String> aFieldMap = new LinkedHashMap<>();
+        Map<String, String> bFieldMap = new LinkedHashMap<>();
+        SimpleFeatureType resultType = buildUnionOverlaySchema(
+                outputName,
+                targetCrs,
+                layerA.data.getSchema(),
+                aFieldMap,
+                layerB.data.getSchema(),
+                bFieldMap
+        );
 
-        Geometry union = UnaryUnionOp.union(allGeometries);
-        Geometry normalized = normalizeGeometryToFamily(union, "POLYGON");
-        if (normalized == null || normalized.isEmpty()) {
+        List<FeatureGeometryRef> referencesA = collectFeatureGeometryRefs(layerA, targetCrs);
+        List<FeatureGeometryRef> referencesB = collectFeatureGeometryRefs(layerB, targetCrs);
+        List<Polygon> overlayPieces = collectUnionOverlayPieces(referencesA, referencesB);
+        if (overlayPieces.isEmpty()) {
             throw new IllegalArgumentException("La union no genero geometrias utiles.");
         }
 
-        SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
-        builder.setName(safeTypeName(outputName));
-        applyCrs(builder, targetCrs);
-        builder.add("the_geom", defaultGeometryBindingForFamily("POLYGON", true));
-        builder.add("origen", String.class);
-        SimpleFeatureType resultType = builder.buildFeatureType();
-
         List<SimpleFeature> resultFeatures = new ArrayList<>();
-        List<Polygon> polygons = new ArrayList<>();
-        collectPolygons(normalized, polygons);
-        if (polygons.isEmpty()) {
-            polygons.addAll(toPolygonList(normalized));
-        }
-
         SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(resultType);
         int index = 1;
-        for (Polygon polygon : polygons) {
+        for (Polygon polygon : overlayPieces) {
             if (polygon == null || polygon.isEmpty()) {
                 continue;
             }
-            featureBuilder.set("the_geom", adaptGeometryToFeatureType(polygon, resultType));
-            featureBuilder.set("origen", layerA.layer.getName() + " + " + layerB.layer.getName());
-            resultFeatures.add(featureBuilder.buildFeature(outputName + "." + index++));
+
+            List<FeatureGeometryRef> matchesA = findMatchingFeatureRefs(polygon, referencesA);
+            List<FeatureGeometryRef> matchesB = findMatchingFeatureRefs(polygon, referencesB);
+            if (matchesA.isEmpty() && matchesB.isEmpty()) {
+                continue;
+            }
+
             featureBuilder.reset();
+            featureBuilder.set("the_geom", adaptGeometryToFeatureType(polygon, resultType));
+            if (!matchesA.isEmpty()) {
+                fillPrefixedAttributes(featureBuilder, aFieldMap, matchesA.get(0).feature());
+            }
+            if (!matchesB.isEmpty()) {
+                fillPrefixedAttributes(featureBuilder, bFieldMap, matchesB.get(0).feature());
+            }
+            featureBuilder.set(FIELD_SRC_A_COUNT, matchesA.size());
+            featureBuilder.set(FIELD_SRC_B_COUNT, matchesB.size());
+            featureBuilder.set(FIELD_OVERLAY_TYPE, resolveOverlayType(matchesA.size(), matchesB.size()));
+            resultFeatures.add(featureBuilder.buildFeature(outputName + "." + index++));
         }
 
         return buildResultData(outputName, resultFeatures, resultType);
@@ -785,6 +811,340 @@ public class GeoprocessingAssistantDialog extends JDialog {
             }
         }
         return geometries;
+    }
+
+    private List<FeatureGeometryRef> collectFeatureGeometryRefs(LayerOption option, String targetCrs) throws Exception {
+        List<FeatureGeometryRef> refs = new ArrayList<>();
+        if (option == null || option.data == null || option.data.getFeatures() == null) {
+            return refs;
+        }
+        for (SimpleFeature feature : option.data.getFeatures()) {
+            Geometry geometry = reprojectGeometry(geometryOf(feature), option.crsCode, targetCrs);
+            if (geometry != null && !geometry.isEmpty()) {
+                refs.add(new FeatureGeometryRef(feature, geometry));
+            }
+        }
+        return refs;
+    }
+
+    private List<FeatureGeometryRef> findMatchingFeatureRefs(Geometry targetGeometry, List<FeatureGeometryRef> candidates) {
+        List<FeatureGeometryRef> matches = new ArrayList<>();
+        if (targetGeometry == null || targetGeometry.isEmpty() || candidates == null || candidates.isEmpty()) {
+            return matches;
+        }
+
+        Point interiorPoint = targetGeometry.getInteriorPoint();
+        for (FeatureGeometryRef candidate : candidates) {
+            if (candidate == null || candidate.geometry() == null || candidate.geometry().isEmpty()) {
+                continue;
+            }
+            Geometry candidateGeometry = candidate.geometry();
+            if (!targetGeometry.getEnvelopeInternal().intersects(candidateGeometry.getEnvelopeInternal())) {
+                continue;
+            }
+            if (interiorPoint != null && candidateGeometry.covers(interiorPoint)) {
+                matches.add(candidate);
+                continue;
+            }
+
+            if (targetGeometry.getDimension() == 0) {
+                if (candidateGeometry.intersects(targetGeometry)) {
+                    matches.add(candidate);
+                }
+                continue;
+            }
+
+            try {
+                Geometry overlap = candidateGeometry.intersection(targetGeometry);
+                if (overlap == null || overlap.isEmpty()) {
+                    continue;
+                }
+                if ((targetGeometry.getDimension() >= 2 && overlap.getArea() > 1e-9d)
+                        || (targetGeometry.getDimension() == 1 && overlap.getLength() > 1e-9d)) {
+                    matches.add(candidate);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return matches;
+    }
+
+    private SimpleFeatureType buildSpatialJoinSchema(String outputName,
+                                                     String crsCode,
+                                                     Class<? extends Geometry> geometryClass,
+                                                     SimpleFeatureType typeA,
+                                                     SimpleFeatureType typeB,
+                                                     Map<String, SpatialJoinFieldSpec> joinFieldSpecs,
+                                                     boolean summaryMode) throws Exception {
+        SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
+        builder.setName(safeTypeName(outputName));
+        applyCrs(builder, crsCode);
+        builder.add("the_geom", geometryClass);
+
+        Set<String> usedNames = new LinkedHashSet<>();
+        usedNames.add("the_geom");
+        usedNames.add(FIELD_JOIN_COUNT);
+        usedNames.add(FIELD_JOIN_MODE);
+
+        if (typeA != null) {
+            for (AttributeDescriptor descriptor : typeA.getAttributeDescriptors()) {
+                if (descriptor instanceof GeometryDescriptor) {
+                    continue;
+                }
+                String outputNameField = uniqueFieldName(descriptor.getLocalName(), usedNames);
+                builder.add(outputNameField, descriptor.getType().getBinding());
+            }
+        }
+
+        if (typeB != null) {
+            for (AttributeDescriptor descriptor : typeB.getAttributeDescriptors()) {
+                if (descriptor instanceof GeometryDescriptor) {
+                    continue;
+                }
+                Class<?> binding = descriptor.getType() != null ? descriptor.getType().getBinding() : String.class;
+                boolean numeric = isNumericBinding(binding);
+                if (summaryMode && numeric) {
+                    addSpatialJoinField(builder, usedNames, joinFieldSpecs, descriptor.getLocalName(), "sum_", Double.class, true, SpatialJoinAggregation.SUM);
+                    addSpatialJoinField(builder, usedNames, joinFieldSpecs, descriptor.getLocalName(), "avg_", Double.class, true, SpatialJoinAggregation.AVG);
+                    addSpatialJoinField(builder, usedNames, joinFieldSpecs, descriptor.getLocalName(), "min_", Double.class, true, SpatialJoinAggregation.MIN);
+                    addSpatialJoinField(builder, usedNames, joinFieldSpecs, descriptor.getLocalName(), "max_", Double.class, true, SpatialJoinAggregation.MAX);
+                } else if (summaryMode) {
+                    addSpatialJoinField(builder, usedNames, joinFieldSpecs, descriptor.getLocalName(), "vals_", String.class, false, SpatialJoinAggregation.VALUES);
+                } else {
+                    Class<?> outputBinding = binding != null ? binding : String.class;
+                    addSpatialJoinField(builder, usedNames, joinFieldSpecs, descriptor.getLocalName(), "j_", outputBinding, numeric, SpatialJoinAggregation.FIRST);
+                }
+            }
+        }
+
+        builder.add(FIELD_JOIN_COUNT, Integer.class);
+        builder.add(FIELD_JOIN_MODE, String.class);
+        return builder.buildFeatureType();
+    }
+
+    private void fillDirectAttributes(SimpleFeatureBuilder builder, SimpleFeatureType type, SimpleFeature feature) {
+        if (builder == null || type == null || feature == null) {
+            return;
+        }
+        for (AttributeDescriptor descriptor : type.getAttributeDescriptors()) {
+            if (descriptor instanceof GeometryDescriptor) {
+                continue;
+            }
+            builder.set(descriptor.getLocalName(), feature.getAttribute(descriptor.getLocalName()));
+        }
+    }
+
+    private void populateSpatialJoinAttributes(SimpleFeatureBuilder builder,
+                                               Map<String, SpatialJoinFieldSpec> joinFieldSpecs,
+                                               List<FeatureGeometryRef> matches,
+                                               boolean summaryMode) {
+        if (builder == null || joinFieldSpecs == null || joinFieldSpecs.isEmpty()) {
+            return;
+        }
+
+        for (Map.Entry<String, SpatialJoinFieldSpec> entry : joinFieldSpecs.entrySet()) {
+            String targetField = entry.getKey();
+            SpatialJoinFieldSpec spec = entry.getValue();
+            Object value = summaryMode
+                    ? summarizeJoinValues(matches, spec)
+                    : firstJoinValue(matches, spec);
+            builder.set(targetField, value);
+        }
+    }
+
+    private Object firstJoinValue(List<FeatureGeometryRef> matches, SpatialJoinFieldSpec spec) {
+        if (matches == null || matches.isEmpty() || spec == null) {
+            return null;
+        }
+        return matches.get(0).feature().getAttribute(spec.sourceField());
+    }
+
+    private Object summarizeJoinValues(List<FeatureGeometryRef> matches, SpatialJoinFieldSpec spec) {
+        if (matches == null || matches.isEmpty() || spec == null) {
+            return null;
+        }
+        if (spec.aggregation() == SpatialJoinAggregation.VALUES) {
+            LinkedHashSet<String> values = new LinkedHashSet<>();
+            for (FeatureGeometryRef match : matches) {
+                Object value = match.feature().getAttribute(spec.sourceField());
+                if (value != null && !String.valueOf(value).isBlank()) {
+                    values.add(String.valueOf(value));
+                }
+            }
+            return values.isEmpty() ? null : String.join(" | ", values);
+        }
+
+        double sum = 0d;
+        double min = Double.POSITIVE_INFINITY;
+        double max = Double.NEGATIVE_INFINITY;
+        int count = 0;
+        for (FeatureGeometryRef match : matches) {
+            Object value = match.feature().getAttribute(spec.sourceField());
+            Double numericValue = extractNumericValue(value);
+            if (numericValue == null) {
+                continue;
+            }
+            double current = numericValue;
+            sum += current;
+            min = Math.min(min, current);
+            max = Math.max(max, current);
+            count++;
+        }
+        if (count == 0) {
+            return null;
+        }
+
+        return switch (spec.aggregation()) {
+            case SUM -> sum;
+            case AVG -> sum / count;
+            case MIN -> min;
+            case MAX -> max;
+            default -> null;
+        };
+    }
+
+    private void addSpatialJoinField(SimpleFeatureTypeBuilder builder,
+                                     Set<String> usedNames,
+                                     Map<String, SpatialJoinFieldSpec> joinFieldSpecs,
+                                     String sourceField,
+                                     String prefix,
+                                     Class<?> outputBinding,
+                                     boolean numeric,
+                                     SpatialJoinAggregation aggregation) {
+        String outputNameField = uniqueFieldName(prefix + sourceField, usedNames, 10);
+        builder.add(outputNameField, outputBinding);
+        joinFieldSpecs.put(outputNameField, new SpatialJoinFieldSpec(sourceField, outputBinding, numeric, aggregation));
+    }
+
+    private Double extractNumericValue(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value != null) {
+            try {
+                return Double.parseDouble(String.valueOf(value).trim().replace(',', '.'));
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private SimpleFeatureType buildUnionOverlaySchema(String outputName,
+                                                      String crsCode,
+                                                      SimpleFeatureType typeA,
+                                                      Map<String, String> mapA,
+                                                      SimpleFeatureType typeB,
+                                                      Map<String, String> mapB) throws Exception {
+        SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
+        builder.setName(safeTypeName(outputName));
+        applyCrs(builder, crsCode);
+        builder.add("the_geom", defaultGeometryBindingForFamily("POLYGON", false));
+
+        Set<String> usedNames = new LinkedHashSet<>();
+        usedNames.add("the_geom");
+        usedNames.add(FIELD_SRC_A_COUNT);
+        usedNames.add(FIELD_SRC_B_COUNT);
+        usedNames.add(FIELD_OVERLAY_TYPE);
+        addAttributesWithPrefix(builder, typeA, "a", usedNames, mapA);
+        addAttributesWithPrefix(builder, typeB, "b", usedNames, mapB);
+        builder.add(FIELD_SRC_A_COUNT, Integer.class);
+        builder.add(FIELD_SRC_B_COUNT, Integer.class);
+        builder.add(FIELD_OVERLAY_TYPE, String.class);
+        return builder.buildFeatureType();
+    }
+
+    private List<Polygon> collectUnionOverlayPieces(List<FeatureGeometryRef> referencesA,
+                                                    List<FeatureGeometryRef> referencesB) {
+        List<Polygon> polygons = new ArrayList<>();
+        List<Geometry> boundaries = new ArrayList<>();
+
+        for (FeatureGeometryRef ref : referencesA) {
+            Geometry geometry = ref.geometry();
+            if (geometry != null && !geometry.isEmpty()) {
+                boundaries.add(geometry.getBoundary());
+            }
+        }
+        for (FeatureGeometryRef ref : referencesB) {
+            Geometry geometry = ref.geometry();
+            if (geometry != null && !geometry.isEmpty()) {
+                boundaries.add(geometry.getBoundary());
+            }
+        }
+
+        if (!boundaries.isEmpty()) {
+            try {
+                Geometry noded = UnaryUnionOp.union(boundaries);
+                Polygonizer polygonizer = new Polygonizer();
+                polygonizer.add(noded);
+                for (Object candidate : polygonizer.getPolygons()) {
+                    if (candidate instanceof Polygon polygon) {
+                        Polygon cleaned = cleanOverlayPolygon(polygon);
+                        if (cleaned != null && !cleaned.isEmpty()) {
+                            polygons.add(cleaned);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (polygons.isEmpty()) {
+            List<Geometry> all = new ArrayList<>();
+            for (FeatureGeometryRef ref : referencesA) {
+                all.add(ref.geometry());
+            }
+            for (FeatureGeometryRef ref : referencesB) {
+                all.add(ref.geometry());
+            }
+            Geometry union = UnaryUnionOp.union(all);
+            Geometry normalized = normalizeGeometryToFamily(union, "POLYGON");
+            collectPolygons(normalized, polygons);
+        }
+
+        return polygons;
+    }
+
+    private Polygon cleanOverlayPolygon(Polygon polygon) {
+        if (polygon == null || polygon.isEmpty()) {
+            return null;
+        }
+        try {
+            Geometry cleaned = polygon.buffer(0);
+            Geometry normalized = normalizeGeometryToFamily(cleaned, "POLYGON");
+            if (normalized instanceof Polygon result) {
+                return result;
+            }
+            List<Polygon> parts = new ArrayList<>();
+            collectPolygons(normalized, parts);
+            if (!parts.isEmpty()) {
+                return parts.get(0);
+            }
+        } catch (Exception ignored) {
+        }
+        return polygon;
+    }
+
+    private String resolveOverlayType(int countA, int countB) {
+        if (countA > 0 && countB > 0) {
+            return "A+B";
+        }
+        if (countA > 0) {
+            return "A";
+        }
+        if (countB > 0) {
+            return "B";
+        }
+        return "";
+    }
+
+    private boolean isNumericBinding(Class<?> binding) {
+        return binding != null
+                && (Number.class.isAssignableFrom(binding)
+                || int.class.equals(binding)
+                || long.class.equals(binding)
+                || float.class.equals(binding)
+                || double.class.equals(binding)
+                || short.class.equals(binding));
     }
 
     private SimpleFeatureType buildSchemaFromSource(String outputName,
@@ -846,18 +1206,24 @@ public class GeoprocessingAssistantDialog extends JDialog {
             if (descriptor instanceof GeometryDescriptor) {
                 continue;
             }
-            String outputName = uniqueFieldName(prefix + "_" + descriptor.getLocalName(), usedNames);
+            String outputName = uniqueFieldName(prefix + "_" + descriptor.getLocalName(), usedNames, 10);
             builder.add(outputName, descriptor.getType().getBinding());
             targetMap.put(outputName, descriptor.getLocalName());
         }
     }
 
     private String uniqueFieldName(String base, Set<String> usedNames) {
-        String safe = safeFieldName(base);
+        return uniqueFieldName(base, usedNames, 24);
+    }
+
+    private String uniqueFieldName(String base, Set<String> usedNames, int maxLength) {
+        String safe = safeFieldName(base, maxLength);
         String candidate = safe;
         int suffix = 2;
         while (usedNames.contains(candidate)) {
-            candidate = safe + "_" + suffix++;
+            String suffixText = "_" + suffix++;
+            int allowedBaseLength = Math.max(1, maxLength - suffixText.length());
+            candidate = safeFieldName(base, allowedBaseLength) + suffixText;
         }
         usedNames.add(candidate);
         return candidate;
@@ -1057,8 +1423,8 @@ public class GeoprocessingAssistantDialog extends JDialog {
             return geometry.copy();
         }
 
-        CoordinateReferenceSystem source = CRS.decode(normalizedSource, true);
-        CoordinateReferenceSystem target = CRS.decode(normalizedTarget, true);
+        CoordinateReferenceSystem source = CRSDefinitions.decode(normalizedSource, true);
+        CoordinateReferenceSystem target = CRSDefinitions.decode(normalizedTarget, true);
         MathTransform transform = CRS.findMathTransform(source, target, true);
         return JTS.transform(geometry, transform);
     }
@@ -1068,10 +1434,19 @@ public class GeoprocessingAssistantDialog extends JDialog {
             return geometry;
         }
 
+        Geometry working = geometry;
+        if ("POLYGON".equalsIgnoreCase(family)) {
+            try {
+                working = geometry.buffer(0);
+            } catch (Exception ignored) {
+                working = geometry;
+            }
+        }
+
         switch (family.toUpperCase(Locale.ROOT)) {
             case "POINT":
                 List<Point> points = new ArrayList<>();
-                collectPoints(geometry, points);
+                collectPoints(working, points);
                 if (points.isEmpty()) {
                     return null;
                 }
@@ -1081,7 +1456,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
                 return GEOMETRY_FACTORY.createMultiPoint(points.toArray(new Point[0]));
             case "LINE":
                 List<LineString> lines = new ArrayList<>();
-                collectLines(geometry, lines);
+                collectLines(working, lines);
                 if (lines.isEmpty()) {
                     return null;
                 }
@@ -1091,7 +1466,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
                 return GEOMETRY_FACTORY.createMultiLineString(lines.toArray(new LineString[0]));
             case "POLYGON":
                 List<Polygon> polygons = new ArrayList<>();
-                collectPolygons(geometry, polygons);
+                collectPolygons(working, polygons);
                 if (polygons.isEmpty()) {
                     return null;
                 }
@@ -1100,7 +1475,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
                 }
                 return GEOMETRY_FACTORY.createMultiPolygon(polygons.toArray(new Polygon[0]));
             default:
-                return geometry;
+                return working;
         }
     }
 
@@ -1203,13 +1578,17 @@ public class GeoprocessingAssistantDialog extends JDialog {
         try {
             String normalized = CRSDefinitions.normalizeCode(crsCode);
             if (!normalized.isBlank()) {
-                builder.setCRS(CRS.decode(normalized, true));
+                builder.setCRS(CRSDefinitions.decode(normalized, true));
             }
         } catch (Exception ignored) {
         }
     }
 
     private String safeFieldName(String text) {
+        return safeFieldName(text, 24);
+    }
+
+    private String safeFieldName(String text, int maxLength) {
         if (text == null || text.isBlank()) {
             return "campo";
         }
@@ -1223,8 +1602,9 @@ public class GeoprocessingAssistantDialog extends JDialog {
         if (Character.isDigit(safe.charAt(0))) {
             safe = "f_" + safe;
         }
-        if (safe.length() > 24) {
-            safe = safe.substring(0, 24);
+        int lengthLimit = Math.max(1, maxLength);
+        if (safe.length() > lengthLimit) {
+            safe = safe.substring(0, lengthLimit);
         }
         return safe;
     }
@@ -1283,5 +1663,23 @@ public class GeoprocessingAssistantDialog extends JDialog {
             String crs = crsCode != null && !crsCode.isBlank() ? crsCode : "Sin CRS";
             return layer.getName() + " | " + familyLabel + " | " + crs;
         }
+    }
+
+    private record FeatureGeometryRef(SimpleFeature feature, Geometry geometry) {
+    }
+
+    private enum SpatialJoinAggregation {
+        FIRST,
+        VALUES,
+        SUM,
+        AVG,
+        MIN,
+        MAX
+    }
+
+    private record SpatialJoinFieldSpec(String sourceField,
+                                        Class<?> outputBinding,
+                                        boolean numeric,
+                                        SpatialJoinAggregation aggregation) {
     }
 }

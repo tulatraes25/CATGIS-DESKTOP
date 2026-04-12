@@ -344,12 +344,12 @@ public class OnlineDemDownloadDialog extends JDialog {
         String layerName = datasetName + " - " + file.getName();
         RasterLayer layer = new RasterLayer(layerName, file.getAbsolutePath());
         layer.setSourceName(sourceLabel);
-        layer.setSourceCRS(sourceCrsCode);
 
         String projectCrs = CatgisDesktopApp.currentProject.getProjectCRS() != null && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()
                 ? CatgisDesktopApp.currentProject.getProjectCRS()
                 : sourceCrsCode;
         LocalRasterData rasterData = RasterImageLoader.loadReal(file, projectCrs, sourceCrsCode);
+        layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
 
         CatgisDesktopApp.currentProject.addLayer(layer);
         if (CatgisDesktopApp.layersPanel != null) {
@@ -359,6 +359,7 @@ public class OnlineDemDownloadDialog extends JDialog {
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
             CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
+            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
@@ -379,7 +380,8 @@ public class OnlineDemDownloadDialog extends JDialog {
             html = "<html><div style='padding:8px;width:540px'>"
                     + "<b>" + dataset.getDisplayName() + "</b><br>"
                     + I18n.t("Fuente operativa en esta ronda:") + " " + dataset.getSourceLabel() + "<br><br>"
-                    + I18n.t("No requiere API key. CATGIS descarga tiles publicos de elevacion, arma un GeoTIFF DEM local y lo incorpora listo para curvas y perfiles.") + "<br><br>"
+                    + I18n.t("No requiere API key. CATGIS descarga tiles publicos de elevacion, arma un GeoTIFF DEM local y lo incorpora listo para curvas, perfiles e hidrologia base.") + "<br><br>"
+                    + I18n.t("El GeoTIFF fuente se descarga en EPSG:3857, pero CATGIS lo incorpora para trabajar en el CRS operativo del proyecto actual.") + "<br><br>"
                     + I18n.t("Esta opcion prioriza simplicidad operativa y acceso sin clave. OpenTopography sigue disponible como alternativa global avanzada cuando necesites sus datasets especificos.")
                     + "</div></html>";
         } else {
@@ -387,6 +389,7 @@ public class OnlineDemDownloadDialog extends JDialog {
                     + "<b>" + dataset.getDisplayName() + "</b><br>"
                     + I18n.t("Fuente operativa en esta ronda:") + " " + dataset.getSourceLabel() + "<br><br>"
                     + I18n.t("Esta descarga usa la API global de OpenTopography y guarda un GeoTIFF local listo para incorporar al proyecto.") + "<br><br>"
+                    + I18n.t("Conviene para datasets globales concretos o cuando necesites una fuente DEM distinta a Terrain Tiles.") + "<br><br>"
                     + I18n.t("La clave se mantiene como configuracion propia del usuario. No se embebe en CATGIS porque no es una buena practica para distribucion general.")
                     + "</div></html>";
         }
@@ -422,7 +425,8 @@ public class OnlineDemDownloadDialog extends JDialog {
                         + "<b>" + I18n.t("Zoom estimado:") + "</b> " + summary.zoom() + "<br>"
                         + "<b>" + I18n.t("Tiles estimados:") + "</b> " + summary.tileCount() + "<br>"
                         + "<b>" + I18n.t("Tamano DEM estimado:") + "</b> " + summary.width() + " x " + summary.height() + " px<br>"
-                        + "<b>" + I18n.t("Resolucion aproximada:") + "</b> " + String.format(Locale.US, "%.1f m/pixel", summary.estimatedResolutionMeters())
+                        + "<b>" + I18n.t("Resolucion aproximada:") + "</b> " + String.format(Locale.US, "%.1f m/pixel", summary.estimatedResolutionMeters()) + "<br>"
+                        + "<b>" + I18n.t("CRS de salida:") + "</b> EPSG:3857"
                         + warning
                         + "</div></html>");
             } catch (Exception ex) {
@@ -435,7 +439,8 @@ public class OnlineDemDownloadDialog extends JDialog {
 
         summaryLabel.setText("<html><div style='padding:8px;width:520px'>"
                 + "<b>" + I18n.t("Fuente:") + "</b> OpenTopography<br>"
-                + I18n.t("Esta fuente prioriza datasets globales avanzados. En esta ronda el detalle exacto depende del dataset elegido y del servicio remoto.")
+                + I18n.t("Esta fuente prioriza datasets globales avanzados. En esta ronda el detalle exacto depende del dataset elegido y del servicio remoto.") + "<br>"
+                + "<b>" + I18n.t("Formato de salida:") + "</b> GeoTIFF"
                 + "</div></html>");
     }
 

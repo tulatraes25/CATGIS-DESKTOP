@@ -27,10 +27,11 @@ import java.util.List;
 public class AttributeTableWindow extends JFrame {
 
     private final Layer layer;
-    private final ShapefileData data;
+    private ShapefileData data;
     private final List<String> rawColumnNames;
     private final JTable table;
     private final DefaultTableModel model;
+    private final TableRowSorter<DefaultTableModel> sorter;
     private final JLabel statusLabel;
     private final JLabel countLabel;
     private final JTextField searchField;
@@ -93,7 +94,7 @@ public class AttributeTableWindow extends JFrame {
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         table.setRowHeight(18);
 
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+        sorter = new TableRowSorter<>(model);
         table.setRowSorter(sorter);
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -257,7 +258,7 @@ public class AttributeTableWindow extends JFrame {
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(Color.WHITE);
-        Font font = new Font("SansSerif", Font.BOLD, "â‰¡".equals(glyph) ? 13 : 14);
+        Font font = new Font("SansSerif", Font.BOLD, "≡".equals(glyph) ? 13 : 14);
         g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
         int x = Math.max(0, (w - fm.stringWidth(glyph)) / 2);
@@ -268,6 +269,7 @@ public class AttributeTableWindow extends JFrame {
     }
 
     private void resolveColumnTypes() {
+        columnTypes.clear();
         SimpleFeatureType schema = data != null && data.getFeatureCollection() != null
                 ? data.getFeatureCollection().getSchema()
                 : null;
@@ -448,6 +450,48 @@ public class AttributeTableWindow extends JFrame {
         return indexes;
     }
 
+    int createField(String requestedName, String requestedTypeName, String requestedPublicName) throws Exception {
+        if (isReadOnlyLayer()) {
+            throw new IllegalArgumentException(getReadOnlyMessage());
+        }
+        if (data == null || data.getSchema() == null) {
+            throw new IllegalArgumentException("La capa no tiene esquema disponible para crear un campo.");
+        }
+
+        String fieldName = VectorAttributeSupport.buildUniqueFieldName(data, requestedName);
+        if (fieldName.isBlank()) {
+            throw new IllegalArgumentException("Debes indicar un nombre de campo valido.");
+        }
+
+        String typeName = FieldConfig.normalizeTypeName(requestedTypeName);
+        ShapefileData rebuilt = VectorAttributeSupport.addField(data, fieldName, typeName);
+
+        FieldConfig config = layer.getOrCreateFieldConfig(fieldName, typeName);
+        config.setPublicName(requestedPublicName != null && !requestedPublicName.isBlank() ? requestedPublicName : fieldName);
+        config.setVisible(true);
+        config.setEditable(true);
+
+        replaceTableData(rebuilt);
+        rawColumnNames.clear();
+        rawColumnNames.addAll(VectorAttributeSupport.resolveVisibleAttributeNames(layer, rebuilt));
+        rebuildVisibleColumns();
+
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, rebuilt);
+            CatgisDesktopApp.mapPanel.refreshMap();
+        }
+        if (CatgisDesktopApp.layersPanel != null) {
+            CatgisDesktopApp.layersPanel.refreshLayerList();
+        }
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage("Campo creado: " + fieldName);
+        }
+        CatgisDesktopApp.markProjectDirty();
+        statusLabel.setText("Campo nuevo listo para calcular: " + config.getPublicName());
+
+        return rawColumnNames.indexOf(fieldName);
+    }
+
     String resolveExpressionForRow(String expression, int row) {
         String resolved = expression != null ? expression.trim() : "";
         if (resolved.startsWith("=")) {
@@ -470,20 +514,31 @@ public class AttributeTableWindow extends JFrame {
         matcher.appendTail(sb);
         resolved = sb.toString();
 
-        resolved = replaceGeometryToken(resolved, "$area", row);
-        resolved = replaceGeometryToken(resolved, "$length", row);
-        resolved = replaceGeometryToken(resolved, "$perimeter", row);
-        resolved = replaceGeometryToken(resolved, "$x", row);
-        resolved = replaceGeometryToken(resolved, "$y", row);
-        return resolved;
+        return replaceGeometryTokens(resolved, row);
     }
 
     double evaluateExpressionForRow(String expression, int row) {
         return new BasicExpressionParser(resolveExpressionForRow(expression, row)).parse();
     }
 
-    private String replaceGeometryToken(String expression, String token, int row) {
-        return expression.replace(token, formatDoubleLiteral(getGeometryTokenValue(token, row)));
+    Object evaluateExpressionPreview(String expression, int row, int targetColumn) {
+        Class<?> targetType = (targetColumn >= 0 && targetColumn < columnTypes.size())
+                ? columnTypes.get(targetColumn)
+                : Object.class;
+        return evaluateExpressionValueForRow(expression, row, targetType);
+    }
+
+    private String replaceGeometryTokens(String expression, int row) {
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\$[A-Za-z_][A-Za-z0-9_]*");
+        java.util.regex.Matcher matcher = pattern.matcher(expression);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String token = matcher.group();
+            double value = getGeometryTokenValue(token, row);
+            matcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(formatDoubleLiteral(value)));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     private String toNumericLiteral(Object value, String fieldName, int row) {
@@ -502,7 +557,7 @@ public class AttributeTableWindow extends JFrame {
         try {
             return formatDoubleLiteral(Double.parseDouble(text));
         } catch (NumberFormatException ex) {
-            throw new IllegalArgumentException("El campo '" + fieldName + "' no es numÃ©rico en la fila " + (row + 1) + ".");
+            throw new IllegalArgumentException("El campo '" + fieldName + "' no es numérico en la fila " + (row + 1) + ".");
         }
     }
 
@@ -535,10 +590,22 @@ public class AttributeTableWindow extends JFrame {
 
         switch (token.toLowerCase()) {
             case "$area":
-                return geometry.getArea();
+            case "$area_m2":
+                return VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry);
+            case "$area_ha":
+                return VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry) / 10000d;
+            case "$area_km2":
+                return VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry) / 1_000_000d;
             case "$length":
+            case "$length_m":
+                return VectorMeasurementSupport.resolveLengthMeters(layer, geometry);
+            case "$length_km":
+                return VectorMeasurementSupport.resolveLengthMeters(layer, geometry) / 1000d;
             case "$perimeter":
-                return geometry.getLength();
+            case "$perimeter_m":
+                return VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry);
+            case "$perimeter_km":
+                return VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry) / 1000d;
             case "$x":
                 if (geometry instanceof Point) {
                     return ((Point) geometry).getX();
@@ -550,21 +617,110 @@ public class AttributeTableWindow extends JFrame {
                 }
                 return geometry.getCentroid() != null ? geometry.getCentroid().getY() : 0d;
             default:
-                return 0d;
+                throw new IllegalArgumentException("Token geometrico no soportado: " + token);
         }
+    }
+
+    private Object evaluateExpressionValueForRow(String expression, int row, Class<?> targetType) {
+        String expr = expression != null ? expression.trim() : "";
+        if (expr.isEmpty()) {
+            return null;
+        }
+
+        if (shouldUseTextEvaluation(expr, targetType)) {
+            try {
+                Object evaluated = new TextExpressionParser(expr, row).parseValue();
+                return convertEvaluatedValue(evaluated, targetType);
+            } catch (IllegalArgumentException ex) {
+                if (!canFallbackToNumeric(expr)) {
+                    throw ex;
+                }
+            }
+        }
+
+        double result = evaluateExpressionForRow(expr, row);
+        return convertCalculatedResult(result, targetType);
+    }
+
+    private boolean shouldUseTextEvaluation(String expression, Class<?> targetType) {
+        String expr = expression != null ? expression.trim() : "";
+        if (expr.startsWith("=")) {
+            expr = expr.substring(1).trim();
+        }
+        String lower = expr.toLowerCase(java.util.Locale.ROOT);
+        return targetType == String.class
+                || targetType == Object.class
+                || expr.contains("'")
+                || expr.contains("\"")
+                || lower.contains("concat(")
+                || lower.contains("upper(")
+                || lower.contains("lower(")
+                || lower.contains("trim(")
+                || lower.contains("replace(")
+                || lower.contains("len(")
+                || lower.contains("coalesce(")
+                || lower.contains("str(");
+    }
+
+    private boolean canFallbackToNumeric(String expression) {
+        String expr = expression != null ? expression.trim() : "";
+        if (expr.startsWith("=")) {
+            expr = expr.substring(1).trim();
+        }
+        String lower = expr.toLowerCase(java.util.Locale.ROOT);
+        return !expr.contains("'")
+                && !expr.contains("\"")
+                && !lower.contains("concat(")
+                && !lower.contains("upper(")
+                && !lower.contains("lower(")
+                && !lower.contains("trim(")
+                && !lower.contains("replace(")
+                && !lower.contains("len(")
+                && !lower.contains("coalesce(")
+                && !lower.contains("str(");
+    }
+
+    private Object convertEvaluatedValue(Object rawValue, Class<?> targetType) {
+        if (rawValue == null) {
+            return null;
+        }
+        if (rawValue instanceof Number number) {
+            return convertCalculatedResult(number.doubleValue(), targetType);
+        }
+        if (rawValue instanceof Boolean) {
+            if (targetType == Boolean.class || targetType == boolean.class) {
+                return rawValue;
+            }
+            if (targetType == null || targetType == Object.class || targetType == String.class) {
+                return String.valueOf(rawValue);
+            }
+            return convertValue(String.valueOf(rawValue), targetType);
+        }
+        if (targetType == null || targetType == Object.class || targetType == String.class) {
+            return String.valueOf(rawValue);
+        }
+        return convertValue(String.valueOf(rawValue), targetType);
+    }
+
+    private Object resolveFieldValue(String rawName, int row) {
+        int col = rawColumnNames.indexOf(rawName);
+        if (col < 0) {
+            throw new IllegalArgumentException("No existe el campo '" + rawName + "'.");
+        }
+        return model.getValueAt(row, col);
     }
 
     int applyFieldCalculation(int targetColumn, String expression, boolean onlySelectedRow) {
         if (targetColumn < 0 || targetColumn >= rawColumnNames.size()) {
-            throw new IllegalArgumentException("Campo destino invÃ¡lido.");
+            throw new IllegalArgumentException("Campo destino inválido.");
         }
         if (!isColumnEditableByConfig(targetColumn)) {
-            throw new IllegalArgumentException("El campo destino no estÃ¡ marcado como editable.");
+            throw new IllegalArgumentException("El campo destino no está marcado como editable.");
         }
 
         String expr = expression != null ? expression.trim() : "";
         if (expr.isEmpty()) {
-            throw new IllegalArgumentException("La expresiÃ³n estÃ¡ vacÃ­a.");
+            throw new IllegalArgumentException("La expresión está vacía.");
         }
 
         if (table.isEditing()) {
@@ -584,8 +740,7 @@ public class AttributeTableWindow extends JFrame {
         }
 
         for (Integer row : rows) {
-            double result = evaluateExpressionForRow(expr, row);
-            Object converted = convertCalculatedResult(result, columnTypes.get(targetColumn));
+            Object converted = evaluateExpressionValueForRow(expr, row, columnTypes.get(targetColumn));
             model.setValueAt(converted, row, targetColumn);
         }
 
@@ -596,7 +751,7 @@ public class AttributeTableWindow extends JFrame {
 
         applyChanges();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("CÃ¡lculo aplicado sobre el campo: " + model.getColumnName(targetColumn));
+            CatgisDesktopApp.statusBar.setMessage("Cálculo aplicado sobre el campo: " + model.getColumnName(targetColumn));
         }
         statusLabel.setText("Calculadora de campos aplicada sobre: " + model.getColumnName(targetColumn));
         return rows.size();
@@ -604,10 +759,10 @@ public class AttributeTableWindow extends JFrame {
 
     int assignConstantValue(int targetColumn, String value, boolean onlySelectedRows) {
         if (targetColumn < 0 || targetColumn >= rawColumnNames.size()) {
-            throw new IllegalArgumentException("Campo destino invÃ¡lido.");
+            throw new IllegalArgumentException("Campo destino inválido.");
         }
         if (!isColumnEditableByConfig(targetColumn)) {
-            throw new IllegalArgumentException("El campo destino no estÃ¡ marcado como editable.");
+            throw new IllegalArgumentException("El campo destino no está marcado como editable.");
         }
 
         List<Integer> rows = new ArrayList<>();
@@ -819,21 +974,12 @@ public class AttributeTableWindow extends JFrame {
             table.getCellEditor().stopCellEditing();
         }
 
-        model.setRowCount(0);
-
         List<SimpleFeature> features = data != null ? data.getFeatures() : null;
         if (features == null) {
             statusLabel.setText("No se pudieron recargar las entidades.");
             return;
         }
-
-        for (SimpleFeature feature : features) {
-            List<Object> row = new ArrayList<>();
-            for (String columnName : rawColumnNames) {
-                row.add(feature.getAttribute(columnName));
-            }
-            model.addRow(row.toArray(new Object[0]));
-        }
+        rebuildVisibleColumns();
 
         editMode = false;
         updateEditControls();
@@ -889,6 +1035,7 @@ public class AttributeTableWindow extends JFrame {
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.repaint();
             }
+            CatgisDesktopApp.markProjectDirty();
             if (CatgisDesktopApp.statusBar != null) {
                 CatgisDesktopApp.statusBar.setMessage("Cambios aplicados en la tabla de atributos.");
             }
@@ -996,7 +1143,7 @@ public class AttributeTableWindow extends JFrame {
                 return Short.parseShort(text);
             }
             if (targetType == Boolean.class || targetType == boolean.class) {
-                return text.equalsIgnoreCase("true") || text.equalsIgnoreCase("si") || text.equalsIgnoreCase("sÃ­") || text.equals("1");
+                return text.equalsIgnoreCase("true") || text.equalsIgnoreCase("si") || text.equalsIgnoreCase("sí") || text.equals("1");
             }
         } catch (Exception ex) {
             throw new IllegalArgumentException(
@@ -1027,6 +1174,40 @@ public class AttributeTableWindow extends JFrame {
         return null;
     }
 
+    private void replaceTableData(ShapefileData newData) {
+        this.data = newData;
+        if (layer != null && newData != null) {
+            layer.setSourceName(newData.getSourceName());
+            layer.setFeatureCount(newData.getFeatureCount());
+        }
+    }
+
+    private void rebuildVisibleColumns() {
+        resolveColumnTypes();
+        model.setRowCount(0);
+        model.setColumnCount(0);
+
+        for (String rawName : rawColumnNames) {
+            model.addColumn(resolveDisplayName(rawName));
+        }
+
+        List<SimpleFeature> features = data != null ? data.getFeatures() : null;
+        if (features != null) {
+            for (SimpleFeature feature : features) {
+                List<Object> row = new ArrayList<>();
+                for (String columnName : rawColumnNames) {
+                    row.add(feature.getAttribute(columnName));
+                }
+                model.addRow(row.toArray(new Object[0]));
+            }
+        }
+
+        table.setRowSorter(sorter);
+        configureTableAppearance();
+        configureEditors();
+        updateCountLabel();
+    }
+
 
 
     static class BasicExpressionParser {
@@ -1043,7 +1224,7 @@ public class AttributeTableWindow extends JFrame {
             double x = parseExpression();
             skipSpaces();
             if (pos < input.length()) {
-                throw new IllegalArgumentException("Token invÃ¡lido cerca de: " + input.substring(pos));
+                throw new IllegalArgumentException("Token inválido cerca de: " + input.substring(pos));
             }
             return x;
         }
@@ -1081,11 +1262,11 @@ public class AttributeTableWindow extends JFrame {
                 if (eat('*')) x *= parsePower();
                 else if (eat('/')) {
                     double divisor = parsePower();
-                    if (divisor == 0d) throw new IllegalArgumentException("DivisiÃ³n por cero.");
+                    if (divisor == 0d) throw new IllegalArgumentException("División por cero.");
                     x /= divisor;
                 } else if (eat('%')) {
                     double divisor = parsePower();
-                    if (divisor == 0d) throw new IllegalArgumentException("DivisiÃ³n por cero.");
+                    if (divisor == 0d) throw new IllegalArgumentException("División por cero.");
                     x %= divisor;
                 } else return x;
             }
@@ -1109,7 +1290,7 @@ public class AttributeTableWindow extends JFrame {
 
             if (eat('(')) {
                 x = parseExpression();
-                if (!eat(')')) throw new IllegalArgumentException("Falta cerrar parÃ©ntesis.");
+                if (!eat(')')) throw new IllegalArgumentException("Falta cerrar paréntesis.");
                 return x;
             }
 
@@ -1130,7 +1311,7 @@ public class AttributeTableWindow extends JFrame {
                 }
 
                 if (!eat('(')) {
-                    throw new IllegalArgumentException("FunciÃ³n invÃ¡lida: " + name);
+                    throw new IllegalArgumentException("Función inválida: " + name);
                 }
 
                 java.util.List<Double> args = new java.util.ArrayList<>();
@@ -1138,12 +1319,12 @@ public class AttributeTableWindow extends JFrame {
                     do {
                         args.add(parseExpression());
                     } while (eat(','));
-                    if (!eat(')')) throw new IllegalArgumentException("Falta cerrar parÃ©ntesis en la funciÃ³n " + name + ".");
+                    if (!eat(')')) throw new IllegalArgumentException("Falta cerrar paréntesis en la función " + name + ".");
                 }
                 return applyFunction(name, args);
             }
 
-            throw new IllegalArgumentException("ExpresiÃ³n invÃ¡lida.");
+            throw new IllegalArgumentException("Expresión inválida.");
         }
 
         private boolean isIdentifierStart(int c) {
@@ -1173,14 +1354,240 @@ public class AttributeTableWindow extends JFrame {
                 case "pow": requireArgs(name, args, 2); return Math.pow(args.get(0), args.get(1));
                 case "min": requireArgs(name, args, 2); return Math.min(args.get(0), args.get(1));
                 case "max": requireArgs(name, args, 2); return Math.max(args.get(0), args.get(1));
-                default: throw new IllegalArgumentException("FunciÃ³n no soportada: " + name);
+                default: throw new IllegalArgumentException("Función no soportada: " + name);
             }
         }
 
         private void requireArgs(String name, java.util.List<Double> args, int expected) {
             if (args.size() != expected) {
-                throw new IllegalArgumentException("La funciÃ³n " + name + " requiere " + expected + " parÃ¡metro(s).");
+                throw new IllegalArgumentException("La función " + name + " requiere " + expected + " parámetro(s).");
             }
+        }
+    }
+
+    private class TextExpressionParser {
+        private final String input;
+        private final int row;
+        private int pos = -1;
+        private int ch;
+
+        TextExpressionParser(String input, int row) {
+            String normalized = input != null ? input.trim() : "";
+            if (normalized.startsWith("=")) {
+                normalized = normalized.substring(1).trim();
+            }
+            this.input = normalized;
+            this.row = row;
+        }
+
+        Object parseValue() {
+            nextChar();
+            Object value = parseExpressionValue();
+            skipSpaces();
+            if (pos < input.length()) {
+                throw new IllegalArgumentException("Expresion de texto invalida cerca de: " + input.substring(pos));
+            }
+            return value;
+        }
+
+        private void nextChar() {
+            ch = (++pos < input.length()) ? input.charAt(pos) : -1;
+        }
+
+        private boolean eat(int charToEat) {
+            skipSpaces();
+            if (ch == charToEat) {
+                nextChar();
+                return true;
+            }
+            return false;
+        }
+
+        private void skipSpaces() {
+            while (ch != -1 && Character.isWhitespace((char) ch)) {
+                nextChar();
+            }
+        }
+
+        private Object parseExpressionValue() {
+            skipSpaces();
+
+            if (eat('(')) {
+                Object value = parseExpressionValue();
+                if (!eat(')')) {
+                    throw new IllegalArgumentException("Falta cerrar parentesis en expresion de texto.");
+                }
+                return value;
+            }
+
+            if (ch == '\'' || ch == '"') {
+                return parseQuotedString();
+            }
+
+            if (ch == '[') {
+                return parseFieldReference();
+            }
+
+            if (ch == '$') {
+                return parseGeometryReference();
+            }
+
+            if (ch == '-' || ch == '+' || (ch >= '0' && ch <= '9') || ch == '.') {
+                return parseNumberLiteral();
+            }
+
+            if (isIdentifierStart(ch)) {
+                String name = parseIdentifier().toLowerCase(java.util.Locale.ROOT);
+                if ("true".equals(name)) {
+                    return Boolean.TRUE;
+                }
+                if ("false".equals(name)) {
+                    return Boolean.FALSE;
+                }
+                if ("null".equals(name)) {
+                    return null;
+                }
+                if (!eat('(')) {
+                    throw new IllegalArgumentException("Funcion de texto invalida: " + name);
+                }
+                java.util.List<Object> args = new java.util.ArrayList<>();
+                if (!eat(')')) {
+                    do {
+                        args.add(parseExpressionValue());
+                    } while (eat(','));
+                    if (!eat(')')) {
+                        throw new IllegalArgumentException("Falta cerrar parentesis en la funcion " + name + ".");
+                    }
+                }
+                return applyTextFunction(name, args);
+            }
+
+            throw new IllegalArgumentException("Expresion de texto invalida.");
+        }
+
+        private String parseQuotedString() {
+            int quote = ch;
+            nextChar();
+            StringBuilder sb = new StringBuilder();
+            while (ch != -1 && ch != quote) {
+                if (ch == '\\') {
+                    nextChar();
+                    if (ch == -1) {
+                        break;
+                    }
+                }
+                sb.append((char) ch);
+                nextChar();
+            }
+            if (ch != quote) {
+                throw new IllegalArgumentException("Falta cerrar comillas en la expresion.");
+            }
+            nextChar();
+            return sb.toString();
+        }
+
+        private Object parseFieldReference() {
+            if (!eat('[')) {
+                throw new IllegalArgumentException("Referencia de campo invalida.");
+            }
+            StringBuilder sb = new StringBuilder();
+            while (ch != -1 && ch != ']') {
+                sb.append((char) ch);
+                nextChar();
+            }
+            if (!eat(']')) {
+                throw new IllegalArgumentException("Falta cerrar ] en la referencia de campo.");
+            }
+            return resolveFieldValue(sb.toString().trim(), row);
+        }
+
+        private double parseGeometryReference() {
+            StringBuilder sb = new StringBuilder();
+            while (ch == '$' || Character.isLetterOrDigit(ch) || ch == '_') {
+                sb.append((char) ch);
+                nextChar();
+            }
+            return getGeometryTokenValue(sb.toString(), row);
+        }
+
+        private Double parseNumberLiteral() {
+            int startPos = this.pos;
+            if (ch == '+' || ch == '-') {
+                nextChar();
+            }
+            while ((ch >= '0' && ch <= '9') || ch == '.') {
+                nextChar();
+            }
+            return Double.parseDouble(input.substring(startPos, this.pos));
+        }
+
+        private String parseIdentifier() {
+            StringBuilder sb = new StringBuilder();
+            while (isIdentifierPart(ch)) {
+                sb.append((char) ch);
+                nextChar();
+            }
+            return sb.toString();
+        }
+
+        private boolean isIdentifierStart(int c) {
+            return Character.isLetter(c) || c == '_';
+        }
+
+        private boolean isIdentifierPart(int c) {
+            return Character.isLetterOrDigit(c) || c == '_';
+        }
+
+        private Object applyTextFunction(String name, java.util.List<Object> args) {
+            switch (name) {
+                case "concat":
+                    StringBuilder concat = new StringBuilder();
+                    for (Object arg : args) {
+                        concat.append(asText(arg));
+                    }
+                    return concat.toString();
+                case "upper":
+                    requireTextArgs(name, args, 1);
+                    return asText(args.get(0)).toUpperCase(java.util.Locale.ROOT);
+                case "lower":
+                    requireTextArgs(name, args, 1);
+                    return asText(args.get(0)).toLowerCase(java.util.Locale.ROOT);
+                case "trim":
+                    requireTextArgs(name, args, 1);
+                    return asText(args.get(0)).trim();
+                case "replace":
+                    requireTextArgs(name, args, 3);
+                    return asText(args.get(0)).replace(asText(args.get(1)), asText(args.get(2)));
+                case "len":
+                    requireTextArgs(name, args, 1);
+                    return (double) asText(args.get(0)).length();
+                case "coalesce":
+                    if (args.isEmpty()) {
+                        throw new IllegalArgumentException("La funcion coalesce requiere al menos un parametro.");
+                    }
+                    for (Object arg : args) {
+                        String text = asText(arg);
+                        if (!text.isBlank()) {
+                            return text;
+                        }
+                    }
+                    return "";
+                case "str":
+                    requireTextArgs(name, args, 1);
+                    return asText(args.get(0));
+                default:
+                    throw new IllegalArgumentException("Funcion de texto no soportada: " + name);
+            }
+        }
+
+        private void requireTextArgs(String name, java.util.List<Object> args, int expected) {
+            if (args.size() != expected) {
+                throw new IllegalArgumentException("La funcion " + name + " requiere " + expected + " parametro(s).");
+            }
+        }
+
+        private String asText(Object value) {
+            return value != null ? String.valueOf(value) : "";
         }
     }
 
@@ -1260,3 +1667,4 @@ public class AttributeTableWindow extends JFrame {
         }
     }
 }
+

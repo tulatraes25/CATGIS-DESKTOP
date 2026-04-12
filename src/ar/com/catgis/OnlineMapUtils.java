@@ -28,14 +28,7 @@ public final class OnlineMapUtils {
             return source != null ? source.getMinZoom() : 0;
         }
 
-        double width = Math.max(1.0, mercatorView.getWidth());
-        double height = Math.max(1.0, mercatorView.getHeight());
-        double resolutionX = width / Math.max(1, panelWidth);
-        double resolutionY = height / Math.max(1, panelHeight);
-        double resolution = Math.max(resolutionX, resolutionY);
-
-        double baseResolution = WEB_MERCATOR_WORLD_WIDTH / source.getTileSize();
-        int zoom = (int) Math.round(Math.log(baseResolution / resolution) / Math.log(2.0));
+        int zoom = estimateZoom(mercatorView, panelWidth, panelHeight, source);
         zoom = Math.max(source.getMinZoom(), Math.min(source.getMaxZoom(), zoom));
 
         while (zoom > source.getMinZoom()) {
@@ -47,6 +40,21 @@ public final class OnlineMapUtils {
         }
 
         return zoom;
+    }
+
+    public static int estimateZoom(Envelope mercatorView, int panelWidth, int panelHeight, OnlineRasterSource source) {
+        if (mercatorView == null || mercatorView.isNull() || source == null) {
+            return source != null ? source.getMinZoom() : 0;
+        }
+
+        double width = Math.max(1.0, mercatorView.getWidth());
+        double height = Math.max(1.0, mercatorView.getHeight());
+        double resolutionX = width / Math.max(1, panelWidth);
+        double resolutionY = height / Math.max(1, panelHeight);
+        double resolution = Math.max(resolutionX, resolutionY);
+
+        double baseResolution = WEB_MERCATOR_WORLD_WIDTH / source.getTileSize();
+        return (int) Math.round(Math.log(baseResolution / resolution) / Math.log(2.0));
     }
 
     public static TileRange calculateTileRange(Envelope mercatorView, int zoom) {

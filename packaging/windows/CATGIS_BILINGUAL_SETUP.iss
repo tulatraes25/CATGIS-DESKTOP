@@ -5,7 +5,7 @@
   #error "OutputDir define is required."
 #endif
 #ifndef InstallerName
-  #define InstallerName "CATGIS Desktop Review"
+  #define InstallerName "CATGIS Desktop"
 #endif
 #ifndef InstallerVersion
   #define InstallerVersion "1.0.0"
@@ -14,7 +14,7 @@
   #define InstallerPublisher "Lic Claudio Alejandro Tula"
 #endif
 #ifndef InstallerExeName
-  #define InstallerExeName "CATGIS-Desktop-Review-1.0.0"
+  #define InstallerExeName "CATGIS-Desktop-1.0.0"
 #endif
 #ifndef InstallerLicense
   #error "InstallerLicense define is required."
@@ -26,7 +26,7 @@
   #define InstallerGroup "CATGIS"
 #endif
 #ifndef InstallerDir
-  #define InstallerDir "CATGIS Desktop Review"
+  #define InstallerDir "CATGIS Desktop"
 #endif
 
 [Setup]

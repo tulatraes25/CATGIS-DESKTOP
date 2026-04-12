@@ -71,6 +71,12 @@ public class AboutCatgisDialog extends JDialog {
         JLabel author = new JLabel("<html><span style='color:#2e3f5d;'>" + escape(CatgisAppInfo.getAuthorLine()) + "</span></html>");
         author.setFont(author.getFont().deriveFont(Font.PLAIN, 11.5f));
 
+        JLabel collaborator = new JLabel("<html><span style='color:#4b5563;'>" + escape(CatgisAppInfo.getCollaboratorLine()) + "</span></html>");
+        collaborator.setFont(collaborator.getFont().deriveFont(Font.PLAIN, 11.2f));
+
+        JLabel revision = new JLabel("<html><span style='color:#4b5563;'>" + escape(CatgisAppInfo.getRevisionCycleLine()) + "</span></html>");
+        revision.setFont(revision.getFont().deriveFont(Font.PLAIN, 11.2f));
+
         textPanel.add(title);
         textPanel.add(Box.createVerticalStrut(4));
         textPanel.add(version);
@@ -78,6 +84,10 @@ public class AboutCatgisDialog extends JDialog {
         textPanel.add(tagline);
         textPanel.add(Box.createVerticalStrut(8));
         textPanel.add(author);
+        textPanel.add(Box.createVerticalStrut(4));
+        textPanel.add(collaborator);
+        textPanel.add(Box.createVerticalStrut(2));
+        textPanel.add(revision);
 
         panel.add(textPanel, BorderLayout.CENTER);
         return panel;
@@ -120,7 +130,9 @@ public class AboutCatgisDialog extends JDialog {
         return wrapHtml(
                 section(I18n.t("Identidad"), List.of(
                         CatgisAppInfo.getAuthorLine(),
+                        CatgisAppInfo.getCollaboratorLine(),
                         CatgisAppInfo.getStatusLine(),
+                        CatgisAppInfo.getRevisionCycleLine(),
                         CatgisAppInfo.getFocusLine(),
                         CatgisAppInfo.getProfessionalNote()
                 )) +
@@ -131,6 +143,8 @@ public class AboutCatgisDialog extends JDialog {
                 )) +
                 section(I18n.t("Estado del programa"), List.of(
                         I18n.format("Version visible: {0}", CatgisAppInfo.getDisplayVersion()),
+                        "Version tecnica base: " + CatgisAppInfo.getBaseVersion(),
+                        CatgisAppInfo.getBetaFinalNote(),
                         I18n.t("Interfaz Swing con branding propio e iconografia integrada."),
                         I18n.t("Desarrollo en evolucion continua con foco en usabilidad, estabilidad y crecimiento modular.")
                 ))
@@ -164,10 +178,13 @@ public class AboutCatgisDialog extends JDialog {
                 section(I18n.t("Autor y direccion del proyecto"), CatgisAppInfo.getCreditsLines()) +
                 section(I18n.t("Complementos, librerias y programas de soporte"), List.of(
                         I18n.t("GeoTools BOM 34, GT Main, GT Swing, GT Shapefile, GT GeoJSON y GT Referencing."),
-                        I18n.t("GT XSD KML, GT GeoPackage, GT WFS NG y GT JDBC PostGIS."),
+                        I18n.t("GT XSD KML, GT GeoPackage, GT WFS NG, GT GeoTIFF, GT ArcGrid y GT Process Raster."),
+                        I18n.t("ImageIO-Ext / GDAL para ampliar la lectura raster dentro del flujo actual."),
                         I18n.t("PostgreSQL JDBC para conexion espacial a bases PostGIS."),
                         I18n.t("Apache PDFBox para exportacion PDF y Apache POI para hojas de calculo."),
-                        I18n.t("FlatLaf, FlatLaf Extras, IntelliJ Themes y JSVG para la experiencia visual.")
+                        I18n.t("FlatLaf, FlatLaf Extras, IntelliJ Themes y JSVG para la experiencia visual."),
+                        I18n.t("Log4j 2 para logging de ejecucion y soporte tecnico."),
+                        I18n.t("Manual actualizado 2026 y HelpCenter integrado como ayuda embebida del producto.")
                 ))
         );
     }

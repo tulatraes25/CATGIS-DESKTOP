@@ -20,13 +20,27 @@ import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryCollection;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.MultiPoint;
+import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 
 import javax.swing.JFileChooser;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
+import java.awt.GridLayout;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
@@ -37,12 +51,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 public class ExportVectorLayerAction {
 
     private static final String SHAPEFILE_OPTION = "Shapefile (*.shp)";
     private static final String GEOJSON_OPTION = "GeoJSON (*.geojson)";
     private static final String KML_OPTION = "KML (*.kml)";
+    private static final String KMZ_OPTION = "KMZ (*.kmz)";
+    private static final String GPX_OPTION = "GPX (*.gpx)";
 
     public static void exportLayer(Layer layer) {
         if (layer == null) {
@@ -60,7 +78,7 @@ public class ExportVectorLayerAction {
     }
 
     public static String[] getSupportedVectorFormats() {
-        return new String[]{SHAPEFILE_OPTION, GEOJSON_OPTION, KML_OPTION};
+        return new String[]{SHAPEFILE_OPTION, GEOJSON_OPTION, KML_OPTION, KMZ_OPTION, GPX_OPTION};
     }
 
     public static File exportLayerWithDialog(Layer layer,
@@ -83,7 +101,7 @@ public class ExportVectorLayerAction {
                 dialogTitle != null && !dialogTitle.isBlank() ? dialogTitle : "Exportar capa",
                 JOptionPane.PLAIN_MESSAGE,
                 null,
-                new String[]{SHAPEFILE_OPTION, GEOJSON_OPTION, KML_OPTION},
+                getSupportedVectorFormats(),
                 SHAPEFILE_OPTION
         );
 
@@ -104,6 +122,10 @@ public class ExportVectorLayerAction {
             chooser.setFileFilter(new FileNameExtensionFilter("Shapefile (*.shp)", "shp"));
         } else if (GEOJSON_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson)", "geojson"));
+        } else if (GPX_OPTION.equals(option)) {
+            chooser.setFileFilter(new FileNameExtensionFilter("GPX (*.gpx)", "gpx"));
+        } else if (KMZ_OPTION.equals(option)) {
+            chooser.setFileFilter(new FileNameExtensionFilter("KMZ (*.kmz)", "kmz"));
         } else {
             chooser.setFileFilter(new FileNameExtensionFilter("KML (*.kml)", "kml"));
         }
@@ -175,6 +197,10 @@ public class ExportVectorLayerAction {
             chooser.setFileFilter(new FileNameExtensionFilter("Shapefile (*.shp)", "shp"));
         } else if (GEOJSON_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson)", "geojson"));
+        } else if (GPX_OPTION.equals(option)) {
+            chooser.setFileFilter(new FileNameExtensionFilter("GPX (*.gpx)", "gpx"));
+        } else if (KMZ_OPTION.equals(option)) {
+            chooser.setFileFilter(new FileNameExtensionFilter("KMZ (*.kmz)", "kmz"));
         } else {
             chooser.setFileFilter(new FileNameExtensionFilter("KML (*.kml)", "kml"));
         }
@@ -265,13 +291,22 @@ public class ExportVectorLayerAction {
                 parentDir.mkdirs();
             }
 
+            KmlExportOptions kmlOptions = requiresKmlOptions(option)
+                    ? resolveKmlExportOptions(layer, data, parent)
+                    : KmlExportOptions.defaults();
+            if (kmlOptions == null) {
+                return false;
+            }
+
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
                 exportToShapefile(layer, data, file, resolveTargetCode(layer, option, targetCode));
             } else if (GEOJSON_OPTION.equals(option)) {
                 exportToGeoJson(layer, data, file, resolveTargetCode(layer, option, targetCode));
+            } else if (GPX_OPTION.equals(option)) {
+                exportToGpx(layer, data, file);
             } else {
-                exportToKml(layer, data, file);
+                exportToKml(layer, data, file, kmlOptions);
             }
 
             if (showSuccessMessage) {
@@ -311,7 +346,7 @@ public class ExportVectorLayerAction {
             return true;
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(parent, "Error al exportar capa: " + ex.getMessage());
+            showExportError(parent, ex);
             return false;
         }
     }
@@ -328,16 +363,27 @@ public class ExportVectorLayerAction {
                 parentDir.mkdirs();
             }
 
+            KmlExportOptions kmlOptions = requiresKmlOptions(option)
+                    ? resolveKmlExportOptions(layer, data, parent)
+                    : KmlExportOptions.defaults();
+            if (kmlOptions == null) {
+                return false;
+            }
+
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
                 exportToShapefile(layer, data, file, resolveTargetCode(layer, option));
             } else if (GEOJSON_OPTION.equals(option)) {
                 exportToGeoJson(layer, data, file, resolveTargetCode(layer, option));
+            } else if (GPX_OPTION.equals(option)) {
+                exportToGpx(layer, data, file);
             } else {
-                exportToKml(layer, data, file);
+                exportToKml(layer, data, file, kmlOptions);
             }
 
-            refreshLayerFromFile(layer, file);
+            if (!GPX_OPTION.equals(option)) {
+                refreshLayerFromFile(layer, file);
+            }
 
             if (showSuccessMessage) {
                 JOptionPane.showMessageDialog(parent, "Capa exportada correctamente:\n" + file.getAbsolutePath());
@@ -345,7 +391,7 @@ public class ExportVectorLayerAction {
             return true;
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(parent, "Error al exportar capa: " + ex.getMessage());
+            showExportError(parent, ex);
             return false;
         }
     }
@@ -393,15 +439,18 @@ public class ExportVectorLayerAction {
 
         try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
             FeatureJSON featureJSON = new FeatureJSON();
+            featureJSON.setFeatureType(featureType);
+            featureJSON.setEncodeNullValues(true);
             featureJSON.writeFeatureCollection(new ListFeatureCollection(featureType, features), writer);
         }
     }
 
-    private static void exportToKml(Layer layer, ShapefileData data, File file) throws Exception {
+    private static void exportToKml(Layer layer, ShapefileData data, File file, KmlExportOptions options) throws Exception {
         TransformResult transformResult = transformFeaturesToTarget(layer, data, "EPSG:4326", KML_OPTION);
         List<SimpleFeature> features = transformResult.features;
 
-        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+        ByteArrayOutputStream xmlBytes = new ByteArrayOutputStream();
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(xmlBytes, StandardCharsets.UTF_8))) {
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             writer.newLine();
             writer.write("<kml xmlns=\"http://www.opengis.net/kml/2.2\">");
@@ -409,6 +458,11 @@ public class ExportVectorLayerAction {
             writer.write("  <Document>");
             writer.newLine();
             writer.write("    <name>" + xml(layer.getName()) + "</name>");
+            writer.newLine();
+            writer.write("    <Style id=\"catgis-default\">");
+            writer.newLine();
+            writeKmlStyle(writer, layer, options);
+            writer.write("    </Style>");
             writer.newLine();
 
             for (SimpleFeature feature : features) {
@@ -424,15 +478,20 @@ public class ExportVectorLayerAction {
 
                 writer.write("    <Placemark>");
                 writer.newLine();
+                writer.write("      <styleUrl>#catgis-default</styleUrl>");
+                writer.newLine();
 
-                String name = getFeatureName(feature, layer);
+                String name = getFeatureName(feature, layer, options);
                 if (name != null && !name.isBlank()) {
                     writer.write("      <name>" + xml(name) + "</name>");
                     writer.newLine();
                 }
 
-                writer.write("      <description>" + xml(buildDescription(feature)) + "</description>");
-                writer.newLine();
+                if (options.includeDescription()) {
+                    writer.write("      <description>" + xml(buildDescription(feature)) + "</description>");
+                    writer.newLine();
+                }
+                writeKmlExtendedData(writer, feature);
 
                 writeKmlGeometry(writer, geometry, "      ");
 
@@ -443,6 +502,55 @@ public class ExportVectorLayerAction {
             writer.write("  </Document>");
             writer.newLine();
             writer.write("</kml>");
+            writer.newLine();
+        }
+
+        if (file.getName().toLowerCase(Locale.ROOT).endsWith(".kmz")) {
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(file))) {
+                zipOutputStream.putNextEntry(new ZipEntry("doc.kml"));
+                zipOutputStream.write(xmlBytes.toByteArray());
+                zipOutputStream.closeEntry();
+            }
+            return;
+        }
+
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
+            outputStream.write(xmlBytes.toByteArray());
+        }
+    }
+
+    private static void exportToGpx(Layer layer, ShapefileData data, File file) throws Exception {
+        TransformResult transformResult = transformFeaturesToTarget(layer, data, "EPSG:4326", GPX_OPTION);
+        List<SimpleFeature> features = transformResult.features;
+
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+            writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            writer.newLine();
+            writer.write("<gpx version=\"1.1\" creator=\"CATGIS Desktop\" xmlns=\"http://www.topografix.com/GPX/1/1\">");
+            writer.newLine();
+            writer.write("  <metadata>");
+            writer.newLine();
+            writer.write("    <name>" + xml(layer.getName()) + "</name>");
+            writer.newLine();
+            writer.write("  </metadata>");
+            writer.newLine();
+
+            int pointIndex = 1;
+            int lineIndex = 1;
+            int polygonIndex = 1;
+
+            for (SimpleFeature feature : features) {
+                Object geomObj = feature.getDefaultGeometry();
+                if (!(geomObj instanceof Geometry geometry) || geometry.isEmpty()) {
+                    continue;
+                }
+
+                pointIndex = writeGpxWaypoints(writer, feature, geometry, pointIndex);
+                lineIndex = writeGpxTracks(writer, feature, geometry, lineIndex);
+                polygonIndex = writeGpxPolygonBoundaries(writer, feature, geometry, polygonIndex);
+            }
+
+            writer.write("</gpx>");
             writer.newLine();
         }
     }
@@ -476,11 +584,11 @@ public class ExportVectorLayerAction {
         MathTransform transform = null;
 
         if (!sourceCode.equalsIgnoreCase(targetCode)) {
-            sourceCRS = CRS.decode(sourceCode, true);
-            targetCRS = CRS.decode(targetCode, true);
+            sourceCRS = CRSDefinitions.decode(sourceCode, true);
+            targetCRS = CRSDefinitions.decode(targetCode, true);
             transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
         } else {
-            targetCRS = CRS.decode(targetCode, true);
+            targetCRS = CRSDefinitions.decode(targetCode, true);
         }
 
         List<TransformFeatureRow> transformedRows = new ArrayList<>();
@@ -656,6 +764,98 @@ public class ExportVectorLayerAction {
         return data.getFeatures() != null;
     }
 
+    private static boolean requiresKmlOptions(String option) {
+        return KML_OPTION.equals(option) || KMZ_OPTION.equals(option);
+    }
+
+    private static KmlExportOptions promptKmlExportOptions(Layer layer, ShapefileData data, Component parent) {
+        List<String> availableFields = data != null ? data.getAttributeNames() : List.of();
+        JComboBox<String> labelCombo = new JComboBox<>();
+        labelCombo.addItem("<sin etiquetas>");
+        for (String field : availableFields) {
+            labelCombo.addItem(field);
+        }
+
+        JCheckBox exportLabelsCheck = new JCheckBox("Exportar etiquetas");
+        String suggestedField = layer != null ? layer.getLabelField() : "";
+        if (suggestedField != null && !suggestedField.isBlank() && availableFields.contains(suggestedField)) {
+            exportLabelsCheck.setSelected(true);
+            labelCombo.setSelectedItem(suggestedField);
+        } else {
+            exportLabelsCheck.setSelected(false);
+            labelCombo.setSelectedIndex(0);
+        }
+        labelCombo.setEnabled(exportLabelsCheck.isSelected());
+        exportLabelsCheck.addActionListener(e -> labelCombo.setEnabled(exportLabelsCheck.isSelected()));
+
+        JCheckBox includeDescriptionCheck = new JCheckBox("Incluir descripcion con atributos", true);
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 6, 6));
+        panel.add(new JLabel("Salida KML/KMZ"));
+        panel.add(exportLabelsCheck);
+
+        JPanel labelRow = new JPanel(new BorderLayout(6, 0));
+        labelRow.add(new JLabel("Campo etiqueta"), BorderLayout.WEST);
+        labelRow.add(labelCombo, BorderLayout.CENTER);
+        panel.add(labelRow);
+        panel.add(includeDescriptionCheck);
+
+        int choice = JOptionPane.showConfirmDialog(
+                parent,
+                panel,
+                "Opciones KML / KMZ",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+        if (choice != JOptionPane.OK_OPTION) {
+            return null;
+        }
+
+        String labelField = null;
+        if (exportLabelsCheck.isSelected() && labelCombo.getSelectedItem() != null) {
+            String selected = String.valueOf(labelCombo.getSelectedItem());
+            if (!selected.startsWith("<")) {
+                labelField = selected;
+            }
+        }
+
+        return new KmlExportOptions(exportLabelsCheck.isSelected(), labelField, includeDescriptionCheck.isSelected());
+    }
+
+    private static KmlExportOptions resolveKmlExportOptions(Layer layer, ShapefileData data, Component parent) {
+        if (parent == null || GraphicsEnvironment.isHeadless()) {
+            String labelField = layer != null && layer.getLabelField() != null && !layer.getLabelField().isBlank()
+                    ? layer.getLabelField()
+                    : resolveSuggestedLabelField(data);
+            boolean exportLabels = labelField != null && !labelField.isBlank();
+            return new KmlExportOptions(exportLabels, labelField, true);
+        }
+        return promptKmlExportOptions(layer, data, parent);
+    }
+
+    private static void showExportError(Component parent, Exception ex) {
+        if (!GraphicsEnvironment.isHeadless()) {
+            JOptionPane.showMessageDialog(parent, "Error al exportar capa: " + ex.getMessage());
+        }
+    }
+
+    private static String resolveSuggestedLabelField(ShapefileData data) {
+        List<String> fields = data != null ? data.getAttributeNames() : List.of();
+        if (fields.isEmpty()) {
+            return null;
+        }
+
+        for (String candidate : List.of("name", "nombre", "label", "titulo", "title", "codigo", "id")) {
+            for (String field : fields) {
+                if (field != null && field.equalsIgnoreCase(candidate)) {
+                    return field;
+                }
+            }
+        }
+
+        return fields.get(0);
+    }
+
     private static String getProjectCRSCode() {
         if (CatgisDesktopApp.currentProject != null &&
                 CatgisDesktopApp.currentProject.getProjectCRS() != null &&
@@ -677,7 +877,7 @@ public class ExportVectorLayerAction {
     }
 
     private static String resolveTargetCode(Layer layer, String option, String requestedTargetCode) {
-        if (KML_OPTION.equals(option)) {
+        if (KML_OPTION.equals(option) || KMZ_OPTION.equals(option) || GPX_OPTION.equals(option)) {
             return "EPSG:4326";
         }
         if (requestedTargetCode != null && !requestedTargetCode.isBlank()) {
@@ -708,7 +908,16 @@ public class ExportVectorLayerAction {
         return name;
     }
 
-    private static String getFeatureName(SimpleFeature feature, Layer layer) {
+    private static String getFeatureName(SimpleFeature feature, Layer layer, KmlExportOptions options) {
+        if (feature == null || options == null || !options.exportLabels()) {
+            return null;
+        }
+
+        if (options.labelField() != null && !options.labelField().isBlank()) {
+            Object value = feature.getAttribute(options.labelField());
+            return value != null ? String.valueOf(value) : null;
+        }
+
         if (layer != null && layer.getLabelField() != null && !layer.getLabelField().isBlank()) {
             Object value = feature.getAttribute(layer.getLabelField());
             if (value != null) {
@@ -726,6 +935,59 @@ public class ExportVectorLayerAction {
         }
 
         return feature.getID();
+    }
+
+    private static String getFeatureName(SimpleFeature feature, Layer layer) {
+        return getFeatureName(feature, layer, new KmlExportOptions(true, null, true));
+    }
+
+    private static void writeKmlStyle(BufferedWriter writer, Layer layer, KmlExportOptions options) throws Exception {
+        writer.write("      <LabelStyle><scale>" + (options.exportLabels() ? "1.0" : "0.0") + "</scale></LabelStyle>");
+        writer.newLine();
+
+        String lineColor = toKmlColor(layer != null ? layer.getLineColor() : null, "ff0000ff");
+        String polygonLine = toKmlColor(layer != null ? layer.getBorderColor() : null, lineColor);
+        String fillColor = toKmlColor(layer != null ? layer.getFillColor() : null, "7fffaa55");
+        String pointColor = toKmlColor(layer != null ? layer.getPointColor() : null, lineColor);
+        float lineWidth = layer != null ? Math.max(1f, layer.getLineWidth()) : 1.5f;
+        double pointScale = layer != null ? Math.max(0.8d, layer.getPointSize() / 8d) : 1.0d;
+
+        writer.write("      <IconStyle><color>" + pointColor + "</color><scale>" + String.format(Locale.US, "%.2f", pointScale) + "</scale></IconStyle>");
+        writer.newLine();
+        writer.write("      <LineStyle><color>" + polygonLine + "</color><width>" + String.format(Locale.US, "%.2f", lineWidth) + "</width></LineStyle>");
+        writer.newLine();
+        writer.write("      <PolyStyle><color>" + fillColor + "</color><outline>1</outline></PolyStyle>");
+        writer.newLine();
+    }
+
+    private static void writeKmlExtendedData(BufferedWriter writer, SimpleFeature feature) throws Exception {
+        if (feature == null || feature.getFeatureType() == null) {
+            return;
+        }
+        writer.write("      <ExtendedData>");
+        writer.newLine();
+        for (AttributeDescriptor descriptor : feature.getFeatureType().getAttributeDescriptors()) {
+            if (descriptor instanceof GeometryDescriptor) {
+                continue;
+            }
+            String name = descriptor.getLocalName();
+            Object value = feature.getAttribute(name);
+            writer.write("        <Data name=\"" + xml(name) + "\"><value>" + xml(value != null ? String.valueOf(value) : "") + "</value></Data>");
+            writer.newLine();
+        }
+        writer.write("      </ExtendedData>");
+        writer.newLine();
+    }
+
+    private static String toKmlColor(java.awt.Color color, String fallback) {
+        if (color == null) {
+            return fallback;
+        }
+        return String.format(Locale.US, "%02x%02x%02x%02x",
+                color.getAlpha(),
+                color.getBlue(),
+                color.getGreen(),
+                color.getRed());
     }
 
     private static String buildDescription(SimpleFeature feature) {
@@ -823,6 +1085,12 @@ public class ExportVectorLayerAction {
         if (GEOJSON_OPTION.equals(option)) {
             return ".geojson";
         }
+        if (KMZ_OPTION.equals(option)) {
+            return ".kmz";
+        }
+        if (GPX_OPTION.equals(option)) {
+            return ".gpx";
+        }
         return ".kml";
     }
 
@@ -840,7 +1108,19 @@ public class ExportVectorLayerAction {
         if (lower.endsWith(".kml")) {
             return KML_OPTION;
         }
+        if (lower.endsWith(".kmz")) {
+            return KMZ_OPTION;
+        }
+        if (lower.endsWith(".gpx")) {
+            return GPX_OPTION;
+        }
         return null;
+    }
+
+    private record KmlExportOptions(boolean exportLabels, String labelField, boolean includeDescription) {
+        private static KmlExportOptions defaults() {
+            return new KmlExportOptions(false, null, true);
+        }
     }
 
     private static void deleteShapefileSidecars(File shpFile) {
@@ -876,8 +1156,16 @@ public class ExportVectorLayerAction {
             if (sourceCRS == null || sourceCRS.isBlank()) {
                 sourceCRS = "EPSG:4326";
             }
-        } else if (lower.endsWith(".kml")) {
+        } else if (lower.endsWith(".kml") || lower.endsWith(".kmz")) {
             reloaded = KmlLoader.load(file);
+            sourceCRS = "EPSG:4326";
+        } else if (lower.endsWith(".gpx")) {
+            if (layer instanceof GpxLayer gpxLayer) {
+                reloaded = GpxLoader.load(file, gpxLayer.getContentKind());
+            } else {
+                GpxImportResult importResult = GpxLoader.load(file);
+                reloaded = pickFirstGpxData(importResult);
+            }
             sourceCRS = "EPSG:4326";
         } else {
             throw new RuntimeException("Formato vectorial no soportado: " + file.getAbsolutePath());
@@ -915,6 +1203,218 @@ public class ExportVectorLayerAction {
         }
         int idx = name.lastIndexOf('.');
         return idx > 0 ? name.substring(0, idx) : name;
+    }
+
+    private static ShapefileData pickFirstGpxData(GpxImportResult importResult) {
+        if (importResult == null) {
+            throw new RuntimeException("No se pudo recargar el GPX exportado.");
+        }
+        if (GpxImportResult.hasFeatures(importResult.get(GpxLayer.ContentKind.WAYPOINTS))) {
+            return importResult.get(GpxLayer.ContentKind.WAYPOINTS);
+        }
+        if (GpxImportResult.hasFeatures(importResult.get(GpxLayer.ContentKind.TRACKS))) {
+            return importResult.get(GpxLayer.ContentKind.TRACKS);
+        }
+        if (GpxImportResult.hasFeatures(importResult.get(GpxLayer.ContentKind.ROUTES))) {
+            return importResult.get(GpxLayer.ContentKind.ROUTES);
+        }
+        throw new RuntimeException("El GPX exportado no contiene entidades utilizables.");
+    }
+
+    private static int writeGpxWaypoints(BufferedWriter writer,
+                                         SimpleFeature feature,
+                                         Geometry geometry,
+                                         int nextIndex) throws Exception {
+        List<Point> points = new ArrayList<>();
+        collectPoints(geometry, points);
+        for (Point point : points) {
+            Coordinate coordinate = point.getCoordinate();
+            if (coordinate == null) {
+                continue;
+            }
+            String fallbackName = buildIndexedName(feature, "waypoint", nextIndex);
+            writer.write("  <wpt lat=\"" + coordinate.y + "\" lon=\"" + coordinate.x + "\">");
+            writer.newLine();
+            writeGpxMetadata(writer, feature, fallbackName, "    ");
+            writer.write("  </wpt>");
+            writer.newLine();
+            nextIndex++;
+        }
+        return nextIndex;
+    }
+
+    private static int writeGpxTracks(BufferedWriter writer,
+                                      SimpleFeature feature,
+                                      Geometry geometry,
+                                      int nextIndex) throws Exception {
+        List<LineString> lines = new ArrayList<>();
+        collectLines(geometry, lines);
+        if (lines.isEmpty()) {
+            return nextIndex;
+        }
+
+        String fallbackName = buildIndexedName(feature, "track", nextIndex);
+        writer.write("  <trk>");
+        writer.newLine();
+        writeGpxMetadata(writer, feature, fallbackName, "    ");
+        for (LineString line : lines) {
+            if (line == null || line.isEmpty() || line.getNumPoints() < 2) {
+                continue;
+            }
+            writer.write("    <trkseg>");
+            writer.newLine();
+            for (Coordinate coordinate : line.getCoordinates()) {
+                writer.write("      <trkpt lat=\"" + coordinate.y + "\" lon=\"" + coordinate.x + "\"></trkpt>");
+                writer.newLine();
+            }
+            writer.write("    </trkseg>");
+            writer.newLine();
+        }
+        writer.write("  </trk>");
+        writer.newLine();
+        return nextIndex + 1;
+    }
+
+    private static int writeGpxPolygonBoundaries(BufferedWriter writer,
+                                                 SimpleFeature feature,
+                                                 Geometry geometry,
+                                                 int nextIndex) throws Exception {
+        List<Polygon> polygons = new ArrayList<>();
+        collectPolygons(geometry, polygons);
+        for (Polygon polygon : polygons) {
+            if (polygon == null || polygon.isEmpty()) {
+                continue;
+            }
+            writer.write("  <trk>");
+            writer.newLine();
+            String fallbackName = buildIndexedName(feature, "polygon_boundary", nextIndex);
+            writeGpxMetadata(writer, feature, fallbackName, "    ");
+            writePolygonRingAsTrack(writer, polygon.getExteriorRing().getCoordinates());
+            for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+                writePolygonRingAsTrack(writer, polygon.getInteriorRingN(i).getCoordinates());
+            }
+            writer.write("  </trk>");
+            writer.newLine();
+            nextIndex++;
+        }
+        return nextIndex;
+    }
+
+    private static void writePolygonRingAsTrack(BufferedWriter writer, Coordinate[] coordinates) throws Exception {
+        if (coordinates == null || coordinates.length < 4) {
+            return;
+        }
+        writer.write("    <trkseg>");
+        writer.newLine();
+        for (Coordinate coordinate : coordinates) {
+            writer.write("      <trkpt lat=\"" + coordinate.y + "\" lon=\"" + coordinate.x + "\"></trkpt>");
+            writer.newLine();
+        }
+        writer.write("    </trkseg>");
+        writer.newLine();
+    }
+
+    private static void writeGpxMetadata(BufferedWriter writer,
+                                         SimpleFeature feature,
+                                         String fallbackName,
+                                         String indent) throws Exception {
+        String name = getFeatureName(feature, null);
+        if (name == null || name.isBlank() || name.equals(feature.getID())) {
+            name = fallbackName;
+        }
+        writeOptionalGpxTag(writer, indent, "name", name);
+        writeOptionalGpxTag(writer, indent, "desc", buildDescription(feature));
+
+        Object typeValue = null;
+        if (feature.getFeatureType() != null) {
+            if (feature.getFeatureType().getDescriptor("type_name") != null) {
+                typeValue = feature.getAttribute("type_name");
+            } else if (feature.getFeatureType().getDescriptor("tipo") != null) {
+                typeValue = feature.getAttribute("tipo");
+            }
+        }
+        if (typeValue != null) {
+            writeOptionalGpxTag(writer, indent, "type", String.valueOf(typeValue));
+        }
+    }
+
+    private static void writeOptionalGpxTag(BufferedWriter writer, String indent, String tag, String value) throws Exception {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        writer.write(indent + "<" + tag + ">" + xml(value) + "</" + tag + ">");
+        writer.newLine();
+    }
+
+    private static String buildIndexedName(SimpleFeature feature, String fallbackPrefix, int index) {
+        String name = getFeatureName(feature, null);
+        if (name != null && !name.isBlank() && !name.equals(feature.getID())) {
+            return name;
+        }
+        return fallbackPrefix + " " + index;
+    }
+
+    private static void collectPoints(Geometry geometry, List<Point> points) {
+        if (geometry == null || points == null) {
+            return;
+        }
+        if (geometry instanceof Point point) {
+            points.add(point);
+            return;
+        }
+        if (geometry instanceof MultiPoint multiPoint) {
+            for (int i = 0; i < multiPoint.getNumGeometries(); i++) {
+                collectPoints(multiPoint.getGeometryN(i), points);
+            }
+            return;
+        }
+        if (geometry instanceof GeometryCollection collection) {
+            for (int i = 0; i < collection.getNumGeometries(); i++) {
+                collectPoints(collection.getGeometryN(i), points);
+            }
+        }
+    }
+
+    private static void collectLines(Geometry geometry, List<LineString> lines) {
+        if (geometry == null || lines == null) {
+            return;
+        }
+        if (geometry instanceof LineString lineString) {
+            lines.add(lineString);
+            return;
+        }
+        if (geometry instanceof MultiLineString multiLineString) {
+            for (int i = 0; i < multiLineString.getNumGeometries(); i++) {
+                collectLines(multiLineString.getGeometryN(i), lines);
+            }
+            return;
+        }
+        if (geometry instanceof GeometryCollection collection) {
+            for (int i = 0; i < collection.getNumGeometries(); i++) {
+                collectLines(collection.getGeometryN(i), lines);
+            }
+        }
+    }
+
+    private static void collectPolygons(Geometry geometry, List<Polygon> polygons) {
+        if (geometry == null || polygons == null) {
+            return;
+        }
+        if (geometry instanceof Polygon polygon) {
+            polygons.add(polygon);
+            return;
+        }
+        if (geometry instanceof MultiPolygon multiPolygon) {
+            for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
+                collectPolygons(multiPolygon.getGeometryN(i), polygons);
+            }
+            return;
+        }
+        if (geometry instanceof GeometryCollection collection) {
+            for (int i = 0; i < collection.getNumGeometries(); i++) {
+                collectPolygons(collection.getGeometryN(i), polygons);
+            }
+        }
     }
 
     private static class TransformResult {

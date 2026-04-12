@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.awt.geom.Point2D;
+import java.util.Locale;
 
 public final class TopographicProfileService {
 
@@ -46,14 +47,14 @@ public final class TopographicProfileService {
         );
 
         GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
-        String rasterCrsCode = RasterCoverageSupport.resolveCoverageCrsCode(coverage, rasterLayer);
+        String rasterCrsCode = RasterCoverageSupport.resolveOperationalAnalysisCrsCode(coverage, rasterLayer);
         if (rasterCrsCode == null || rasterCrsCode.isBlank()) {
             throw new IllegalStateException("No se pudo determinar el CRS del raster DEM.");
         }
 
-        CoordinateReferenceSystem rasterCrs = CRS.decode(normalizeCode(rasterCrsCode, "EPSG:4326"), true);
+        CoordinateReferenceSystem rasterCrs = CRSDefinitions.decode(normalizeCode(rasterCrsCode, "EPSG:4326"), true);
         MathTransform sourceToRaster = buildTransform(normalizedSourceCrs, rasterCrsCode);
-        MathTransform sourceToMetric = buildTransform(normalizedSourceCrs, resolveMetricCrs(normalizedSourceCrs));
+        MathTransform sourceToMetric = buildTransform(normalizedSourceCrs, resolveMetricCrs(normalizedSourceCrs, sourceLine));
         Geometry rasterLine = org.geotools.geometry.jts.JTS.transform(sourceLine, sourceToRaster);
         LineString clippedRasterLine = clipLineToCoverage(rasterLine, coverage);
         if (clippedRasterLine == null || clippedRasterLine.isEmpty() || clippedRasterLine.getNumPoints() < 2) {
@@ -109,11 +110,39 @@ public final class TopographicProfileService {
         );
     }
 
-    private static String resolveMetricCrs(String sourceCode) {
+    public static double estimateLineDistanceMeters(Geometry sourceLineGeometry, String sourceLineCrs) {
         try {
-            CoordinateReferenceSystem sourceCrs = CRS.decode(normalizeCode(sourceCode, "EPSG:4326"), true);
-            if (sourceCrs instanceof ProjectedCRS) {
-                return normalizeCode(CRS.toSRS(sourceCrs, true), "EPSG:3857");
+            LineString line = normalizeLine(sourceLineGeometry);
+            if (line == null || line.isEmpty() || line.getNumPoints() < 2) {
+                return 0d;
+            }
+            String normalizedSourceCrs = normalizeCode(
+                    sourceLineCrs,
+                    CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326"
+            );
+            String metricCode = resolveMetricCrs(normalizedSourceCrs, line);
+            MathTransform toMetric = buildTransform(normalizedSourceCrs, metricCode);
+            Geometry metricGeometry = org.geotools.geometry.jts.JTS.transform(line, toMetric);
+            return metricGeometry != null ? Math.abs(metricGeometry.getLength()) : Math.abs(line.getLength());
+        } catch (Exception ignored) {
+            return sourceLineGeometry != null ? Math.abs(sourceLineGeometry.getLength()) : 0d;
+        }
+    }
+
+    private static String resolveMetricCrs(String sourceCode, Geometry geometry) {
+        try {
+            CoordinateReferenceSystem sourceCrs = CRSDefinitions.decode(normalizeCode(sourceCode, "EPSG:4326"), true);
+            String projectCode = CatgisDesktopApp.currentProject != null
+                    ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+                    : "";
+            if (projectCode != null && !projectCode.isBlank()) {
+                CoordinateReferenceSystem projectCrs = CRSDefinitions.decode(projectCode, true);
+                if (isProjectedMetric(projectCrs)) {
+                    return projectCode;
+                }
+            }
+            if (isProjectedMetric(sourceCrs)) {
+                return normalizeCode(sourceCode, "EPSG:3857");
             }
         } catch (Exception ignored) {
         }
@@ -121,8 +150,8 @@ public final class TopographicProfileService {
     }
 
     private static MathTransform buildTransform(String sourceCode, String targetCode) throws Exception {
-        CoordinateReferenceSystem source = CRS.decode(normalizeCode(sourceCode, "EPSG:4326"), true);
-        CoordinateReferenceSystem target = CRS.decode(normalizeCode(targetCode, "EPSG:4326"), true);
+        CoordinateReferenceSystem source = CRSDefinitions.decode(normalizeCode(sourceCode, "EPSG:4326"), true);
+        CoordinateReferenceSystem target = CRSDefinitions.decode(normalizeCode(targetCode, "EPSG:4326"), true);
         return CRS.findMathTransform(source, target, true);
     }
 
@@ -245,6 +274,30 @@ public final class TopographicProfileService {
             normalized = fallback;
         }
         return normalized;
+    }
+
+    private static boolean isProjectedMetric(CoordinateReferenceSystem crs) {
+        if (!(crs instanceof ProjectedCRS)) {
+            return false;
+        }
+        try {
+            String unit0 = String.valueOf(crs.getCoordinateSystem().getAxis(0).getUnit()).toLowerCase(Locale.ROOT);
+            String unit1 = String.valueOf(crs.getCoordinateSystem().getAxis(1).getUnit()).toLowerCase(Locale.ROOT);
+            return looksMetric(unit0) && looksMetric(unit1);
+        } catch (Exception ex) {
+            return true;
+        }
+    }
+
+    private static boolean looksMetric(String unitText) {
+        if (unitText == null) {
+            return false;
+        }
+        String normalized = unitText.trim().toLowerCase(Locale.ROOT);
+        return normalized.contains("metre")
+                || normalized.contains("meter")
+                || normalized.equals("m")
+                || normalized.contains("9001");
     }
 
     public record ProfileSample(double distanceMeters, double elevation, Coordinate sourceCoordinate, boolean valid) {

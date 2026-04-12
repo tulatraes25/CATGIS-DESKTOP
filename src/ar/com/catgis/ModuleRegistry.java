@@ -264,14 +264,14 @@ public final class ModuleRegistry {
     private static CatgisModule createCsvModule() {
         CatgisModule module = new CatgisModule(
                 MODULE_CSV,
-                "Origen de datos CSV",
+                "Tablas externas",
                 ModuleCategory.DATA_SOURCE,
-                "Carga CSV como tabla o como capa espacial de puntos con eleccion de X/Y y CRS.",
-                "Origen de datos CSV",
+                "Carga CSV, XLSX, XLS, ODS o DBF como tabla externa o como capa espacial de puntos con eleccion de X/Y y CRS.",
+                "Tablas externas",
                 false,
                 true
         );
-        module.addAction(new CatgisModuleAction("csv-open", "Abrir CSV", "Abre un CSV y decide si se carga como tabla o como capa espacial.",
+        module.addAction(new CatgisModuleAction("csv-open", "Cargar tabla externa", "Abre una tabla externa y decide si se carga como tabla o como capa espacial.",
                 AppIcons.importTableIcon(), CsvDataSourceAction::openCsvDataSource, ModuleActionPlacement.MODULE_MENU, () -> true));
         return module;
     }
@@ -279,14 +279,14 @@ public final class ModuleRegistry {
     private static CatgisModule createKmlModule() {
         CatgisModule module = new CatgisModule(
                 MODULE_KML,
-                "Origen de datos KML",
+                "Origen de datos KML / KMZ",
                 ModuleCategory.DATA_SOURCE,
-                "Formaliza la carga KML como modulo visible y separado del cargador general.",
-                "Origen de datos KML",
+                "Formaliza la carga KML y KMZ como modulo visible y separado del cargador general.",
+                "Origen de datos KML / KMZ",
                 false,
                 true
         );
-        module.addAction(new CatgisModuleAction("kml-open", "Abrir KML", "Carga un archivo KML como capa vectorial del proyecto.",
+        module.addAction(new CatgisModuleAction("kml-open", "Abrir KML / KMZ", "Carga un archivo KML o KMZ como capa vectorial del proyecto.",
                 AppIcons.openIcon(), KmlDataSourceAction::openKmlDataSource, ModuleActionPlacement.MODULE_MENU, () -> true));
         return module;
     }
@@ -379,7 +379,7 @@ public final class ModuleRegistry {
                 AppIcons.removeIcon(), () -> GeoprocessingAssistantDialog.openForOperation(GeoprocessingAssistantDialog.OP_DIFFERENCE), ModuleActionPlacement.MODULE_MENU, () -> !VectorLayerUtils.getVectorLayers().isEmpty()));
         module.addAction(new CatgisModuleAction("geoprocess-spatial-join", "Spatial Join", "Abre el asistente listo para Spatial Join.",
                 AppIcons.attrCopyIcon(), () -> GeoprocessingAssistantDialog.openForOperation(GeoprocessingAssistantDialog.OP_SPATIAL_JOIN), ModuleActionPlacement.MODULE_MENU, () -> !VectorLayerUtils.getVectorLayers().isEmpty()));
-        module.addAction(new CatgisModuleAction("geoprocess-union", "Union geometrica (experimental)", "Abre el asistente listo para la union geometrica experimental.",
+        module.addAction(new CatgisModuleAction("geoprocess-union", "Union geometrica", "Abre el asistente listo para una union poligonal con atributos de ambas capas.",
                 AppIcons.propertiesIcon(), () -> GeoprocessingAssistantDialog.openForOperation(GeoprocessingAssistantDialog.OP_UNION), ModuleActionPlacement.MODULE_MENU, () -> !VectorLayerUtils.getVectorLayers().isEmpty()));
         return module;
     }
@@ -400,6 +400,14 @@ public final class ModuleRegistry {
                 AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM), ModuleActionPlacement.MODULE_MENU, () -> true));
         module.addAction(new CatgisModuleAction("online-basemap-esri", "Esri World Imagery", "Agrega o activa Esri World Imagery como capa de fondo.",
                 AppIcons.imageryIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY), ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("online-basemap-esri-topo", "Esri World Topo", "Agrega o activa Esri World Topo como mapa base.",
+                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_TOPO), ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("online-basemap-esri-street", "Esri World Street Map", "Agrega o activa Esri World Street Map como mapa base.",
+                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_STREET), ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("online-basemap-esri-light", "Esri Light Gray Canvas", "Agrega o activa Esri Light Gray Canvas como mapa base.",
+                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_LIGHT_GRAY), ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("online-basemap-esri-natgeo", "Esri NatGeo World Map", "Agrega o activa Esri NatGeo World Map como mapa base.",
+                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_NATGEO), ModuleActionPlacement.MODULE_MENU, () -> true));
         module.addAction(new CatgisModuleAction("online-basemap-wms", "Agregar WMS...", "Abre el dialogo para conectar un servicio WMS real via GetCapabilities.",
                 AppIcons.wmsIcon(), AddWmsAction::openDialog, ModuleActionPlacement.MODULE_MENU, () -> true));
         return module;

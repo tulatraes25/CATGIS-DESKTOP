@@ -50,10 +50,37 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemCargarDem = createItem("Cargar datos DEM...", AppIcons.openIcon());
         itemCargarDem.addActionListener(e -> DemLocalLoadAction.openDialog());
 
+        JMenuItem itemEscorrentias = createItem("Generar escorrentias...", AppIcons.drainageIcon());
+        itemEscorrentias.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            DrainageExtractionDialog.open();
+        });
+
+        JMenuItem itemAnalisisHidro = createItem("Analisis topohidrologico...", AppIcons.terrainAnalysisIcon());
+        itemAnalisisHidro.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            TerrainHydrologyAnalysisDialog.open();
+        });
+
+        JMenuItem itemCuencaOutlet = createItem("Cuenca desde outlet...", AppIcons.pointIcon());
+        itemCuencaOutlet.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            BasinFromOutletDialog.open();
+        });
+
         JMenuItem itemNuevaCapaVectorial = createItem("Nueva capa vectorial", createNewVectorLayerIcon());
         itemNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
 
-        JMenuItem itemAbrirTabla = createItem("Importar tabla de puntos", AppIcons.importTableIcon());
+        JMenuItem itemAbrirTabla = createItem("Cargar tabla externa", AppIcons.importTableIcon());
         itemAbrirTabla.addActionListener(e -> OpenTablePointsAction.openTablePoints());
 
         JMenuItem itemGuardarProyecto = createItem("Guardar proyecto", AppIcons.saveIcon(),
@@ -79,7 +106,7 @@ public class MainMenuBar extends JMenuBar {
         menuArchivo.add(itemGuardarProyectoComo);
         menuArchivo.add(itemSalvarVista);
 
-        JMenuItem itemCompositorCartografico = createItem("Abrir compositor cartografico...", AppIcons.projectIcon());
+        JMenuItem itemCompositorCartografico = createItem("Abrir CATMAP...", AppIcons.projectIcon());
         itemCompositorCartografico.addActionListener(e -> MapLayoutComposerDialog.open());
 
         JMenuItem itemSimbologiaCapa = createItem("Simbologia de capa seleccionada...", AppIcons.propertiesIcon());
@@ -96,7 +123,7 @@ public class MainMenuBar extends JMenuBar {
         itemTematicaCampo.addActionListener(e -> {
             Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
             if (layer == null) {
-                JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa de lineas o poligonos."));
+                JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa vectorial."));
                 return;
             }
             CategorizedSymbologyDialog.open(layer);
@@ -289,6 +316,21 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
+        JMenuItem itemCadIntegration = createItem("Integracion DWG / CAD...", AppIcons.propertiesIcon());
+        itemCadIntegration.addActionListener(e -> CadIntegrationDialog.open());
+
+        JMenuItem itemCadGeoref = createItem("Georreferenciar capa CAD seleccionada...", AppIcons.crsIcon());
+        itemCadGeoref.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            CadWorkflowSupport.openGeoreferenceWorkflow(CatgisDesktopApp.getMainFrameSafe(), layer);
+        });
+
+        JMenuItem itemCadInternalLayers = createItem("Capas internas CAD...", AppIcons.tableIcon());
+        itemCadInternalLayers.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            CadWorkflowSupport.openCadInternalLayers(CatgisDesktopApp.getMainFrameSafe(), layer);
+        });
+
         menuCad.add(itemContinuarLinea);
         menuCad.add(itemExtenderLinea);
         menuCad.add(itemAcortarLinea);
@@ -298,6 +340,10 @@ public class MainMenuBar extends JMenuBar {
         menuCad.add(itemRectangulo);
         menuCad.add(itemCirculo);
         menuCad.add(itemCirculo3P);
+        menuCad.addSeparator();
+        menuCad.add(itemCadGeoref);
+        menuCad.add(itemCadInternalLayers);
+        menuCad.add(itemCadIntegration);
 
         menuEdicion.add(itemCortar);
         menuEdicion.add(itemCopiar);
@@ -436,6 +482,10 @@ public class MainMenuBar extends JMenuBar {
         menuHerramientas.add(itemCalculadoraCampos);
         menuHerramientas.add(itemAsignarValor);
         menuHerramientas.add(itemConversor);
+        menuHerramientas.addSeparator();
+        menuHerramientas.add(itemEscorrentias);
+        menuHerramientas.add(itemAnalisisHidro);
+        menuHerramientas.add(itemCuencaOutlet);
 
         JMenuItem itemVentanaPrincipal = createItem("Traer CATGIS al frente", AppIcons.projectIcon());
         itemVentanaPrincipal.addActionListener(e -> {
@@ -676,7 +726,7 @@ public class MainMenuBar extends JMenuBar {
         g.fillRoundRect(2, 2, 12, 12, 3, 3);
         g.setColor(Color.WHITE);
         g.setFont(new Font("SansSerif", Font.BOLD, 11));
-        g.drawString("ÃƒÅ½Ã‚Â£", 4, 12);
+        g.drawString("=", 5, 12);
         g.dispose();
         return new ImageIcon(img);
     }
@@ -763,3 +813,4 @@ public class MainMenuBar extends JMenuBar {
         return new ImageIcon(img);
     }
 }
+

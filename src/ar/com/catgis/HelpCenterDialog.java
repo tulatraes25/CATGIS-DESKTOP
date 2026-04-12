@@ -15,13 +15,18 @@ import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
+import javax.swing.text.html.HTMLDocument;
+import javax.swing.text.html.HTMLEditorKit;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Window;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.net.URL;
 
 public class HelpCenterDialog extends JDialog {
 
@@ -88,19 +93,31 @@ public class HelpCenterDialog extends JDialog {
         title.setFont(title.getFont().deriveFont(Font.BOLD, 23f));
         title.setForeground(new Color(24, 39, 72));
 
-        JLabel subtitle = new JLabel(I18n.t("Guia rapida integrada para cargar datos, editar, consultar y producir mapas."));
+        JLabel subtitle = new JLabel(I18n.t("Guía rápida integrada para cargar datos, editar, consultar y producir mapas."));
         subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 12.5f));
         subtitle.setForeground(new Color(91, 102, 116));
 
-        JLabel note = new JLabel(I18n.t("Incluye flujos basicos, bloques clave de la interfaz y rutas cortas para trabajar mas rapido."));
+        JLabel note = new JLabel(I18n.t("Incluye flujos básicos, bloques clave de la interfaz y rutas cortas para trabajar más rápido."));
         note.setFont(note.getFont().deriveFont(Font.BOLD, 11.5f));
         note.setForeground(new Color(35, 120, 210));
+
+        JLabel release = new JLabel(CatgisAppInfo.getDisplayVersion());
+        release.setFont(release.getFont().deriveFont(Font.BOLD, 11.5f));
+        release.setForeground(new Color(24, 92, 180));
+
+        JLabel collaborator = new JLabel(CatgisAppInfo.getCollaboratorLine());
+        collaborator.setFont(collaborator.getFont().deriveFont(Font.PLAIN, 11.3f));
+        collaborator.setForeground(new Color(91, 102, 116));
 
         textPanel.add(title);
         textPanel.add(Box.createVerticalStrut(5));
         textPanel.add(subtitle);
         textPanel.add(Box.createVerticalStrut(6));
         textPanel.add(note);
+        textPanel.add(Box.createVerticalStrut(8));
+        textPanel.add(release);
+        textPanel.add(Box.createVerticalStrut(3));
+        textPanel.add(collaborator);
 
         panel.add(textPanel, BorderLayout.CENTER);
         return panel;
@@ -146,7 +163,7 @@ public class HelpCenterDialog extends JDialog {
         ));
         panel.setBackground(Color.WHITE);
 
-        JLabel footerLabel = new JLabel(I18n.t("Ayuda integrada para orientarte sin salir de la aplicacion."));
+        JLabel footerLabel = new JLabel(I18n.t("Ayuda integrada para orientarte sin salir de la aplicación."));
         footerLabel.setForeground(new Color(96, 106, 118));
         footerLabel.setFont(footerLabel.getFont().deriveFont(Font.PLAIN, 11.5f));
         panel.add(footerLabel, BorderLayout.WEST);
@@ -158,13 +175,24 @@ public class HelpCenterDialog extends JDialog {
     }
 
     private void updateTopicContent(HelpTopic topic) {
+        HTMLEditorKit editorKit = new HTMLEditorKit();
+        HTMLDocument document = (HTMLDocument) editorKit.createDefaultDocument();
+        URL helpBase = HelpCenterDialog.class.getResource("/help/");
+        if (helpBase != null) {
+            document.setBase(helpBase);
+        }
+        contentPane.setEditorKit(editorKit);
+        contentPane.setDocument(document);
         contentPane.setText(buildTopicHtml(topic));
         contentPane.setCaretPosition(0);
     }
 
     private String buildTopicHtml(HelpTopic topic) {
+        if (topic.rawHtml()) {
+            return topic.html();
+        }
         return "<html><body style='font-family:sans-serif; font-size:13px; color:#243146; padding:18px 22px;'>"
-                + "<div style='color:#2478d2; font-size:11px; font-weight:bold; letter-spacing:0.3px;'>" + escape(I18n.t("GUIA RAPIDA")) + "</div>"
+                + "<div style='color:#2478d2; font-size:11px; font-weight:bold; letter-spacing:0.3px;'>" + escape(I18n.t("GUÍA RÁPIDA")) + "</div>"
                 + "<h1 style='margin-top:6px; margin-bottom:4px; font-size:25px; color:#162544;'>" + escape(topic.title()) + "</h1>"
                 + "<div style='margin-bottom:18px; color:#617084; font-size:13px;'>" + escape(topic.subtitle()) + "</div>"
                 + topic.html()
@@ -174,8 +202,29 @@ public class HelpCenterDialog extends JDialog {
     private List<HelpTopic> buildTopics() {
         return List.of(
                 new HelpTopic(
-                        I18n.t("Que es CATGIS"),
-                        I18n.t("Resumen del enfoque de la aplicacion y sus bloques principales."),
+                        "Manual actualizado 2026",
+                        "Versión integrada del manual técnico de uso con glosario de iconos y flujos recomendados.",
+                        loadHelpHtmlResource("/help/CATGIS_Manual_Integrado_2026.html"),
+                        true
+                ),
+                new HelpTopic(
+                        "Estado de esta beta final",
+                        "Versión visible, ciclo de revisiones y créditos de la etapa de cierre.",
+                        section("Versión y cierre de release",
+                                bulletList(
+                                        "Versión visible actual: " + CatgisAppInfo.getDisplayVersion(),
+                                        "Versión técnica base: " + CatgisAppInfo.getBaseVersion(),
+                                        CatgisAppInfo.getRevisionCycleLine(),
+                                        CatgisAppInfo.getCollaboratorLine(),
+                                        CatgisAppInfo.getStatusLine()
+                                ),
+                                paragraph(CatgisAppInfo.getBetaFinalNote())
+                        ),
+                        false
+                ),
+                new HelpTopic(
+                        I18n.t("Qué es CATGIS"),
+                        I18n.t("Resumen del enfoque de la aplicación y sus bloques principales."),
                         section(I18n.t("Vision general"),
                                 paragraph(I18n.t("CATGIS Desktop es una aplicacion GIS de escritorio orientada a trabajo tecnico diario: carga de datos, edicion vectorial, servicios remotos, analisis visual y composicion cartografica.")),
                                 bulletList(
@@ -185,7 +234,8 @@ public class HelpCenterDialog extends JDialog {
                                         I18n.t("Base modular mantenible para seguir creciendo.")
                                 ),
                                 paragraph(I18n.t("La idea es que puedas concentrar en una misma herramienta tareas que normalmente se reparten entre varios programas."))
-                        )
+                        ),
+                        false
                 ),
                 new HelpTopic(
                         I18n.t("Cargar capas y proyectos"),
@@ -203,7 +253,8 @@ public class HelpCenterDialog extends JDialog {
                                                 I18n.t("Mapas base online: OpenStreetMap y Esri World Imagery.")
                                         )
                                 )
-                        )
+                        ),
+                        false
                 ),
                 new HelpTopic(
                         I18n.t("Orden y gestion de capas"),
@@ -216,7 +267,8 @@ public class HelpCenterDialog extends JDialog {
                                         I18n.t("Selecciona una capa para abrir su tabla, simbologia o consultas."),
                                         I18n.t("Mantiene el orden al guardar y reabrir el proyecto.")
                                 )
-                        )
+                        ),
+                        false
                 ),
                 new HelpTopic(
                         I18n.t("Edicion vectorial y snapping"),
@@ -235,7 +287,8 @@ public class HelpCenterDialog extends JDialog {
                                                 I18n.t("Guarda la edicion cuando termines para llevar los cambios a disco.")
                                         )
                                 )
-                        )
+                        ),
+                        false
                 ),
                 new HelpTopic(
                         I18n.t("Datos remotos y conexiones online"),
@@ -252,7 +305,8 @@ public class HelpCenterDialog extends JDialog {
                                                 I18n.t("GeoPackage y PostGIS: fuentes estructuradas para seguir ampliando el trabajo GIS.")
                                         )
                                 )
-                        )
+                        ),
+                        false
                 ),
                 new HelpTopic(
                         I18n.t("Composicion cartografica"),
@@ -270,7 +324,8 @@ public class HelpCenterDialog extends JDialog {
                                                 I18n.t("Ajusta el layout para aprovechar mejor el espacio del mapa.")
                                         )
                                 )
-                        )
+                        ),
+                        false
                 ),
                 new HelpTopic(
                         I18n.t("Flujo rapido y atajos"),
@@ -293,9 +348,37 @@ public class HelpCenterDialog extends JDialog {
                                                 I18n.t("F1 abre este panel de ayuda.")
                                         )
                                 )
-                        )
+                        ),
+                        false
                 )
         );
+    }
+
+    private String loadHelpHtmlResource(String resourcePath) {
+        if (resourcePath == null || resourcePath.isBlank()) {
+            return buildMissingManualHtml("No se definio un recurso de ayuda para esta seccion.");
+        }
+        try (InputStream in = HelpCenterDialog.class.getResourceAsStream(resourcePath)) {
+            if (in == null) {
+                return buildMissingManualHtml("No se encontro el recurso de ayuda: " + resourcePath);
+            }
+            byte[] bytes = in.readAllBytes();
+            return new String(bytes, StandardCharsets.UTF_8);
+        } catch (Exception ex) {
+            return buildMissingManualHtml("No se pudo cargar el recurso de ayuda: " + resourcePath + ". " + ex.getMessage());
+        }
+    }
+
+    private String buildMissingManualHtml(String reason) {
+        return "<html><body style='font-family:sans-serif; font-size:13px; color:#243146; padding:18px 22px;'>"
+                + "<h1 style='margin-top:4px; margin-bottom:10px; font-size:25px; color:#162544;'>Manual integrado no disponible</h1>"
+                + "<p style='line-height:1.58; margin:8px 0 10px 0;'>"
+                + escape(reason)
+                + "</p>"
+                + "<p style='line-height:1.58; margin:8px 0 10px 0;'>"
+                + escape("La ayuda rapida sigue disponible en las demas secciones del HelpCenter.")
+                + "</p>"
+                + "</body></html>";
     }
 
     private String section(String title, String... blocks) {
@@ -329,7 +412,7 @@ public class HelpCenterDialog extends JDialog {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    private record HelpTopic(String title, String subtitle, String html) {
+    private record HelpTopic(String title, String subtitle, String html, boolean rawHtml) {
         @Override
         public String toString() {
             return title;

@@ -1,6 +1,7 @@
 package ar.com.catgis;
 
 import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.FeatureIterator;
 import org.geotools.geojson.feature.FeatureJSON;
@@ -48,8 +49,16 @@ public class GeoJsonLoader {
         }
 
         FeatureJSON featureJSON = new FeatureJSON();
-        SimpleFeatureCollection featureCollection;
+        SimpleFeatureType detectedType = null;
+        try (FileReader reader = new FileReader(file)) {
+            detectedType = featureJSON.readFeatureCollectionSchema(reader, true);
+        } catch (Exception ignored) {
+        }
+        if (detectedType != null) {
+            featureJSON.setFeatureType(detectedType);
+        }
 
+        SimpleFeatureCollection featureCollection;
         try (FileReader reader = new FileReader(file)) {
             featureCollection = (SimpleFeatureCollection) featureJSON.readFeatureCollection(reader);
         }

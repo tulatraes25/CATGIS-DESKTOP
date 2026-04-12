@@ -43,6 +43,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.HeadlessException;
 import java.awt.Paint;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
@@ -55,9 +56,12 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.io.File;
+import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -78,6 +82,8 @@ public class MapPanel extends JPanel {
     private final Map<Layer, RasterStyle> rasterStyles = new LinkedHashMap<>();
     private final Map<Layer, CachedRasterDisplay> rasterDisplayCache = new LinkedHashMap<>();
     private final GeometryFactory selectionGeometryFactory = new GeometryFactory();
+    private boolean onlineResolutionNoticeVisible = false;
+    private String onlineResolutionNotice = "";
 
     private final List<PinMarker> pins = new ArrayList<>();
     private int nextPinId = 1;
@@ -112,6 +118,9 @@ public class MapPanel extends JPanel {
 
     private boolean dragging = false;
     private boolean draggingPin = false;
+    private boolean temporaryMiddlePanActive = false;
+    private boolean temporaryMiddlePanMoved = false;
+    private boolean layoutRenderMode = false;
     private int lastMouseX;
     private int lastMouseY;
 
@@ -174,6 +183,11 @@ public class MapPanel extends JPanel {
     private boolean topographicProfileCaptureActive = false;
     private final List<Coordinate> topographicProfileCaptureCoordinates = new ArrayList<>();
     private TopographicProfileCaptureHandler topographicProfileCaptureHandler = null;
+    private boolean pointCaptureActive = false;
+    private MapPointCaptureHandler pointCaptureHandler = null;
+    private String pointCaptureStartMessage = I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
+    private String pointCaptureSuccessMessage = I18n.t("Pour point capturado.");
+    private String pointCaptureCancelMessage = I18n.t("Captura de pour point cancelada.");
     private boolean snapEnabled = true;
     private Coordinate snapPreviewCoordinate = null;
     private final Timer selectionFlashTimer;
@@ -181,6 +195,12 @@ public class MapPanel extends JPanel {
     public MapPanel() {
         setBackground(Color.WHITE);
         configureKeyboardShortcuts();
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                refreshStatusBarScale();
+            }
+        });
         selectionFlashTimer = new Timer(33, e -> {
             if (selectionFlashGeometry == null
                     || (System.currentTimeMillis() - selectionFlashStartedAt) > SELECTION_FLASH_DURATION_MS) {
@@ -195,6 +215,16 @@ public class MapPanel extends JPanel {
 
             @Override
             public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isMiddleMouseButton(e)) {
+                    beginTemporaryMiddlePan(e);
+                    return;
+                }
+                if (pointCaptureActive) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        cancelPointCapture();
+                    }
+                    return;
+                }
                 if (topographicProfileCaptureActive) {
                     if (SwingUtilities.isRightMouseButton(e)) {
                         cancelTopographicProfileCapture();
@@ -277,6 +307,14 @@ public class MapPanel extends JPanel {
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                if (temporaryMiddlePanActive && SwingUtilities.isMiddleMouseButton(e)) {
+                    finishTemporaryMiddlePan();
+                    return;
+                }
+                if (pointCaptureActive) {
+                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+                    return;
+                }
                 if (topographicProfileCaptureActive) {
                     setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
                     return;
@@ -336,21 +374,12 @@ public class MapPanel extends JPanel {
                 if (dragging && ("MOVE".equalsIgnoreCase(currentTool))) {
                     rememberViewState(dragStartViewMinX, dragStartViewMinY, zoomFactor);
                     rememberCurrentView();
+                    refreshStatusBarScale();
                 }
 
                 dragging = false;
 
-                if (isDrawingActive() || isMeasurementActive()) {
-                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-                } else if ("MOVE".equalsIgnoreCase(currentTool)) {
-                    setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-                } else if ("IDENTIFY".equalsIgnoreCase(currentTool)) {
-                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-                } else if ("SELECT".equalsIgnoreCase(currentTool)) {
-                    setCursor(featureEditMode ? resolveFeatureEditCursor() : Cursor.getDefaultCursor());
-                } else {
-                    setCursor(Cursor.getDefaultCursor());
-                }
+                applyCursorForCurrentMode();
             }
 
             @Override
@@ -358,6 +387,11 @@ public class MapPanel extends JPanel {
                 updateStatusCoordinates(e.getX(), e.getY());
 
                 updateHoverAndSnap(e.getX(), e.getY());
+
+                if (temporaryMiddlePanActive) {
+                    dragViewTemporarily(e);
+                    return;
+                }
 
                 if (topographicProfileCaptureActive) {
                     repaint();
@@ -415,6 +449,12 @@ public class MapPanel extends JPanel {
                 updateStatusCoordinates(e.getX(), e.getY());
 
                 updateHoverAndSnap(e.getX(), e.getY());
+
+                if (pointCaptureActive) {
+                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+                    repaint();
+                    return;
+                }
 
                 if (topographicProfileCaptureActive) {
                     setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
@@ -474,6 +514,18 @@ public class MapPanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 if (suppressNextSelectClick) {
                     suppressNextSelectClick = false;
+                    return;
+                }
+
+                if (pointCaptureActive) {
+                    if (SwingUtilities.isRightMouseButton(e)) {
+                        cancelPointCapture();
+                        return;
+                    }
+                    if (SwingUtilities.isLeftMouseButton(e)) {
+                        Coordinate coordinate = resolveInteractiveCoordinate(e.getX(), e.getY(), false);
+                        finishPointCapture(coordinate);
+                    }
                     return;
                 }
 
@@ -605,24 +657,33 @@ public class MapPanel extends JPanel {
     }
 
     private void configureKeyboardShortcuts() {
-        int shortcutMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        int shortcutMask;
+        try {
+            shortcutMask = java.awt.GraphicsEnvironment.isHeadless()
+                    ? InputEvent.CTRL_DOWN_MASK
+                    : Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        } catch (HeadlessException ex) {
+            shortcutMask = InputEvent.CTRL_DOWN_MASK;
+        }
 
         getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "cancelSketchOrMeasurement");
         getActionMap().put("cancelSketchOrMeasurement", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (topographicProfileCaptureActive) {
+                if (pointCaptureActive) {
+                    cancelPointCapture();
+                } else if (topographicProfileCaptureActive) {
                     cancelTopographicProfileCapture();
                 } else if (featureEditMode && !featureEditSketchCoordinates.isEmpty()) {
                     featureEditSketchCoordinates.clear();
                     repaint();
-                    showCopiedMessage("Boceto de ediciÃƒÂ³n cancelado.");
+                    showCopiedMessage("Boceto de edición cancelado.");
                 } else if (isDrawingActive()) {
                     cancelCurrentDrawing();
                     showCopiedMessage("Dibujo cancelado.");
                 } else if (isMeasurementActive()) {
                     cancelCurrentMeasurement();
-                    showCopiedMessage("MediciÃƒÂ³n cancelada.");
+                    showCopiedMessage("Medición cancelada.");
                 }
             }
         });
@@ -847,7 +908,7 @@ public class MapPanel extends JPanel {
     private void zoomToSelectedLayer() {
         Layer layer = (CatgisDesktopApp.layersPanel != null) ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Primero seleccionÃƒÂ¡ una capa en el panel de capas.");
+            JOptionPane.showMessageDialog(this, "Primero seleccioná una capa en el panel de capas.");
             return;
         }
         zoomToLayer(layer);
@@ -863,20 +924,60 @@ public class MapPanel extends JPanel {
 
     public void setTool(String tool) {
         this.currentTool = tool;
+        applyCursorForCurrentMode();
+        CatgisDesktopApp.syncFloatingVectorEditToolbar();
+    }
 
-        if (isDrawingActive() || isMeasurementActive()) {
-            setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        } else if ("MOVE".equalsIgnoreCase(tool)) {
+    private void applyCursorForCurrentMode() {
+        if (temporaryMiddlePanActive) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if ("IDENTIFY".equalsIgnoreCase(tool)) {
+            return;
+        }
+        if (pointCaptureActive || topographicProfileCaptureActive || isDrawingActive() || isMeasurementActive()) {
             setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        } else if ("SELECT".equalsIgnoreCase(tool)) {
+        } else if ("MOVE".equalsIgnoreCase(currentTool)) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        } else if ("IDENTIFY".equalsIgnoreCase(currentTool)) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+        } else if ("SELECT".equalsIgnoreCase(currentTool)) {
             setCursor(resolveFeatureEditCursor());
         } else {
             setCursor(Cursor.getDefaultCursor());
         }
+    }
 
-        CatgisDesktopApp.syncFloatingVectorEditToolbar();
+    private void beginTemporaryMiddlePan(MouseEvent e) {
+        temporaryMiddlePanActive = true;
+        temporaryMiddlePanMoved = false;
+        dragStartViewMinX = viewMinX;
+        dragStartViewMinY = viewMinY;
+        lastMouseX = e.getX();
+        lastMouseY = e.getY();
+        setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+    }
+
+    private void dragViewTemporarily(MouseEvent e) {
+        int dx = e.getX() - lastMouseX;
+        int dy = e.getY() - lastMouseY;
+        if (dx != 0 || dy != 0) {
+            viewMinX -= dx / zoomFactor;
+            viewMinY += dy / zoomFactor;
+            lastMouseX = e.getX();
+            lastMouseY = e.getY();
+            temporaryMiddlePanMoved = true;
+        }
+        repaint();
+    }
+
+    private void finishTemporaryMiddlePan() {
+        if (temporaryMiddlePanMoved) {
+            rememberViewState(dragStartViewMinX, dragStartViewMinY, zoomFactor);
+            rememberCurrentView();
+        }
+        temporaryMiddlePanActive = false;
+        temporaryMiddlePanMoved = false;
+        refreshStatusBarScale();
+        applyCursorForCurrentMode();
     }
 
     private void refreshEditingUi() {
@@ -932,7 +1033,7 @@ public class MapPanel extends JPanel {
         SnapTarget bestTarget = null;
         Coordinate target = new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
         for (Layer layer : getSnapCandidateLayers()) {
-            if (layer == null || !layer.isVisible()) {
+            if (layer == null || !isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
@@ -943,6 +1044,9 @@ public class MapPanel extends JPanel {
 
             for (SimpleFeature feature : data.getFeatures()) {
                 if (feature == null) {
+                    continue;
+                }
+                if (!isFeatureVisibleInLayer(layer, feature)) {
                     continue;
                 }
                 if (excludeSelectedFeature && layer == selectedLayer && sameFeatureId(feature, selectedFeature != null ? selectedFeature.getID() : null)) {
@@ -1016,7 +1120,7 @@ public class MapPanel extends JPanel {
             return candidates;
         }
         for (Layer layer : getRenderOrderLayers()) {
-            if (layer != null && shapefileLayers.containsKey(layer) && layer.isVisible()) {
+            if (layer != null && shapefileLayers.containsKey(layer) && isLayerEffectivelyVisible(layer)) {
                 candidates.add(layer);
             }
         }
@@ -1309,12 +1413,12 @@ public class MapPanel extends JPanel {
 
         String layerName = selectedLayer != null ? selectedLayer.getName() : "la capa actual";
         Object[] options = {"Guardar", "Descartar", "Cancelar"};
-        String message = "Hay cambios sin guardar en la entidad en ediciÃƒÂ³n de " + layerName + ".\n"
-                + "Ã‚Â¿QuerÃƒÂ©s guardarlos antes de " + nextActionDescription + "?";
+        String message = "Hay cambios sin guardar en la entidad en edición de " + layerName + ".\n"
+                + "¿Querés guardarlos antes de " + nextActionDescription + "?";
         int choice = JOptionPane.showOptionDialog(
                 this,
                 message,
-                "Cambios en ediciÃƒÂ³n",
+                "Cambios en edición",
                 JOptionPane.YES_NO_CANCEL_OPTION,
                 JOptionPane.WARNING_MESSAGE,
                 null,
@@ -1372,7 +1476,7 @@ public class MapPanel extends JPanel {
 
         List<String> normalizedIds = normalizeSelectionIds(layer, featureIds);
         if (normalizedIds.isEmpty()) {
-            if (promptOnDirty && !confirmPendingFeatureEdit("cambiar la selecciÃƒÂ³n")) {
+            if (promptOnDirty && !confirmPendingFeatureEdit("cambiar la selección")) {
                 return false;
             }
             clearSelectedFeatureInternal(syncOpenTables);
@@ -1392,7 +1496,7 @@ public class MapPanel extends JPanel {
             return true;
         }
 
-        if (promptOnDirty && !confirmPendingFeatureEdit("cambiar la selecciÃƒÂ³n")) {
+        if (promptOnDirty && !confirmPendingFeatureEdit("cambiar la selección")) {
             return false;
         }
 
@@ -1492,7 +1596,7 @@ public class MapPanel extends JPanel {
             return;
         }
         boolean sameSelection = layer == selectedLayer && feature == selectedFeature && featureEditMode;
-        if (!sameSelection && !confirmPendingFeatureEdit("cambiar de entidad en ediciÃƒÂ³n")) {
+        if (!sameSelection && !confirmPendingFeatureEdit("cambiar de entidad en edición")) {
             return;
         }
         activeVectorEditingLayer = layer;
@@ -1549,7 +1653,7 @@ public class MapPanel extends JPanel {
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Mover vÃƒÂ©rtices sÃƒÂ³lo funciona sobre lÃƒÂ­neas o polÃƒÂ­gonos.");
+            JOptionPane.showMessageDialog(this, "Mover vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         featureEditOperation = EDIT_OP_MOVE_VERTEX;
@@ -1558,7 +1662,7 @@ public class MapPanel extends JPanel {
         clearAdjacentPolygonState();
         clearCadConstructionState();
         setTool("SELECT");
-        showCopiedMessage("Modo mover vÃƒÂ©rtice activo.");
+        showCopiedMessage("Modo mover vértice activo.");
         refreshEditingUi();
     }
 
@@ -1577,7 +1681,7 @@ public class MapPanel extends JPanel {
         clearAdjacentPolygonState();
         clearCadConstructionState();
         setTool("SELECT");
-        showCopiedMessage("Modo mover elementos activo. ArrastrÃƒÂ¡ una entidad seleccionada.");
+        showCopiedMessage("Modo mover elementos activo. Arrastrá una entidad seleccionada.");
         refreshEditingUi();
     }
 
@@ -1586,7 +1690,7 @@ public class MapPanel extends JPanel {
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Agregar vÃƒÂ©rtices sÃƒÂ³lo funciona sobre lÃƒÂ­neas o polÃƒÂ­gonos.");
+            JOptionPane.showMessageDialog(this, "Agregar vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         featureEditOperation = EDIT_OP_ADD_VERTEX;
@@ -1595,7 +1699,7 @@ public class MapPanel extends JPanel {
         clearAdjacentPolygonState();
         clearCadConstructionState();
         setTool("SELECT");
-        showCopiedMessage("Modo agregar vÃƒÂ©rtice activo. HacÃƒÂ© clic o arrastrÃƒÂ¡ una caja sobre un tramo.");
+        showCopiedMessage("Modo agregar vértice activo. Hacé clic o arrastrá una caja sobre un tramo.");
         refreshEditingUi();
     }
 
@@ -1604,7 +1708,7 @@ public class MapPanel extends JPanel {
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Eliminar vÃƒÂ©rtices sÃƒÂ³lo funciona sobre lÃƒÂ­neas o polÃƒÂ­gonos.");
+            JOptionPane.showMessageDialog(this, "Eliminar vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         featureEditOperation = EDIT_OP_REMOVE_VERTEX;
@@ -1613,7 +1717,7 @@ public class MapPanel extends JPanel {
         clearAdjacentPolygonState();
         clearCadConstructionState();
         setTool("SELECT");
-        showCopiedMessage("Modo eliminar vÃƒÂ©rtice activo. HacÃƒÂ© clic o arrastrÃƒÂ¡ una caja para quitar uno o varios vÃƒÂ©rtices.");
+        showCopiedMessage("Modo eliminar vértice activo. Hacé clic o arrastrá una caja para quitar uno o varios vértices.");
         refreshEditingUi();
     }
 
@@ -1622,7 +1726,7 @@ public class MapPanel extends JPanel {
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Unir vÃƒÂ©rtices sÃƒÂ³lo funciona sobre lÃƒÂ­neas o polÃƒÂ­gonos.");
+            JOptionPane.showMessageDialog(this, "Unir vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         featureEditOperation = EDIT_OP_JOIN_VERTEX;
@@ -1632,7 +1736,7 @@ public class MapPanel extends JPanel {
         clearAdjacentPolygonState();
         clearCadConstructionState();
         setTool("SELECT");
-        showCopiedMessage("Modo unir vÃƒÂ©rtices activo. ElegÃƒÂ­ un vÃƒÂ©rtice base y despuÃƒÂ©s otro vÃƒÂ©rtice o un rectÃƒÂ¡ngulo.");
+        showCopiedMessage("Modo unir vértices activo. Elegí un vértice base y después otro vértice o un rectángulo.");
         refreshEditingUi();
     }
 
@@ -1641,7 +1745,7 @@ public class MapPanel extends JPanel {
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Cortar geometrÃ­a sÃƒÂ³lo funciona sobre lÃƒÂ­neas o polÃƒÂ­gonos.");
+            JOptionPane.showMessageDialog(this, "Cortar geometría sólo funciona sobre líneas o polígonos.");
             return;
         }
         featureEditOperation = EDIT_OP_CUT;
@@ -1651,8 +1755,8 @@ public class MapPanel extends JPanel {
         clearCadConstructionState();
         setTool("SELECT");
         String hint = isSelectedFeaturePolygonal()
-                ? "Modo cortar activo. DibujÃƒÂ¡ la lÃƒÂ­nea de corte y terminÃƒÂ¡ con doble clic."
-                : "Modo cortar activo. HacÃƒÂ© clic sobre la lÃƒÂ­nea en el punto donde querÃƒÂ©s cortarla.";
+                ? "Modo cortar activo. Dibujá la línea de corte y terminá con doble clic."
+                : "Modo cortar activo. Hacé clic sobre la línea en el punto donde querés cortarla.";
         showCopiedMessage(hint);
         refreshEditingUi();
     }
@@ -1662,7 +1766,7 @@ public class MapPanel extends JPanel {
             return;
         }
         if (!isSelectedFeaturePolygonal()) {
-            JOptionPane.showMessageDialog(this, "La opciÃƒÂ³n agujero solo funciona sobre polÃƒÂ­gonos.");
+            JOptionPane.showMessageDialog(this, "La opción agujero solo funciona sobre polígonos.");
             return;
         }
         featureEditOperation = EDIT_OP_HOLE;
@@ -1671,7 +1775,7 @@ public class MapPanel extends JPanel {
         clearAdjacentPolygonState();
         clearCadConstructionState();
         setTool("SELECT");
-        showCopiedMessage("Modo agujero activo. DibujÃƒÂ¡ el polÃƒÂ­gono interior y terminÃƒÂ¡ con doble clic.");
+        showCopiedMessage("Modo agujero activo. Dibujá el polígono interior y terminá con doble clic.");
         refreshEditingUi();
     }
 
@@ -1814,7 +1918,7 @@ public class MapPanel extends JPanel {
         if (!featureEditMode && activeVectorEditingLayer == null) {
             return;
         }
-        if (!confirmPendingFeatureEdit("salir de la ediciÃƒÂ³n")) {
+        if (!confirmPendingFeatureEdit("salir de la edición")) {
             return;
         }
 
@@ -1849,14 +1953,14 @@ public class MapPanel extends JPanel {
         clearCadConstructionState();
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Cambios geomÃƒÂ©tricos guardados en la sesiÃƒÂ³n del proyecto.");
+            CatgisDesktopApp.statusBar.setMessage("Cambios geométricos guardados en la sesión del proyecto.");
         }
         refreshEditingUi();
         return true;
     }
 
     public void cancelFeatureEdit() {
-        if (!confirmPendingFeatureEdit("cancelar la ediciÃƒÂ³n")) {
+        if (!confirmPendingFeatureEdit("cancelar la edición")) {
             return;
         }
         restoreFeatureEditOriginalGeometry();
@@ -1885,7 +1989,7 @@ public class MapPanel extends JPanel {
         drawingContinuationLayer = null;
         drawingContinuationFeatureId = null;
         setTool("DRAW");
-        showCopiedMessage("Modo dibujo puntos activo. HacÃƒÂ© varios clics. Clic derecho para terminar y Escape para cancelar.");
+        showCopiedMessage("Modo dibujo puntos activo. Hacé varios clics. Clic derecho para terminar y Escape para cancelar.");
         repaint();
     }
 
@@ -1896,7 +2000,7 @@ public class MapPanel extends JPanel {
         drawingContinuationLayer = null;
         drawingContinuationFeatureId = null;
         setTool("DRAW");
-        showCopiedMessage("Modo dibujo multipunto activo. HacÃƒÂ© varios clics. Clic derecho para terminar y Escape para cancelar.");
+        showCopiedMessage("Modo dibujo multipunto activo. Hacé varios clics. Clic derecho para terminar y Escape para cancelar.");
         repaint();
     }
 
@@ -1907,7 +2011,7 @@ public class MapPanel extends JPanel {
         drawingContinuationLayer = null;
         drawingContinuationFeatureId = null;
         setTool("DRAW");
-        showCopiedMessage("Modo dibujo lÃƒÂ­nea activo. Clic para vÃƒÂ©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
+        showCopiedMessage("Modo dibujo línea activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
@@ -1917,13 +2021,13 @@ public class MapPanel extends JPanel {
             return;
         }
         if (selectedLayer == null || selectedFeature == null) {
-            JOptionPane.showMessageDialog(this, "Primero seleccionÃ¡ una lÃ­nea para continuar.");
+            JOptionPane.showMessageDialog(this, "Primero seleccioná una línea para continuar.");
             return;
         }
 
         Coordinate[] baseCoordinates = extractContinuableLineCoordinates(extractFeatureGeometryCopy(selectedFeature));
         if (baseCoordinates == null || baseCoordinates.length < 2) {
-            JOptionPane.showMessageDialog(this, "La entidad seleccionada no es una lÃ­nea continua compatible.");
+            JOptionPane.showMessageDialog(this, "La entidad seleccionada no es una línea continua compatible.");
             return;
         }
 
@@ -1942,7 +2046,7 @@ public class MapPanel extends JPanel {
         drawingContinuationFeatureId = selectedFeature.getID();
         drawingSessionLayer = selectedLayer;
         setTool("DRAW");
-        showCopiedMessage("ContinuaciÃ³n de lÃ­nea activa. AgregÃ¡ vÃ©rtices y terminÃ¡ con doble clic o clic derecho.");
+        showCopiedMessage("Continuación de línea activa. Agregá vértices y terminá con doble clic o clic derecho.");
         repaint();
     }
 
@@ -1953,7 +2057,7 @@ public class MapPanel extends JPanel {
         drawingContinuationLayer = null;
         drawingContinuationFeatureId = null;
         setTool("DRAW");
-        showCopiedMessage("Modo rectÃ¡ngulo activo. MarcÃ¡ la primera esquina y luego la opuesta.");
+        showCopiedMessage("Modo rectángulo activo. Marcá la primera esquina y luego la opuesta.");
         repaint();
     }
 
@@ -1988,7 +2092,7 @@ public class MapPanel extends JPanel {
         drawingContinuationLayer = null;
         drawingContinuationFeatureId = null;
         setTool("DRAW");
-        showCopiedMessage("Modo dibujo polÃƒÂ­gono activo. Clic para vÃƒÂ©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
+        showCopiedMessage("Modo dibujo polígono activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
@@ -1997,7 +2101,7 @@ public class MapPanel extends JPanel {
         measurementMode = "DISTANCE";
         measurementCoordinates.clear();
         setTool("MEASURE");
-        showCopiedMessage("Modo medir distancia activo. Clic para vÃƒÂ©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
+        showCopiedMessage("Modo medir distancia activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
@@ -2006,7 +2110,7 @@ public class MapPanel extends JPanel {
         measurementMode = "AREA";
         measurementCoordinates.clear();
         setTool("MEASURE");
-        showCopiedMessage("Modo medir ÃƒÂ¡rea activo. Clic para vÃƒÂ©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
+        showCopiedMessage("Modo medir área activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
@@ -2150,8 +2254,8 @@ public class MapPanel extends JPanel {
                 return geometry;
             }
 
-            CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRS.decode(targetMetricCode, true);
+            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
+            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetMetricCode, true);
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
 
             return JTS.transform(geometry, transform);
@@ -2206,10 +2310,10 @@ public class MapPanel extends JPanel {
             if ("CONTINUE_LINE".equalsIgnoreCase(drawingMode)) {
                 Geometry continuationGeometry = buildContinuationLineGeometry();
                 if (continuationGeometry == null) {
-                    JOptionPane.showMessageDialog(this, "Para continuar la lÃ­nea necesitÃ¡s agregar al menos un vÃ©rtice nuevo.");
+                    JOptionPane.showMessageDialog(this, "Para continuar la línea necesitás agregar al menos un vértice nuevo.");
                     return;
                 }
-                updateSelectedFeatureGeometry(continuationGeometry, "LÃ­nea continuada.");
+                updateSelectedFeatureGeometry(continuationGeometry, "Línea continuada.");
                 cancelCurrentDrawing();
                 return;
             }
@@ -2233,13 +2337,13 @@ public class MapPanel extends JPanel {
             if (targetLayer == null) {
                 int choice = JOptionPane.showConfirmDialog(
                         this,
-                        "No hay una capa vectorial editable compatible para este dibujo.\n\nÃ‚Â¿QuerÃƒÂ©s crearla ahora?",
+                        "No hay una capa vectorial editable compatible para este dibujo.\n\n¿Querés crearla ahora?",
                         "Crear capa destino",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE
                 );
                 if (choice != JOptionPane.YES_OPTION) {
-                    showCopiedMessage("SeleccionÃƒÂ¡ o creÃƒÂ¡ una capa compatible para guardar el dibujo.");
+                    showCopiedMessage("Seleccioná o creá una capa compatible para guardar el dibujo.");
                     return;
                 }
 
@@ -2274,7 +2378,7 @@ public class MapPanel extends JPanel {
             repaint();
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al agregar la geometrÃƒÂ­a a la capa: " + ex.getMessage());
+            JOptionPane.showMessageDialog(this, "Error al agregar la geometría a la capa: " + ex.getMessage());
         }
     }
 
@@ -2529,7 +2633,7 @@ public class MapPanel extends JPanel {
 
         if ("POINT".equalsIgnoreCase(drawingMode) || "MULTIPOINT".equalsIgnoreCase(drawingMode)) {
             if (drawingCoordinates.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Para crear puntos necesitÃƒÂ¡s hacer clic en el mapa.");
+                JOptionPane.showMessageDialog(this, "Para crear puntos necesitás hacer clic en el mapa.");
                 return geometries;
             }
 
@@ -2551,7 +2655,7 @@ public class MapPanel extends JPanel {
         if ("LINE".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = DrawFeatureBuilder.buildLine(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(this, "Para una lÃ­nea necesitÃ¡s al menos 2 vÃ©rtices.");
+                JOptionPane.showMessageDialog(this, "Para una línea necesitás al menos 2 vértices.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -2561,7 +2665,7 @@ public class MapPanel extends JPanel {
         if ("RECTANGLE".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = buildRectangleGeometry(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(this, "Para un rectÃ¡ngulo necesitÃ¡s marcar dos esquinas opuestas.");
+                JOptionPane.showMessageDialog(this, "Para un rectángulo necesitás marcar dos esquinas opuestas.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -2571,7 +2675,7 @@ public class MapPanel extends JPanel {
         if ("POLYGON".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = DrawFeatureBuilder.buildPolygon(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(this, "Para un polÃ­gono necesitÃ¡s al menos 3 vÃ©rtices.");
+                JOptionPane.showMessageDialog(this, "Para un polígono necesitás al menos 3 vértices.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -2913,6 +3017,69 @@ public class MapPanel extends JPanel {
         rememberCurrentView();
     }
 
+    public void applyRequestedScale(String input) {
+        Double targetDenominator = parseScaleDenominator(input);
+        if (targetDenominator == null || targetDenominator <= 0d) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Introduce una escala valida. Ejemplo: 1:5000",
+                    "Escala de vista",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        double currentDenominator = getCurrentScaleDenominator();
+        if (currentDenominator <= 0d) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No se pudo calcular la escala actual de la vista.",
+                    "Escala de vista",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        rememberCurrentView();
+        double factor = currentDenominator / targetDenominator;
+        applyZoom(factor, Math.max(1, getWidth() / 2), Math.max(1, getHeight() / 2));
+        rememberCurrentView();
+        if (CatgisDesktopApp.statusBar != null) {
+            String scaleText = formatScaleDenominator(targetDenominator);
+            CatgisDesktopApp.statusBar.forceScaleText(scaleText);
+            CatgisDesktopApp.statusBar.setMessage("Escala de vista ajustada a " + scaleText + ".");
+        }
+    }
+
+    public void refreshStatusBarScale() {
+        if (CatgisDesktopApp.statusBar == null) {
+            return;
+        }
+        double denominator = getCurrentScaleDenominator();
+        CatgisDesktopApp.statusBar.setScaleText(formatScaleDenominator(denominator));
+        CatgisDesktopApp.statusBar.setScaleToolTip(buildScaleTooltip(denominator));
+    }
+
+    public double getCurrentScaleDenominator() {
+        if (zoomFactor <= 0d || getWidth() <= 0 || !hasLoadedMapContent()) {
+            return 0d;
+        }
+
+        int screenDpi = safeScreenDpi();
+        double metersPerProjectUnit = estimateMetersPerProjectUnit();
+        if (metersPerProjectUnit <= 0d) {
+            return 0d;
+        }
+
+        double groundMetersPerPixel = metersPerProjectUnit / zoomFactor;
+        double screenMetersPerPixel = 0.0254d / Math.max(1, screenDpi);
+        double denominator = groundMetersPerPixel / screenMetersPerPixel;
+        if (Double.isFinite(denominator) && denominator > 0d) {
+            return denominator;
+        }
+        return 0d;
+    }
+
     public void showShapefile(Layer layer, ShapefileData data) {
         if (layer == null || data == null) {
             return;
@@ -2954,6 +3121,12 @@ public class MapPanel extends JPanel {
     public void addOrUpdateRasterLayer(Layer layer, LocalRasterData data) {
         if (layer == null || data == null) {
             return;
+        }
+
+        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String operationalCrs = RasterCoverageSupport.resolveOperationalRasterCrs(data, projectCrs);
+        if (data.isGeoreferenced() && operationalCrs != null && !operationalCrs.isBlank()) {
+            layer.setSourceCRS(operationalCrs);
         }
 
         boolean wasEmpty = shapefileLayers.isEmpty() && rasterLayers.isEmpty() && onlineTileLayers.isEmpty() && onlineWmsLayers.isEmpty();
@@ -3023,7 +3196,7 @@ public class MapPanel extends JPanel {
         if (handler == null) {
             return;
         }
-        if (isDrawingActive() || isMeasurementActive()) {
+        if (isDrawingActive() || isMeasurementActive() || pointCaptureActive) {
             JOptionPane.showMessageDialog(this, I18n.t("Termina o cancela el dibujo/medicion actual antes de capturar un perfil."));
             return;
         }
@@ -3036,6 +3209,79 @@ public class MapPanel extends JPanel {
             CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
         }
         repaint();
+    }
+
+    public void startPointCapture(MapPointCaptureHandler handler) {
+        startPointCapture(
+                handler,
+                I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar."),
+                I18n.t("Pour point capturado."),
+                I18n.t("Captura de pour point cancelada.")
+        );
+    }
+
+    public void startPointCapture(MapPointCaptureHandler handler,
+                                  String startMessage,
+                                  String successMessage,
+                                  String cancelMessage) {
+        if (handler == null) {
+            return;
+        }
+        if (isDrawingActive() || isMeasurementActive() || topographicProfileCaptureActive) {
+            JOptionPane.showMessageDialog(this, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de capturar un punto en el mapa."));
+            return;
+        }
+        pointCaptureHandler = handler;
+        pointCaptureActive = true;
+        pointCaptureStartMessage = startMessage != null && !startMessage.isBlank()
+                ? startMessage
+                : I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
+        pointCaptureSuccessMessage = successMessage != null && !successMessage.isBlank()
+                ? successMessage
+                : I18n.t("Pour point capturado.");
+        pointCaptureCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
+                ? cancelMessage
+                : I18n.t("Captura de pour point cancelada.");
+        requestFocusInWindow();
+        setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage(pointCaptureStartMessage);
+        }
+        repaint();
+    }
+
+    public void cancelPointCapture() {
+        MapPointCaptureHandler handler = pointCaptureHandler;
+        pointCaptureActive = false;
+        pointCaptureHandler = null;
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage(pointCaptureCancelMessage);
+        }
+        repaint();
+        if (handler != null) {
+            handler.onCaptureCanceled();
+        }
+    }
+
+    public boolean isPointCaptureActive() {
+        return pointCaptureActive;
+    }
+
+    private void finishPointCapture(Coordinate coordinate) {
+        if (!pointCaptureActive || coordinate == null) {
+            return;
+        }
+        MapPointCaptureHandler handler = pointCaptureHandler;
+        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
+        pointCaptureActive = false;
+        pointCaptureHandler = null;
+        repaint();
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage(pointCaptureSuccessMessage);
+        }
+        if (handler != null) {
+            handler.onPointCaptured(coordinate, projectCrs);
+        }
     }
 
     public void cancelTopographicProfileCapture() {
@@ -3129,6 +3375,7 @@ public class MapPanel extends JPanel {
             return;
         }
 
+        cleanupLayerReferencesOnRemoval(layer);
         shapefileLayers.remove(layer);
         rasterLayers.remove(layer);
         onlineTileLayers.remove(layer);
@@ -3136,16 +3383,72 @@ public class MapPanel extends JPanel {
         rasterStyles.remove(layer);
         invalidateRasterDisplay(layer);
 
-        if (selectedLayer == layer) {
-            selectedLayer = null;
-            selectedFeature = null;
-        }
-
         if (!shapefileLayers.isEmpty() || !rasterLayers.isEmpty() || !onlineTileLayers.isEmpty() || !onlineWmsLayers.isEmpty()) {
             fitToAllLayers();
         }
 
         repaint();
+    }
+
+    public void removeLayers(Collection<Layer> layers) {
+        if (layers == null || layers.isEmpty()) {
+            return;
+        }
+
+        boolean hasRemainingLayersBeforeFit = false;
+        for (Layer layer : new ArrayList<>(layers)) {
+            if (layer == null) {
+                continue;
+            }
+            cleanupLayerReferencesOnRemoval(layer);
+            shapefileLayers.remove(layer);
+            rasterLayers.remove(layer);
+            onlineTileLayers.remove(layer);
+            onlineWmsLayers.remove(layer);
+            rasterStyles.remove(layer);
+            invalidateRasterDisplay(layer);
+        }
+
+        hasRemainingLayersBeforeFit = !shapefileLayers.isEmpty()
+                || !rasterLayers.isEmpty()
+                || !onlineTileLayers.isEmpty()
+                || !onlineWmsLayers.isEmpty();
+
+        if (hasRemainingLayersBeforeFit) {
+            fitToAllLayers();
+        }
+
+        repaint();
+    }
+
+    private void cleanupLayerReferencesOnRemoval(Layer layer) {
+        tableSelectionIds.remove(layer);
+
+        if (selectedLayer == layer) {
+            selectedLayer = null;
+            selectedFeature = null;
+        }
+
+        if (drawingSessionLayer == layer || drawingContinuationLayer == layer) {
+            cancelCurrentDrawing();
+        }
+
+        if (activeVectorEditingLayer == layer) {
+            activeVectorEditingLayer = null;
+            featureEditMode = false;
+            featureEditOperation = EDIT_OP_MOVE_VERTEX;
+            featureEditSketchCoordinates.clear();
+            activeEditVertexIndex = -1;
+            joinTargetVertexIndex = -1;
+            clearAdjacentPolygonState();
+            clearCadConstructionState();
+            featureEditOriginalGeometry = null;
+            featureEditDirty = false;
+            editUndoStack.clear();
+            editRedoStack.clear();
+        }
+
+        refreshEditingUi();
     }
 
     public void refreshMap() {
@@ -3168,6 +3471,7 @@ public class MapPanel extends JPanel {
         clearAllPins();
         cancelCurrentDrawing();
         cancelCurrentMeasurement();
+        refreshStatusBarScale();
         repaint();
     }
 
@@ -3212,7 +3516,77 @@ public class MapPanel extends JPanel {
         this.viewMinX = viewMinX;
         this.viewMinY = viewMinY;
         this.zoomFactor = zoomFactor;
+        refreshStatusBarScale();
         repaint();
+    }
+
+    public void restoreViewOrReset(double savedViewMinX, double savedViewMinY, double savedZoomFactor, boolean hasSavedView) {
+        if (hasSavedView) {
+            restoreView(savedViewMinX, savedViewMinY, savedZoomFactor);
+        } else {
+            resetView();
+            return;
+        }
+
+        Envelope current = getCurrentViewEnvelope();
+        Envelope global = getGlobalEnvelope();
+        if (global == null || global.isNull()) {
+            repaint();
+            return;
+        }
+
+        if (current == null
+                || current.isNull()
+                || !current.intersects(global)
+                || current.getWidth() > global.getWidth() * 500
+                || current.getHeight() > global.getHeight() * 500) {
+            fitToEnvelope(global);
+            rememberCurrentView();
+            repaint();
+        }
+    }
+
+    public BufferedImage renderMapViewImage(double renderViewMinX, double renderViewMinY, double renderZoomFactor) {
+        if (renderZoomFactor <= 0) {
+            return null;
+        }
+
+        int renderWidth = Math.max(1, getWidth());
+        int renderHeight = Math.max(1, getHeight());
+        if (renderWidth <= 1 || renderHeight <= 1) {
+            renderWidth = 1200;
+            renderHeight = 800;
+        }
+
+        double oldViewMinX = viewMinX;
+        double oldViewMinY = viewMinY;
+        double oldZoomFactor = zoomFactor;
+        boolean oldLayoutRenderMode = layoutRenderMode;
+        int oldWidth = getWidth();
+        int oldHeight = getHeight();
+
+        BufferedImage image = new BufferedImage(renderWidth, renderHeight, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = image.createGraphics();
+        try {
+            if (oldWidth <= 1 || oldHeight <= 1) {
+                setSize(renderWidth, renderHeight);
+            }
+            viewMinX = renderViewMinX;
+            viewMinY = renderViewMinY;
+            zoomFactor = renderZoomFactor;
+            layoutRenderMode = true;
+            paintComponent(g2);
+            return image;
+        } finally {
+            g2.dispose();
+            viewMinX = oldViewMinX;
+            viewMinY = oldViewMinY;
+            zoomFactor = oldZoomFactor;
+            layoutRenderMode = oldLayoutRenderMode;
+            if (oldWidth <= 1 || oldHeight <= 1) {
+                setSize(oldWidth, oldHeight);
+            }
+        }
     }
 
     public void zoomToLayer(Layer layer) {
@@ -3240,7 +3614,7 @@ public class MapPanel extends JPanel {
                     : (online != null ? getOnlineLayerEnvelope((OnlineTileLayer) layer) : getOnlineWmsEnvelope(onlineWms)));
 
             if (env == null || env.isNull()) {
-                JOptionPane.showMessageDialog(this, "No se pudo calcular la extensiÃƒÂ³n de la capa.");
+                JOptionPane.showMessageDialog(this, "No se pudo calcular la extensión de la capa.");
                 return;
             }
 
@@ -3410,21 +3784,25 @@ public class MapPanel extends JPanel {
         sb.append("Nombre: ").append(layer.getName()).append("\n");
         sb.append("Ruta: ").append(layer.getPath()).append("\n");
         sb.append("Tipo: ").append(layer.getType()).append("\n");
-        sb.append("Visible: ").append(layer.isVisible() ? "SÃƒÂ­" : "No").append("\n");
+        sb.append("Visible: ").append(layer.isVisible() ? "Sí" : "No").append("\n");
         sb.append("SourceName: ").append(layer.getSourceName() != null ? layer.getSourceName() : "-").append("\n");
         sb.append("FeatureCount: ").append(layer.getFeatureCount()).append("\n");
         sb.append("CRS origen: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "desconocido").append("\n");
         sb.append("CRS proyecto: ").append(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "-").append("\n");
         LocalRasterData rasterDataInfo = rasterLayers.get(layer);
         if (rasterDataInfo != null) {
-            sb.append("Raster: SÃƒÂ­\n");
+            sb.append("Raster: Sí\n");
             sb.append("Bandas: ").append(rasterDataInfo.getBandCount()).append("\n");
-            sb.append("Georreferenciado: ").append(rasterDataInfo.isGeoreferenced() ? "SÃƒÂ­" : "No").append("\n");
+            sb.append("Georreferenciado: ").append(rasterDataInfo.isGeoreferenced() ? "Sí" : "No").append("\n");
         }
-        sb.append("Etiquetas: ").append(layer.isLabelsVisible() ? "SÃƒÂ­" : "No").append("\n");
+        sb.append("Etiquetas: ").append(layer.isLabelsVisible() ? "Sí" : "No").append("\n");
         sb.append("Campo etiqueta: ").append(layer.getLabelField() != null ? layer.getLabelField() : "-").append("\n");
 
-        JOptionPane.showMessageDialog(this, sb.toString(), "InformaciÃƒÂ³n de capa", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, sb.toString(), "Información de capa", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private boolean isFeatureVisibleInLayer(Layer layer, SimpleFeature feature) {
+        return CadLayerSupport.isCadFeatureVisible(layer, feature);
     }
 
     private Geometry reprojectGeometryIfNeeded(Layer layer, Geometry geometry) {
@@ -3436,30 +3814,34 @@ public class MapPanel extends JPanel {
             String sourceCode = layer != null ? layer.getSourceCRS() : "";
             String targetCode = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
 
+            Geometry resolvedGeometry = geometry;
             if (sourceCode == null || sourceCode.isBlank()) {
-                return geometry;
+                return CadPlacementSupport.applyPlacement(layer, geometry);
             }
             if (targetCode == null || targetCode.isBlank()) {
-                return geometry;
+                return CadPlacementSupport.applyPlacement(layer, geometry);
             }
-            if (sourceCode.equalsIgnoreCase(targetCode)) {
-                return geometry;
+            if (!sourceCode.equalsIgnoreCase(targetCode)) {
+                Geometry manualGeometry = CoordinateTransformSupport.reprojectGeometry(geometry, sourceCode, targetCode);
+                if (manualGeometry != null) {
+                    resolvedGeometry = manualGeometry;
+                } else {
+                    CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
+                    CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
+                    MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
+                    resolvedGeometry = JTS.transform(geometry, transform);
+                }
             }
-
-            CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRS.decode(targetCode, true);
-            MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-
-            return JTS.transform(geometry, transform);
+            return CadPlacementSupport.applyPlacement(layer, resolvedGeometry);
         } catch (Exception ex) {
-            return geometry;
+            return CadPlacementSupport.applyPlacement(layer, geometry);
         }
     }
 
     private Envelope reprojectEnvelopeIfNeeded(Layer layer, Envelope env) {
         String sourceCode = layer != null ? layer.getSourceCRS() : "";
         String targetCode = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
-        return reprojectEnvelopeIfNeeded(env, sourceCode, targetCode);
+        return CadPlacementSupport.applyPlacement(layer, reprojectEnvelopeIfNeeded(env, sourceCode, targetCode));
     }
 
     private Envelope reprojectEnvelopeIfNeeded(Envelope env, String sourceCode, String targetCode) {
@@ -3478,8 +3860,13 @@ public class MapPanel extends JPanel {
                 return env;
             }
 
-            CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRS.decode(targetCode, true);
+            Envelope manualEnvelope = CoordinateTransformSupport.reprojectEnvelope(env, sourceCode, targetCode);
+            if (manualEnvelope != null && !manualEnvelope.isNull()) {
+                return manualEnvelope;
+            }
+
+            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
+            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
 
             return JTS.transform(env, null, transform, 10);
@@ -3500,8 +3887,13 @@ public class MapPanel extends JPanel {
                 return new double[]{x, y};
             }
 
-            CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRS.decode(targetCode, true);
+            double[] manual = CoordinateTransformSupport.transformPoint(x, y, sourceCode, targetCode);
+            if (manual != null) {
+                return manual;
+            }
+
+            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
+            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
 
             double[] src = new double[]{x, y};
@@ -3541,11 +3933,11 @@ public class MapPanel extends JPanel {
         if (isMeasurementActive()) {
             JPopupMenu popupMenu = new JPopupMenu();
 
-            JMenuItem finishItem = new JMenuItem("Terminar mediciÃƒÂ³n");
+            JMenuItem finishItem = new JMenuItem("Terminar medición");
             finishItem.addActionListener(ev -> finishCurrentMeasurement());
             popupMenu.add(finishItem);
 
-            JMenuItem cancelItem = new JMenuItem("Cancelar mediciÃƒÂ³n");
+            JMenuItem cancelItem = new JMenuItem("Cancelar medición");
             cancelItem.addActionListener(ev -> cancelCurrentMeasurement());
             popupMenu.add(cancelItem);
 
@@ -3556,7 +3948,7 @@ public class MapPanel extends JPanel {
         if (featureEditMode && isFeatureEditSketchMode() && !featureEditSketchCoordinates.isEmpty()) {
             JPopupMenu popupMenu = new JPopupMenu();
 
-            JMenuItem finishItem = new JMenuItem("Aplicar ediciÃƒÂ³n");
+            JMenuItem finishItem = new JMenuItem("Aplicar edición");
             finishItem.addActionListener(ev -> applyFeatureEditSketchOperationEnhanced());
             popupMenu.add(finishItem);
 
@@ -3564,7 +3956,7 @@ public class MapPanel extends JPanel {
             cancelItem.addActionListener(ev -> {
                 featureEditSketchCoordinates.clear();
                 repaint();
-                showCopiedMessage("Boceto de ediciÃƒÂ³n cancelado.");
+                showCopiedMessage("Boceto de edición cancelado.");
             });
             popupMenu.add(cancelItem);
 
@@ -3593,7 +3985,7 @@ public class MapPanel extends JPanel {
 
         JPopupMenu popupMenu = new JPopupMenu();
 
-        JMenuItem addPinItem = new JMenuItem("Agregar pin aquÃƒÂ­");
+        JMenuItem addPinItem = new JMenuItem("Agregar pin aquí");
         addPinItem.addActionListener(ev -> {
             PinMarker pin = addPin(projectX, projectY);
             showCopiedMessage("Pin P" + pin.getId() + " agregado.");
@@ -4024,6 +4416,93 @@ public class MapPanel extends JPanel {
         return String.format(Locale.US, "%.6f", value);
     }
 
+    private String formatScaleDenominator(double denominator) {
+        if (denominator <= 0d) {
+            return "";
+        }
+        return "1:" + new DecimalFormat("#,##0").format(Math.round(denominator));
+    }
+
+    private String buildScaleTooltip(double denominator) {
+        if (denominator <= 0d) {
+            return "Escala no disponible hasta que haya una vista cartografica valida.";
+        }
+        if (isGeographicProjectCrs()) {
+            return "Escala actual aproximada para la vista. En CRS geograficos se estima segun la latitud central.";
+        }
+        return "Escala actual de la vista principal. Escribe 1:5000 o 5000 y presiona Enter para ajustarla.";
+    }
+
+    private Double parseScaleDenominator(String value) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.trim();
+        if (text.isBlank()) {
+            return null;
+        }
+        int colonIndex = text.indexOf(':');
+        if (colonIndex >= 0 && colonIndex < text.length() - 1) {
+            text = text.substring(colonIndex + 1);
+        }
+        text = text.replaceAll("[^0-9]", "");
+        if (text.isBlank()) {
+            return null;
+        }
+        try {
+            double denominator = Double.parseDouble(text);
+            return denominator > 0d ? denominator : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private boolean hasLoadedMapContent() {
+        return !shapefileLayers.isEmpty()
+                || !rasterLayers.isEmpty()
+                || !onlineTileLayers.isEmpty()
+                || !onlineWmsLayers.isEmpty();
+    }
+
+    private int safeScreenDpi() {
+        try {
+            int dpi = Toolkit.getDefaultToolkit().getScreenResolution();
+            return dpi > 0 ? dpi : 96;
+        } catch (Exception ex) {
+            return 96;
+        }
+    }
+
+    private double estimateMetersPerProjectUnit() {
+        String projectCrs = CatgisDesktopApp.currentProject != null
+                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+                : "";
+        if (projectCrs == null || projectCrs.isBlank()) {
+            return 0d;
+        }
+        if (isGeographicProjectCrs()) {
+            double centerX = viewMinX + (Math.max(1, getWidth()) / (2d * Math.max(zoomFactor, 0.000001d)));
+            double centerY = viewMinY + (Math.max(1, getHeight()) / (2d * Math.max(zoomFactor, 0.000001d)));
+            double[] geographic = transformPoint(centerX, centerY, projectCrs, "EPSG:4326");
+            double centerLat = geographic != null && geographic.length >= 2 ? geographic[1] : centerY;
+            double metersPerDegreeLon = 111320d * Math.cos(Math.toRadians(centerLat));
+            return Math.max(1d, Math.abs(metersPerDegreeLon));
+        }
+        return 1d;
+    }
+
+    private boolean isGeographicProjectCrs() {
+        String projectCrs = CatgisDesktopApp.currentProject != null
+                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+                : "";
+        return "EPSG:4326".equalsIgnoreCase(projectCrs)
+                || "EPSG:4258".equalsIgnoreCase(projectCrs)
+                || "EPSG:4269".equalsIgnoreCase(projectCrs)
+                || "EPSG:4674".equalsIgnoreCase(projectCrs)
+                || "EPSG:4190".equalsIgnoreCase(projectCrs)
+                || "EPSG:4221".equalsIgnoreCase(projectCrs);
+    }
+
     private void copyToClipboard(String text) {
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
     }
@@ -4051,7 +4530,7 @@ public class MapPanel extends JPanel {
             Envelope global = getGlobalEnvelope();
 
             if (global == null || global.isNull()) {
-                JOptionPane.showMessageDialog(this, "No hay capas cargadas para calcular la extensiÃƒÂ³n.");
+                JOptionPane.showMessageDialog(this, "No hay capas cargadas para calcular la extensión.");
                 return;
             }
 
@@ -4103,6 +4582,7 @@ public class MapPanel extends JPanel {
 
         viewMinX = env.getMinX() - extraWorldWidth / 2.0;
         viewMinY = env.getMinY() - extraWorldHeight / 2.0;
+        refreshStatusBarScale();
     }
 
     private Envelope getLayerEnvelope(Layer layer, ShapefileData data) {
@@ -4112,7 +4592,7 @@ public class MapPanel extends JPanel {
 
         Envelope env = null;
 
-        if (data.getFeatureCollection() != null) {
+        if (data.getFeatureCollection() != null && !(CadLayerSupport.isCadLayer(layer) && layer.hasCadInternalLayerFilter())) {
             try {
                 env = data.getFeatureCollection().getBounds();
             } catch (Exception ignored) {
@@ -4126,6 +4606,9 @@ public class MapPanel extends JPanel {
         if ((env == null || env.isNull()) && data.getFeatures() != null) {
             for (SimpleFeature feature : data.getFeatures()) {
                 if (feature == null) {
+                    continue;
+                }
+                if (!isFeatureVisibleInLayer(layer, feature)) {
                     continue;
                 }
 
@@ -4259,6 +4742,7 @@ public class MapPanel extends JPanel {
         viewMinX += (worldXBefore - worldXAfter);
         viewMinY += (worldYBefore - worldYAfter);
 
+        refreshStatusBarScale();
         repaint();
     }
 
@@ -4276,8 +4760,8 @@ public class MapPanel extends JPanel {
 
         if (hits.isEmpty()) {
             clearSelectedFeature();
-            showCopiedMessage("No se identificÃƒÂ³ ninguna entidad.");
-            JOptionPane.showMessageDialog(this, "No se identificÃƒÂ³ ninguna entidad.");
+            showCopiedMessage("No se identificó ninguna entidad.");
+            JOptionPane.showMessageDialog(this, "No se identificó ninguna entidad.");
             repaint();
             return;
         }
@@ -4291,7 +4775,7 @@ public class MapPanel extends JPanel {
         }
 
         highlightIdentifiedFeature(hits.get(0).getLayer(), hits.get(0).getFeature());
-        showCopiedMessage(hits.size() + " entidades identificadas. ElegÃƒÂ­ una en la ventana de resultados.");
+        showCopiedMessage(hits.size() + " entidades identificadas. Elegí una en la ventana de resultados.");
         IdentifyResultsDialog.open(this, hits);
     }
 
@@ -4301,7 +4785,7 @@ public class MapPanel extends JPanel {
         if (hits.isEmpty()) {
             if (!additiveSelection) {
                 clearSelectedFeature();
-                showCopiedMessage("No se seleccionÃƒÂ³ ninguna entidad.");
+                showCopiedMessage("No se seleccionó ninguna entidad.");
             }
             repaint();
             return;
@@ -4322,7 +4806,7 @@ public class MapPanel extends JPanel {
                 ? (selectionIds.size() == 1
                 ? "1 entidad seleccionada."
                 : selectionIds.size() + " entidades seleccionadas.")
-                : "Entidad seleccionada para ediciÃƒÂ³n: " + targetLayer.getName();
+                : "Entidad seleccionada para edición: " + targetLayer.getName();
         applyFeatureSelection(targetLayer, selectionIds, !additiveSelection, true, true, message);
     }
 
@@ -4332,7 +4816,7 @@ public class MapPanel extends JPanel {
         if (hits.isEmpty()) {
             if (!additiveSelection) {
                 clearSelectedFeature();
-                showCopiedMessage("No se encontrÃƒÂ³ ninguna entidad dentro del rectÃƒÂ¡ngulo.");
+                showCopiedMessage("No se encontró ninguna entidad dentro del rectángulo.");
             }
             repaint();
             return;
@@ -4369,7 +4853,7 @@ public class MapPanel extends JPanel {
 
         for (Layer layer : getHitTestLayers(false)) {
 
-            if (!layer.isVisible()) {
+            if (!isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
@@ -4381,6 +4865,9 @@ public class MapPanel extends JPanel {
             try (FeatureIterator<SimpleFeature> iterator = data.getFeatureCollection().features()) {
                 while (iterator.hasNext()) {
                     SimpleFeature feature = iterator.next();
+                    if (!isFeatureVisibleInLayer(layer, feature)) {
+                        continue;
+                    }
                     Object geomObj = feature.getDefaultGeometry();
 
                     if (!(geomObj instanceof Geometry)) {
@@ -4423,7 +4910,7 @@ public class MapPanel extends JPanel {
         Point clickPoint = selectionGeometryFactory.createPoint(new Coordinate(worldX, worldY));
 
         for (Layer layer : getHitTestLayers(true)) {
-            if (!layer.isVisible()) {
+            if (!isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
@@ -4435,6 +4922,9 @@ public class MapPanel extends JPanel {
             try (FeatureIterator<SimpleFeature> iterator = data.getFeatureCollection().features()) {
                 while (iterator.hasNext()) {
                     SimpleFeature feature = iterator.next();
+                    if (!isFeatureVisibleInLayer(layer, feature)) {
+                        continue;
+                    }
                     Object geomObj = feature.getDefaultGeometry();
 
                     if (!(geomObj instanceof Geometry)) {
@@ -4485,7 +4975,7 @@ public class MapPanel extends JPanel {
         Geometry selectionArea = selectionGeometryFactory.toGeometry(envelope);
 
         for (Layer layer : getHitTestLayers(true)) {
-            if (!layer.isVisible()) {
+            if (!isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
@@ -4497,6 +4987,9 @@ public class MapPanel extends JPanel {
             try (FeatureIterator<SimpleFeature> iterator = data.getFeatureCollection().features()) {
                 while (iterator.hasNext()) {
                     SimpleFeature feature = iterator.next();
+                    if (!isFeatureVisibleInLayer(layer, feature)) {
+                        continue;
+                    }
                     Object geomObj = feature.getDefaultGeometry();
 
                     if (!(geomObj instanceof Geometry)) {
@@ -4572,7 +5065,7 @@ public class MapPanel extends JPanel {
         if (preferEditingLayer
                 && activeVectorEditingLayer != null
                 && shapefileLayers.containsKey(activeVectorEditingLayer)
-                && activeVectorEditingLayer.isVisible()) {
+                && isLayerEffectivelyVisible(activeVectorEditingLayer)) {
             orderedLayers.add(activeVectorEditingLayer);
             return orderedLayers;
         }
@@ -4627,7 +5120,7 @@ public class MapPanel extends JPanel {
     }
 
     public void clearSelectedFeature() {
-        if (!confirmPendingFeatureEdit("limpiar la selecciÃƒÂ³n")) {
+        if (!confirmPendingFeatureEdit("limpiar la selección")) {
             return;
         }
         clearSelectedFeatureInternal(true);
@@ -5144,6 +5637,8 @@ public class MapPanel extends JPanel {
 
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        onlineResolutionNoticeVisible = false;
+        onlineResolutionNotice = "";
 
         if (shapefileLayers.isEmpty() && rasterLayers.isEmpty() && onlineTileLayers.isEmpty() && onlineWmsLayers.isEmpty()) {
             g2.setColor(Color.GRAY);
@@ -5151,7 +5646,7 @@ public class MapPanel extends JPanel {
         }
 
         for (Layer layer : getRenderOrderLayers()) {
-            if (layer == null || !layer.isVisible()) {
+            if (layer == null || !isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
@@ -5180,24 +5675,27 @@ public class MapPanel extends JPanel {
             }
         }
 
-        drawAttributeTableSelections(g2);
+        if (!layoutRenderMode) {
+            drawAttributeTableSelections(g2);
 
-        if (selectedLayer != null && selectedFeature != null) {
-            drawSelectedFeature(g2, selectedFeature, selectedLayer);
-            if (featureEditMode) {
-                drawEditableVertices(g2, selectedFeature, selectedLayer);
+            if (selectedLayer != null && selectedFeature != null) {
+                drawSelectedFeature(g2, selectedFeature, selectedLayer);
+                if (featureEditMode) {
+                    drawEditableVertices(g2, selectedFeature, selectedLayer);
+                }
             }
-        }
 
-        drawSelectionFlash(g2);
-        drawPins(g2);
-        drawCurrentSketch(g2);
-        drawCurrentMeasurement(g2);
-        drawFeatureEditSketch(g2);
-        drawTopographicProfileCapture(g2);
-        drawSnapPreview(g2);
-        drawSelectionBox(g2);
+            drawSelectionFlash(g2);
+            drawPins(g2);
+            drawCurrentSketch(g2);
+            drawCurrentMeasurement(g2);
+            drawFeatureEditSketch(g2);
+            drawTopographicProfileCapture(g2);
+            drawSnapPreview(g2);
+            drawSelectionBox(g2);
+        }
         drawOnlineAttribution(g2);
+        drawOnlineResolutionNotice(g2);
 
         g2.dispose();
     }
@@ -5223,12 +5721,24 @@ public class MapPanel extends JPanel {
     private List<Layer> getRenderOrderLayers() {
         List<Layer> ordered = new ArrayList<>();
 
-        if (CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getLayers() != null) {
-            for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        if (CatgisDesktopApp.currentProject != null) {
+            for (Layer layer : CatgisDesktopApp.currentProject.getUngroupedLayers()) {
                 if (layer != null
                         && (shapefileLayers.containsKey(layer) || rasterLayers.containsKey(layer) || onlineTileLayers.containsKey(layer) || onlineWmsLayers.containsKey(layer))
                         && !ordered.contains(layer)) {
                     ordered.add(layer);
+                }
+            }
+            for (LayerGroup group : CatgisDesktopApp.currentProject.getLayerGroups()) {
+                if (group == null) {
+                    continue;
+                }
+                for (Layer layer : CatgisDesktopApp.currentProject.getLayersForGroup(group.getName())) {
+                    if (layer != null
+                            && (shapefileLayers.containsKey(layer) || rasterLayers.containsKey(layer) || onlineTileLayers.containsKey(layer) || onlineWmsLayers.containsKey(layer))
+                            && !ordered.contains(layer)) {
+                        ordered.add(layer);
+                    }
                 }
             }
         }
@@ -5255,6 +5765,16 @@ public class MapPanel extends JPanel {
         }
         java.util.Collections.reverse(ordered);
         return ordered;
+    }
+
+    private boolean isLayerEffectivelyVisible(Layer layer) {
+        if (layer == null) {
+            return false;
+        }
+        if (CatgisDesktopApp.currentProject != null) {
+            return CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer);
+        }
+        return layer.isVisible();
     }
 
     private void drawSelectionFlash(Graphics2D g2) {
@@ -5409,7 +5929,10 @@ public class MapPanel extends JPanel {
             return;
         }
 
+        int desiredZoom = OnlineMapUtils.estimateZoom(mercatorView, getWidth(), getHeight(), source);
         int zoom = OnlineMapUtils.chooseZoom(mercatorView, getWidth(), getHeight(), source);
+        boolean detailLimited = desiredZoom > source.getMaxZoom();
+        boolean usedFallbackTile = false;
         OnlineMapUtils.TileRange range = OnlineMapUtils.calculateTileRange(mercatorView, zoom);
         if (range.tileCount() <= 0) {
             return;
@@ -5417,11 +5940,6 @@ public class MapPanel extends JPanel {
 
         for (int tx = range.minX; tx <= range.maxX; tx++) {
             for (int ty = range.minY; ty <= range.maxY; ty++) {
-                BufferedImage tile = OnlineTileCache.getTile(source, zoom, tx, ty, this::repaint);
-                if (tile == null) {
-                    continue;
-                }
-
                 Envelope tileMercator = OnlineMapUtils.tileBounds(tx, ty, zoom);
                 Envelope tileProject = reprojectEnvelopeIfNeeded(tileMercator, "EPSG:3857", projectCRS);
                 if (tileProject == null || tileProject.isNull()) {
@@ -5442,16 +5960,76 @@ public class MapPanel extends JPanel {
                     continue;
                 }
 
+                BufferedImage tile = OnlineTileCache.getTile(source, zoom, tx, ty, this::repaint);
                 Graphics2D copy = (Graphics2D) g2.create();
                 try {
                     float opacity = layer.getOpacity();
                     copy.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0.1f, Math.min(1f, opacity))));
-                    copy.drawImage(tile, drawX, drawY, drawW, drawH, null);
+                    if (tile != null) {
+                        copy.drawImage(tile, drawX, drawY, drawW, drawH, null);
+                    } else {
+                        OnlineTileFallback fallback = resolveFallbackOnlineTile(source, zoom, tx, ty);
+                        if (fallback == null) {
+                            continue;
+                        }
+                        usedFallbackTile = true;
+                        copy.drawImage(
+                                fallback.image,
+                                drawX,
+                                drawY,
+                                drawX + drawW,
+                                drawY + drawH,
+                                fallback.srcX,
+                                fallback.srcY,
+                                fallback.srcX + fallback.srcW,
+                                fallback.srcY + fallback.srcH,
+                                null
+                        );
+                    }
                 } finally {
                     copy.dispose();
                 }
             }
         }
+
+        if (detailLimited) {
+            onlineResolutionNoticeVisible = true;
+            onlineResolutionNotice = "Zoom mayor al detalle disponible en " + source.getName() + ". Se muestra la ultima resolucion util.";
+        } else if (usedFallbackTile && !onlineResolutionNoticeVisible) {
+            onlineResolutionNoticeVisible = true;
+            onlineResolutionNotice = "Algunas teselas no estan disponibles en este zoom. Se mantiene el ultimo detalle disponible.";
+        }
+    }
+
+    private OnlineTileFallback resolveFallbackOnlineTile(OnlineRasterSource source, int zoom, int x, int y) {
+        if (source == null) {
+            return null;
+        }
+        for (int fallbackZoom = zoom - 1; fallbackZoom >= source.getMinZoom(); fallbackZoom--) {
+            int delta = zoom - fallbackZoom;
+            int parentX = x >> delta;
+            int parentY = y >> delta;
+            BufferedImage parentTile = OnlineTileCache.getTile(source, fallbackZoom, parentX, parentY, this::repaint);
+            if (parentTile == null) {
+                continue;
+            }
+
+            int divisions = 1 << delta;
+            int childX = x - (parentX << delta);
+            int childY = y - (parentY << delta);
+            int srcX = childX * parentTile.getWidth() / divisions;
+            int srcY = childY * parentTile.getHeight() / divisions;
+            int srcW = Math.max(1, parentTile.getWidth() / divisions);
+            int srcH = Math.max(1, parentTile.getHeight() / divisions);
+
+            srcW = Math.min(srcW, parentTile.getWidth() - srcX);
+            srcH = Math.min(srcH, parentTile.getHeight() - srcY);
+            if (srcW <= 0 || srcH <= 0) {
+                continue;
+            }
+            return new OnlineTileFallback(parentTile, srcX, srcY, srcW, srcH);
+        }
+        return null;
     }
 
     private void drawOnlineWmsLayer(Graphics2D g2, OnlineWmsLayer layer) {
@@ -5648,7 +6226,7 @@ public class MapPanel extends JPanel {
         for (Map.Entry<Layer, OnlineRasterSource> entry : onlineTileLayers.entrySet()) {
             Layer layer = entry.getKey();
             OnlineRasterSource source = entry.getValue();
-            if (layer == null || source == null || !layer.isVisible()) {
+            if (layer == null || source == null || !isLayerEffectivelyVisible(layer)) {
                 continue;
             }
             if (source.getAttribution() != null && !source.getAttribution().isBlank()) {
@@ -5658,7 +6236,7 @@ public class MapPanel extends JPanel {
         for (Map.Entry<Layer, OnlineWmsLayer> entry : onlineWmsLayers.entrySet()) {
             Layer layer = entry.getKey();
             OnlineWmsLayer wms = entry.getValue();
-            if (layer == null || wms == null || !layer.isVisible()) {
+            if (layer == null || wms == null || !isLayerEffectivelyVisible(layer)) {
                 continue;
             }
             if (wms.getAttribution() != null && !wms.getAttribution().isBlank()) {
@@ -5819,6 +6397,14 @@ public class MapPanel extends JPanel {
     }
 
     private LocalRasterData loadRasterForCurrentProject(Layer layer, File rasterFile) throws java.io.IOException {
+        if (layer instanceof RasterLayer rasterLayer && rasterLayer.isDerivedLayer()) {
+            try {
+                return TerrainHydrologyAnalysisService.regenerateDerivedRasterData(rasterLayer);
+            } catch (Exception ex) {
+                throw new java.io.IOException("No se pudo regenerar el raster derivado.", ex);
+            }
+        }
+
         String mode = RasterImageLoader.MODE_PREVIEW;
         if (layer instanceof RasterLayer) {
             mode = ((RasterLayer) layer).getRasterMode();
@@ -6392,6 +6978,9 @@ public class MapPanel extends JPanel {
         try (FeatureIterator<SimpleFeature> iterator = data.getFeatureCollection().features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
+                if (!isFeatureVisibleInLayer(layer, feature)) {
+                    continue;
+                }
                 Object geomObj = feature.getDefaultGeometry();
 
                 if (!(geomObj instanceof Geometry)) {
@@ -6416,7 +7005,7 @@ public class MapPanel extends JPanel {
         }
 
         if (geometry instanceof Point) {
-            drawStyledPoint(g2, (Point) geometry, layer);
+            drawStyledPoint(g2, (Point) geometry, layer, feature);
             return;
         }
 
@@ -6425,7 +7014,7 @@ public class MapPanel extends JPanel {
             for (int i = 0; i < mp.getNumGeometries(); i++) {
                 Geometry g = mp.getGeometryN(i);
                 if (g instanceof Point) {
-                    drawStyledPoint(g2, (Point) g, layer);
+                    drawStyledPoint(g2, (Point) g, layer, feature);
                 }
             }
             return;
@@ -6525,17 +7114,21 @@ public class MapPanel extends JPanel {
         }
     }
 
-    private void drawStyledPoint(Graphics2D g2, Point point, Layer layer) {
+    private void drawStyledPoint(Graphics2D g2, Point point, Layer layer, SimpleFeature feature) {
         int x = worldToScreenX(point.getX());
         int y = worldToScreenY(point.getY());
-        int size = Math.max(4, layer.getPointSize());
+        CategoryStyleRule categoryRule = resolveCategoryRule(layer.getPointCategorizedSymbology(), feature);
+        int size = Math.max(4, categoryRule != null ? categoryRule.getPointSize() : layer.getPointSize());
         int half = size / 2;
-        Layer.PointSymbolStyle style = layer.getPointSymbolStyle();
+        if (categoryRule == null && PointGraphicSymbolSupport.paintLayerSymbol(g2, layer, x, y, Math.max(14, size + 6))) {
+            return;
+        }
+        Layer.PointSymbolStyle style = categoryRule != null ? categoryRule.getPointSymbolStyle() : layer.getPointSymbolStyle();
         if (style == null) {
             style = Layer.PointSymbolStyle.CIRCLE;
         }
 
-        g2.setColor(layer.getPointColor());
+        g2.setColor(categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor());
         switch (style) {
             case SQUARE -> g2.fillRect(x - half, y - half, size, size);
             case DIAMOND -> {
@@ -6679,8 +7272,13 @@ public class MapPanel extends JPanel {
         }
 
         g2.setPaint(oldPaint);
-        g2.setColor(categoryRule != null ? categoryRule.getSecondaryColor() : layer.getBorderColor());
-        g2.setStroke(buildLineStroke(layer.getLineWidth(), layer.getLineSymbolStyle()));
+        Color borderColor = categoryRule != null && categoryRule.getSecondaryColor() != null
+                ? categoryRule.getSecondaryColor()
+                : layer.getBorderColor();
+        float borderWidth = categoryRule != null ? categoryRule.getLineWidth() : layer.getLineWidth();
+        Layer.LineSymbolStyle borderStyle = categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle();
+        g2.setColor(borderColor);
+        g2.setStroke(buildLineStroke(borderWidth, borderStyle));
         g2.draw(exteriorPath);
 
         for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
@@ -6847,6 +7445,9 @@ public class MapPanel extends JPanel {
     }
 
     private void drawSelectedFeature(Graphics2D g2, SimpleFeature feature, Layer layer) {
+        if (!isFeatureVisibleInLayer(layer, feature)) {
+            return;
+        }
         Object geomObj = feature.getDefaultGeometry();
         if (!(geomObj instanceof Geometry)) {
             return;
@@ -6926,7 +7527,7 @@ public class MapPanel extends JPanel {
 
         for (Map.Entry<Layer, List<String>> entry : tableSelectionIds.entrySet()) {
             Layer layer = entry.getKey();
-            if (layer == null || !layer.isVisible()) {
+            if (layer == null || !isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
@@ -6991,7 +7592,7 @@ public class MapPanel extends JPanel {
     }
 
     private Geometry getEditableDisplayGeometry(SimpleFeature feature, Layer layer) {
-        if (feature == null) {
+        if (feature == null || !isFeatureVisibleInLayer(layer, feature)) {
             return null;
         }
 
@@ -7164,18 +7765,18 @@ public class MapPanel extends JPanel {
         Coordinate displayTarget = new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
         LineSplitProjection projection = findEditableSegmentProjection(displayGeometry, displayTarget, screenX, screenY, EDIT_SEGMENT_TOLERANCE_PX);
         if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
-            showCopiedMessage("No se encontrÃƒÂ³ un tramo cercano para agregar el vÃƒÂ©rtice.");
+            showCopiedMessage("No se encontró un tramo cercano para agregar el vértice.");
             return true;
         }
 
         Coordinate sourceCoordinate = toSourceCoordinate(projection.projected.x, projection.projected.y, selectedLayer);
         Geometry updated = buildGeometryWithAddedVertex((Geometry) geomObj, projection.segmentIndex, sourceCoordinate);
         if (updated == null) {
-            showCopiedMessage("No se pudo agregar el vÃƒÂ©rtice en esa geometrÃƒÂ­a.");
+            showCopiedMessage("No se pudo agregar el vértice en esa geometría.");
             return true;
         }
 
-        updateSelectedFeatureGeometry(updated, "VÃƒÂ©rtice agregado.");
+        updateSelectedFeatureGeometry(updated, "Vértice agregado.");
         return true;
     }
 
@@ -7187,17 +7788,17 @@ public class MapPanel extends JPanel {
 
         int vertexIndex = findEditableVertexIndex(screenX, screenY);
         if (vertexIndex < 0) {
-            showCopiedMessage("No se encontrÃƒÂ³ un vÃƒÂ©rtice cercano para eliminar.");
+            showCopiedMessage("No se encontró un vértice cercano para eliminar.");
             return true;
         }
 
         Geometry updated = buildGeometryWithRemovedVertex((Geometry) geomObj, vertexIndex);
         if (updated == null) {
-            showCopiedMessage("No se pudo eliminar ese vÃƒÂ©rtice.");
+            showCopiedMessage("No se pudo eliminar ese vértice.");
             return true;
         }
 
-        updateSelectedFeatureGeometry(updated, "VÃƒÂ©rtice eliminado.");
+        updateSelectedFeatureGeometry(updated, "Vértice eliminado.");
         return true;
     }
 
@@ -7213,19 +7814,19 @@ public class MapPanel extends JPanel {
 
         List<Integer> vertexIndexes = collectEditableVertexIndexes(selectionBounds);
         if (vertexIndexes.isEmpty()) {
-            showCopiedMessage("No se encontrÃƒÂ³ ningÃƒÂºn vÃƒÂ©rtice dentro del rectÃƒÂ¡ngulo.");
+            showCopiedMessage("No se encontró ningún vértice dentro del rectángulo.");
             return true;
         }
 
         Geometry updated = buildGeometryWithRemovedVertices(geometry, vertexIndexes);
         if (updated == null) {
-            showCopiedMessage("No se pudieron eliminar esos vÃƒÂ©rtices.");
+            showCopiedMessage("No se pudieron eliminar esos vértices.");
             return true;
         }
 
         String message = vertexIndexes.size() == 1
-                ? "VÃƒÂ©rtice eliminado."
-                : vertexIndexes.size() + " vÃƒÂ©rtices eliminados.";
+                ? "Vértice eliminado."
+                : vertexIndexes.size() + " vértices eliminados.";
         updateSelectedFeatureGeometry(updated, message);
         return true;
     }
@@ -7237,13 +7838,13 @@ public class MapPanel extends JPanel {
 
         int vertexIndex = findEditableVertexIndex(screenX, screenY);
         if (vertexIndex < 0) {
-            showCopiedMessage("No se encontrÃƒÂ³ un vÃƒÂ©rtice cercano para unir.");
+            showCopiedMessage("No se encontró un vértice cercano para unir.");
             return true;
         }
 
         if (joinTargetVertexIndex < 0 || joinTargetVertexIndex == vertexIndex) {
             joinTargetVertexIndex = vertexIndex;
-            showCopiedMessage("VÃƒÂ©rtice base seleccionado. ElegÃƒÂ­ otro vÃƒÂ©rtice o arrastrÃƒÂ¡ un rectÃƒÂ¡ngulo para unirlos.");
+            showCopiedMessage("Vértice base seleccionado. Elegí otro vértice o arrastrá un rectángulo para unirlos.");
             repaint();
             return true;
         }
@@ -7260,7 +7861,7 @@ public class MapPanel extends JPanel {
 
         List<Integer> vertexIndexes = collectEditableVertexIndexes(selectionBounds);
         if (vertexIndexes.isEmpty()) {
-            showCopiedMessage("No se encontrÃƒÂ³ ningÃƒÂºn vÃƒÂ©rtice dentro del rectÃƒÂ¡ngulo.");
+            showCopiedMessage("No se encontró ningún vértice dentro del rectángulo.");
             return true;
         }
 
@@ -7269,7 +7870,7 @@ public class MapPanel extends JPanel {
             targetIndex = vertexIndexes.remove(0);
             if (vertexIndexes.isEmpty()) {
                 joinTargetVertexIndex = targetIndex;
-                showCopiedMessage("VÃƒÂ©rtice base seleccionado. Ahora marcÃƒÂ¡ otros vÃƒÂ©rtices para unirlos.");
+                showCopiedMessage("Vértice base seleccionado. Ahora marcá otros vértices para unirlos.");
                 repaint();
                 return true;
             }
@@ -7288,19 +7889,19 @@ public class MapPanel extends JPanel {
 
         if (vertexIndexes == null || vertexIndexes.isEmpty()) {
             showCopiedMessage(fromSelection
-                    ? "MarcÃƒÂ¡ al menos otro vÃƒÂ©rtice para unirlo al vÃƒÂ©rtice base."
-                    : "ElegÃƒÂ­ otro vÃƒÂ©rtice distinto del vÃƒÂ©rtice base.");
+                    ? "Marcá al menos otro vértice para unirlo al vértice base."
+                    : "Elegí otro vértice distinto del vértice base.");
             return true;
         }
 
         Geometry updated = buildGeometryWithJoinedVertices(geometry, targetIndex, vertexIndexes);
         if (updated == null) {
-            showCopiedMessage("No se pudieron unir esos vÃƒÂ©rtices. ProbÃƒÂ¡ dentro del mismo tramo o polÃƒÂ­gono.");
+            showCopiedMessage("No se pudieron unir esos vértices. Probá dentro del mismo tramo o polígono.");
             return true;
         }
 
         joinTargetVertexIndex = -1;
-        updateSelectedFeatureGeometry(updated, vertexIndexes.size() == 1 ? "VÃƒÂ©rtices unidos." : "VÃƒÂ©rtices unidos al vÃƒÂ©rtice base.");
+        updateSelectedFeatureGeometry(updated, vertexIndexes.size() == 1 ? "Vértices unidos." : "Vértices unidos al vértice base.");
         return true;
     }
 
@@ -7701,11 +8302,11 @@ public class MapPanel extends JPanel {
         Coordinate sourceCoordinate = toSourceCoordinate(targetCoordinate.x, targetCoordinate.y, selectedLayer);
         Geometry updated = buildCutGeometryAtPoint((Geometry) geomObj, sourceCoordinate);
         if (updated == null) {
-            showCopiedMessage("No se pudo cortar la lÃƒÂ­nea en ese punto.");
+            showCopiedMessage("No se pudo cortar la línea en ese punto.");
             return true;
         }
 
-        updateSelectedFeatureGeometry(updated, "GeometrÃƒÂ­a cortada.");
+        updateSelectedFeatureGeometry(updated, "Geometría cortada.");
         return true;
     }
 
@@ -7726,14 +8327,14 @@ public class MapPanel extends JPanel {
 
         if (EDIT_OP_CUT.equals(featureEditOperation)) {
             updated = buildCutGeometryWithSketch(sourceGeometry, sourceSketch);
-            message = "GeometrÃƒÂ­a cortada.";
+            message = "Geometría cortada.";
         } else if (EDIT_OP_HOLE.equals(featureEditOperation)) {
             updated = buildGeometryWithHole(sourceGeometry, sourceSketch);
             message = "Agujero creado.";
         }
 
         if (updated == null) {
-            showCopiedMessage("No se pudo aplicar la ediciÃƒÂ³n geomÃƒÂ©trica.");
+            showCopiedMessage("No se pudo aplicar la edición geométrica.");
             return;
         }
 
@@ -8801,8 +9402,8 @@ public class MapPanel extends JPanel {
                 return geometry;
             }
 
-            CoordinateReferenceSystem sourceCRS = CRS.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRS.decode(targetCode, true);
+            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
+            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
             return JTS.transform(geometry, transform);
         } catch (Exception ex) {
@@ -9763,7 +10364,7 @@ public class MapPanel extends JPanel {
             return;
         }
 
-        if (!layer.isVisible()) {
+        if (!isLayerEffectivelyVisible(layer)) {
             return;
         }
 
@@ -9786,6 +10387,9 @@ public class MapPanel extends JPanel {
         try (FeatureIterator<SimpleFeature> iterator = collection.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
+                if (!isFeatureVisibleInLayer(layer, feature)) {
+                    continue;
+                }
 
                 Object attrValue = feature.getAttribute(layer.getLabelField());
                 if (attrValue == null) {
@@ -10005,8 +10609,59 @@ public class MapPanel extends JPanel {
         }
     }
 
+    private void drawOnlineResolutionNotice(Graphics2D g2) {
+        if (!onlineResolutionNoticeVisible || onlineResolutionNotice == null || onlineResolutionNotice.isBlank()) {
+            return;
+        }
+
+        Font font = g2.getFont().deriveFont(Font.BOLD, 11f);
+        FontMetrics metrics = g2.getFontMetrics(font);
+        int padding = 8;
+        int textWidth = metrics.stringWidth(onlineResolutionNotice);
+        int textHeight = metrics.getHeight();
+        int boxWidth = textWidth + padding * 2;
+        int boxHeight = textHeight + 6;
+        int x = 10;
+        int y = 10;
+
+        Graphics2D copy = (Graphics2D) g2.create();
+        try {
+            copy.setFont(font);
+            copy.setColor(new Color(255, 248, 230, 230));
+            copy.fillRoundRect(x, y, boxWidth, boxHeight, 12, 12);
+            copy.setColor(new Color(196, 138, 17, 220));
+            copy.drawRoundRect(x, y, boxWidth, boxHeight, 12, 12);
+            copy.setColor(new Color(120, 53, 15));
+            copy.drawString(onlineResolutionNotice, x + padding, y + metrics.getAscent() + 3);
+        } finally {
+            copy.dispose();
+        }
+    }
+
+    private static final class OnlineTileFallback {
+        private final BufferedImage image;
+        private final int srcX;
+        private final int srcY;
+        private final int srcW;
+        private final int srcH;
+
+        private OnlineTileFallback(BufferedImage image, int srcX, int srcY, int srcW, int srcH) {
+            this.image = image;
+            this.srcX = srcX;
+            this.srcY = srcY;
+            this.srcW = srcW;
+            this.srcH = srcH;
+        }
+    }
+
     public interface TopographicProfileCaptureHandler {
         void onLineCaptured(LineString line, String sourceCrs);
+
+        void onCaptureCanceled();
+    }
+
+    public interface MapPointCaptureHandler {
+        void onPointCaptured(Coordinate coordinate, String sourceCrs);
 
         void onCaptureCanceled();
     }

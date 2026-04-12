@@ -6,7 +6,11 @@ import java.util.List;
 
 public final class CatgisAppInfo {
 
-    private static final String FALLBACK_VERSION = "1.0";
+    private static final String FALLBACK_VERSION = "1.0.0";
+    private static final String RELEASE_STAGE = "Beta final";
+    private static final int RELEASE_REVISION_COUNT = 14;
+    private static final String FIRST_RELEASE_REVISION = "1.0.0.0";
+    private static final String CURRENT_RELEASE_REVISION = "1.0.0.14";
 
     private CatgisAppInfo() {
     }
@@ -16,6 +20,10 @@ public final class CatgisAppInfo {
     }
 
     public static String getDisplayVersion() {
+        return getBaseVersion() + " " + RELEASE_STAGE + " (rev. " + RELEASE_REVISION_COUNT + ")";
+    }
+
+    public static String getBaseVersion() {
         String packageVersion = CatgisAppInfo.class.getPackage() != null
                 ? CatgisAppInfo.class.getPackage().getImplementationVersion()
                 : null;
@@ -33,8 +41,12 @@ public final class CatgisAppInfo {
         return I18n.t("Creado por Lic Claudio Alejandro Tula - Licenciado en proteccion y saneamiento ambiental.");
     }
 
+    public static String getCollaboratorLine() {
+        return "Colaboradores de revisiones: Lic Daniel Warton y Geologo Federico Sanchez.";
+    }
+
     public static String getStatusLine() {
-        return I18n.t("Estado actual: desarrollo activo, orientado a trabajo GIS tecnico, servicios web geograficos y mapas finales.");
+        return "Estado actual del release: beta final funcional sin firma digital de distribucion.";
     }
 
     public static String getFocusLine() {
@@ -45,18 +57,28 @@ public final class CatgisAppInfo {
         return I18n.t("Proyecto en evolucion con foco en presentar una experiencia profesional, clara y confiable para cartografia y gestion espacial.");
     }
 
+    public static String getRevisionCycleLine() {
+        return "Ciclo de revisiones beta: " + FIRST_RELEASE_REVISION + " a " + CURRENT_RELEASE_REVISION
+                + " (" + RELEASE_REVISION_COUNT + " revisiones).";
+    }
+
+    public static String getBetaFinalNote() {
+        return "Esta build se considera beta final funcional. La firma digital del instalador queda como paso comercial posterior.";
+    }
+
     public static List<String> getTechnologyLines() {
         return List.of(
                 I18n.t("Java 21 y Gradle"),
                 I18n.t("GeoTools 34 y JTS / LocationTech"),
-                I18n.t("Shapefile, GeoJSON, KML, CSV y GeoPackage"),
-                I18n.t("WMS, WFS, PostGIS y mapas base online"),
+                I18n.t("Shapefile, GeoJSON, KML, GeoPackage, WMS, WFS y PostGIS"),
+                I18n.t("GeoTIFF, ArcGrid, raster process e ImageIO-Ext / GDAL para el bloque raster"),
                 I18n.t("Apache PDFBox para salida cartografica y PDF"),
                 I18n.t("Apache POI para hojas de calculo"),
                 I18n.t("PostgreSQL JDBC y GT JDBC PostGIS para conectividad espacial"),
                 I18n.t("JavaDBF y SODS para intercambio tabular y compatibilidad adicional"),
                 I18n.t("FlatLaf, FlatLaf Extras e IntelliJ Themes para la interfaz"),
-                I18n.t("JSVG para recursos SVG e iconografia")
+                I18n.t("JSVG para recursos SVG e iconografia"),
+                I18n.t("Log4j 2 para logging y soporte tecnico de ejecucion")
         );
     }
 
@@ -66,6 +88,9 @@ public final class CatgisAppInfo {
                 I18n.t("Soporte GeoPackage, WMS, WFS y PostGIS en la arquitectura actual"),
                 I18n.t("Motor cartografico propio para layout, exportacion e impresion"),
                 I18n.t("Snapping, CAD, geoprocesamiento basico y validacion topologica"),
+                I18n.t("DEM online/local, recorte DEM, curvas, relieve e hidrologia preliminar integrados en el mismo flujo"),
+                I18n.t("Suelos online y riesgo booleano preliminar integrados como bloques propios"),
+                I18n.t("Centro de ayuda integrado y manual tecnico embebido en la aplicacion"),
                 I18n.t("Iconografia, splash, branding e identidad visual propios de CATGIS"),
                 I18n.t("Compositor cartografico con leyenda, escala, norte, cartucho y exportacion"),
                 I18n.t("Gestor de modulos y bloques tematicos para crecer sin rehacer el nucleo")
@@ -75,6 +100,8 @@ public final class CatgisAppInfo {
     public static List<String> getCreditsLines() {
         return List.of(
                 getAuthorLine(),
+                getCollaboratorLine(),
+                getRevisionCycleLine(),
                 I18n.t("Direccion y criterio funcional orientados a cartografia, analisis visual y flujo GIS de escritorio."),
                 I18n.t("Construido sobre un ecosistema de librerias GIS, PDF, UI y conectividad espacial integradas dentro de CATGIS."),
                 getProfessionalNote()

@@ -102,6 +102,11 @@ public final class OpenTopographyDemService {
         try (InputStream stream = response.body()) {
             Files.copy(stream, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
+        RasterSidecarSupport.write(
+                outputFile,
+                latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null,
+                dataset != null ? dataset.getSourceCrsCode() : "EPSG:4326"
+        );
         return new FileDownloadResult(outputFile, latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null, uri);
     }
 

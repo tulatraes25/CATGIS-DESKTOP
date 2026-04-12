@@ -17,6 +17,7 @@ import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.Locale;
 
 public class RasterDisplaySettingsDialog extends JDialog {
 
@@ -51,6 +52,7 @@ public class RasterDisplaySettingsDialog extends JDialog {
 
         MapPanel.RasterStyle style = mapPanel.getOrCreateRasterStyle(layer, Math.max(1, data.getBandCount()));
         int bandCount = Math.max(1, data.getBandCount());
+        TopographyWorkflowSupport.RasterVisualPreset preset = TopographyWorkflowSupport.resolveRasterVisualPreset(layer, bandCount);
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
@@ -76,7 +78,7 @@ public class RasterDisplaySettingsDialog extends JDialog {
         redCombo.setSelectedItem(Math.min(style.redBand + 1, bandCount));
         greenCombo.setSelectedItem(Math.min(style.greenBand + 1, bandCount));
         blueCombo.setSelectedItem(Math.min(style.blueBand + 1, bandCount));
-        boolean multiBand = bandCount >= 3;
+        boolean multiBand = bandCount >= 3 && preset.allowBandSelection();
         redCombo.setEnabled(multiBand);
         greenCombo.setEnabled(multiBand);
         blueCombo.setEnabled(multiBand);
@@ -96,12 +98,18 @@ public class RasterDisplaySettingsDialog extends JDialog {
         gc.gridx = 0; gc.gridy = y; form.add(new JLabel("Banda B"), gc);
         gc.gridx = 1; form.add(blueCombo, gc); y++;
 
-        JLabel help = new JLabel(multiBand ? "Raster multibanda detectado." : "Raster de una banda o RGB no configurable.");
+        String helpText = "<html><div style='width:300px'><b>" + preset.title() + ":</b> "
+                + preset.description()
+                + "<br><br><b>Opacidad sugerida:</b> "
+                + String.format(Locale.US, "%d%%", preset.recommendedOpacityPercent())
+                + (multiBand ? "<br><br>Las bandas RGB se pueden ajustar manualmente." : "<br><br>La composicion RGB no necesita ajuste para esta capa.")
+                + "</div></html>";
+        JLabel help = new JLabel(helpText);
         gc.gridx = 0; gc.gridy = y; gc.gridwidth = 2; form.add(help, gc);
 
         JButton apply = new JButton("Aplicar");
         JButton close = new JButton("Cerrar");
-        JButton reset = new JButton("Reset");
+        JButton reset = new JButton("Restablecer sugerido");
 
         apply.addActionListener(e -> {
             float opacity = opacitySlider.getValue() / 100f;
@@ -117,13 +125,21 @@ public class RasterDisplaySettingsDialog extends JDialog {
         });
 
         reset.addActionListener(e -> {
-            opacitySlider.setValue(100);
-            grayCheck.setSelected(false);
-            autoContrastCheck.setSelected(true);
+            opacitySlider.setValue(Math.max(0, Math.min(100, preset.recommendedOpacityPercent())));
+            grayCheck.setSelected(preset.grayscale());
+            autoContrastCheck.setSelected(preset.autoContrast());
             redCombo.setSelectedItem(1);
             greenCombo.setSelectedItem(Math.min(2, bandCount));
             blueCombo.setSelectedItem(Math.min(3, bandCount));
-            mapPanel.applyRasterStyle(layer, 1.0f, false, true, 0, Math.min(1, bandCount - 1), Math.min(2, bandCount - 1));
+            mapPanel.applyRasterStyle(
+                    layer,
+                    Math.max(0f, Math.min(1f, preset.recommendedOpacityPercent() / 100f)),
+                    preset.grayscale(),
+                    preset.autoContrast(),
+                    0,
+                    Math.min(1, bandCount - 1),
+                    Math.min(2, bandCount - 1)
+            );
         });
 
         close.addActionListener(e -> dispose());

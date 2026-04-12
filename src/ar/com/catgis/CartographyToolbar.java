@@ -5,7 +5,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -34,7 +33,7 @@ public class CartographyToolbar extends JPanel {
         panel.setOpaque(false);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        JLabel title = new JLabel(I18n.t("Mapas finales"));
+        JLabel title = new JLabel(I18n.t("CATMAP"));
         title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
         title.setForeground(new Color(24, 40, 72));
 
@@ -52,18 +51,31 @@ public class CartographyToolbar extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         panel.setOpaque(false);
 
-        JButton compositorButton = createButton(I18n.t("Abrir compositor cartografico"), AppIcons.projectIcon());
+        JButton compositorButton = createButton(I18n.t("Abrir CATMAP"), AppIcons.projectIcon());
         compositorButton.addActionListener(e -> MapLayoutComposerDialog.open());
 
-        JButton symbologyButton = createButton(I18n.t("Simbologia de capa"), AppIcons.propertiesIcon());
-        symbologyButton.addActionListener(e -> openSelectedLayerProperties());
+        JButton osmButton = createIconButton(I18n.t("Activar OpenStreetMap"), AppIcons.basemapIcon());
+        osmButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM));
 
-        JButton thematicButton = createButton(I18n.t("Tematica por campo"), AppIcons.propertiesIcon());
-        thematicButton.addActionListener(e -> openSelectedLayerThematic());
+        JButton esriImageryButton = createIconButton(I18n.t("Activar Esri World Imagery"), AppIcons.imageryIcon());
+        esriImageryButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY));
+
+        JButton esriTopoButton = createIconButton(I18n.t("Activar Esri World Topo"), AppIcons.basemapIcon());
+        esriTopoButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_TOPO));
+
+        JButton mapsButton = createIconButton(I18n.t("Elegir mapa base online"), AppIcons.openIcon());
+        mapsButton.addActionListener(e -> OnlineBaseMapAction.openDialog());
+
+        JButton wmsButton = createIconButton(I18n.t("Agregar servicio WMS"), AppIcons.wmsIcon());
+        wmsButton.addActionListener(e -> AddWmsAction.openDialog());
 
         panel.add(compositorButton);
-        panel.add(symbologyButton);
-        panel.add(thematicButton);
+        panel.add(Box.createHorizontalStrut(6));
+        panel.add(osmButton);
+        panel.add(esriImageryButton);
+        panel.add(esriTopoButton);
+        panel.add(mapsButton);
+        panel.add(wmsButton);
         return panel;
     }
 
@@ -75,31 +87,12 @@ public class CartographyToolbar extends JPanel {
         return button;
     }
 
-    private void openSelectedLayerProperties() {
-        Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
-        if (layer == null) {
-            JOptionPane.showMessageDialog(
-                    CatgisDesktopApp.getMainFrameSafe(),
-                    I18n.t("Selecciona una capa en el Gestor de proyecto para editar su simbologia."),
-                    I18n.t("Mapas finales"),
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-            return;
-        }
-        LayerPropertiesDialog.open(layer);
-    }
-
-    private void openSelectedLayerThematic() {
-        Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
-        if (layer == null) {
-            JOptionPane.showMessageDialog(
-                    CatgisDesktopApp.getMainFrameSafe(),
-                    I18n.t("Selecciona una capa de lineas o poligonos para configurar su simbologia por campo."),
-                    I18n.t("Mapas finales"),
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-            return;
-        }
-        CategorizedSymbologyDialog.open(layer);
+    private JButton createIconButton(String tooltip, javax.swing.Icon icon) {
+        JButton button = new JButton(icon);
+        button.setToolTipText(tooltip);
+        button.setFocusable(false);
+        button.setMargin(new Insets(6, 6, 6, 6));
+        button.setPreferredSize(new Dimension(34, 34));
+        return button;
     }
 }

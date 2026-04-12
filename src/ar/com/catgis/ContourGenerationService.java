@@ -20,6 +20,12 @@ import java.util.Locale;
 
 public final class ContourGenerationService {
 
+    private static final String CONTOUR_INTERVAL_TOKEN = "interval=";
+    private static final String CONTOUR_INDEX_TOKEN = "indexEvery=";
+    private static final String CONTOUR_SIMPLIFY_TOKEN = "simplify=";
+    private static final String CONTOUR_SMOOTH_TOKEN = "smooth=";
+    private static final String CONTOUR_MIN_ELEVATION_TOKEN = "minElevation=";
+
     private ContourGenerationService() {
     }
 
@@ -28,7 +34,8 @@ public final class ContourGenerationService {
                                                          int indexEvery,
                                                          String outputLayerName,
                                                          boolean simplify,
-                                                         boolean smooth) throws Exception {
+                                                         boolean smooth,
+                                                         Double minimumElevation) throws Exception {
         if (!(rasterLayer instanceof RasterLayer)) {
             throw new IllegalArgumentException("La capa seleccionada no es raster.");
         }
@@ -71,6 +78,9 @@ public final class ContourGenerationService {
                     continue;
                 }
                 double elevation = resolveElevationValue(feature, elevationField);
+                if (minimumElevation != null && Double.isFinite(elevation) && elevation <= minimumElevation) {
+                    continue;
+                }
                 String curveType = isIndexContour(elevation, interval, indexEvery) ? "Indice" : "Intermedia";
                 featureBuilder.set("the_geom", geometry.copy());
                 featureBuilder.set("elevation_m", elevation);
@@ -80,6 +90,9 @@ public final class ContourGenerationService {
             }
         }
         if (features.isEmpty()) {
+            if (minimumElevation != null) {
+                throw new IllegalStateException("No se generaron curvas con esa equidistancia porque el filtro costero / cota minima esta dejando todo afuera. Prueba con un umbral menor o desactivalo.");
+            }
             throw new IllegalStateException("No se generaron curvas de nivel para ese raster y esa equidistancia.");
         }
 
@@ -88,13 +101,21 @@ public final class ContourGenerationService {
                 ? new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY())
                 : null;
 
-        Layer contourLayer = new Layer(
+        VectorLayer contourLayer = new VectorLayer(
                 outputLayerName != null && !outputLayerName.isBlank() ? outputLayerName.trim() : "Curvas de nivel",
-                rasterLayer.getPath(),
-                "LINE"
+                ""
         );
-        contourLayer.setSourceName("Curvas de nivel derivadas de " + rasterLayer.getName());
-        contourLayer.setSourceCRS(RasterCoverageSupport.resolveCoverageCrsCode(coverage, rasterLayer));
+        contourLayer.setVisible(true);
+        contourLayer.setSourceName(buildPersistentSourceName(
+                rasterLayer,
+                interval,
+                indexEvery,
+                simplify,
+                smooth,
+                minimumElevation
+        ));
+        contourLayer.setFeatureCount(features.size());
+        contourLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalAnalysisCrsCode(coverage, rasterLayer));
         contourLayer.setLineColor(new Color(142, 99, 61));
         contourLayer.setLineWidth(1.15f);
         contourLayer.setLineSymbolStyle(Layer.LineSymbolStyle.SOLID);
@@ -107,10 +128,28 @@ public final class ContourGenerationService {
                 envelope,
                 contourLayer.getSourceName(),
                 features.size(),
-                "Curvas generadas con equidistancia " + formatNumber(interval) + " e indice cada " + indexEvery + " curvas.",
+                "Curvas generadas con equidistancia " + formatNumber(interval)
+                        + " e indice cada " + indexEvery + " curvas."
+                        + (minimumElevation != null ? " Se excluyeron curvas <= " + formatNumber(minimumElevation) + " m para limpieza costera / ruido de borde." : ""),
                 outputSchema
         );
         return new GeneratedContourLayer(contourLayer, data, "elevation_m");
+    }
+
+    public static GeneratedContourLayer regenerateContours(Layer savedLayer, Layer rasterLayer) throws Exception {
+        if (savedLayer == null) {
+            throw new IllegalArgumentException("La capa de curvas guardada no es valida.");
+        }
+        RegenerationOptions options = RegenerationOptions.fromLayer(savedLayer);
+        return generateContours(
+                rasterLayer,
+                options.interval(),
+                options.indexEvery(),
+                savedLayer.getName(),
+                options.simplify(),
+                options.smooth(),
+                options.minimumElevation()
+        );
     }
 
     private static SimpleFeatureType buildOutputSchema(SimpleFeatureType sourceSchema, String outputLayerName) {
@@ -259,6 +298,110 @@ public final class ContourGenerationService {
             return String.format(Locale.US, "%.0f", value);
         }
         return String.format(Locale.US, "%.2f", value);
+    }
+
+    private static String buildPersistentSourceName(Layer rasterLayer,
+                                                    double interval,
+                                                    int indexEvery,
+                                                    boolean simplify,
+                                                    boolean smooth,
+                                                    Double minimumElevation) {
+        String rasterName = rasterLayer != null && rasterLayer.getName() != null && !rasterLayer.getName().isBlank()
+                ? rasterLayer.getName().trim()
+                : "DEM";
+        StringBuilder sb = new StringBuilder("Curvas de nivel derivadas de ")
+                .append(rasterName)
+                .append("; ")
+                .append(CONTOUR_INTERVAL_TOKEN).append(formatNumber(interval))
+                .append("; ")
+                .append(CONTOUR_INDEX_TOKEN).append(indexEvery)
+                .append("; ")
+                .append(CONTOUR_SIMPLIFY_TOKEN).append(simplify)
+                .append("; ")
+                .append(CONTOUR_SMOOTH_TOKEN).append(smooth);
+        if (minimumElevation != null) {
+            sb.append("; ")
+                    .append(CONTOUR_MIN_ELEVATION_TOKEN)
+                    .append(formatNumber(minimumElevation));
+        }
+        return sb.toString();
+    }
+
+    private static Double parseOptionalDoubleToken(String text, String token) {
+        String value = parseToken(text, token);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return toDouble(value);
+    }
+
+    private static Integer parseOptionalIntegerToken(String text, String token) {
+        String value = parseToken(text, token);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static Boolean parseOptionalBooleanToken(String text, String token) {
+        String value = parseToken(text, token);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Boolean.parseBoolean(value.trim());
+    }
+
+    private static String parseToken(String text, String token) {
+        if (text == null || text.isBlank() || token == null || token.isBlank()) {
+            return null;
+        }
+        String lowerText = text.toLowerCase(Locale.ROOT);
+        String lowerToken = token.toLowerCase(Locale.ROOT);
+        int start = lowerText.indexOf(lowerToken);
+        if (start < 0) {
+            return null;
+        }
+        int valueStart = start + token.length();
+        int end = text.indexOf(';', valueStart);
+        String value = end >= 0 ? text.substring(valueStart, end) : text.substring(valueStart);
+        return value != null ? value.trim() : null;
+    }
+
+    private record RegenerationOptions(double interval,
+                                       int indexEvery,
+                                       boolean simplify,
+                                       boolean smooth,
+                                       Double minimumElevation) {
+        private static RegenerationOptions fromLayer(Layer layer) {
+            String sourceName = layer != null ? layer.getSourceName() : "";
+            Double parsedInterval = parseOptionalDoubleToken(sourceName, CONTOUR_INTERVAL_TOKEN);
+            Integer parsedIndexEvery = parseOptionalIntegerToken(sourceName, CONTOUR_INDEX_TOKEN);
+            Boolean parsedSimplify = parseOptionalBooleanToken(sourceName, CONTOUR_SIMPLIFY_TOKEN);
+            Boolean parsedSmooth = parseOptionalBooleanToken(sourceName, CONTOUR_SMOOTH_TOKEN);
+            Double parsedMinimumElevation = parseOptionalDoubleToken(sourceName, CONTOUR_MIN_ELEVATION_TOKEN);
+
+            if (parsedInterval == null && layer != null && layer.getName() != null) {
+                String name = layer.getName().trim().toLowerCase(Locale.ROOT);
+                int start = name.indexOf("curvas ");
+                int meterMarker = name.indexOf("m", Math.max(start, 0));
+                if (start >= 0 && meterMarker > start + 7) {
+                    String candidate = layer.getName().substring(start + 7, meterMarker).trim();
+                    parsedInterval = toDouble(candidate);
+                }
+            }
+
+            return new RegenerationOptions(
+                    parsedInterval != null && parsedInterval > 0d ? parsedInterval : 10d,
+                    parsedIndexEvery != null && parsedIndexEvery >= 2 ? parsedIndexEvery : 5,
+                    parsedSimplify != null ? parsedSimplify : true,
+                    parsedSmooth != null ? parsedSmooth : false,
+                    parsedMinimumElevation
+            );
+        }
     }
 
     public record GeneratedContourLayer(Layer layer, ShapefileData data, String elevationField) {

@@ -5,7 +5,6 @@ import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.gce.geotiff.GeoTiffWriter;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.Envelope;
 
 import javax.imageio.ImageIO;
@@ -168,7 +167,7 @@ public final class PublicTerrainTilesDemService {
                 lonToMetersX(plan.latLonEnvelope.getMaxX()),
                 latToMetersY(plan.latLonEnvelope.getMinY()),
                 latToMetersY(plan.latLonEnvelope.getMaxY()),
-                CRS.decode("EPSG:3857", true)
+                CRSDefinitions.decode("EPSG:3857", true)
         );
 
         GridCoverage2D coverage = new GridCoverageFactory().create("terrain-tiles-dem", raster, env3857);
@@ -178,6 +177,16 @@ public final class PublicTerrainTilesDemService {
         } finally {
             writer.dispose();
         }
+        RasterSidecarSupport.write(
+                outputFile,
+                new Envelope(
+                        env3857.getMinX(),
+                        env3857.getMaxX(),
+                        env3857.getMinY(),
+                        env3857.getMaxY()
+                ),
+                "EPSG:3857"
+        );
     }
 
     private static void placeTile(HttpClient client,

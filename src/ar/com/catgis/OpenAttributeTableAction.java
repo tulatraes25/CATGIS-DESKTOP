@@ -218,6 +218,16 @@ public class OpenAttributeTableAction extends AbstractAction {
         return window != null && window.isDisplayable() ? window : null;
     }
 
+    public static void closeOpenWindow(Layer layer) {
+        if (layer == null) {
+            return;
+        }
+        AttributeTableWindow window = OPEN_WINDOWS.remove(layer);
+        if (window != null && window.isDisplayable()) {
+            window.dispose();
+        }
+    }
+
     public static void focusOpenTables() {
         Collection<AttributeTableWindow> windows = new ArrayList<>(OPEN_WINDOWS.values());
         boolean focused = false;
@@ -289,12 +299,26 @@ public class OpenAttributeTableAction extends AbstractAction {
                 if (path.endsWith(".shp")) {
                     data = invokeLoader(ShapefileLoader.class, layer.getPath(),
                             new String[]{"load", "loadShapefile", "open", "openShapefile", "read", "readShapefile"});
+                } else if (path.endsWith(".dxf")) {
+                    data = invokeLoader(DxfLoader.class, layer.getPath(),
+                            new String[]{"load", "open", "read"});
+                } else if (path.endsWith(".dwg")) {
+                    DwgImportSupport.ResolvedCadReference resolvedCad = DwgImportSupport.resolveDwgReference(
+                            new File(layer.getPath()),
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            true
+                    );
+                    if (resolvedCad != null && resolvedCad.dxfFile() != null) {
+                        data = DxfLoader.load(resolvedCad.dxfFile());
+                    }
                 } else if (path.endsWith(".geojson") || path.endsWith(".json")) {
                     data = invokeLoader(GeoJsonLoader.class, layer.getPath(),
                             new String[]{"load", "loadGeoJson", "open", "read"});
-                } else if (path.endsWith(".kml")) {
+                } else if (layer instanceof GpxLayer gpxLayer && path.endsWith(".gpx")) {
+                    data = GpxLoader.load(new File(layer.getPath()), gpxLayer.getContentKind());
+                } else if (path.endsWith(".kml") || path.endsWith(".kmz")) {
                     data = invokeLoader(KmlLoader.class, layer.getPath(),
-                            new String[]{"load", "loadKml", "open", "read"});
+                            new String[]{"load", "loadKml", "loadKmz", "open", "read"});
                 }
 
                 if (data != null) {

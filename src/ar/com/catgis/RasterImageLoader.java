@@ -24,6 +24,7 @@ import org.geotools.coverage.grid.io.AbstractGridCoverage2DReader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridFormatFinder;
 import org.geotools.coverage.processing.Operations;
+import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.Envelope;
@@ -186,6 +187,14 @@ public class RasterImageLoader {
                 return data;
             }
         } catch (Exception ex) {
+            LocalRasterData sidecarFallback = loadWithSidecarFallback(fileToRead, targetDisplaySize, mode, projectCRS, forcedSourceCRS);
+            if (sidecarFallback != null) {
+                return sidecarFallback;
+            }
+            LocalRasterData imageFallback = loadWithPlainImageFallback(fileToRead, targetDisplaySize, mode, projectCRS, forcedSourceCRS);
+            if (imageFallback != null) {
+                return imageFallback;
+            }
             throw new IOException(buildDiagnosticMessage(originalPath, fileToRead, ex), ex);
         }
         throw new IOException("No se pudo leer el archivo raster:\n" + originalPath);
@@ -212,6 +221,9 @@ public class RasterImageLoader {
         AbstractGridCoverage2DReader reader = null;
         try {
             reader = (AbstractGridCoverage2DReader) format.getReader(file);
+            if (reader == null && isTiff(file.getName().toLowerCase(Locale.ROOT))) {
+                reader = new GeoTiffReader(file);
+            }
             if (reader == null) {
                 throw new IOException("GeoTools encontro formato pero no pudo crear reader para: " + file.getName()
                         + " [" + format.getClass().getName() + "]");
@@ -221,6 +233,7 @@ public class RasterImageLoader {
             if (coverage == null || coverage.getRenderedImage() == null) {
                 throw new IOException("GeoTools creo reader pero no devolvio cobertura valida para: " + file.getName());
             }
+            coverage = RasterCoverageSupport.applySidecarMetadataIfPresent(file, coverage);
 
             BufferedImage originalRaw = renderedToBuffered(coverage);
             Envelope originalEnvelope = extractEnvelopeByReflection(coverage, originalRaw);
@@ -392,6 +405,97 @@ public class RasterImageLoader {
         return sb.toString();
     }
 
+    private static LocalRasterData loadWithSidecarFallback(
+            File file,
+            int targetDisplaySize,
+            String mode,
+            String projectCRS,
+            String forcedSourceCRS) {
+        if (file == null || !isTiff(file.getName().toLowerCase(Locale.ROOT))) {
+            return null;
+        }
+
+        RasterSidecarSupport.Metadata metadata = RasterSidecarSupport.read(file);
+        if (metadata == null || metadata.envelope() == null || metadata.envelope().isNull()) {
+            return null;
+        }
+
+        try {
+            BufferedImage raw = ImageIO.read(file);
+            if (raw == null) {
+                return null;
+            }
+            String sourceCrs = pickUsableSourceCRS(forcedSourceCRS, metadata.sourceCrs());
+            String targetCrs = CRSDefinitions.normalizeCode(projectCRS);
+            Envelope displayEnvelope = new Envelope(metadata.envelope());
+            String displayCrs = sourceCrs;
+            if (isResolvableCode(sourceCrs) && isResolvableCode(targetCrs) && !sourceCrs.equalsIgnoreCase(targetCrs)) {
+                Envelope projectedEnvelope = RasterCoverageSupport.reprojectEnvelope(displayEnvelope, sourceCrs, targetCrs);
+                if (projectedEnvelope != null && !projectedEnvelope.isNull()) {
+                    displayEnvelope = projectedEnvelope;
+                    displayCrs = targetCrs;
+                }
+            }
+            BufferedImage displayImage = prepareDisplayImage(raw, targetDisplaySize);
+            return new LocalRasterData(
+                    displayImage,
+                    displayEnvelope,
+                    raw.getRaster().getNumBands(),
+                    true,
+                    sourceCrs,
+                    mode,
+                    displayCrs
+            );
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static LocalRasterData loadWithPlainImageFallback(
+            File file,
+            int targetDisplaySize,
+            String mode,
+            String projectCRS,
+            String forcedSourceCRS) {
+        if (file == null || !isTiff(file.getName().toLowerCase(Locale.ROOT))) {
+            return null;
+        }
+        try {
+            BufferedImage raw = ImageIO.read(file);
+            if (raw == null) {
+                return null;
+            }
+            String sourceCrs = pickUsableSourceCRS(forcedSourceCRS, RasterCoverageSupport.readCrsCodeFromTiffMetadata(file));
+            String targetCrs = CRSDefinitions.normalizeCode(projectCRS);
+            Envelope envelope = RasterCoverageSupport.readEnvelopeFromTiffMetadata(file, raw.getWidth(), raw.getHeight());
+            boolean georeferenced = envelope != null && !envelope.isNull() && !sourceCrs.isBlank();
+            String displayCrs = sourceCrs;
+            Envelope displayEnvelope = envelope;
+            if (georeferenced && isResolvableCode(sourceCrs) && isResolvableCode(targetCrs) && !sourceCrs.equalsIgnoreCase(targetCrs)) {
+                Envelope projectedEnvelope = RasterCoverageSupport.reprojectEnvelope(displayEnvelope, sourceCrs, targetCrs);
+                if (projectedEnvelope != null && !projectedEnvelope.isNull()) {
+                    displayEnvelope = projectedEnvelope;
+                    displayCrs = targetCrs;
+                }
+            }
+            if (displayEnvelope == null || displayEnvelope.isNull()) {
+                displayEnvelope = new Envelope(0, raw.getWidth(), 0, raw.getHeight());
+            }
+            BufferedImage displayImage = prepareDisplayImage(raw, targetDisplaySize);
+            return new LocalRasterData(
+                    displayImage,
+                    displayEnvelope,
+                    raw.getRaster().getNumBands(),
+                    georeferenced,
+                    sourceCrs,
+                    mode,
+                    displayCrs
+            );
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private static String readAll(InputStream in) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
@@ -449,7 +553,7 @@ public class RasterImageLoader {
         }
 
         try {
-            String code = CRS.lookupIdentifier(crs, true);
+            String code = CRS.toSRS(crs, true);
             if (isResolvableCode(code)) {
                 return CRSDefinitions.normalizeCode(code);
             }
@@ -457,7 +561,7 @@ public class RasterImageLoader {
         }
 
         try {
-            String code = CRS.toSRS(crs, true);
+            String code = crs.getName() != null ? crs.getName().toString() : "";
             if (isResolvableCode(code)) {
                 return CRSDefinitions.normalizeCode(code);
             }
@@ -469,20 +573,8 @@ public class RasterImageLoader {
 
     private static GridCoverage2D reprojectCoverageIfNeeded(GridCoverage2D coverage, String sourceCRSCode, String targetCRSCode)
             throws IOException {
-        if (coverage == null) {
-            return null;
-        }
-
-        String source = CRSDefinitions.normalizeCode(sourceCRSCode);
-        String target = CRSDefinitions.normalizeCode(targetCRSCode);
-
-        if (!isResolvableCode(source) || !isResolvableCode(target) || source.equalsIgnoreCase(target)) {
-            return coverage;
-        }
-
         try {
-            CoordinateReferenceSystem targetCRS = CRS.decode(target, true);
-            return (GridCoverage2D) Operations.DEFAULT.resample(coverage, targetCRS);
+            return RasterCoverageSupport.reprojectCoverage(coverage, sourceCRSCode, targetCRSCode);
         } catch (Exception ex) {
             return coverage;
         }
@@ -495,7 +587,7 @@ public class RasterImageLoader {
         }
 
         try {
-            CoordinateReferenceSystem sourceCRS = CRS.decode(CRSDefinitions.normalizeCode(sourceCRSCode), true);
+            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCRSCode, true);
             ReferencedEnvelope referencedEnvelope = new ReferencedEnvelope(envelope, sourceCRS);
             GridCoverageFactory factory = new GridCoverageFactory();
             return factory.create("catgis-raster", coverage.getRenderedImage(), referencedEnvelope);
@@ -505,11 +597,11 @@ public class RasterImageLoader {
     }
 
     private static String pickUsableSourceCRS(String requestedSourceCRS, String extractedSourceCRS) {
-        if (isResolvableCode(requestedSourceCRS)) {
-            return CRSDefinitions.normalizeCode(requestedSourceCRS);
-        }
         if (isResolvableCode(extractedSourceCRS)) {
             return CRSDefinitions.normalizeCode(extractedSourceCRS);
+        }
+        if (isResolvableCode(requestedSourceCRS)) {
+            return CRSDefinitions.normalizeCode(requestedSourceCRS);
         }
         return "";
     }
@@ -521,7 +613,7 @@ public class RasterImageLoader {
         }
 
         try {
-            CRS.decode(normalized, true);
+            CRSDefinitions.decode(normalized, true);
             return true;
         } catch (Exception ignored) {
             return false;

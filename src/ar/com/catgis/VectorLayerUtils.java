@@ -290,10 +290,32 @@ public final class VectorLayerUtils {
         target.setPointSymbolStyle(source.getPointSymbolStyle());
         target.setLineSymbolStyle(source.getLineSymbolStyle());
         target.setPolygonFillStyle(source.getPolygonFillStyle());
+        copyCategorizedSymbology(source.getPointCategorizedSymbology(), target.getPointCategorizedSymbology());
         copyCategorizedSymbology(source.getLineCategorizedSymbology(), target.getLineCategorizedSymbology());
         copyCategorizedSymbology(source.getPolygonCategorizedSymbology(), target.getPolygonCategorizedSymbology());
         target.setLabelsVisible(source.isLabelsVisible());
         target.setLabelField(source.getLabelField());
+        target.setSourceCRS(source.getSourceCRS());
+        target.setCadOffsetX(source.getCadOffsetX());
+        target.setCadOffsetY(source.getCadOffsetY());
+        target.setCadScale(source.getCadScale());
+        target.setCadRotationDegrees(source.getCadRotationDegrees());
+        target.setCadGeoreferenceTransform(
+                source.getCadGeoreferenceMethod(),
+                source.getCadGeorefM00(),
+                source.getCadGeorefM01(),
+                source.getCadGeorefM02(),
+                source.getCadGeorefM10(),
+                source.getCadGeorefM11(),
+                source.getCadGeorefM12()
+        );
+        target.setCadGeoreferenceDiagnostics(
+                source.getCadGeorefResidualMean(),
+                source.getCadGeorefResidualMax(),
+                source.getCadGeorefReferenceCount(),
+                source.getCadGeorefCheckCount()
+        );
+        target.setCadHiddenInternalLayers(source.getCadHiddenInternalLayers());
 
         for (FieldConfig sourceConfig : source.getFieldConfigs().values()) {
             if (sourceConfig == null) {
@@ -357,7 +379,10 @@ public final class VectorLayerUtils {
             targetRule.setPrimaryColor(copyColor(sourceRule.getPrimaryColor()));
             targetRule.setSecondaryColor(copyColor(sourceRule.getSecondaryColor()));
             targetRule.setLineStyle(sourceRule.getLineStyle());
+            targetRule.setPointSymbolStyle(sourceRule.getPointSymbolStyle());
+            targetRule.setPointSize(sourceRule.getPointSize());
             targetRule.setPolygonFillStyle(sourceRule.getPolygonFillStyle());
+            targetRule.setLineWidth(sourceRule.getLineWidth());
         }
     }
 

@@ -102,9 +102,9 @@ public class PinLayerBuilder {
             }
 
             org.geotools.api.referencing.crs.CoordinateReferenceSystem sourceCRS =
-                    org.geotools.referencing.CRS.decode(sourceCode, true);
+                    CRSDefinitions.decode(sourceCode, true);
             org.geotools.api.referencing.crs.CoordinateReferenceSystem targetCRS =
-                    org.geotools.referencing.CRS.decode(targetCode, true);
+                    CRSDefinitions.decode(targetCode, true);
             org.geotools.api.referencing.operation.MathTransform transform =
                     org.geotools.referencing.CRS.findMathTransform(sourceCRS, targetCRS, true);
 
