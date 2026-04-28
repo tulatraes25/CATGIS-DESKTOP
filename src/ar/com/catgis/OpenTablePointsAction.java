@@ -47,12 +47,12 @@ public class OpenTablePointsAction {
             }
             CsvDataSourceDialog.open(file, data);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(
+            AppErrorSupport.logFailure("Error al abrir tabla externa " + file.getAbsolutePath(), ex);
+            AppErrorSupport.showErrorDialog(
                     CatgisDesktopApp.getMainFrameSafe(),
-                    "Error al abrir tabla: " + ex.getMessage(),
                     "Tabla externa",
-                    JOptionPane.ERROR_MESSAGE
+                    "Error al abrir tabla.",
+                    ex
             );
         }
     }

@@ -31,8 +31,7 @@ public class AboutCatgisDialog extends JDialog {
         add(buildContentTabs(), BorderLayout.CENTER);
         add(buildFooter(), BorderLayout.SOUTH);
 
-        setSize(760, 560);
-        setMinimumSize(new Dimension(700, 520));
+        WindowLayoutSupport.fitDialogToScreen(this, 760, 560, 680, 500);
         setLocationRelativeTo(owner);
     }
 

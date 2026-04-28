@@ -38,7 +38,7 @@ public class ShapefileData {
                     this.features.add(it.next());
                 }
             } catch (Exception ex) {
-                ex.printStackTrace();
+                AppErrorSupport.logFailure("No se pudieron materializar las entidades del feature collection", ex);
             }
         }
         this.featureCollection = buildFeatureCollection(this.features, this.schema);

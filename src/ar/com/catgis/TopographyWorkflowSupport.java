@@ -229,6 +229,38 @@ public final class TopographyWorkflowSupport {
                     false,
                     false
             );
+            case ProRasterDerivedService.OP_PRO_THEMATIC_CHLOR_A -> new RasterVisualPreset(
+                    "Clorofila-a Pro",
+                    "Salida tematica preliminar para clorofila-a. Conviene verla sobre mapa base o costa con opacidad alta.",
+                    86,
+                    false,
+                    false,
+                    false
+            );
+            case ProRasterDerivedService.OP_PRO_THEMATIC_KD490 -> new RasterVisualPreset(
+                    "Kd490 Pro",
+                    "Salida tematica preliminar para atenuacion difusa. Funciona mejor con relieve costero o linea de costa visible.",
+                    86,
+                    false,
+                    false,
+                    false
+            );
+            case ProRasterDerivedService.OP_PRO_THEMATIC_TURBIDITY_TSM -> new RasterVisualPreset(
+                    "Turbidez / TSM Pro",
+                    "Salida exploratoria para turbidez o materia en suspension. Conviene usarla con opacidad media-alta.",
+                    84,
+                    false,
+                    false,
+                    false
+            );
+            case ProRasterDerivedService.OP_PRO_QA_BASIC_MASK -> new RasterVisualPreset(
+                    "QA basica Pro",
+                    "Mascara exploratoria de cobertura valida y pixeles sospechosos. Sirve para revisar rapidamente el raster fuente.",
+                    74,
+                    false,
+                    false,
+                    false
+            );
             default -> new RasterVisualPreset(
                     "Raster derivado",
                     "Salida raster derivada lista para mezcla visual con opacidad moderada.",
@@ -657,10 +689,21 @@ public final class TopographyWorkflowSupport {
             return data;
         }
 
+        if (CadLayerSupport.isCadLayer(sourceLayer)) {
+            String cadSource = CRSDefinitions.normalizeCode(sourceLayer.getSourceCRS());
+            if (!cadSource.isBlank()) {
+                sourceLayer.setSourceCRS(cadSource);
+            }
+            return data;
+        }
+
         String sourceCrs = CRSDefinitions.normalizeCode(sourceLayer.getSourceCRS());
         String targetCrs = CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS());
         if (sourceCrs.isBlank() || targetCrs.isBlank() || sourceCrs.equalsIgnoreCase(targetCrs)) {
             sourceLayer.setSourceCRS(targetCrs.isBlank() ? sourceCrs : targetCrs);
+            if (!targetCrs.isBlank() && shouldNormalizeSchemaCrs(data, targetCrs)) {
+                return rebuildDataWithTargetSchema(data, targetCrs);
+            }
             return data;
         }
 
@@ -702,6 +745,48 @@ public final class TopographyWorkflowSupport {
                 projected.size(),
                 data.getMessage(),
                 targetSchema != null ? targetSchema : data.getSchema()
+        );
+    }
+
+    private static boolean shouldNormalizeSchemaCrs(ShapefileData data, String targetCrs) {
+        if (data == null || data.getSchema() == null || targetCrs == null || targetCrs.isBlank()) {
+            return false;
+        }
+        try {
+            String schemaCrs = CRSDefinitions.normalizeCode(org.geotools.referencing.CRS.toSRS(
+                    data.getSchema().getCoordinateReferenceSystem(),
+                    true
+            ));
+            return schemaCrs.isBlank() || !schemaCrs.equalsIgnoreCase(targetCrs);
+        } catch (Exception ex) {
+            return true;
+        }
+    }
+
+    private static ShapefileData rebuildDataWithTargetSchema(ShapefileData data, String targetCrs) {
+        if (data == null || data.getFeatures() == null || data.getFeatures().isEmpty()) {
+            return data;
+        }
+        SimpleFeatureType targetSchema = rebuildSchemaForTargetCrs(data.getSchema(), targetCrs);
+        if (targetSchema == null) {
+            return data;
+        }
+        List<SimpleFeature> cloned = new ArrayList<>();
+        for (SimpleFeature feature : data.getFeatures()) {
+            if (feature == null) {
+                continue;
+            }
+            Object geometryObject = feature.getDefaultGeometry();
+            Geometry geometry = geometryObject instanceof Geometry g ? (Geometry) g.copy() : null;
+            cloned.add(cloneFeatureWithGeometry(feature, geometry, targetSchema));
+        }
+        return new ShapefileData(
+                cloned,
+                data.getEnvelope(),
+                data.getSourceName(),
+                cloned.size(),
+                data.getMessage(),
+                targetSchema
         );
     }
 

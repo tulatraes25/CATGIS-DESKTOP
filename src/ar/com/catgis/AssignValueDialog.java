@@ -179,10 +179,13 @@ public class AssignValueDialog extends JDialog {
                     JOptionPane.INFORMATION_MESSAGE);
             dispose();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "No se pudo asignar el valor: " + ex.getMessage(),
+            AppErrorSupport.logFailure("No se pudo asignar el valor al campo", ex);
+            AppErrorSupport.showErrorDialog(
+                    this,
                     "Asignar valor a un campo",
-                    JOptionPane.ERROR_MESSAGE);
+                    "No se pudo asignar el valor.",
+                    ex
+            );
         }
     }
 

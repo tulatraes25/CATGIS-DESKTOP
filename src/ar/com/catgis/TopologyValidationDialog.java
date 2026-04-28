@@ -208,8 +208,8 @@ public class TopologyValidationDialog extends JDialog {
                 }
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "No se pudo ejecutar la validacion: " + ex.getMessage(), "Topologia", JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("No se pudo ejecutar la validacion topologica", ex);
+            AppErrorSupport.showErrorDialog(this, "Topologia", "No se pudo ejecutar la validacion.", ex);
         }
     }
 
@@ -365,8 +365,8 @@ public class TopologyValidationDialog extends JDialog {
             TopologyValidationService.exportReport(currentResults, file);
             JOptionPane.showMessageDialog(this, "Reporte exportado:\n" + file.getAbsolutePath());
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "No se pudo exportar el reporte: " + ex.getMessage(), "Topologia", JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("No se pudo exportar el reporte de topologia a " + file.getAbsolutePath(), ex);
+            AppErrorSupport.showErrorDialog(this, "Topologia", "No se pudo exportar el reporte.", ex);
         }
     }
 

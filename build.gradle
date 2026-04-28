@@ -7,6 +7,7 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 
 plugins {
     id 'java'
@@ -15,6 +16,10 @@ plugins {
 
 group = 'ar.com.catgis'
 version = '1.0'
+
+def javaVersionProperty = (findProperty('catgisJavaVersion') ?: '').toString().trim()
+def targetJavaVersion = javaVersionProperty.isInteger() ? javaVersionProperty.toInteger() : 17
+def windowsHost = System.getProperty('os.name', '').toLowerCase().contains('windows')
 
 repositories {
     mavenCentral()
@@ -59,7 +64,7 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
 }
 
@@ -70,19 +75,38 @@ sourceSets {
             exclude 'test/**'
         }
         resources {
-            srcDirs = ['src', '.']
-            includes = ['icons/**', 'help/**', 'splash_catgis.png']
+            srcDirs = ['src/main/resources', 'src', '.']
+            includes = ['icons/**', 'help/**', 'crs/**', 'splash_catgis.png']
         }
     }
 }
 
 application {
     mainClass = 'ar.com.catgis.Main'
+    applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8']
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes(
+                'Main-Class': 'ar.com.catgis.Main',
+                'Implementation-Title': 'CATGIS Desktop',
+                'Implementation-Version': version
+        )
+    }
 }
 
 tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'java.awt.headless', 'true'
+}
+
+tasks.named('processResources') {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.named('startScripts') {
@@ -98,7 +122,6 @@ tasks.named('startScripts') {
     }
 }
 
-def windowsHost = System.getProperty('os.name', '').toLowerCase().contains('windows')
 def installerDisplayName = 'CATGIS Desktop'
 def installerVersion = '1.0.0'
 def installerStableExeBaseName = 'CATGIS Desktop Review-1.0.0'
@@ -110,10 +133,90 @@ def installerInstallDir = 'CATGIS Desktop'
 def bundledWixBinDir = new File(rootDir.parentFile, 'tools/wix314/bin')
 def bundledInnoCompiler = new File(rootDir.parentFile, 'tools/innosetup6/ISCC.exe')
 def javaHomeProvider = javaToolchains.launcherFor {
-    languageVersion = JavaLanguageVersion.of(21)
+    languageVersion = JavaLanguageVersion.of(targetJavaVersion)
 }.map { it.metadata.installationPath.asFile }
 
+void runExternalCommand(List command, Map extraEnv = [:], String failureMessage = 'Error ejecutando comando externo.') {
+    List<String> commandStrings = (command ?: []).collect { it?.toString() ?: '' }
+    ProcessBuilder processBuilder = new ProcessBuilder(commandStrings)
+    if (extraEnv != null && !extraEnv.isEmpty()) {
+        Map<String, String> envStrings = extraEnv.collectEntries { k, v -> [(k.toString()): (v?.toString() ?: '')] }
+        processBuilder.environment().putAll(envStrings)
+    }
+    processBuilder.redirectErrorStream(true)
+    Process process = processBuilder.start()
+    process.inputStream.eachLine { line -> println(line) }
+    int exitCode = process.waitFor()
+    if (exitCode != 0) {
+        throw new GradleException("${failureMessage} Exit code: ${exitCode}. Comando: ${commandStrings.join(' ')}")
+    }
+}
+
+File requiredProjectFile(String relativePath, String purpose) {
+    File candidate = file(relativePath)
+    if (!candidate.exists()) {
+        throw new GradleException("Falta ${purpose} en ${candidate.absolutePath}.")
+    }
+    return candidate
+}
+
+tasks.register('printBuildEnvironment') {
+    doLast {
+        logger.lifecycle("CATGIS compila con Java ${targetJavaVersion}.")
+        logger.lifecycle("Windows host: ${windowsHost}")
+        logger.lifecycle("Directorio raiz: ${rootDir.absolutePath}")
+    }
+}
+
+tasks.register('verifyProjectLayout') {
+    doLast {
+        List<String> missing = []
+        [
+                'src/ar/com/catgis/Main.java',
+                'src/icons',
+                'src/help',
+                'src/main/resources/crs'
+        ].each { path ->
+            if (!file(path).exists()) {
+                missing << path
+            }
+        }
+
+        if (!missing.isEmpty()) {
+            throw new GradleException("Faltan archivos o carpetas clave del proyecto: ${missing.join(', ')}")
+        }
+
+        logger.lifecycle('Estructura base del proyecto verificada.')
+    }
+}
+
+tasks.register('verifyWindowsInstallerPrereqs') {
+    onlyIf { windowsHost }
+    doLast {
+        List<String> missing = []
+        [
+                'packaging/windows/CATGIS_BETA_LICENSE.rtf',
+                'packaging/windows/CATGIS_BILINGUAL_SETUP.iss'
+        ].each { path ->
+            if (!file(path).exists()) {
+                missing << path
+            }
+        }
+
+        if (!missing.isEmpty()) {
+            throw new GradleException("Faltan recursos del instalador Windows: ${missing.join(', ')}")
+        }
+
+        logger.lifecycle('Recursos base del instalador Windows verificados.')
+    }
+}
+
+tasks.named('classes') {
+    dependsOn 'verifyProjectLayout'
+}
+
 tasks.register('generateWindowsInstallerAssets') {
+    onlyIf { windowsHost }
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/resources')
     outputs.dir(outputDirProvider)
 
@@ -135,6 +238,7 @@ tasks.register('generateWindowsInstallerAssets') {
 }
 
 tasks.register('prepareWindowsInstallerInput', Sync) {
+    onlyIf { windowsHost }
     dependsOn installDist
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/input')
     from(layout.buildDirectory.dir("install/${project.name}/lib"))
@@ -142,21 +246,16 @@ tasks.register('prepareWindowsInstallerInput', Sync) {
 }
 
 tasks.register('packageWindowsAppImage') {
+    onlyIf { windowsHost }
     dependsOn 'prepareWindowsInstallerInput', 'generateWindowsInstallerAssets'
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
     def inputDirProvider = layout.buildDirectory.dir('installer/windows/input')
     def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
     inputs.dir(inputDirProvider)
     inputs.dir(resourcesDirProvider)
-    inputs.file(file('packaging/windows/CATGIS_BETA_LICENSE.rtf'))
-    inputs.file(file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss'))
     outputs.dir(outputDirProvider)
 
     doLast {
-        if (!windowsHost) {
-            throw new GradleException('El empaquetado Windows solo puede ejecutarse sobre Windows.')
-        }
-
         File outputDir = outputDirProvider.get().asFile
         File inputDir = inputDirProvider.get().asFile
         File resourcesDir = resourcesDirProvider.get().asFile
@@ -173,28 +272,28 @@ tasks.register('packageWindowsAppImage') {
         delete outputDir
         outputDir.mkdirs()
 
-        exec {
-            commandLine(
-                    jpackageExe.absolutePath,
-                    '--type', 'app-image',
-                    '--input', inputDir.absolutePath,
-                    '--dest', outputDir.absolutePath,
-                    '--name', installerDisplayName,
-                    '--main-jar', mainJar.name,
-                    '--main-class', 'ar.com.catgis.Main',
-                    '--app-version', installerVersion,
-                    '--vendor', installerVendor,
-                    '--description', installerDescription,
-                    '--copyright', installerCopyright,
-                    '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
-                    '--verbose'
-            )
-        }
+        List<String> appImageCommand = [
+                jpackageExe.absolutePath,
+                '--type', 'app-image',
+                '--input', inputDir.absolutePath,
+                '--dest', outputDir.absolutePath,
+                '--name', installerDisplayName,
+                '--main-jar', mainJar.name,
+                '--main-class', 'ar.com.catgis.Main',
+                '--app-version', installerVersion,
+                '--vendor', installerVendor,
+                '--description', installerDescription,
+                '--copyright', installerCopyright,
+                '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
+                '--verbose'
+        ]
+        runExternalCommand(appImageCommand, [:], 'Fallo al generar la app-image de Windows.')
     }
 }
 
 tasks.register('packageWindowsJpackageExeInstaller') {
-    dependsOn 'packageWindowsAppImage'
+    onlyIf { windowsHost }
+    dependsOn 'packageWindowsAppImage', 'verifyWindowsInstallerPrereqs'
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
     def appImageDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
     def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
@@ -204,10 +303,6 @@ tasks.register('packageWindowsJpackageExeInstaller') {
     outputs.dir(outputDirProvider)
 
     doLast {
-        if (!windowsHost) {
-            throw new GradleException('El instalador Windows .exe solo puede generarse sobre Windows.')
-        }
-
         File wixBinDir = project.ext.resolveWixBinDir.call()
         if (wixBinDir == null) {
             throw new GradleException('No se puede generar el .exe porque falta WiX Toolset 3.x (candle.exe y light.exe). La app-image con runtime ya queda disponible; agrega WiX al PATH o en C:\\CATGIS\\tools\\wix314\\bin y vuelve a ejecutar packageWindowsExeInstaller.')
@@ -216,14 +311,11 @@ tasks.register('packageWindowsJpackageExeInstaller') {
         File outputDir = outputDirProvider.get().asFile
         File appImageDir = new File(appImageDirProvider.get().asFile, installerDisplayName)
         File resourcesDir = resourcesDirProvider.get().asFile
-        File licenseFile = file('packaging/windows/CATGIS_BETA_LICENSE.rtf')
+        File licenseFile = requiredProjectFile('packaging/windows/CATGIS_BETA_LICENSE.rtf', 'la licencia de instalacion')
         File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage.exe')
 
         if (!appImageDir.exists()) {
             throw new GradleException("No se encontro la app-image esperada en ${appImageDir.absolutePath}.")
-        }
-        if (!licenseFile.exists()) {
-            throw new GradleException("No se encontro la licencia de instalacion en ${licenseFile.absolutePath}.")
         }
 
         File appImageExe = new File(appImageDir, "${installerDisplayName}.exe")
@@ -236,29 +328,30 @@ tasks.register('packageWindowsJpackageExeInstaller') {
         delete outputDir
         outputDir.mkdirs()
 
-        exec {
-            environment 'PATH', wixBinDir.absolutePath + File.pathSeparator + (System.getenv('PATH') ?: '')
-            commandLine(
-                    jpackageExe.absolutePath,
-                    '--type', 'exe',
-                    '--dest', outputDir.absolutePath,
-                    '--name', installerDisplayName,
-                    '--app-image', appImageDir.absolutePath,
-                    '--app-version', installerVersion,
-                    '--vendor', installerVendor,
-                    '--description', installerDescription,
-                    '--copyright', installerCopyright,
-                    '--license-file', licenseFile.absolutePath,
-                    '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
-                    '--win-shortcut',
-                    '--win-menu',
-                    '--win-menu-group', installerMenuGroup,
-                    '--win-dir-chooser',
-                    '--win-shortcut-prompt',
-                    '--install-dir', installerInstallDir,
-                    '--verbose'
-            )
-        }
+        List<String> jpackageExeCommand = [
+                jpackageExe.absolutePath,
+                '--type', 'exe',
+                '--dest', outputDir.absolutePath,
+                '--name', installerDisplayName,
+                '--app-image', appImageDir.absolutePath,
+                '--app-version', installerVersion,
+                '--vendor', installerVendor,
+                '--description', installerDescription,
+                '--copyright', installerCopyright,
+                '--license-file', licenseFile.absolutePath,
+                '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
+                '--win-shortcut',
+                '--win-menu',
+                '--win-menu-group', installerMenuGroup,
+                '--win-dir-chooser',
+                '--win-shortcut-prompt',
+                '--install-dir', installerInstallDir,
+                '--verbose'
+        ]
+        Map<String, String> jpackageEnv = [
+                'PATH': wixBinDir.absolutePath + File.pathSeparator + (System.getenv('PATH') ?: '')
+        ]
+        runExternalCommand(jpackageExeCommand, jpackageEnv, 'Fallo al generar instalador .exe via jpackage.')
 
         File generatedInstallerExe = new File(outputDir, "${installerDisplayName}-${installerVersion}.exe")
         File installerExe = new File(outputDir, "${installerStableExeBaseName}.exe")
@@ -277,7 +370,8 @@ tasks.register('packageWindowsJpackageExeInstaller') {
 }
 
 tasks.register('packageWindowsExeInstaller') {
-    dependsOn 'packageWindowsAppImage', 'generateWindowsInstallerAssets'
+    onlyIf { windowsHost }
+    dependsOn 'packageWindowsAppImage', 'generateWindowsInstallerAssets', 'verifyWindowsInstallerPrereqs'
     def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
     def appImageDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
     def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
@@ -288,10 +382,6 @@ tasks.register('packageWindowsExeInstaller') {
     outputs.dir(outputDirProvider)
 
     doLast {
-        if (!windowsHost) {
-            throw new GradleException('El instalador Windows .exe solo puede generarse sobre Windows.')
-        }
-
         File innoCompiler = project.ext.resolveInnoCompiler.call()
         if (innoCompiler == null || !innoCompiler.exists()) {
             throw new GradleException('No se puede generar el .exe bilingue porque falta Inno Setup 6 (ISCC.exe). Instala o copia Inno Setup en C:\\CATGIS\\tools\\innosetup6\\ISCC.exe y vuelve a ejecutar packageWindowsExeInstaller.')
@@ -300,17 +390,11 @@ tasks.register('packageWindowsExeInstaller') {
         File outputDir = outputDirProvider.get().asFile
         File appImageDir = new File(appImageDirProvider.get().asFile, installerDisplayName)
         File resourcesDir = resourcesDirProvider.get().asFile
-        File licenseFile = file('packaging/windows/CATGIS_BETA_LICENSE.rtf')
-        File issFile = file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss')
+        File licenseFile = requiredProjectFile('packaging/windows/CATGIS_BETA_LICENSE.rtf', 'la licencia de instalacion')
+        File issFile = requiredProjectFile('packaging/windows/CATGIS_BILINGUAL_SETUP.iss', 'el script de Inno Setup')
 
         if (!appImageDir.exists()) {
             throw new GradleException("No se encontro la app-image esperada en ${appImageDir.absolutePath}.")
-        }
-        if (!licenseFile.exists()) {
-            throw new GradleException("No se encontro la licencia de instalacion en ${licenseFile.absolutePath}.")
-        }
-        if (!issFile.exists()) {
-            throw new GradleException("No se encontro el script de Inno Setup en ${issFile.absolutePath}.")
         }
 
         File appImageExe = new File(appImageDir, "${installerDisplayName}.exe")
@@ -323,22 +407,21 @@ tasks.register('packageWindowsExeInstaller') {
         delete outputDir
         outputDir.mkdirs()
 
-        exec {
-            commandLine(
-                    innoCompiler.absolutePath,
-                    "/DAppImageDir=${appImageDir.absolutePath}",
-                    "/DOutputDir=${outputDir.absolutePath}",
-                    "/DInstallerName=${installerDisplayName}",
-                    "/DInstallerVersion=${installerVersion}",
-                    "/DInstallerPublisher=${installerVendor}",
-                    "/DInstallerExeName=${installerStableExeBaseName}",
-                    "/DInstallerLicense=${licenseFile.absolutePath}",
-                    "/DInstallerIcon=${new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath}",
-                    "/DInstallerGroup=${installerMenuGroup}",
-                    "/DInstallerDir=${installerInstallDir}",
-                    issFile.absolutePath
-            )
-        }
+        List<String> innoCommand = [
+                innoCompiler.absolutePath,
+                "/DAppImageDir=${appImageDir.absolutePath}",
+                "/DOutputDir=${outputDir.absolutePath}",
+                "/DInstallerName=${installerDisplayName}",
+                "/DInstallerVersion=${installerVersion}",
+                "/DInstallerPublisher=${installerVendor}",
+                "/DInstallerExeName=${installerStableExeBaseName}",
+                "/DInstallerLicense=${licenseFile.absolutePath}",
+                "/DInstallerIcon=${new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath}",
+                "/DInstallerGroup=${installerMenuGroup}",
+                "/DInstallerDir=${installerInstallDir}",
+                issFile.absolutePath
+        ]
+        runExternalCommand(innoCommand, [:], 'Fallo al generar instalador .exe via Inno Setup.')
 
         File installerExe = new File(outputDir, "${installerStableExeBaseName}.exe")
         if (project.ext.resolveSigningConfig.call() != null) {
@@ -453,15 +536,30 @@ tasks.register('printWindowsSigningStatus') {
 }
 
 tasks.register('packageWindowsDistribution') {
-    dependsOn 'packageWindowsAppImage'
+    onlyIf { windowsHost }
+    dependsOn 'packageWindowsAppImage', 'verifyWindowsInstallerPrereqs'
     doLast {
-        if (windowsHost && project.ext.resolveInnoCompiler.call() != null) {
+        if (project.ext.resolveInnoCompiler.call() != null) {
             logger.lifecycle('Inno Setup detectado: ejecuta packageWindowsExeInstaller para generar el instalador .exe bilingue.')
-        } else if (windowsHost && project.ext.resolveWixBinDir.call() != null) {
+        } else if (project.ext.resolveWixBinDir.call() != null) {
             logger.lifecycle('WiX detectado: ejecuta packageWindowsJpackageExeInstaller si necesitas el instalador .exe estandar de jpackage.')
         } else {
             logger.lifecycle('No se detecto Inno Setup ni WiX. Se genero la app-image con runtime embebido en build/installer/windows/app-image y el proyecto quedo listo para generar el .exe cuando se instale un compilador de setup.')
         }
+    }
+}
+
+tasks.register('smokeCheck') {
+    dependsOn 'verifyProjectLayout', 'testClasses'
+    doLast {
+        logger.lifecycle('Smoke check completado: el codigo y los tests pudieron compilar.')
+    }
+}
+
+tasks.register('releaseCheck') {
+    dependsOn 'clean', 'test', 'build'
+    doLast {
+        logger.lifecycle('Release check completado: tests y build finalizaron.')
     }
 }
 
@@ -521,9 +619,7 @@ boolean signWindowsBinary(Project project, File targetFile) {
     command.add(targetFile.absolutePath)
 
     project.logger.lifecycle("Firmando ${targetFile.name} con ${signTool.absolutePath}")
-    project.exec {
-        commandLine(command)
-    }
+    runExternalCommand(command, [:], "Fallo al firmar binario ${targetFile.name}.")
     return true
 }
 
@@ -546,7 +642,12 @@ BufferedImage loadInstallerIconSourceImage() {
 }
 
 BufferedImage loadSplashSourceImage() {
-    return readOptionalImage(file('splash_catgis.png'))
+    List<File> candidates = [
+            file('splash_catgis.png'),
+            file('src/main/resources/splash_catgis.png'),
+            file('src/splash_catgis.png')
+    ]
+    return candidates.collect { readOptionalImage(it) }.find { it != null }
 }
 
 BufferedImage readOptionalImage(File imageFile) {

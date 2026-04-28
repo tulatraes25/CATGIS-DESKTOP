@@ -75,10 +75,10 @@ public class FloodScenarioDialog extends JDialog {
         updateNote();
         refreshExportControls();
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 760, 500), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         pack();
-        setSize(Math.max(760, getWidth()), getHeight());
+        WindowLayoutSupport.fitDialogToScreen(this, 840, 660, 740, 520);
         setLocationRelativeTo(owner);
     }
 

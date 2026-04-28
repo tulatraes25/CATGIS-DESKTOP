@@ -3,6 +3,7 @@ package ar.com.catgis;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -46,7 +47,19 @@ public class CatmapLegendEditorDialog extends JDialog {
         legendModel = new DefaultListModel<>();
         legendList = new JList<>(legendModel);
         legendList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        legendList.setFixedCellHeight(52);
         legendList.setCellRenderer((list, value, index, isSelected, cellHasFocus) -> {
+            JPanel row = new JPanel(new BorderLayout(8, 0));
+            row.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 6, 5, 6));
+            row.setBackground(isSelected ? list.getSelectionBackground() : list.getBackground());
+            row.setOpaque(true);
+
+            CatmapLegendItem item = value instanceof CatmapLegendItem ? (CatmapLegendItem) value : null;
+            JCheckBox check = new JCheckBox();
+            check.setSelected(item == null || item.isVisible());
+            check.setEnabled(false);
+            check.setOpaque(false);
+
             JLabel label = (JLabel) new DefaultListCellRenderer().getListCellRendererComponent(
                     list,
                     value,
@@ -54,22 +67,32 @@ public class CatmapLegendEditorDialog extends JDialog {
                     isSelected,
                     cellHasFocus
             );
-            CatmapLegendItem item = value instanceof CatmapLegendItem ? (CatmapLegendItem) value : null;
             String title = item != null && !item.getLabel().isBlank() ? item.getLabel() : "Item de leyenda";
             String subtitle = item != null ? item.getSubtitle() : "";
-            String state = item != null && item.isVisible() ? "Visible" : "Oculto";
+            String state = item != null && item.isVisible() ? "Aparece en leyenda" : "Oculto en leyenda";
             label.setText("<html><b>" + escape(title) + "</b><br/><span style='color:#5f6c80;font-size:9px;'>"
                     + escape(subtitle) + " | " + state + "</span></html>");
-            label.setBorder(javax.swing.BorderFactory.createEmptyBorder(5, 6, 5, 6));
+            label.setOpaque(false);
             if (item != null && !item.isVisible() && !isSelected) {
                 label.setForeground(new Color(120, 128, 140));
             }
-            return label;
+            row.add(check, BorderLayout.WEST);
+            row.add(label, BorderLayout.CENTER);
+            return row;
         });
         legendList.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                if (!SwingUtilities.isLeftMouseButton(e)) {
+                    return;
+                }
+                int index = legendList.locationToIndex(e.getPoint());
+                if (index >= 0 && e.getX() <= 34) {
+                    legendList.setSelectedIndex(index);
+                    toggleSelectedVisibility();
+                    return;
+                }
+                if (e.getClickCount() == 2) {
                     editSelectedLegendTexts();
                 }
             }
@@ -94,7 +117,7 @@ public class CatmapLegendEditorDialog extends JDialog {
         addField(form, gc, "Subtitulo", subtitleField);
         gc.gridy += 2;
 
-        JLabel hint = new JLabel("<html>Reordena, oculta o renombra items de la leyenda. La simbologia sigue saliendo de la capa, pero la composicion ya no depende ciegamente del gestor.</html>");
+        JLabel hint = new JLabel("<html>Marcá con tilde solo lo que querés mostrar en la leyenda. La capa puede seguir visible en el mapa aunque su item esté oculto acá.</html>");
         hint.setForeground(new Color(88, 98, 112));
         form.add(hint, gc);
         gc.gridy++;

@@ -68,12 +68,12 @@ public class OnlineSoilDownloadDialog extends JDialog {
         refreshProviderState();
         outputField.setText(defaultOutputFile().getAbsolutePath());
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 760, 500), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
 
         loadCurrentViewEnvelope();
         pack();
-        setSize(Math.max(780, getWidth()), Math.max(500, getHeight()));
+        WindowLayoutSupport.fitDialogToScreen(this, 840, 640, 740, 520);
         setLocationRelativeTo(owner);
     }
 
@@ -196,7 +196,8 @@ public class OnlineSoilDownloadDialog extends JDialog {
             eastField.setText(formatCoord(latLon.getMaxX()));
             refreshDownloadSummary();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("No se pudo leer la vista actual para suelos online.") + "\n" + ex.getMessage());
+            AppErrorSupport.logFailure("No se pudo leer la vista actual para suelos online", ex);
+            showSoilError(I18n.t("No se pudo leer la vista actual para suelos online."), ex);
         }
     }
 
@@ -268,16 +269,15 @@ public class OnlineSoilDownloadDialog extends JDialog {
                     addRasterLayer(result.file(), result.displayName(), result.sourceLabel(), result.sourceCrsCode());
                     dispose();
                 } catch (Exception ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(
-                            OnlineSoilDownloadDialog.this,
-                            I18n.t("No se pudo descargar el mapa de suelos:") + "\n" + describeThrowable(ex),
-                            I18n.t("Suelos online"),
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    AppErrorSupport.logFailure("No se pudo descargar el mapa de suelos online", ex);
+                    showSoilError(I18n.t("No se pudo descargar el mapa de suelos."), ex);
                 }
             }
         }.execute();
+    }
+
+    private void showSoilError(String intro, Throwable ex) {
+        AppErrorSupport.showErrorDialog(this, I18n.t("Suelos online"), intro, ex);
     }
 
     private void addRasterLayer(File file, String datasetName, String sourceLabel, String sourceCrsCode) throws Exception {

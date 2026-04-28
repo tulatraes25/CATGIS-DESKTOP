@@ -177,8 +177,8 @@ public class CsvDataSourceDialog extends JDialog {
             JOptionPane.showMessageDialog(this, "Tabla cargada correctamente como capa de puntos.");
             dispose();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al cargar tabla: " + ex.getMessage(), "Origen de datos tabulares", JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("Error al cargar tabla desde origen tabular " + (file != null ? file.getAbsolutePath() : ""), ex);
+            AppErrorSupport.showErrorDialog(this, "Origen de datos tabulares", "Error al cargar tabla.", ex);
         }
     }
 

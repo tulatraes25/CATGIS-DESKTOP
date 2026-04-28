@@ -57,6 +57,7 @@ import java.util.zip.ZipOutputStream;
 public class ExportVectorLayerAction {
 
     private static final String SHAPEFILE_OPTION = "Shapefile (*.shp)";
+    private static final String DXF_OPTION = "CAD DXF (*.dxf)";
     private static final String GEOJSON_OPTION = "GeoJSON (*.geojson)";
     private static final String KML_OPTION = "KML (*.kml)";
     private static final String KMZ_OPTION = "KMZ (*.kmz)";
@@ -78,7 +79,7 @@ public class ExportVectorLayerAction {
     }
 
     public static String[] getSupportedVectorFormats() {
-        return new String[]{SHAPEFILE_OPTION, GEOJSON_OPTION, KML_OPTION, KMZ_OPTION, GPX_OPTION};
+        return new String[]{SHAPEFILE_OPTION, DXF_OPTION, GEOJSON_OPTION, KML_OPTION, KMZ_OPTION, GPX_OPTION};
     }
 
     public static File exportLayerWithDialog(Layer layer,
@@ -102,7 +103,7 @@ public class ExportVectorLayerAction {
                 JOptionPane.PLAIN_MESSAGE,
                 null,
                 getSupportedVectorFormats(),
-                SHAPEFILE_OPTION
+                CadLayerSupport.isCadLayer(layer) ? DXF_OPTION : SHAPEFILE_OPTION
         );
 
         if (selected == null) {
@@ -120,6 +121,8 @@ public class ExportVectorLayerAction {
 
         if (SHAPEFILE_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("Shapefile (*.shp)", "shp"));
+        } else if (DXF_OPTION.equals(option)) {
+            chooser.setFileFilter(new FileNameExtensionFilter("CAD DXF (*.dxf)", "dxf"));
         } else if (GEOJSON_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson)", "geojson"));
         } else if (GPX_OPTION.equals(option)) {
@@ -195,6 +198,8 @@ public class ExportVectorLayerAction {
 
         if (SHAPEFILE_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("Shapefile (*.shp)", "shp"));
+        } else if (DXF_OPTION.equals(option)) {
+            chooser.setFileFilter(new FileNameExtensionFilter("CAD DXF (*.dxf)", "dxf"));
         } else if (GEOJSON_OPTION.equals(option)) {
             chooser.setFileFilter(new FileNameExtensionFilter("GeoJSON (*.geojson)", "geojson"));
         } else if (GPX_OPTION.equals(option)) {
@@ -249,6 +254,10 @@ public class ExportVectorLayerAction {
             return false;
         }
 
+        if (layer instanceof PostgisLayer postgisLayer) {
+            return PostgisWriteService.saveLayerToCurrentPath(postgisLayer, data, parent, showSuccessMessage);
+        }
+
         String option = optionForPath(layer.getPath());
         if (option == null) {
             return false;
@@ -258,6 +267,9 @@ public class ExportVectorLayerAction {
     }
 
     public static boolean hasSupportedVectorPath(Layer layer) {
+        if (layer instanceof PostgisLayer postgisLayer) {
+            return postgisLayer.getTableName() != null && !postgisLayer.getTableName().isBlank();
+        }
         return layer != null && optionForPath(layer.getPath()) != null;
     }
 
@@ -301,6 +313,8 @@ public class ExportVectorLayerAction {
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
                 exportToShapefile(layer, data, file, resolveTargetCode(layer, option, targetCode));
+            } else if (DXF_OPTION.equals(option)) {
+                exportToDxf(layer, data, file, resolveTargetCode(layer, option, targetCode));
             } else if (GEOJSON_OPTION.equals(option)) {
                 exportToGeoJson(layer, data, file, resolveTargetCode(layer, option, targetCode));
             } else if (GPX_OPTION.equals(option)) {
@@ -345,7 +359,7 @@ public class ExportVectorLayerAction {
             }
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            AppErrorSupport.logFailure("Error al exportar capa reproyectada a " + file.getAbsolutePath(), ex);
             showExportError(parent, ex);
             return false;
         }
@@ -362,6 +376,7 @@ public class ExportVectorLayerAction {
             if (parentDir != null && !parentDir.exists()) {
                 parentDir.mkdirs();
             }
+            String resolvedTargetCode = resolveTargetCode(layer, option);
 
             KmlExportOptions kmlOptions = requiresKmlOptions(option)
                     ? resolveKmlExportOptions(layer, data, parent)
@@ -372,9 +387,11 @@ public class ExportVectorLayerAction {
 
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
-                exportToShapefile(layer, data, file, resolveTargetCode(layer, option));
+                exportToShapefile(layer, data, file, resolvedTargetCode);
+            } else if (DXF_OPTION.equals(option)) {
+                exportToDxf(layer, data, file, resolvedTargetCode);
             } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolveTargetCode(layer, option));
+                exportToGeoJson(layer, data, file, resolvedTargetCode);
             } else if (GPX_OPTION.equals(option)) {
                 exportToGpx(layer, data, file);
             } else {
@@ -382,7 +399,7 @@ public class ExportVectorLayerAction {
             }
 
             if (!GPX_OPTION.equals(option)) {
-                refreshLayerFromFile(layer, file);
+                refreshLayerFromFile(layer, file, resolvedTargetCode);
             }
 
             if (showSuccessMessage) {
@@ -390,7 +407,7 @@ public class ExportVectorLayerAction {
             }
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            AppErrorSupport.logFailure("Error al exportar capa a " + file.getAbsolutePath(), ex);
             showExportError(parent, ex);
             return false;
         }
@@ -442,6 +459,30 @@ public class ExportVectorLayerAction {
             featureJSON.setFeatureType(featureType);
             featureJSON.setEncodeNullValues(true);
             featureJSON.writeFeatureCollection(new ListFeatureCollection(featureType, features), writer);
+        }
+    }
+
+    private static void exportToDxf(Layer layer, ShapefileData data, File file, String targetCode) throws Exception {
+        TransformResult transformResult = transformFeaturesToTarget(layer, data, targetCode, DXF_OPTION);
+        List<SimpleFeature> features = transformResult.features;
+
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+            writeDxfPair(writer, "0", "SECTION");
+            writeDxfPair(writer, "2", "HEADER");
+            writeDxfPair(writer, "9", "$INSUNITS");
+            writeDxfPair(writer, "70", "0");
+            writeDxfPair(writer, "0", "ENDSEC");
+
+            writeDxfPair(writer, "0", "SECTION");
+            writeDxfPair(writer, "2", "ENTITIES");
+
+            String defaultCadLayer = sanitizeCadLayerName(layer != null ? layer.getName() : "CATGIS");
+            for (SimpleFeature feature : features) {
+                writeDxfFeature(writer, feature, defaultCadLayer);
+            }
+
+            writeDxfPair(writer, "0", "ENDSEC");
+            writeDxfPair(writer, "0", "EOF");
         }
     }
 
@@ -555,10 +596,10 @@ public class ExportVectorLayerAction {
         }
     }
 
-    private static TransformResult transformFeaturesToTarget(Layer layer,
-                                                             ShapefileData data,
-                                                             String targetCode,
-                                                             String outputOption) throws Exception {
+    static TransformResult transformFeaturesToTarget(Layer layer,
+                                                     ShapefileData data,
+                                                     String targetCode,
+                                                     String outputOption) throws Exception {
         List<SimpleFeature> inputFeatures = data != null && data.getFeatures() != null
                 ? data.getFeatures()
                 : List.of();
@@ -578,12 +619,32 @@ public class ExportVectorLayerAction {
         if (sourceCode.isBlank()) {
             sourceCode = targetCode;
         }
+        String projectCode = getProjectCRSCode();
+        if (projectCode == null || projectCode.isBlank()) {
+            projectCode = targetCode;
+        }
+        boolean cadLayer = CadLayerSupport.isCadLayer(layer);
 
         CoordinateReferenceSystem sourceCRS = null;
+        CoordinateReferenceSystem projectCRS = null;
         CoordinateReferenceSystem targetCRS = null;
         MathTransform transform = null;
+        MathTransform sourceToProjectTransform = null;
+        MathTransform projectToTargetTransform = null;
 
-        if (!sourceCode.equalsIgnoreCase(targetCode)) {
+        if (cadLayer) {
+            targetCRS = CRSDefinitions.decode(targetCode, true);
+            if (!sourceCode.equalsIgnoreCase(projectCode)) {
+                sourceCRS = CRSDefinitions.decode(sourceCode, true);
+                projectCRS = CRSDefinitions.decode(projectCode, true);
+                sourceToProjectTransform = CRS.findMathTransform(sourceCRS, projectCRS, true);
+            } else {
+                projectCRS = CRSDefinitions.decode(projectCode, true);
+            }
+            if (!projectCode.equalsIgnoreCase(targetCode)) {
+                projectToTargetTransform = CRS.findMathTransform(projectCRS, targetCRS, true);
+            }
+        } else if (!sourceCode.equalsIgnoreCase(targetCode)) {
             sourceCRS = CRSDefinitions.decode(sourceCode, true);
             targetCRS = CRSDefinitions.decode(targetCode, true);
             transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
@@ -595,10 +656,19 @@ public class ExportVectorLayerAction {
         List<Geometry> transformedGeometries = new ArrayList<>();
         for (SimpleFeature feature : inputFeatures) {
             Geometry geometry = geometryOf(feature);
-            if (geometry != null && transform != null) {
-                geometry = JTS.transform(geometry, transform);
-            } else if (geometry != null) {
+            if (geometry != null) {
                 geometry = (Geometry) geometry.copy();
+                if (cadLayer) {
+                    if (sourceToProjectTransform != null) {
+                        geometry = JTS.transform(geometry, sourceToProjectTransform);
+                    }
+                    geometry = CadPlacementSupport.applyPlacement(layer, geometry);
+                    if (geometry != null && projectToTargetTransform != null) {
+                        geometry = JTS.transform(geometry, projectToTargetTransform);
+                    }
+                } else if (transform != null) {
+                    geometry = JTS.transform(geometry, transform);
+                }
             }
             transformedRows.add(new TransformFeatureRow(feature, geometry));
             if (geometry != null && !geometry.isEmpty()) {
@@ -835,7 +905,7 @@ public class ExportVectorLayerAction {
 
     private static void showExportError(Component parent, Exception ex) {
         if (!GraphicsEnvironment.isHeadless()) {
-            JOptionPane.showMessageDialog(parent, "Error al exportar capa: " + ex.getMessage());
+            AppErrorSupport.showErrorDialog(parent, "Exportar capa", "Error al exportar capa.", ex);
         }
     }
 
@@ -897,7 +967,7 @@ public class ExportVectorLayerAction {
         return text.replaceAll("[\\\\/:*?\"<>|]+", "_").trim();
     }
 
-    private static String safeTypeName(String text) {
+    static String safeTypeName(String text) {
         String name = safeFileName(text).replaceAll("\\s+", "_");
         if (name.isBlank()) {
             name = "layer";
@@ -1055,6 +1125,367 @@ public class ExportVectorLayerAction {
         }
     }
 
+    private static void writeDxfFeature(BufferedWriter writer, SimpleFeature feature, String fallbackLayer) throws Exception {
+        if (feature == null) {
+            return;
+        }
+        Geometry geometry = geometryOf(feature);
+        if (geometry == null || geometry.isEmpty()) {
+            return;
+        }
+
+        DxfEntityStyle style = resolveDxfEntityStyle(feature, fallbackLayer);
+        String entityType = resolveDxfEntityType(feature);
+        String textValue = resolveDxfTextValue(feature);
+        if (isTextEntityType(entityType) && textValue != null && !textValue.isBlank()) {
+            Coordinate anchor = resolveDxfTextAnchor(geometry);
+            if (anchor != null) {
+                writeDxfText(writer, anchor, style, textValue, "MTEXT".equalsIgnoreCase(entityType));
+                return;
+            }
+        }
+
+        writeDxfGeometry(writer, geometry, style);
+    }
+
+    private static void writeDxfGeometry(BufferedWriter writer, Geometry geometry, DxfEntityStyle style) throws Exception {
+        if (geometry == null || geometry.isEmpty()) {
+            return;
+        }
+        if (geometry instanceof Point point) {
+            writeDxfPoint(writer, point.getCoordinate(), style);
+            return;
+        }
+        if (geometry instanceof LineString lineString) {
+            writeDxfPolyline(writer, lineString.getCoordinates(), lineString.isClosed(), style);
+            return;
+        }
+        if (geometry instanceof Polygon polygon) {
+            writeDxfPolyline(writer, polygon.getExteriorRing().getCoordinates(), true, style);
+            for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+                writeDxfPolyline(writer, polygon.getInteriorRingN(i).getCoordinates(), true, style);
+            }
+            return;
+        }
+        if (geometry instanceof MultiPoint multiPoint) {
+            for (int i = 0; i < multiPoint.getNumGeometries(); i++) {
+                writeDxfGeometry(writer, multiPoint.getGeometryN(i), style);
+            }
+            return;
+        }
+        if (geometry instanceof MultiLineString multiLineString) {
+            for (int i = 0; i < multiLineString.getNumGeometries(); i++) {
+                writeDxfGeometry(writer, multiLineString.getGeometryN(i), style);
+            }
+            return;
+        }
+        if (geometry instanceof MultiPolygon multiPolygon) {
+            for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
+                writeDxfGeometry(writer, multiPolygon.getGeometryN(i), style);
+            }
+            return;
+        }
+        if (geometry instanceof GeometryCollection collection) {
+            for (int i = 0; i < collection.getNumGeometries(); i++) {
+                writeDxfGeometry(writer, collection.getGeometryN(i), style);
+            }
+        }
+    }
+
+    private static void writeDxfPoint(BufferedWriter writer, Coordinate coordinate, DxfEntityStyle style) throws Exception {
+        if (coordinate == null || !isFiniteCoordinate(coordinate)) {
+            return;
+        }
+        writeDxfPair(writer, "0", "POINT");
+        writeDxfStyle(writer, style);
+        writeDxfPair(writer, "10", dxfNumber(coordinate.x));
+        writeDxfPair(writer, "20", dxfNumber(coordinate.y));
+        writeDxfPair(writer, "30", dxfNumber(resolveCoordinateZ(coordinate, style)));
+    }
+
+    private static void writeDxfPolyline(BufferedWriter writer,
+                                         Coordinate[] coordinates,
+                                         boolean closed,
+                                         DxfEntityStyle style) throws Exception {
+        if (coordinates == null || coordinates.length < 2) {
+            return;
+        }
+        List<Coordinate> cleaned = new ArrayList<>();
+        for (Coordinate coordinate : coordinates) {
+            if (coordinate != null && isFiniteCoordinate(coordinate)) {
+                cleaned.add(coordinate);
+            }
+        }
+        if (cleaned.size() < 2) {
+            return;
+        }
+        if (cleaned.size() >= 2 && almostSameCoordinate(cleaned.get(0), cleaned.get(cleaned.size() - 1))) {
+            cleaned.remove(cleaned.size() - 1);
+        }
+        if (cleaned.size() < 2) {
+            return;
+        }
+
+        writeDxfPair(writer, "0", "LWPOLYLINE");
+        writeDxfStyle(writer, style);
+        writeDxfPair(writer, "90", String.valueOf(cleaned.size()));
+        writeDxfPair(writer, "70", closed ? "1" : "0");
+        if (style != null && style.elevation != null && Double.isFinite(style.elevation)) {
+            writeDxfPair(writer, "38", dxfNumber(style.elevation));
+        }
+        for (Coordinate coordinate : cleaned) {
+            writeDxfPair(writer, "10", dxfNumber(coordinate.x));
+            writeDxfPair(writer, "20", dxfNumber(coordinate.y));
+        }
+    }
+
+    private static void writeDxfText(BufferedWriter writer,
+                                     Coordinate coordinate,
+                                     DxfEntityStyle style,
+                                     String text,
+                                     boolean multiline) throws Exception {
+        if (coordinate == null || !isFiniteCoordinate(coordinate)) {
+            return;
+        }
+        String normalized = normalizeDxfText(text, multiline);
+        if (normalized.isBlank()) {
+            return;
+        }
+
+        writeDxfPair(writer, "0", multiline ? "MTEXT" : "TEXT");
+        writeDxfStyle(writer, style);
+        writeDxfPair(writer, "10", dxfNumber(coordinate.x));
+        writeDxfPair(writer, "20", dxfNumber(coordinate.y));
+        writeDxfPair(writer, "30", dxfNumber(resolveCoordinateZ(coordinate, style)));
+        writeDxfPair(writer, "40", "2.5");
+        if (multiline) {
+            writeDxfPair(writer, "71", "1");
+            writeDxfPair(writer, "72", "5");
+            writeDxfPair(writer, "1", normalized);
+        } else {
+            writeDxfPair(writer, "7", "Standard");
+            writeDxfPair(writer, "1", normalized);
+        }
+    }
+
+    private static void writeDxfStyle(BufferedWriter writer, DxfEntityStyle style) throws Exception {
+        String layerName = style != null ? style.layerName : null;
+        writeDxfPair(writer, "8", sanitizeCadLayerName(layerName));
+        if (style != null && style.lineType != null && !style.lineType.isBlank()) {
+            writeDxfPair(writer, "6", style.lineType.trim());
+        }
+        if (style != null && style.colorIndex != null) {
+            writeDxfPair(writer, "62", String.valueOf(style.colorIndex));
+        }
+    }
+
+    private static DxfEntityStyle resolveDxfEntityStyle(SimpleFeature feature, String fallbackLayer) {
+        String cadLayer = resolveCadLayerName(feature, fallbackLayer);
+        Integer cadColor = resolveCadColor(feature);
+        String cadLineType = resolveCadLineType(feature);
+        Double cadElevation = resolveCadElevation(feature);
+        return new DxfEntityStyle(cadLayer, cadColor, cadLineType, cadElevation);
+    }
+
+    private static Integer resolveCadColor(SimpleFeature feature) {
+        Object value = firstPresentAttribute(feature, "cad_color", "color", "aci_color");
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value).trim());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static String resolveCadLineType(SimpleFeature feature) {
+        Object value = firstPresentAttribute(feature, "cad_ltype", "linetype");
+        if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value).trim();
+        return text;
+    }
+
+    private static Double resolveCadElevation(SimpleFeature feature) {
+        Object value = firstPresentAttribute(feature, "elev_z", "elevation", "z");
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value).trim().replace(',', '.'));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private static String resolveDxfEntityType(SimpleFeature feature) {
+        Object value = firstPresentAttribute(feature, "entity_type", "type");
+        if (value == null) {
+            return "";
+        }
+        return String.valueOf(value).trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static String resolveDxfTextValue(SimpleFeature feature) {
+        Object value = firstPresentAttribute(feature, "text", "label", "name", "nombre", "value");
+        if (value == null) {
+            return "";
+        }
+        return String.valueOf(value).trim();
+    }
+
+    private static Coordinate resolveDxfTextAnchor(Geometry geometry) {
+        if (geometry == null || geometry.isEmpty()) {
+            return null;
+        }
+        if (geometry instanceof Point point) {
+            return point.getCoordinate();
+        }
+        Coordinate coordinate = geometry.getCoordinate();
+        if (coordinate != null && isFiniteCoordinate(coordinate)) {
+            return coordinate;
+        }
+        Geometry centroid = geometry.getCentroid();
+        if (centroid instanceof Point point) {
+            return point.getCoordinate();
+        }
+        return null;
+    }
+
+    private static boolean isTextEntityType(String entityType) {
+        if (entityType == null || entityType.isBlank()) {
+            return false;
+        }
+        return "TEXT".equalsIgnoreCase(entityType)
+                || "MTEXT".equalsIgnoreCase(entityType)
+                || "ATTRIB".equalsIgnoreCase(entityType);
+    }
+
+    private static String normalizeDxfText(String text, boolean multiline) {
+        if (text == null) {
+            return "";
+        }
+        String cleaned = text
+                .replace('\u0000', ' ')
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .trim();
+        if (cleaned.isBlank()) {
+            return "";
+        }
+        if (multiline) {
+            return cleaned.replace("\n", "\\P");
+        }
+        return cleaned.replace('\n', ' ').replaceAll("\\s+", " ");
+    }
+
+    private static double resolveCoordinateZ(Coordinate coordinate, DxfEntityStyle style) {
+        if (coordinate != null && Double.isFinite(coordinate.getZ())) {
+            return coordinate.getZ();
+        }
+        if (style != null && style.elevation != null && Double.isFinite(style.elevation)) {
+            return style.elevation;
+        }
+        return 0d;
+    }
+
+    private static Object firstPresentAttribute(SimpleFeature feature, String... names) {
+        if (feature == null || names == null || names.length == 0) {
+            return null;
+        }
+        for (String name : names) {
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            if (feature.getFeatureType() == null || feature.getFeatureType().getDescriptor(name) == null) {
+                continue;
+            }
+            Object value = feature.getAttribute(name);
+            if (value == null) {
+                continue;
+            }
+            if (value instanceof String text && text.isBlank()) {
+                continue;
+            }
+            return value;
+        }
+        return null;
+    }
+
+    private static String resolveCadLayerName(SimpleFeature feature, String fallback) {
+        String base = fallback != null && !fallback.isBlank() ? fallback : "CATGIS";
+        if (feature == null) {
+            return sanitizeCadLayerName(base);
+        }
+        Object cadLayerAttr = feature.getAttribute("cad_layer");
+        if (cadLayerAttr == null) {
+            cadLayerAttr = feature.getAttribute("layer");
+        }
+        String candidate = cadLayerAttr != null ? String.valueOf(cadLayerAttr).trim() : "";
+        if (candidate.isBlank()) {
+            return sanitizeCadLayerName(base);
+        }
+        return sanitizeCadLayerName(candidate);
+    }
+
+    private static String sanitizeCadLayerName(String name) {
+        String normalized = name != null ? name.trim() : "";
+        if (normalized.isBlank()) {
+            return "CATGIS";
+        }
+        normalized = normalized.replace('\r', ' ').replace('\n', ' ');
+        if (normalized.length() > 60) {
+            normalized = normalized.substring(0, 60);
+        }
+        return normalized;
+    }
+
+    private static void writeDxfPair(BufferedWriter writer, String code, String value) throws Exception {
+        writer.write(code != null ? code : "");
+        writer.newLine();
+        writer.write(value != null ? value : "");
+        writer.newLine();
+    }
+
+    private static String dxfNumber(double value) {
+        return String.format(Locale.US, "%.6f", value);
+    }
+
+    private static boolean isFiniteCoordinate(Coordinate coordinate) {
+        return coordinate != null
+                && Double.isFinite(coordinate.x)
+                && Double.isFinite(coordinate.y);
+    }
+
+    private static boolean almostSameCoordinate(Coordinate a, Coordinate b) {
+        if (a == null || b == null) {
+            return false;
+        }
+        return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
+    }
+
+    private static class DxfEntityStyle {
+        final String layerName;
+        final Integer colorIndex;
+        final String lineType;
+        final Double elevation;
+
+        private DxfEntityStyle(String layerName, Integer colorIndex, String lineType, Double elevation) {
+            this.layerName = layerName;
+            this.colorIndex = colorIndex;
+            this.lineType = lineType;
+            this.elevation = elevation;
+        }
+    }
+
     private static String buildCoordinateString(Coordinate[] coordinates) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < coordinates.length; i++) {
@@ -1082,6 +1513,9 @@ public class ExportVectorLayerAction {
         if (SHAPEFILE_OPTION.equals(option)) {
             return ".shp";
         }
+        if (DXF_OPTION.equals(option)) {
+            return ".dxf";
+        }
         if (GEOJSON_OPTION.equals(option)) {
             return ".geojson";
         }
@@ -1101,6 +1535,9 @@ public class ExportVectorLayerAction {
         String lower = path.trim().toLowerCase(Locale.ROOT);
         if (lower.endsWith(".shp")) {
             return SHAPEFILE_OPTION;
+        }
+        if (lower.endsWith(".dxf")) {
+            return DXF_OPTION;
         }
         if (lower.endsWith(".geojson") || lower.endsWith(".json")) {
             return GEOJSON_OPTION;
@@ -1136,7 +1573,7 @@ public class ExportVectorLayerAction {
         }
     }
 
-    public static void refreshLayerFromFile(Layer layer, File file) throws Exception {
+    public static void refreshLayerFromFile(Layer layer, File file, String sourceCrsOverride) throws Exception {
         if (layer == null || file == null) {
             return;
         }
@@ -1150,6 +1587,13 @@ public class ExportVectorLayerAction {
             String detected = ShapefileLoader.getCRSCode(file);
             if (detected != null && !detected.isBlank()) {
                 sourceCRS = detected;
+            }
+        } else if (lower.endsWith(".dxf")) {
+            reloaded = DxfLoader.load(file);
+            if (sourceCrsOverride != null && !sourceCrsOverride.isBlank()) {
+                sourceCRS = CRSDefinitions.normalizeCode(sourceCrsOverride);
+            } else if (sourceCRS == null || sourceCRS.isBlank()) {
+                sourceCRS = getProjectCRSCode();
             }
         } else if (lower.endsWith(".geojson") || lower.endsWith(".json")) {
             reloaded = GeoJsonLoader.load(file);
@@ -1417,7 +1861,7 @@ public class ExportVectorLayerAction {
         }
     }
 
-    private static class TransformResult {
+    static class TransformResult {
         final SimpleFeatureType featureType;
         final List<SimpleFeature> features;
 

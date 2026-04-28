@@ -28,10 +28,13 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.KeyStroke;
+import javax.swing.JFileChooser;
 import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.BorderLayout;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -67,6 +70,9 @@ public class LayersPanel extends JPanel {
     private final DefaultListModel<Object> model;
     private final JList<Object> layerList;
     private final JButton newGroupButton;
+    private final JButton scrollTopButton;
+    private final JButton scrollBottomButton;
+    private final JScrollPane layerScrollPane;
     private int dragSourceIndex = -1;
     private int dragTargetInsertIndex = -1;
     private boolean dragReorderActive = false;
@@ -78,16 +84,32 @@ public class LayersPanel extends JPanel {
         layerList = new JList<>(model);
         layerList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         layerList.setCellRenderer(new LayerCellRenderer());
+        layerList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                CatgisDesktopApp.syncFloatingVectorEditToolbar();
+                CatgisDesktopApp.syncProInterpretationToolbar();
+            }
+        });
 
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
         topBar.setBorder(BorderFactory.createEmptyBorder(4, 4, 0, 4));
-        newGroupButton = new JButton("Nuevo grupo", AppIcons.openIcon());
+        newGroupButton = new JButton(I18n.t("Nuevo grupo"), AppIcons.openIcon());
         newGroupButton.addActionListener(e -> createNewGroupFromSelection());
         topBar.add(newGroupButton);
+        scrollTopButton = new JButton(AppIcons.upIcon());
+        scrollTopButton.setToolTipText(I18n.t("Ir al inicio"));
+        scrollTopButton.addActionListener(e -> scrollToTop());
+        topBar.add(scrollTopButton);
+        scrollBottomButton = new JButton(AppIcons.downIcon());
+        scrollBottomButton.setToolTipText(I18n.t("Ir al final"));
+        scrollBottomButton.addActionListener(e -> scrollToBottom());
+        topBar.add(scrollBottomButton);
         add(topBar, BorderLayout.NORTH);
 
-        JScrollPane scrollPane = new JScrollPane(layerList);
-        add(scrollPane, BorderLayout.CENTER);
+        layerScrollPane = new JScrollPane(layerList);
+        layerScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        layerScrollPane.getVerticalScrollBar().setUnitIncrement(18);
+        add(layerScrollPane, BorderLayout.CENTER);
 
         MouseAdapter layerMouseAdapter = new MouseAdapter() {
             @Override
@@ -112,7 +134,7 @@ public class LayersPanel extends JPanel {
                 Layer selectedLayer = asLayer(selectedValue);
                 LayerGroup selectedGroup = asGroup(selectedValue);
 
-                if (e.getButton() == MouseEvent.BUTTON1 && isVisibilityToggleHit(e, bounds)) {
+                if (e.getButton() == MouseEvent.BUTTON1 && isVisibilityToggleHit(e, bounds, selectedValue)) {
                     dragSourceIndex = -1;
                     dragTargetInsertIndex = -1;
                     dragReorderActive = false;
@@ -200,7 +222,8 @@ public class LayersPanel extends JPanel {
                     if (index >= 0) {
                         Rectangle bounds = layerList.getCellBounds(index, index);
                         boolean selectionModifier = e.isControlDown() || e.isShiftDown() || e.isMetaDown();
-                        if (bounds != null && !isVisibilityToggleHit(e, bounds) && !selectionModifier && asLayer(model.get(index)) != null) {
+                        Object rowValue = model.get(index);
+                        if (bounds != null && !isVisibilityToggleHit(e, bounds, rowValue) && !selectionModifier && asLayer(rowValue) != null) {
                             dragSourceIndex = index;
                         }
                     }
@@ -301,6 +324,139 @@ public class LayersPanel extends JPanel {
         return selected;
     }
 
+    public RasterLayer getSelectedRasterLayer() {
+        Layer selected = getSelectedLayer();
+        return selected instanceof RasterLayer rasterLayer ? rasterLayer : null;
+    }
+
+    public boolean canRunSelectedProThematic() {
+        RasterLayer rasterLayer = getSelectedRasterLayer();
+        return isQuickInterpretationSource(rasterLayer) && ProRasterDerivedService.supportsThematicOutput(rasterLayer);
+    }
+
+    public boolean canRunSelectedProQa() {
+        return isQuickInterpretationSource(getSelectedRasterLayer());
+    }
+
+    public boolean canRunSelectedLandsatQaMask(String operation) {
+        RasterLayer rasterLayer = getSelectedRasterLayer();
+        return isQuickInterpretationSource(rasterLayer)
+                && isSupportedLandsatQuickMask(operation)
+                && ProRasterDerivedService.supportsLandsatQaPixelMasks(rasterLayer);
+    }
+
+    public boolean canRunSelectedProComparison() {
+        RasterLayer rasterLayer = getSelectedRasterLayer();
+        return isQuickInterpretationSource(rasterLayer) && !findComparableProLayers(rasterLayer).isEmpty();
+    }
+
+    public String describeSelectedProInterpretationContext() {
+        Layer selectedLayer = getSelectedLayer();
+        if (selectedLayer == null) {
+            return "Selecciona un raster Pro Landsat o satelital";
+        }
+        if (!(selectedLayer instanceof RasterLayer rasterLayer)) {
+            return "Seleccion actual: " + selectedLayer.getName() + " | sin interpretacion raster Pro";
+        }
+        if (!hasProRasterMetadata(rasterLayer)) {
+            return "Raster seleccionado: " + rasterLayer.getName() + " | sin metadata Pro";
+        }
+        if (rasterLayer.isDerivedLayer()) {
+            return "Salida raster derivada: " + rasterLayer.getName();
+        }
+        String variable = nonBlank(rasterLayer.getProVariableName(), "sin variable");
+        String dataset = nonBlank(rasterLayer.getProDatasetRef(), "sin dataset");
+        return rasterLayer.getName() + " | " + variable + " | " + dataset;
+    }
+
+    public void runSelectedProThematic() {
+        RasterLayer rasterLayer = requireSelectedQuickInterpretationSource("mapa tematico raster");
+        if (rasterLayer == null) {
+            return;
+        }
+        if (!ProRasterDerivedService.supportsThematicOutput(rasterLayer)) {
+            showQuickInterpretationWarning("La capa seleccionada no tiene un preset tematico Pro compatible.");
+            return;
+        }
+        generateProDerivedRaster(rasterLayer, (String) null);
+    }
+
+    public void runSelectedProQa() {
+        RasterLayer rasterLayer = requireSelectedQuickInterpretationSource("QA Pro");
+        if (rasterLayer == null) {
+            return;
+        }
+        generateProDerivedRaster(rasterLayer, true);
+    }
+
+    public void runSelectedLandsatQaMask(String operation) {
+        RasterLayer rasterLayer = requireSelectedQuickInterpretationSource("mascara Landsat");
+        if (rasterLayer == null) {
+            return;
+        }
+        if (!isSupportedLandsatQuickMask(operation) || !ProRasterDerivedService.supportsLandsatQaPixelMasks(rasterLayer)) {
+            showQuickInterpretationWarning("La capa seleccionada no dispone de QA_PIXEL Landsat para generar esta mascara.");
+            return;
+        }
+        generateProDerivedRaster(rasterLayer, operation);
+    }
+
+    public void runSelectedProComparison() {
+        RasterLayer rasterLayer = requireSelectedQuickInterpretationSource("comparacion temporal raster");
+        if (rasterLayer == null) {
+            return;
+        }
+        if (findComparableProLayers(rasterLayer).isEmpty()) {
+            showQuickInterpretationWarning(
+                    "No hay otra capa Pro compatible en el proyecto para comparar esta variable.\n\n"
+                            + "CATGIS exige misma variable, misma familia fuente y fechas distintas."
+            );
+            return;
+        }
+        compareProRasterWithAnotherDate(rasterLayer);
+    }
+
+    private RasterLayer requireSelectedQuickInterpretationSource(String actionLabel) {
+        RasterLayer rasterLayer = getSelectedRasterLayer();
+        if (rasterLayer == null) {
+            showQuickInterpretationWarning("Selecciona primero un raster Pro para ejecutar " + actionLabel + ".");
+            return null;
+        }
+        if (!hasProRasterMetadata(rasterLayer)) {
+            showQuickInterpretationWarning("La capa seleccionada no tiene metadata Pro suficiente para ejecutar " + actionLabel + ".");
+            return null;
+        }
+        if (rasterLayer.isDerivedLayer()) {
+            showQuickInterpretationWarning("Selecciona la capa fuente Pro, no una salida derivada, para ejecutar " + actionLabel + ".");
+            return null;
+        }
+        return rasterLayer;
+    }
+
+    private boolean isQuickInterpretationSource(RasterLayer rasterLayer) {
+        return rasterLayer != null && !rasterLayer.isDerivedLayer() && hasProRasterMetadata(rasterLayer);
+    }
+
+    private boolean isSupportedLandsatQuickMask(String operation) {
+        String normalized = operation != null ? operation.trim().toLowerCase(java.util.Locale.ROOT) : "";
+        return ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS.equals(normalized)
+                || ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW.equals(normalized)
+                || ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW.equals(normalized)
+                || ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER.equals(normalized);
+    }
+
+    private void showQuickInterpretationWarning(String message) {
+        if (CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage(message);
+        }
+        JOptionPane.showMessageDialog(
+                this,
+                message,
+                "Interpretacion Pro",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
     public void selectLayer(Layer layer) {
         if (layer == null) {
             layerList.clearSelection();
@@ -319,6 +475,7 @@ public class LayersPanel extends JPanel {
         Project project = CatgisDesktopApp.currentProject;
         if (project == null) {
             layerList.repaint();
+            CatgisDesktopApp.syncProInterpretationToolbar();
             return;
         }
 
@@ -344,6 +501,7 @@ public class LayersPanel extends JPanel {
 
         restoreSelection(previousSelection);
         layerList.repaint();
+        CatgisDesktopApp.syncProInterpretationToolbar();
     }
 
     private void configureKeyboardShortcuts() {
@@ -357,11 +515,66 @@ public class LayersPanel extends JPanel {
                 removeSelectedLayersFromList();
             }
         });
+        layerList.getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_HOME, 0),
+                "scrollLayersToTop"
+        );
+        layerList.getActionMap().put("scrollLayersToTop", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!model.isEmpty()) {
+                    layerList.setSelectedIndex(0);
+                    scrollToTop();
+                }
+            }
+        });
+        layerList.getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_END, 0),
+                "scrollLayersToBottom"
+        );
+        layerList.getActionMap().put("scrollLayersToBottom", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!model.isEmpty()) {
+                    layerList.setSelectedIndex(model.getSize() - 1);
+                    scrollToBottom();
+                }
+            }
+        });
     }
 
-    private boolean isVisibilityToggleHit(MouseEvent e, Rectangle bounds) {
+    private void scrollToTop() {
+        SwingUtilities.invokeLater(() -> {
+            if (!model.isEmpty()) {
+                layerList.ensureIndexIsVisible(0);
+            }
+            if (layerScrollPane != null) {
+                layerScrollPane.getVerticalScrollBar().setValue(layerScrollPane.getVerticalScrollBar().getMinimum());
+            }
+        });
+    }
+
+    private void scrollToBottom() {
+        SwingUtilities.invokeLater(() -> {
+            if (!model.isEmpty()) {
+                layerList.ensureIndexIsVisible(model.getSize() - 1);
+            }
+            if (layerScrollPane != null) {
+                layerScrollPane.getVerticalScrollBar().setValue(layerScrollPane.getVerticalScrollBar().getMaximum());
+            }
+        });
+    }
+
+    private boolean isVisibilityToggleHit(MouseEvent e, Rectangle bounds, Object rowValue) {
         int relativeX = e.getX() - bounds.x;
-        return relativeX >= 8 && relativeX <= 28;
+        int minX = 8;
+        int maxX = 28;
+        Layer layer = asLayer(rowValue);
+        if (layer != null && layer.isInGroup()) {
+            minX += 22;
+            maxX += 22;
+        }
+        return relativeX >= minX && relativeX <= maxX;
     }
 
     private void updateSelectionForPopup(int index) {
@@ -465,6 +678,19 @@ public class LayersPanel extends JPanel {
         editItem.addActionListener(ev -> openVectorEditing(selectedLayer));
         popupMenu.add(editItem);
 
+        JMenuItem copyToEditingItem = createMenuItem("Copiar seleccionadas a capa en edicion", AppIcons.attrCopyIcon());
+        boolean canCopyToEditing = CatgisDesktopApp.mapPanel != null
+                && CatgisDesktopApp.mapPanel.canCopySelectedFeaturesFromLayerToEditingLayer(selectedLayer);
+        copyToEditingItem.setEnabled(canCopyToEditing);
+        copyToEditingItem.addActionListener(ev -> {
+            if (CatgisDesktopApp.mapPanel != null
+                    && CatgisDesktopApp.mapPanel.copySelectedFeaturesFromLayerToEditingLayer(selectedLayer)) {
+                refreshLayerList();
+                CatgisDesktopApp.mapPanel.repaint();
+            }
+        });
+        popupMenu.add(copyToEditingItem);
+
         JMenu simbologiaMenu = new JMenu("Simbologia");
         simbologiaMenu.setIcon(AppIcons.propertiesIcon());
 
@@ -511,6 +737,10 @@ public class LayersPanel extends JPanel {
             cadPlacementItem.addActionListener(ev -> editCadPlacement(selectedLayer));
             advancedMenu.add(cadPlacementItem);
 
+            JMenuItem cadDragPlacementItem = createMenuItem("Arrastrar CAD en mapa...", AppIcons.moveFeatureIcon());
+            cadDragPlacementItem.addActionListener(ev -> CadWorkflowSupport.openCadDragPlacementWorkflow(this, selectedLayer));
+            advancedMenu.add(cadDragPlacementItem);
+
             JMenuItem cadInternalLayersItem = createMenuItem("Capas internas CAD...", AppIcons.tableIcon());
             cadInternalLayersItem.addActionListener(ev -> CadWorkflowSupport.openCadInternalLayers(this, selectedLayer));
             advancedMenu.add(cadInternalLayersItem);
@@ -518,18 +748,31 @@ public class LayersPanel extends JPanel {
             JMenuItem cadDiagItem = createMenuItem("Diagnostico DWG/CAD...", AppIcons.propertiesIcon());
             cadDiagItem.addActionListener(ev -> CadIntegrationDialog.open());
             advancedMenu.add(cadDiagItem);
+
+            JMenuItem exportCadAdjustedItem = createMenuItem("Exportar CAD georreferenciado...", AppIcons.exportIcon());
+            exportCadAdjustedItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
+            advancedMenu.add(exportCadAdjustedItem);
         }
 
         JMenuItem exportItem = createMenuItem("Exportar capa", AppIcons.exportIcon());
         exportItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
         advancedMenu.add(exportItem);
 
+        JMenuItem sendPostgisItem = createMenuItem("Enviar a CATSERVER...", AppIcons.tableIcon());
+        sendPostgisItem.addActionListener(ev -> PostgisDataSourceAction.exportLayerToPostgis(selectedLayer));
+        advancedMenu.add(sendPostgisItem);
+
         if (selectedLayer instanceof OnlineWfsLayer) {
             JMenuItem infoItem = createMenuItem("Informacion del servicio...", AppIcons.propertiesIcon());
             infoItem.addActionListener(ev -> showOnlineWfsInfo((OnlineWfsLayer) selectedLayer));
             advancedMenu.add(infoItem);
         } else if (selectedLayer instanceof PostgisLayer) {
-            JMenuItem infoItem = createMenuItem("Informacion PostGIS...", AppIcons.propertiesIcon());
+            if (!readOnlyVector) {
+                JMenuItem savePostgisItem = createMenuItem("Guardar cambios en CATSERVER", AppIcons.saveIcon());
+                savePostgisItem.addActionListener(ev -> PostgisDataSourceAction.savePostgisLayerChanges((PostgisLayer) selectedLayer));
+                advancedMenu.add(savePostgisItem);
+            }
+            JMenuItem infoItem = createMenuItem("Informacion de la conexion...", AppIcons.propertiesIcon());
             infoItem.addActionListener(ev -> showPostgisInfo((PostgisLayer) selectedLayer));
             advancedMenu.add(infoItem);
         } else if (selectedLayer instanceof GeoPackageLayer) {
@@ -580,11 +823,77 @@ public class LayersPanel extends JPanel {
         rasterInfoItem.addActionListener(ev -> showRasterInfo(selectedLayer));
         popupMenu.add(rasterInfoItem);
 
+        if (selectedLayer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer)) {
+            JMenuItem proInfoItem = createMenuItem("Informacion raster avanzada...", AppIcons.imageryIcon());
+            proInfoItem.addActionListener(ev -> showProRasterInfo(rasterLayer));
+            popupMenu.add(proInfoItem);
+
+            JMenuItem exportProReportItem = createMenuItem("Exportar ficha raster...", AppIcons.exportIcon());
+            exportProReportItem.addActionListener(ev -> exportProRasterReport(rasterLayer));
+            popupMenu.add(exportProReportItem);
+        }
+
         JMenuItem displayItem = createMenuItem("Ajustes de visualizacion...", AppIcons.attrEditIcon());
         displayItem.addActionListener(ev -> openRasterDisplaySettings(selectedLayer));
         popupMenu.add(displayItem);
 
         boolean derivedRaster = isDerivedRasterLayer(selectedLayer);
+        if (selectedLayer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer) && !derivedRaster) {
+            JMenu proOutputsMenu = new JMenu("Salidas raster avanzadas");
+            proOutputsMenu.setIcon(AppIcons.imageryIcon());
+
+            JMenuItem thematicItem = createMenuItem("Generar mapa tematico raster", AppIcons.imageryIcon());
+            thematicItem.setEnabled(ProRasterDerivedService.supportsThematicOutput(rasterLayer));
+            thematicItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, false));
+            proOutputsMenu.add(thematicItem);
+
+            JMenuItem qaItem = createMenuItem(ProRasterDerivedService.qaMenuLabel(rasterLayer), AppIcons.propertiesIcon());
+            qaItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, true));
+            proOutputsMenu.add(qaItem);
+
+            if (ProRasterDerivedService.supportsLandsatQaPixelMasks(rasterLayer)) {
+                JMenu landsatMasksMenu = new JMenu("Mascaras Landsat QA_PIXEL");
+                landsatMasksMenu.setIcon(AppIcons.propertiesIcon());
+
+                JMenuItem cloudsMaskItem = createMenuItem(
+                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS),
+                        AppIcons.propertiesIcon()
+                );
+                cloudsMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS));
+                landsatMasksMenu.add(cloudsMaskItem);
+
+                JMenuItem shadowMaskItem = createMenuItem(
+                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW),
+                        AppIcons.propertiesIcon()
+                );
+                shadowMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW));
+                landsatMasksMenu.add(shadowMaskItem);
+
+                JMenuItem snowMaskItem = createMenuItem(
+                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW),
+                        AppIcons.propertiesIcon()
+                );
+                snowMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW));
+                landsatMasksMenu.add(snowMaskItem);
+
+                JMenuItem waterMaskItem = createMenuItem(
+                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER),
+                        AppIcons.propertiesIcon()
+                );
+                waterMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER));
+                landsatMasksMenu.add(waterMaskItem);
+
+                proOutputsMenu.add(landsatMasksMenu);
+            }
+
+            JMenuItem compareItem = createMenuItem("Comparar con otra fecha...", AppIcons.attrRefreshIcon());
+            compareItem.addActionListener(ev -> compareProRasterWithAnotherDate(rasterLayer));
+            compareItem.setEnabled(findComparableProLayers(rasterLayer).size() > 0);
+            proOutputsMenu.add(compareItem);
+
+            popupMenu.add(proOutputsMenu);
+        }
+
         String currentMode = getRasterMode(selectedLayer);
         JMenuItem currentModeItem = createMenuItem("Modo actual: " + getRasterModeLabel(currentMode), AppIcons.zoomLayerIcon());
         currentModeItem.setEnabled(false);
@@ -954,12 +1263,49 @@ public class LayersPanel extends JPanel {
             text.append("\nAjuste CAD: ").append(CadPlacementSupport.buildPlacementSummary(layer));
             text.append("\nCapas internas CAD: ").append(CadLayerSupport.buildCadInternalLayerFilterLabel(layer));
         }
-        JOptionPane.showMessageDialog(this, text.toString(), "CRS de capa", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("CRS de capa", text.toString());
+    }
+
+    private void showScrollableInfoDialog(String title, String content) {
+        JTextArea infoArea = new JTextArea(content != null ? content : "");
+        infoArea.setEditable(false);
+        infoArea.setLineWrap(false);
+        infoArea.setWrapStyleWord(false);
+        infoArea.setCaretPosition(0);
+        infoArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, Math.max(12, infoArea.getFont().getSize())));
+        infoArea.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JScrollPane scrollPane = new JScrollPane(
+                infoArea,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        );
+        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+
+        Dimension screenSize = getToolkit() != null ? getToolkit().getScreenSize() : new Dimension(1366, 768);
+        int preferredWidth = Math.max(520, Math.min(920, screenSize.width - 140));
+        int preferredHeight = Math.max(280, Math.min(560, screenSize.height - 180));
+        scrollPane.setPreferredSize(new Dimension(preferredWidth, preferredHeight));
+
+        JOptionPane.showMessageDialog(this, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void defineLayerCRS(Layer layer) {
         if (CadLayerSupport.isCadLayer(layer)) {
             CadCrsAssignmentDialog.Result result = CadCrsAssignmentDialog.chooseForLayer(this, layer);
+            if (result.selectorRequested()) {
+                String chosenCode = CRSSelectorDialog.chooseBlocking(
+                        CatgisDesktopApp.getMainFrameSafe(),
+                        "Seleccionar CRS para CAD",
+                        result.sourceCrs()
+                );
+                if (chosenCode == null || chosenCode.isBlank()) {
+                    return;
+                }
+                applyLayerCrsChange(layer, chosenCode);
+                return;
+            }
             if (!result.approved()) {
                 return;
             }
@@ -1402,6 +1748,9 @@ public class LayersPanel extends JPanel {
         if (isDerivedRasterLayer(layer) && layer instanceof RasterLayer rasterLayer) {
             sb.append("Derivado: ").append(rasterLayer.getDerivedOperation()).append("\n");
         }
+        if (layer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer)) {
+            appendProRasterInfo(sb, rasterLayer, false);
+        }
 
         Object raster = getRasterDataFromMapPanel(layer);
         if (raster != null) {
@@ -1414,7 +1763,257 @@ public class LayersPanel extends JPanel {
             sb.append("Informacion raster adicional: no disponible en memoria.\n");
         }
 
-        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion raster", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("Informacion raster", sb.toString());
+    }
+
+    private void showProRasterInfo(RasterLayer rasterLayer) {
+        if (rasterLayer == null) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(rasterLayer.getName()).append("\n");
+        sb.append("Ruta raster: ").append(rasterLayer.getPath() != null ? rasterLayer.getPath() : "-").append("\n");
+        appendProRasterInfo(sb, rasterLayer, true);
+        showScrollableInfoDialog("Informacion raster avanzada", sb.toString());
+    }
+
+    private void exportProRasterReport(RasterLayer rasterLayer) {
+        if (rasterLayer == null) {
+            return;
+        }
+
+        JFileChooser chooser = FileChooserSupport.createChooser("pro-raster-report", "Exportar ficha raster");
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setFileFilter(new FileNameExtensionFilter("Markdown (*.md)", "md"));
+        chooser.setSelectedFile(FileChooserSupport.resolveSuggestedFile(
+                "pro-raster-report",
+                new File(ProRasterReportService.buildSuggestedFileName(rasterLayer))
+        ));
+
+        int result = chooser.showSaveDialog(CatgisDesktopApp.getMainFrameSafe());
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File targetFile = chooser.getSelectedFile();
+        if (targetFile == null) {
+            return;
+        }
+        File outputFile = ProRasterReportService.ensureMarkdownExtension(targetFile);
+        FileChooserSupport.rememberFile("pro-raster-report", outputFile);
+
+        if (outputFile.exists()) {
+            int overwrite = JOptionPane.showConfirmDialog(
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "El archivo ya existe.\nDesea reemplazarlo?\n\n" + outputFile.getAbsolutePath(),
+                    "Exportar ficha raster",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+            if (overwrite != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+
+        try {
+            LocalRasterData rasterData = CatgisDesktopApp.mapPanel != null
+                    ? CatgisDesktopApp.mapPanel.getRasterData(rasterLayer)
+                    : null;
+            String projectName = CatgisDesktopApp.currentProject != null
+                    ? nonBlank(CatgisDesktopApp.currentProject.getName(), "Proyecto CATGIS")
+                    : "Proyecto CATGIS";
+            File saved = ProRasterReportService.exportMarkdownReport(rasterLayer, rasterData, projectName, outputFile);
+            if (CatgisDesktopApp.statusBar != null) {
+                CatgisDesktopApp.statusBar.setMessage("Ficha raster exportada: " + saved.getName());
+            }
+            JOptionPane.showMessageDialog(
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "Ficha raster exportada correctamente:\n" + saved.getAbsolutePath(),
+                    "CATGIS",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "No se pudo exportar la ficha raster:\n" + ex.getMessage(),
+                    "CATGIS",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    private void appendProRasterInfo(StringBuilder sb, RasterLayer rasterLayer, boolean detailed) {
+        if (sb == null || rasterLayer == null) {
+            return;
+        }
+        ProMetadataSidecarSupport.Metadata metadata = resolveProMetadata(rasterLayer);
+        String effectiveMaturity = !rasterLayer.getProMaturityLevel().isBlank()
+                ? rasterLayer.getProMaturityLevel()
+                : metadata != null ? metadata.maturity() : "";
+        sb.append("Dataset raster: ").append(nonBlank(rasterLayer.getProDatasetRef(), "-")).append("\n");
+        sb.append("Variable Pro: ").append(nonBlank(rasterLayer.getProVariableName(), "-")).append("\n");
+        if (!rasterLayer.getProAcquisitionStart().isBlank()) {
+            sb.append("Tiempo Pro: ").append(rasterLayer.getProAcquisitionStart()).append("\n");
+        }
+        if (!effectiveMaturity.isBlank()) {
+            sb.append("Madurez Pro: ").append(effectiveMaturity).append("\n");
+            sb.append("Clasificacion metodologica: ")
+                    .append(ProOceanColorPresetSupport.methodologyLabel(effectiveMaturity))
+                    .append("\n");
+        }
+        if (!rasterLayer.getProMetadataSidecarPath().isBlank()) {
+            sb.append("Sidecar Pro: ").append(rasterLayer.getProMetadataSidecarPath()).append("\n");
+        }
+        if (!rasterLayer.getProJobRef().isBlank()) {
+            sb.append("Job Pro: ").append(rasterLayer.getProJobRef()).append("\n");
+        }
+        if (metadata == null) {
+            if (detailed && !effectiveMaturity.isBlank()) {
+                sb.append("Alcance: ").append(ProOceanColorPresetSupport.methodologyDescription(effectiveMaturity)).append("\n");
+            }
+            return;
+        }
+        sb.append("Preset tematico: ")
+                .append(ProOceanColorPresetSupport.resolve(
+                        metadata.variable(),
+                        metadata.qualityPreset(),
+                        metadata.flagsApplied(),
+                        metadata.recipe(),
+                        effectiveMaturity
+                ).presetLabel())
+                .append("\n");
+        if (metadata.dataset() != null && !metadata.dataset().getProvider().isBlank()) {
+            sb.append("Proveedor: ").append(metadata.dataset().getProvider()).append("\n");
+        }
+        if (metadata.dataset() != null && !metadata.dataset().getFamily().isBlank()) {
+            sb.append("Familia: ").append(metadata.dataset().getFamily()).append("\n");
+        }
+        if (metadata.dataset() != null && !metadata.dataset().getPlatform().isBlank()) {
+            sb.append("Plataforma: ").append(metadata.dataset().getPlatform()).append("\n");
+        }
+        if (metadata.dataset() != null && !metadata.dataset().getInstrument().isBlank()) {
+            sb.append("Instrumento: ").append(metadata.dataset().getInstrument()).append("\n");
+        }
+        if (metadata.variable() != null && !metadata.variable().getLongName().isBlank()) {
+            sb.append("Descripcion: ").append(metadata.variable().getLongName()).append("\n");
+        }
+        if (metadata.variable() != null && !metadata.variable().getUnits().isBlank()) {
+            sb.append("Unidades: ").append(metadata.variable().getUnits()).append("\n");
+        }
+        if (metadata.variable() != null && !metadata.variable().getStandardName().isBlank()) {
+            sb.append("standard_name: ").append(metadata.variable().getStandardName()).append("\n");
+        }
+        if (metadata.variable() != null && !metadata.variable().getDimensions().isEmpty()) {
+            sb.append("Dimensiones: ").append(String.join(", ", metadata.variable().getDimensions())).append("\n");
+        }
+        if (metadata.variable() != null && metadata.variable().getScaleFactor() != null) {
+            sb.append("scale_factor: ").append(metadata.variable().getScaleFactor()).append("\n");
+        }
+        if (metadata.variable() != null && metadata.variable().getAddOffset() != null) {
+            sb.append("add_offset: ").append(metadata.variable().getAddOffset()).append("\n");
+        }
+        if (metadata.variable() != null && metadata.variable().getValidMin() != null) {
+            sb.append("valid_min: ").append(metadata.variable().getValidMin()).append("\n");
+        }
+        if (metadata.variable() != null && metadata.variable().getValidMax() != null) {
+            sb.append("valid_max: ").append(metadata.variable().getValidMax()).append("\n");
+        }
+        if (metadata.variable() != null && !metadata.variable().getQaDescriptor().isBlank()) {
+            sb.append("QA descriptor: ").append(metadata.variable().getQaDescriptor()).append("\n");
+        }
+        String expectedQa = ProRasterDerivedService.describeExpectedQa(metadata);
+        if (!expectedQa.isBlank()) {
+            sb.append("QA prevista: ").append(expectedQa).append("\n");
+        }
+        if (metadata.variable() != null && !metadata.variable().getBandFamily().isBlank()) {
+            sb.append("Familia tematica: ").append(metadata.variable().getBandFamily()).append("\n");
+        }
+        if (metadata.qualityPreset() != null && !metadata.qualityPreset().isBlank()) {
+            sb.append("QA preset: ").append(metadata.qualityPreset()).append("\n");
+        }
+        if (!metadata.flagsApplied().isEmpty()) {
+            sb.append("Flags QA: ").append(String.join(", ", metadata.flagsApplied())).append("\n");
+        }
+        if (detailed && metadata.recipe() != null && !metadata.recipe().isBlank()) {
+            sb.append("Receta: ").append(metadata.recipe()).append("\n");
+        }
+        if (rasterLayer.isDerivedLayer() && ProRasterDerivedService.isQaOperation(rasterLayer.getDerivedOperation())) {
+            java.util.Map<String, String> parameters = ProRasterDerivedService.parseParameterSpec(rasterLayer.getDerivedParameters());
+            String qaLabel = parameters.getOrDefault("qaCriteriaLabel", "");
+            if (!qaLabel.isBlank()) {
+                sb.append("QA aplicada: ").append(qaLabel).append("\n");
+            }
+            String qaSummary = parameters.getOrDefault("qaCriteriaSummary", "");
+            if (!qaSummary.isBlank()) {
+                sb.append("Criterio QA: ").append(qaSummary).append("\n");
+            }
+            String qaMode = parameters.getOrDefault("qaValueMode", "");
+            if (!qaMode.isBlank()) {
+                sb.append("Modo QA: ").append(ProRasterDerivedService.qaValueModeLabel(qaMode)).append("\n");
+            }
+            String qaBits = parameters.getOrDefault("qaBits", "");
+            String qaTargetLabel = parameters.getOrDefault("qaTargetLabel", "");
+            if (!qaTargetLabel.isBlank()) {
+                sb.append("Mascara QA: ").append(qaTargetLabel).append("\n");
+            }
+            String qaTargetBits = parameters.getOrDefault("qaTargetBits", "");
+            if (!qaBits.isBlank() && (qaTargetBits.isBlank() || !qaBits.equalsIgnoreCase(qaTargetBits))) {
+                sb.append("Bits QA: ").append(qaBits).append("\n");
+            }
+            if (!qaTargetBits.isBlank()) {
+                sb.append("Bits objetivo: ").append(qaTargetBits).append("\n");
+            }
+            String qaRejectBits = parameters.getOrDefault("qaRejectBits", "");
+            if (!qaRejectBits.isBlank()) {
+                sb.append("Bits excluidos: ").append(qaRejectBits).append("\n");
+            }
+            String qaCompanionPath = parameters.getOrDefault("qaCompanionPath", "");
+            if (!qaCompanionPath.isBlank()) {
+                sb.append("Raster QA companero: ").append(qaCompanionPath).append("\n");
+            }
+        }
+        if (rasterLayer.isDerivedLayer() && ProRasterDerivedService.OP_PRO_COMPARE_DELTA.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
+            java.util.Map<String, String> parameters = ProRasterDerivedService.parseParameterSpec(rasterLayer.getDerivedParameters());
+            String compareName = parameters.getOrDefault("compareName", "");
+            String compareDate = parameters.getOrDefault("compareAcquisition", "");
+            if (!compareName.isBlank()) {
+                sb.append("Comparada contra: ").append(compareName).append("\n");
+            }
+            if (!compareDate.isBlank()) {
+                sb.append("Fecha comparada: ").append(compareDate).append("\n");
+            }
+            String compareDataset = parameters.getOrDefault("compareDatasetRef", "");
+            if (!compareDataset.isBlank()) {
+                sb.append("Dataset comparado: ").append(compareDataset).append("\n");
+            }
+        }
+        if (detailed && !effectiveMaturity.isBlank()) {
+            sb.append("Alcance: ").append(ProOceanColorPresetSupport.methodologyDescription(effectiveMaturity)).append("\n");
+        }
+    }
+
+    private boolean hasProRasterMetadata(RasterLayer rasterLayer) {
+        return false;
+    }
+
+    private ProMetadataSidecarSupport.Metadata resolveProMetadata(RasterLayer rasterLayer) {
+        if (rasterLayer == null) {
+            return null;
+        }
+        if (rasterLayer.getProMetadataSidecarPath() != null && !rasterLayer.getProMetadataSidecarPath().isBlank()) {
+            ProMetadataSidecarSupport.Metadata metadata = ProMetadataSidecarSupport.readSidecar(new File(rasterLayer.getProMetadataSidecarPath()));
+            if (metadata != null) {
+                return metadata;
+            }
+        }
+        if (rasterLayer.getPath() != null && !rasterLayer.getPath().isBlank()) {
+            return ProMetadataSidecarSupport.read(new File(rasterLayer.getPath()));
+        }
+        return null;
+    }
+
+    private String nonBlank(String value, String fallback) {
+        return value != null && !value.isBlank() ? value : fallback;
     }
 
     private void openRasterDisplaySettings(Layer layer) {
@@ -1623,6 +2222,201 @@ public class LayersPanel extends JPanel {
         return layer instanceof RasterLayer rasterLayer && rasterLayer.isDerivedLayer();
     }
 
+    private void generateProDerivedRaster(RasterLayer sourceLayer, boolean qaMask) {
+        generateProDerivedRaster(
+                sourceLayer,
+                qaMask
+                        ? ProRasterDerivedService.defaultQaOperation(sourceLayer)
+                        : null
+        );
+    }
+
+    private void generateProDerivedRaster(RasterLayer sourceLayer, String explicitOperation) {
+        if (sourceLayer == null) {
+            return;
+        }
+        boolean thematic = explicitOperation == null || explicitOperation.isBlank();
+        String actionLabel = thematic
+                ? "Generando mapa tematico raster..."
+                : ProRasterDerivedService.describeOperation(explicitOperation).replace("Mascara", "Generando mascara") + "...";
+        final JDialog progressDialog = createRasterProgressDialog(actionLabel);
+        SwingWorker<ProRasterDerivedService.GeneratedRasterLayer, Void> worker = new SwingWorker<>() {
+            @Override
+            protected ProRasterDerivedService.GeneratedRasterLayer doInBackground() throws Exception {
+                if (thematic) {
+                    return ProRasterDerivedService.generateThematicLayer(sourceLayer);
+                }
+                if (ProRasterDerivedService.OP_PRO_QA_BASIC_MASK.equalsIgnoreCase(explicitOperation)
+                        || ProRasterDerivedService.OP_PRO_QA_NASA_OCEANCOLOR_L3M.equalsIgnoreCase(explicitOperation)
+                        || ProRasterDerivedService.OP_PRO_QA_LANDSAT_L2SP.equalsIgnoreCase(explicitOperation)) {
+                    return ProRasterDerivedService.generateQaLayer(sourceLayer);
+                }
+                return ProRasterDerivedService.generateLandsatQaPixelMask(sourceLayer, explicitOperation);
+            }
+
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                try {
+                    ProRasterDerivedService.GeneratedRasterLayer generated = get();
+                    addGeneratedProRaster(generated);
+                    RasterLayer layer = generated.layer();
+                    String methodology = ProOceanColorPresetSupport.methodologyLabel(layer.getProMaturityLevel());
+                    String message = (!thematic ? ProRasterDerivedService.describeOperation(generated.operation()) + ": " : "Mapa tematico raster generado: ")
+                            + layer.getName()
+                            + "\nClasificacion metodologica: " + methodology;
+                    if (CatgisDesktopApp.statusBar != null) {
+                        CatgisDesktopApp.statusBar.setMessage(message.replace('\n', ' '));
+                    }
+                    JOptionPane.showMessageDialog(
+                            LayersPanel.this,
+                            message,
+                            "CATGIS",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(
+                            LayersPanel.this,
+                            "No se pudo generar la salida raster:\n" + ex.getMessage(),
+                            "CATGIS",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        };
+        worker.execute();
+        progressDialog.setVisible(true);
+    }
+
+    private void compareProRasterWithAnotherDate(RasterLayer sourceLayer) {
+        if (sourceLayer == null) {
+            return;
+        }
+        List<RasterLayer> candidates = findComparableProLayers(sourceLayer);
+        if (candidates.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No hay otra capa Pro compatible en el proyecto para comparar esta variable.\n\n"
+                            + "CATGIS exige misma variable, misma familia fuente y fechas distintas.",
+                    "CATGIS",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+            return;
+        }
+
+        java.util.Map<String, RasterLayer> options = new java.util.LinkedHashMap<>();
+        for (RasterLayer candidate : candidates) {
+            String label = candidate.getName()
+                    + " | "
+                    + ProRasterDerivedService.formatAcquisitionLabel(nonBlank(candidate.getProAcquisitionStart(), "sin fecha"))
+                    + " | "
+                    + nonBlank(candidate.getProDatasetRef(), "sin dataset");
+            options.put(label, candidate);
+        }
+
+        Object selected = JOptionPane.showInputDialog(
+                this,
+                "Selecciona la segunda fecha para comparar con " + sourceLayer.getName() + ":",
+                "Comparacion temporal raster",
+                JOptionPane.PLAIN_MESSAGE,
+                AppIcons.attrRefreshIcon(),
+                options.keySet().toArray(),
+                options.keySet().iterator().next()
+        );
+        if (!(selected instanceof String selectedLabel) || !options.containsKey(selectedLabel)) {
+            return;
+        }
+
+        RasterLayer comparisonLayer = options.get(selectedLabel);
+        final JDialog progressDialog = createRasterProgressDialog("Generando comparacion temporal raster...");
+        SwingWorker<ProRasterDerivedService.GeneratedRasterLayer, Void> worker = new SwingWorker<>() {
+            @Override
+            protected ProRasterDerivedService.GeneratedRasterLayer doInBackground() throws Exception {
+                return ProRasterDerivedService.generateComparisonLayer(sourceLayer, comparisonLayer);
+            }
+
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                try {
+                    ProRasterDerivedService.GeneratedRasterLayer generated = get();
+                    addGeneratedProRaster(generated);
+                    RasterLayer layer = generated.layer();
+                    String message = "Comparacion temporal raster generada: "
+                            + layer.getName()
+                            + "\nBase: " + ProRasterDerivedService.formatAcquisitionLabel(sourceLayer.getProAcquisitionStart())
+                            + "\nContra: " + comparisonLayer.getName()
+                            + " | " + ProRasterDerivedService.formatAcquisitionLabel(comparisonLayer.getProAcquisitionStart())
+                            + "\nClasificacion metodologica: "
+                            + ProOceanColorPresetSupport.methodologyLabel(layer.getProMaturityLevel());
+                    if (CatgisDesktopApp.statusBar != null) {
+                        CatgisDesktopApp.statusBar.setMessage(message.replace('\n', ' '));
+                    }
+                    JOptionPane.showMessageDialog(
+                            LayersPanel.this,
+                            message,
+                            "CATGIS",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(
+                            LayersPanel.this,
+                            "No se pudo generar la comparacion temporal raster:\n" + ex.getMessage(),
+                            "CATGIS",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        };
+        worker.execute();
+        progressDialog.setVisible(true);
+    }
+
+    private List<RasterLayer> findComparableProLayers(RasterLayer sourceLayer) {
+        List<RasterLayer> candidates = new ArrayList<>();
+        if (sourceLayer == null || CatgisDesktopApp.currentProject == null) {
+            return candidates;
+        }
+        String variable = nonBlank(sourceLayer.getProVariableName(), "");
+        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+            if (!(layer instanceof RasterLayer rasterLayer)) {
+                continue;
+            }
+            if (rasterLayer == sourceLayer || rasterLayer.isDerivedLayer() || !hasProRasterMetadata(rasterLayer)) {
+                continue;
+            }
+            if (!variable.isBlank() && !variable.equalsIgnoreCase(nonBlank(rasterLayer.getProVariableName(), ""))) {
+                continue;
+            }
+            ProRasterDerivedService.ComparisonCompatibility compatibility = ProRasterDerivedService.evaluateComparisonCompatibility(sourceLayer, rasterLayer);
+            if (!compatibility.compatible()) {
+                continue;
+            }
+            candidates.add(rasterLayer);
+        }
+        candidates.sort(java.util.Comparator.comparing(raster -> nonBlank(raster.getProAcquisitionStart(), raster.getName()), String.CASE_INSENSITIVE_ORDER));
+        return candidates;
+    }
+
+    private void addGeneratedProRaster(ProRasterDerivedService.GeneratedRasterLayer generated) {
+        if (generated == null || generated.layer() == null || generated.data() == null) {
+            return;
+        }
+        if (CatgisDesktopApp.currentProject == null) {
+            CatgisDesktopApp.currentProject = new Project("Proyecto CATGIS");
+        }
+        CatgisDesktopApp.currentProject.addLayer(generated.layer());
+        CatgisDesktopApp.markProjectDirty();
+        if (CatgisDesktopApp.layersPanel != null) {
+            CatgisDesktopApp.layersPanel.addLayer(generated.layer());
+            CatgisDesktopApp.layersPanel.refreshLayerList();
+        }
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(generated.layer(), generated.data());
+            CatgisDesktopApp.mapPanel.repaint();
+        }
+    }
+
     private JDialog createRasterProgressDialog(String message) {
         java.awt.Window owner = javax.swing.SwingUtilities.getWindowAncestor(this);
         JDialog dialog = new JDialog(owner, "Procesando raster", java.awt.Dialog.ModalityType.APPLICATION_MODAL);
@@ -1719,7 +2513,7 @@ public class LayersPanel extends JPanel {
         if (layer.getTermsUrl() != null && !layer.getTermsUrl().isBlank()) {
             sb.append("Referencia: ").append(layer.getTermsUrl()).append("\n");
         }
-        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion mapa base online", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("Informacion mapa base online", sb.toString());
     }
 
     private void showOnlineWmsInfo(OnlineWmsLayer layer) {
@@ -1738,7 +2532,7 @@ public class LayersPanel extends JPanel {
         if (layer.getAttribution() != null && !layer.getAttribution().isBlank()) {
             sb.append("Atribucion: ").append(layer.getAttribution()).append("\n");
         }
-        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion WMS", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("Informacion WMS", sb.toString());
     }
 
     private void showOnlineWfsInfo(OnlineWfsLayer layer) {
@@ -1755,7 +2549,7 @@ public class LayersPanel extends JPanel {
         sb.append("Version WFS: ").append(layer.getVersion() != null && !layer.getVersion().isBlank() ? layer.getVersion() : "-").append("\n");
         sb.append("Modo: ").append(layer.isReadOnly() ? "Solo lectura" : "Editable").append("\n");
         sb.append("Elementos cargados: ").append(layer.getFeatureCount()).append("\n");
-        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion WFS", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("Informacion WFS", sb.toString());
     }
 
     private void showPostgisInfo(PostgisLayer layer) {
@@ -1765,7 +2559,7 @@ public class LayersPanel extends JPanel {
         }
         StringBuilder sb = new StringBuilder();
         sb.append("Capa: ").append(layer.getName()).append("\n");
-        sb.append("Tipo: PostGIS\n");
+        sb.append("Tipo: CATSERVER / PostgreSQL-PostGIS\n");
         sb.append("Conexion: ").append(layer.getHost() != null && !layer.getHost().isBlank() ? layer.getHost() : "-").append(":").append(layer.getPort()).append("\n");
         sb.append("Base: ").append(layer.getDatabaseName() != null && !layer.getDatabaseName().isBlank() ? layer.getDatabaseName() : "-").append("\n");
         sb.append("Schema: ").append(layer.getSchemaName() != null && !layer.getSchemaName().isBlank() ? layer.getSchemaName() : "-").append("\n");
@@ -1775,7 +2569,7 @@ public class LayersPanel extends JPanel {
         sb.append("CRS: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "-").append("\n");
         sb.append("Modo: ").append(layer.isReadOnly() ? "Solo lectura" : "Editable").append("\n");
         sb.append("Elementos cargados: ").append(layer.getFeatureCount()).append("\n");
-        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion PostGIS", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("Informacion de la conexion", sb.toString());
     }
 
     private void showGeoPackageInfo(GeoPackageLayer layer) {
@@ -1798,7 +2592,7 @@ public class LayersPanel extends JPanel {
         sb.append("CRS: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "-").append("\n");
         sb.append("Modo: ").append(layer.isReadOnly() ? "Solo lectura" : "Editable").append("\n");
         sb.append("Elementos cargados: ").append(layer.getFeatureCount()).append("\n");
-        JOptionPane.showMessageDialog(this, sb.toString(), "Informacion GeoPackage", JOptionPane.INFORMATION_MESSAGE);
+        showScrollableInfoDialog("Informacion GeoPackage", sb.toString());
     }
 
     private double invokeDouble(Object target, String methodName) throws Exception {
@@ -1860,9 +2654,10 @@ public class LayersPanel extends JPanel {
                         ? CatgisDesktopApp.currentProject.getLayersForGroup(group.getName()).size()
                         : 0;
 
-                Color bg = isSelected ? new Color(225, 235, 248) : new Color(246, 248, 252);
+                Color bg = isSelected ? new Color(217, 231, 251) : new Color(236, 244, 253);
                 Color fg = new Color(30, 38, 52);
                 Color metaFg = new Color(95, 106, 122);
+                Color accent = isSelected ? new Color(53, 105, 189) : new Color(138, 171, 214);
 
                 panel.setBackground(bg);
                 leftPanel.setBackground(bg);
@@ -1876,8 +2671,11 @@ public class LayersPanel extends JPanel {
                 metaLabel.setForeground(metaFg);
 
                 panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(isSelected ? new Color(120, 160, 220) : new Color(214, 220, 228)),
-                        BorderFactory.createEmptyBorder(5, 6, 5, 6)
+                        BorderFactory.createCompoundBorder(
+                                BorderFactory.createMatteBorder(1, 6, 1, 1, accent),
+                                BorderFactory.createLineBorder(isSelected ? new Color(113, 147, 201) : new Color(196, 210, 229))
+                        ),
+                        BorderFactory.createEmptyBorder(6, 8, 6, 6)
                 ));
                 return panel;
             }
@@ -1888,10 +2686,11 @@ public class LayersPanel extends JPanel {
             boolean effectiveVisible = CatgisDesktopApp.currentProject == null
                     ? layer.isVisible()
                     : CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer);
+            boolean layerInGroup = layer.isInGroup();
 
             Color bg = editingLayer
                     ? new Color(255, 239, 239)
-                    : (isSelected ? new Color(220, 235, 255) : Color.WHITE);
+                    : (isSelected ? new Color(220, 235, 255) : (layerInGroup ? new Color(248, 251, 255) : Color.WHITE));
             Color fg = editingLayer ? new Color(170, 24, 24) : new Color(30, 30, 30);
             Color metaFg = missingCrs
                     ? new Color(170, 70, 20)
@@ -1905,17 +2704,33 @@ public class LayersPanel extends JPanel {
 
             visibleCheck.setSelected(layer.isVisible());
             iconLabel.setIcon(resolveLayerIcon(layer));
-            nameLabel.setText((layer.isInGroup() ? "   " : "") + layer.getName());
+            nameLabel.setText((layerInGroup ? "  - " : "") + layer.getName());
             nameLabel.setForeground(effectiveVisible ? fg : new Color(120, 120, 120));
-            metaLabel.setText(buildMetaText(layer));
+            String metaText = buildMetaText(layer);
+            if (layerInGroup && layer.getGroupName() != null && !layer.getGroupName().isBlank()) {
+                metaText = "Carpeta: " + layer.getGroupName() + " | " + metaText;
+            }
+            metaLabel.setText(metaText);
             metaLabel.setForeground(metaFg);
 
-            panel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(editingLayer
-                            ? new Color(220, 90, 90)
-                            : (isSelected ? new Color(120, 160, 220) : new Color(230, 230, 230))),
-                    BorderFactory.createEmptyBorder(5, layer.isInGroup() ? 18 : 6, 5, 6)
-            ));
+            if (layerInGroup) {
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createCompoundBorder(
+                                BorderFactory.createMatteBorder(1, 14, 1, 1, isSelected ? new Color(78, 125, 198) : new Color(184, 206, 240)),
+                                BorderFactory.createLineBorder(editingLayer
+                                        ? new Color(220, 90, 90)
+                                        : (isSelected ? new Color(120, 160, 220) : new Color(220, 228, 239)))
+                        ),
+                        BorderFactory.createEmptyBorder(5, 14, 5, 6)
+                ));
+            } else {
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(editingLayer
+                                ? new Color(220, 90, 90)
+                                : (isSelected ? new Color(120, 160, 220) : new Color(230, 230, 230))),
+                        BorderFactory.createEmptyBorder(5, 6, 5, 6)
+                ));
+            }
 
             return panel;
         }
@@ -1952,6 +2767,15 @@ public class LayersPanel extends JPanel {
             }
             if (isRasterLayer(layer)) {
                 String hidden = buildVisibilitySuffix(layer);
+                if (layer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer)) {
+                    String variable = rasterLayer.getProVariableName() != null && !rasterLayer.getProVariableName().isBlank()
+                            ? rasterLayer.getProVariableName()
+                            : "variable";
+                    String time = rasterLayer.getProAcquisitionStart() != null && !rasterLayer.getProAcquisitionStart().isBlank()
+                            ? " | " + rasterLayer.getProAcquisitionStart()
+                            : "";
+                    return "Raster Pro | " + variable + time + " | " + crsInfo + hidden;
+                }
                 return "Raster | " + crsInfo + hidden;
             }
             if (CadLayerSupport.isCadLayer(layer)) {

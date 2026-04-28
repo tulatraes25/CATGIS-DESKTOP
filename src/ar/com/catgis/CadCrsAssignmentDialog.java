@@ -26,7 +26,8 @@ public class CadCrsAssignmentDialog extends JDialog {
 
     private final String projectCrs;
     private String selectedCrs;
-    private Result result = new Result(false, "");
+    private Result result = new Result(false, "", false);
+    private boolean selectorRequested;
 
     private JRadioButton undefinedRadio;
     private JRadioButton useProjectRadio;
@@ -171,7 +172,7 @@ public class CadCrsAssignmentDialog extends JDialog {
         selectedCrsField = new JTextField();
         selectedCrsField.setEditable(false);
         chooseButton = new JButton("Selector de CRS...");
-        chooseButton.addActionListener(e -> openCrsSelector());
+        chooseButton.addActionListener(e -> requestCrsSelector());
 
         JPanel customPanel = new JPanel(new BorderLayout(6, 0));
         customPanel.setOpaque(false);
@@ -201,7 +202,7 @@ public class CadCrsAssignmentDialog extends JDialog {
         JButton cancel = new JButton("Cancelar");
         accept.addActionListener(e -> applyAndClose());
         cancel.addActionListener(e -> {
-            result = new Result(false, "");
+            result = new Result(false, "", false);
             dispose();
         });
         buttons.add(accept);
@@ -239,14 +240,11 @@ public class CadCrsAssignmentDialog extends JDialog {
         selectedCrsField.setText(CadLayerSupport.formatSourceCrsLabel(selectedCrs));
     }
 
-    private void openCrsSelector() {
-        Frame owner = resolveOwner(this);
-        CRSSelectorDialog dialog = new CRSSelectorDialog(owner, "Seleccionar CRS para CAD", selectedCrs, code -> {
-            selectedCrs = CRSDefinitions.normalizeCode(code);
-            customRadio.setSelected(true);
-            refreshState();
-        });
-        dialog.setVisible(true);
+    private void requestCrsSelector() {
+        customRadio.setSelected(true);
+        selectorRequested = true;
+        result = new Result(false, CRSDefinitions.normalizeCode(selectedCrs), true);
+        dispose();
     }
 
     private void applyAndClose() {
@@ -266,7 +264,7 @@ public class CadCrsAssignmentDialog extends JDialog {
             code = selectedCrs;
         }
 
-        result = new Result(true, CRSDefinitions.normalizeCode(code));
+        result = new Result(true, CRSDefinitions.normalizeCode(code), false);
         dispose();
     }
 
@@ -302,6 +300,6 @@ public class CadCrsAssignmentDialog extends JDialog {
                 .replace(">", "&gt;");
     }
 
-    public record Result(boolean approved, String sourceCrs) {
+    public record Result(boolean approved, String sourceCrs, boolean selectorRequested) {
     }
 }

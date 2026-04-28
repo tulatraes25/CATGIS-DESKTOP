@@ -76,11 +76,13 @@ public class SaveMapViewAction extends AbstractAction {
                     JOptionPane.INFORMATION_MESSAGE);
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
-                    "Error al guardar la vista: " + ex.getMessage(),
+            AppErrorSupport.logFailure("Error al guardar la vista del mapa en " + file.getAbsolutePath(), ex);
+            AppErrorSupport.showErrorDialog(
+                    CatgisDesktopApp.getMainFrameSafe(),
                     "Salvar vista del mapa",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error al guardar la vista del mapa.",
+                    ex
+            );
         }
     }
 }

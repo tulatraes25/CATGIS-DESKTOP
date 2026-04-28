@@ -108,12 +108,12 @@ public final class CadLayerSupport {
             if (trimmed.isBlank()) {
                 continue;
             }
-            if (!sb.isEmpty()) {
+            if (sb.length() > 0) {
                 sb.append('\n');
             }
             sb.append(trimmed);
         }
-        if (sb.isEmpty()) {
+        if (sb.length() == 0) {
             return "";
         }
         return Base64.getUrlEncoder().withoutPadding().encodeToString(sb.toString().getBytes(StandardCharsets.UTF_8));

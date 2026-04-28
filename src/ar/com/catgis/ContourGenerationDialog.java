@@ -46,8 +46,8 @@ public class ContourGenerationDialog extends JDialog {
         }
         intervalField = new JTextField("10", 16);
         indexEveryField = new JTextField("5", 16);
-        excludeZeroCheck = new JCheckBox("Excluir curvas <= 0 m (costa / mar)", false);
-        minElevationCheck = new JCheckBox("Usar umbral minimo personalizado", false);
+        excludeZeroCheck = new JCheckBox(I18n.t("Excluir curvas <= 0 m (costa / mar)"), false);
+        minElevationCheck = new JCheckBox(I18n.t("Usar umbral minimo personalizado"), false);
         minElevationField = new JTextField("0", 16);
         minElevationField.setEnabled(false);
         outputNameField = new JTextField("Curvas " + intervalField.getText().trim() + "m - " + resolveRasterLabel(), 26);
@@ -107,9 +107,10 @@ public class ContourGenerationDialog extends JDialog {
         });
         updateTechnicalHint();
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 740, 480), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         pack();
+        WindowLayoutSupport.fitDialogToScreen(this, 800, 620, 720, 500);
         setLocationRelativeTo(owner);
     }
 
@@ -137,7 +138,7 @@ public class ContourGenerationDialog extends JDialog {
         panel.add(indexEveryField, gc);
 
         gc.gridy++;
-        panel.add(new JLabel("Filtro costero / umbral de cota (m):"), gc);
+        panel.add(new JLabel(I18n.t("Filtro costero / umbral de cota (m):")), gc);
         gc.gridy++;
         panel.add(excludeZeroCheck, gc);
         gc.gridy++;
@@ -146,8 +147,8 @@ public class ContourGenerationDialog extends JDialog {
         panel.add(minElevationField, gc);
         gc.gridy++;
         JLabel filterHelp = new JLabel("<html><div style='width:270px'>"
-                + "Util para limpiar curvas en mar, playa o sectores donde el DEM mete ruido cercano a 0 m. "
-                + "Si no quieres filtrar, deja esta opcion desactivada."
+                + I18n.t("Util para limpiar curvas en mar, playa o sectores donde el DEM mete ruido cercano a 0 m. ")
+                + I18n.t("Si no quieres filtrar, deja esta opcion desactivada.")
                 + "</div></html>");
         panel.add(filterHelp, gc);
         gc.gridy++;
@@ -214,7 +215,7 @@ public class ContourGenerationDialog extends JDialog {
             try {
                 minimumElevation = Double.parseDouble(minElevationField.getText().trim().replace(",", "."));
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "La cota minima debe ser numerica.");
+                JOptionPane.showMessageDialog(this, I18n.t("La cota minima debe ser numerica."));
                 return;
             }
         } else if (excludeZeroCheck.isSelected()) {

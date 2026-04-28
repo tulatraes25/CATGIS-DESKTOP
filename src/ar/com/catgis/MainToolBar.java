@@ -117,6 +117,7 @@ public class MainToolBar extends JToolBar {
         JButton btnProjectCRS = createButton(I18n.t("Definir CRS del proyecto"), createProjectCrsIcon());
         btnProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
 
+        // Bloque global de proyecto y datos
         add(btnAbrirProyecto);
         add(btnAgregarCapa);
         add(btnNuevaCapaVectorial);
@@ -124,8 +125,8 @@ public class MainToolBar extends JToolBar {
         add(btnGuardar);
         add(btnGuardarComo);
         add(btnSalvarVista);
-        add(btnModulos);
         addSeparator();
+        // Bloque de navegacion del mapa
         add(btnZoomMas);
         add(btnZoomMenos);
         add(btnZoomCapa);
@@ -133,23 +134,13 @@ public class MainToolBar extends JToolBar {
         add(btnVistaAnterior);
         add(btnVistaSiguiente);
         add(btnMover);
-        addSeparator();
         add(btnIdentificar);
         add(btnBuscarCoord);
         addSeparator();
-        add(btnPunto);
-        add(btnMultiPunto);
-        add(btnLinea);
-        add(btnPoligono);
-        addSeparator();
-        add(btnMedirDist);
-        add(btnMedirArea);
-        add(btnTerminar);
-        add(btnCancelar);
-        addSeparator();
-        add(btnTabla);
-        add(btnCRS);
+        // Bloque de utilidades globales
         add(btnProjectCRS);
+        add(btnCRS);
+        add(btnModulos);
     }
 
     private JButton createButton(String tooltip, Icon icon) {

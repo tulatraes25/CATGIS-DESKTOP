@@ -17,7 +17,7 @@ public final class ModuleRegistry {
     public static final String MODULE_CSV = "csv";
     public static final String MODULE_KML = "kml";
     public static final String MODULE_GEOPACKAGE = "geopackage";
-    public static final String MODULE_POSTGIS = "postgis";
+    public static final String MODULE_CATSERVER = "catserver";
     public static final String MODULE_WFS = "wfs";
     public static final String MODULE_ONLINE_BASEMAPS = "online-basemaps";
     public static final String MODULE_LAYOUT_PRINT = "layout-print";
@@ -43,7 +43,7 @@ public final class ModuleRegistry {
         register(createCsvModule());
         register(createKmlModule());
         register(createGeoPackageModule());
-        register(createPostgisModule());
+        register(createCatserverModule());
         register(createWfsModule());
         register(createOnlineBasemapModule());
         register(createLayoutPrintModule());
@@ -306,18 +306,23 @@ public final class ModuleRegistry {
         return module;
     }
 
-    private static CatgisModule createPostgisModule() {
+    private static CatgisModule createCatserverModule() {
         CatgisModule module = new CatgisModule(
-                MODULE_POSTGIS,
-                "Origen de datos PostGIS",
+                MODULE_CATSERVER,
+                "CATSERVER",
                 ModuleCategory.DATA_SOURCE,
-                "Conecta una base PostgreSQL/PostGIS, lista tablas espaciales y las incorpora al proyecto como capas vectoriales reales en modo lectura.",
-                "Bases de datos espaciales / PostGIS",
+                "CATSERVER es la puerta de entrada de CATGIS para conectar, listar y cargar capas desde cualquier servidor PostgreSQL/PostGIS.",
+                "Conexion CATSERVER a servidores PostgreSQL/PostGIS",
                 false,
                 true
         );
-        module.addAction(new CatgisModuleAction("postgis-open", "Agregar PostGIS...", "Abre el navegador de conexiones PostGIS para probar la conexion, listar tablas y cargar capas vectoriales.",
-                AppIcons.tableIcon(), PostgisDataSourceAction::openPostgisBrowser, ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("catserver-open", "Conectar CATSERVER...", "Abre CATSERVER con host, puerto, base y schema editables para listar capas y agregarlas al proyecto.",
+                AppIcons.projectIcon(), PostgisDataSourceAction::openCatserverBrowser, ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("catserver-export", "Enviar capa a CATSERVER...", "Toma la capa vectorial seleccionada y la escribe en el servidor PostgreSQL/PostGIS configurado en CATSERVER.",
+                AppIcons.exportIcon(), PostgisDataSourceAction::exportSelectedLayerToPostgis, ModuleActionPlacement.MODULE_MENU,
+                () -> CatgisDesktopApp.layersPanel != null
+                        && CatgisDesktopApp.layersPanel.getSelectedLayer() != null
+                        && !(CatgisDesktopApp.layersPanel.getSelectedLayer() instanceof RasterLayer)));
         return module;
     }
 
@@ -387,29 +392,19 @@ public final class ModuleRegistry {
     private static CatgisModule createOnlineBasemapModule() {
         CatgisModule module = new CatgisModule(
                 MODULE_ONLINE_BASEMAPS,
-                "Mapas base online",
+                "Conexiones online",
                 ModuleCategory.ONLINE_MAPS,
-                "Carga mapas base XYZ legales y mantenibles como capas de fondo online para el proyecto actual.",
-                "Mapas base / servicios web",
+                "Accesos directos online acotados a OSM, Esri y WFS para flujo estable y simple.",
+                "OSM / Esri / WFS",
                 false,
                 true
         );
-        module.addAction(new CatgisModuleAction("online-basemap-open", "Agregar mapa base online...", "Abre el selector de proveedores de mapas base online.",
-                AppIcons.basemapIcon(), OnlineBaseMapAction::openDialog, ModuleActionPlacement.MODULE_MENU, () -> true));
         module.addAction(new CatgisModuleAction("online-basemap-osm", "OpenStreetMap", "Agrega o activa OpenStreetMap como mapa base.",
                 AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM), ModuleActionPlacement.MODULE_MENU, () -> true));
         module.addAction(new CatgisModuleAction("online-basemap-esri", "Esri World Imagery", "Agrega o activa Esri World Imagery como capa de fondo.",
                 AppIcons.imageryIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY), ModuleActionPlacement.MODULE_MENU, () -> true));
-        module.addAction(new CatgisModuleAction("online-basemap-esri-topo", "Esri World Topo", "Agrega o activa Esri World Topo como mapa base.",
-                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_TOPO), ModuleActionPlacement.MODULE_MENU, () -> true));
-        module.addAction(new CatgisModuleAction("online-basemap-esri-street", "Esri World Street Map", "Agrega o activa Esri World Street Map como mapa base.",
-                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_STREET), ModuleActionPlacement.MODULE_MENU, () -> true));
-        module.addAction(new CatgisModuleAction("online-basemap-esri-light", "Esri Light Gray Canvas", "Agrega o activa Esri Light Gray Canvas como mapa base.",
-                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_LIGHT_GRAY), ModuleActionPlacement.MODULE_MENU, () -> true));
-        module.addAction(new CatgisModuleAction("online-basemap-esri-natgeo", "Esri NatGeo World Map", "Agrega o activa Esri NatGeo World Map como mapa base.",
-                AppIcons.basemapIcon(), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_NATGEO), ModuleActionPlacement.MODULE_MENU, () -> true));
-        module.addAction(new CatgisModuleAction("online-basemap-wms", "Agregar WMS...", "Abre el dialogo para conectar un servicio WMS real via GetCapabilities.",
-                AppIcons.wmsIcon(), AddWmsAction::openDialog, ModuleActionPlacement.MODULE_MENU, () -> true));
+        module.addAction(new CatgisModuleAction("online-basemap-wfs", "Agregar WFS...", "Abre el dialogo para conectar un servicio WFS via GetCapabilities.",
+                AppIcons.tableIcon(), AddWfsAction::openDialog, ModuleActionPlacement.MODULE_MENU, () -> true));
         return module;
     }
 }

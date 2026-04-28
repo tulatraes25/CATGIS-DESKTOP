@@ -30,17 +30,13 @@ public class OnlineConnectionsToolbar extends JPanel {
         JButton esriButton = createButton("Esri", I18n.t("Activar Esri World Imagery"), AppIcons.imageryIcon());
         esriButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY));
 
-        JButton mapsButton = createButton(I18n.t("Mapas..."), I18n.t("Elegir mapa base online"), AppIcons.basemapIcon());
-        mapsButton.addActionListener(e -> OnlineBaseMapAction.openDialog());
-
-        JButton wmsButton = createButton("WMS", I18n.t("Agregar servicio WMS"), AppIcons.wmsIcon());
-        wmsButton.addActionListener(e -> AddWmsAction.openDialog());
+        JButton wfsButton = createButton("WFS", I18n.t("Agregar capa WFS"), AppIcons.tableIcon());
+        wfsButton.addActionListener(e -> AddWfsAction.openDialog());
 
         add(title);
         add(osmButton);
         add(esriButton);
-        add(mapsButton);
-        add(wmsButton);
+        add(wfsButton);
     }
 
     private JButton createButton(String text, String tooltip, javax.swing.Icon icon) {

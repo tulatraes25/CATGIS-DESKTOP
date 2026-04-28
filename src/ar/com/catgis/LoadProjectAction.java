@@ -10,7 +10,6 @@ import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.lang.reflect.Method;
 
 public class LoadProjectAction extends AbstractAction {
 
@@ -160,6 +159,8 @@ public class LoadProjectAction extends AbstractAction {
                 loadedProject.addLayer(layer);
             }
 
+            normalizeCatserverGrouping(loadedProject);
+
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.clearLayers();
             }
@@ -205,9 +206,9 @@ public class LoadProjectAction extends AbstractAction {
             }
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            AppErrorSupport.logFailure("Error al abrir proyecto " + file.getAbsolutePath(), ex);
             if (showDialogs) {
-                JOptionPane.showMessageDialog(owner, "Error al abrir proyecto: " + ex.getMessage());
+                AppErrorSupport.showErrorDialog(owner, "Abrir proyecto", "Error al abrir proyecto.", ex);
             }
             return false;
         }
@@ -227,58 +228,6 @@ public class LoadProjectAction extends AbstractAction {
             return;
         }
         try {
-            if (layer instanceof PostgisLayer) {
-                PostgisConnectionInfo info = PostgisConnectionStore.applyStoredPassword(((PostgisLayer) layer).toConnectionInfo());
-                if (info == null || info.getPassword().isBlank()) {
-                    info = PostgisConnectionStore.promptForPassword(
-                            CatgisDesktopApp.getMainFrameSafe(),
-                            ((PostgisLayer) layer).toConnectionInfo(),
-                            "Ingresá la clave para reconstruir la capa PostGIS guardada en el proyecto."
-                    );
-                    if (info == null) {
-                        return;
-                    }
-                }
-                ShapefileData data = PostgisLoader.loadLayerData((PostgisLayer) layer, info);
-                if (data != null) {
-                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
-                    layer.setSourceName(data.getSourceName());
-                    layer.setFeatureCount(data.getFeatureCount());
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                }
-                return;
-            }
-            if (layer instanceof GeoPackageLayer) {
-                ShapefileData data = GeoPackageLoader.loadLayerData((GeoPackageLayer) layer);
-                if (data != null) {
-                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
-                    layer.setSourceName(data.getSourceName());
-                    layer.setFeatureCount(data.getFeatureCount());
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                }
-                return;
-            }
-            if (layer instanceof GpxLayer gpxLayer) {
-                ShapefileData data = GpxLoader.load(new File(layer.getPath()), gpxLayer.getContentKind());
-                if (data != null) {
-                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
-                    layer.setSourceName(data.getSourceName());
-                    layer.setFeatureCount(data.getFeatureCount());
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                }
-                return;
-            }
-            if (layer instanceof OnlineWfsLayer) {
-                ShapefileData data = WfsFeatureLoader.loadLayerData((OnlineWfsLayer) layer);
-                if (data != null) {
-                    data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
-                    layer.setSourceName(data.getSourceName());
-                    layer.setFeatureCount(data.getFeatureCount());
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                }
-                return;
-            }
-
             String path = layer.getPath() != null ? layer.getPath().trim().toLowerCase() : "";
 
             if (isRasterLayer(layer)) {
@@ -321,64 +270,25 @@ public class LoadProjectAction extends AbstractAction {
                 }
                 return;
             }
-
-            if (!"VECTOR".equalsIgnoreCase(layer.getType())) {
-                return;
-            }
-
-            ShapefileData data = null;
-
-            if (TopographyWorkflowSupport.isTransientTopographyVector(layer)
-                    && (path.isBlank() || !ExportVectorLayerAction.hasSupportedVectorPath(layer))) {
-                data = TopographyWorkflowSupport.tryRestoreTransientTopographyVectorLayer(layer);
-                if (data != null) {
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                }
-                return;
-            }
-
-            if (path.endsWith(".shp")) {
-                data = loadShapefileCompat(layer.getPath());
-                if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
-                    layer.setSourceCRS(ShapefileLoader.getCRSCode(new File(layer.getPath())));
-                }
-            } else if (path.endsWith(".dxf")) {
-                data = DxfLoader.load(new File(layer.getPath()));
-            } else if (path.endsWith(".dwg")) {
-                DwgImportSupport.ResolvedCadReference resolvedCad = DwgImportSupport.resolveDwgReference(new File(layer.getPath()), null, false);
-                if (resolvedCad != null && resolvedCad.dxfFile() != null) {
-                    data = DxfLoader.load(resolvedCad.dxfFile());
-                    layer.setSourceName(resolvedCad.resolutionMessage());
-                }
-            } else if (path.endsWith(".geojson") || path.endsWith(".json")) {
-                data = loadGeoJsonCompat(layer.getPath());
-                if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
-                    layer.setSourceCRS("EPSG:4326");
-                }
-            } else if (path.endsWith(".kml") || path.endsWith(".kmz")) {
-                data = loadKmlCompat(layer.getPath());
-                if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
-                    layer.setSourceCRS("EPSG:4326");
-                }
-            }
-
-            if (data != null) {
-                data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
-                layer.setSourceName(data.getSourceName());
-                layer.setFeatureCount(data.getFeatureCount());
-                CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+            if ("VECTOR".equalsIgnoreCase(layer.getType())) {
+                LayerVectorDataSupport.ensureDataLoaded(
+                        layer,
+                        CatgisDesktopApp.getMainFrameSafe(),
+                        "Ingresá la clave para reconstruir la capa PostGIS guardada en el proyecto.",
+                        false
+                );
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
-            System.out.println("No se pudo cargar la capa desde proyecto: " + layer.getPath());
-            if (layer instanceof PostgisLayer) {
-                JOptionPane.showMessageDialog(
-                        CatgisDesktopApp.getMainFrameSafe(),
-                        "No se pudo reconstruir la capa PostGIS \"" + layer.getName() + "\".\n"
-                                + PostgisErrorSupport.toUserMessage(ex, ((PostgisLayer) layer).toConnectionInfo()),
-                        "PostGIS",
-                        JOptionPane.ERROR_MESSAGE
-                );
+            LayerVectorDataSupport.showLoadFailure(
+                    layer,
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "Abrir proyecto",
+                    "No se pudo reconstruir la capa seleccionada del proyecto.",
+                    ex
+            );
+            if (!(layer instanceof PostgisLayer) && CatgisDesktopApp.statusBar != null) {
+                String layerName = layer != null ? layer.getName() : "capa desconocida";
+                CatgisDesktopApp.statusBar.setMessage("No se pudo reconstruir la capa \"" + layerName + "\".");
             }
         }
     }
@@ -811,7 +721,7 @@ public class LoadProjectAction extends AbstractAction {
 
             return layer;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            AppErrorSupport.logFailure("No se pudo interpretar una entrada de capa del proyecto", ex);
             return null;
         }
     }
@@ -962,54 +872,44 @@ public class LoadProjectAction extends AbstractAction {
         return name;
     }
 
-    private static ShapefileData loadShapefileCompat(String path) throws Exception {
-        return invokeLoader(ShapefileLoader.class, path,
-                new String[]{"load", "loadShapefile", "open", "openShapefile", "read", "readShapefile"});
-    }
-
-    private static ShapefileData loadGeoJsonCompat(String path) throws Exception {
-        return invokeLoader(GeoJsonLoader.class, path,
-                new String[]{"load", "loadGeoJson", "open", "read"});
-    }
-
-    private static ShapefileData loadKmlCompat(String path) throws Exception {
-        return invokeLoader(KmlLoader.class, path,
-                new String[]{"load", "loadKml", "open", "read"});
-    }
-
-    private static ShapefileData invokeLoader(Class<?> clazz, String path, String[] methodNames) throws Exception {
-        if (path == null || path.isBlank()) {
-            return null;
+    private static void normalizeCatserverGrouping(Project project) {
+        if (project == null) {
+            return;
         }
-
-        File file = new File(path);
-        if (!file.exists()) {
-            throw new RuntimeException("No existe el archivo: " + path);
-        }
-
-        for (String methodName : methodNames) {
-            try {
-                Method m = clazz.getMethod(methodName, String.class);
-                Object result = m.invoke(null, path);
-                if (result instanceof ShapefileData) {
-                    return (ShapefileData) result;
-                }
-            } catch (NoSuchMethodException ignored) {
+        LayerGroup catserverGroup = null;
+        for (Layer layer : project.getLayers()) {
+            if (!(layer instanceof PostgisLayer postgisLayer)) {
+                continue;
             }
-        }
-
-        for (String methodName : methodNames) {
-            try {
-                Method m = clazz.getMethod(methodName, File.class);
-                Object result = m.invoke(null, file);
-                if (result instanceof ShapefileData) {
-                    return (ShapefileData) result;
-                }
-            } catch (NoSuchMethodException ignored) {
+            if (layer.isInGroup()) {
+                continue;
             }
+            if (!isCatserverLayer(postgisLayer)) {
+                continue;
+            }
+            if (catserverGroup == null) {
+                catserverGroup = project.getLayerGroup("CATSERVER");
+                if (catserverGroup == null) {
+                    catserverGroup = project.addLayerGroup("CATSERVER");
+                }
+                catserverGroup.setVisible(true);
+                catserverGroup.setExpanded(true);
+            }
+            project.assignLayerToGroup(layer, catserverGroup.getName());
         }
-
-        throw new RuntimeException("No se encontró un loader compatible para: " + path + ". Verificá que la capa siga soportada y que la ruta del proyecto apunte al archivo correcto.");
     }
+
+    private static boolean isCatserverLayer(PostgisLayer layer) {
+        if (layer == null) {
+            return false;
+        }
+        String databaseName = layer.getDatabaseName();
+        if (databaseName != null && "catserver".equalsIgnoreCase(databaseName.trim())) {
+            return true;
+        }
+        String sourceName = layer.getSourceName();
+        return sourceName != null && sourceName.toLowerCase().contains("catserver");
+    }
+
 }
 

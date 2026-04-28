@@ -14,6 +14,7 @@ import java.util.prefs.Preferences;
 public final class PostgisConnectionStore {
 
     private static final Preferences ROOT = Preferences.userNodeForPackage(PostgisConnectionStore.class).node("postgis");
+    private static final Preferences PROFILES = ROOT.node("profiles");
     private static final String KEY_LAST_HOST = "last.host";
     private static final String KEY_LAST_PORT = "last.port";
     private static final String KEY_LAST_DATABASE = "last.database";
@@ -56,6 +57,40 @@ public final class PostgisConnectionStore {
         ROOT.put(KEY_LAST_SCHEMA, safe(info.getSchema()));
         ROOT.put(KEY_LAST_USER, safe(info.getUser()));
         ROOT.putBoolean(KEY_LAST_REMEMBER, info.isRememberPassword());
+        rememberPassword(info);
+    }
+
+    public static PostgisConnectionInfo loadProfileConnection(String profileId, PostgisConnectionInfo defaults) {
+        if (profileId == null || profileId.isBlank()) {
+            return defaults != null ? defaults.copy() : null;
+        }
+
+        Preferences node = PROFILES.node(profileId.trim());
+        PostgisConnectionInfo base = defaults != null ? defaults.copy() : new PostgisConnectionInfo();
+        base.setHost(node.get("host", base.getHost()));
+        base.setPort(node.getInt("port", base.getPort()));
+        base.setDatabase(node.get("database", base.getDatabase()));
+        base.setSchema(node.get("schema", base.getSchema()));
+        base.setUser(node.get("user", base.getUser()));
+        base.setRememberPassword(node.getBoolean("remember", base.isRememberPassword()));
+        String rememberedPassword = getStoredPassword(base);
+        if (!rememberedPassword.isBlank()) {
+            base.setPassword(rememberedPassword);
+        }
+        return base;
+    }
+
+    public static void saveProfileConnection(String profileId, PostgisConnectionInfo info) {
+        if (profileId == null || profileId.isBlank() || info == null) {
+            return;
+        }
+        Preferences node = PROFILES.node(profileId.trim());
+        node.put("host", safe(info.getHost()));
+        node.putInt("port", info.getPort());
+        node.put("database", safe(info.getDatabase()));
+        node.put("schema", safe(info.getSchema()));
+        node.put("user", safe(info.getUser()));
+        node.putBoolean("remember", info.isRememberPassword());
         rememberPassword(info);
     }
 

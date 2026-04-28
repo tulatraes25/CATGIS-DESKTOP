@@ -54,28 +54,7 @@ public class CartographyToolbar extends JPanel {
         JButton compositorButton = createButton(I18n.t("Abrir CATMAP"), AppIcons.projectIcon());
         compositorButton.addActionListener(e -> MapLayoutComposerDialog.open());
 
-        JButton osmButton = createIconButton(I18n.t("Activar OpenStreetMap"), AppIcons.basemapIcon());
-        osmButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM));
-
-        JButton esriImageryButton = createIconButton(I18n.t("Activar Esri World Imagery"), AppIcons.imageryIcon());
-        esriImageryButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY));
-
-        JButton esriTopoButton = createIconButton(I18n.t("Activar Esri World Topo"), AppIcons.basemapIcon());
-        esriTopoButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_TOPO));
-
-        JButton mapsButton = createIconButton(I18n.t("Elegir mapa base online"), AppIcons.openIcon());
-        mapsButton.addActionListener(e -> OnlineBaseMapAction.openDialog());
-
-        JButton wmsButton = createIconButton(I18n.t("Agregar servicio WMS"), AppIcons.wmsIcon());
-        wmsButton.addActionListener(e -> AddWmsAction.openDialog());
-
         panel.add(compositorButton);
-        panel.add(Box.createHorizontalStrut(6));
-        panel.add(osmButton);
-        panel.add(esriImageryButton);
-        panel.add(esriTopoButton);
-        panel.add(mapsButton);
-        panel.add(wmsButton);
         return panel;
     }
 
@@ -84,15 +63,6 @@ public class CartographyToolbar extends JPanel {
         button.setFocusable(false);
         button.setMargin(new Insets(6, 10, 6, 10));
         button.setPreferredSize(new Dimension(Math.max(190, button.getPreferredSize().width), 34));
-        return button;
-    }
-
-    private JButton createIconButton(String tooltip, javax.swing.Icon icon) {
-        JButton button = new JButton(icon);
-        button.setToolTipText(tooltip);
-        button.setFocusable(false);
-        button.setMargin(new Insets(6, 6, 6, 6));
-        button.setPreferredSize(new Dimension(34, 34));
         return button;
     }
 }

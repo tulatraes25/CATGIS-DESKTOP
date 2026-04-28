@@ -55,8 +55,26 @@ public final class PostgisErrorSupport {
         if (lower.contains("password authentication failed") || lower.contains("authentication failed")) {
             return "Usuario o clave PostGIS incorrectos. Revisa las credenciales.";
         }
+        if (lower.contains("permission denied")) {
+            return "El usuario PostgreSQL/PostGIS no tiene permisos suficientes para completar la operación solicitada.";
+        }
+        if (lower.contains("must be owner of relation")) {
+            return "El usuario actual no es dueño de la tabla y no puede reemplazarla o modificar su estructura.";
+        }
         if (lower.contains("database") && lower.contains("does not exist")) {
             return "La base PostgreSQL indicada no existe en el servidor.";
+        }
+        if (lower.contains("schema") && lower.contains("does not exist")) {
+            return "El schema indicado no existe en la base PostgreSQL.";
+        }
+        if (lower.contains("already exists")) {
+            return "La tabla destino ya existe en PostGIS. Elegi crear otra tabla o reemplazarla.";
+        }
+        if (lower.contains("duplicate key value")) {
+            return "La operación PostGIS encontró claves duplicadas. Revisá ids, anexado o restricciones de la tabla.";
+        }
+        if (lower.contains("violates not-null constraint")) {
+            return "La tabla PostGIS exige campos obligatorios que la capa actual no está completando.";
         }
         if (lower.contains("role") && lower.contains("does not exist")) {
             return "El usuario PostgreSQL indicado no existe en el servidor.";

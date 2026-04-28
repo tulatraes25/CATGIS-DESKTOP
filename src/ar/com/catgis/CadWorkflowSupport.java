@@ -73,4 +73,57 @@ public final class CadWorkflowSupport {
             );
         }
     }
+
+    public static void openCadDragPlacementWorkflow(Component owner, Layer layer) {
+        if (layer == null || !CadLayerSupport.isCadLayer(layer)) {
+            JOptionPane.showMessageDialog(owner, "Selecciona una capa CAD (DWG/DXF) para moverla sobre el mapa.");
+            return;
+        }
+        if (CatgisDesktopApp.mapPanel == null) {
+            JOptionPane.showMessageDialog(owner, "No se encontro la vista de mapa activa para arrastrar la referencia CAD.");
+            return;
+        }
+        if (CatgisDesktopApp.mapPanel.isCadPlacementDragActive()) {
+            JOptionPane.showMessageDialog(owner, "Ya hay un arrastre CAD activo. Termina o cancela el flujo actual.");
+            return;
+        }
+        CatgisDesktopApp.mapPanel.startCadPlacementDrag(
+                layer,
+                new MapPanel.CadPlacementDragHandler() {
+                    @Override
+                    public void onDragApplied(double offsetX, double offsetY) {
+                        layer.setCadOffsetX(offsetX);
+                        layer.setCadOffsetY(offsetY);
+                        CatgisDesktopApp.markProjectDirty();
+                        if (CatgisDesktopApp.layersPanel != null) {
+                            CatgisDesktopApp.layersPanel.refreshLayerList();
+                        }
+                        if (CatgisDesktopApp.mapPanel != null) {
+                            CatgisDesktopApp.mapPanel.repaint();
+                        }
+                        if (CatgisDesktopApp.statusBar != null) {
+                            CatgisDesktopApp.statusBar.setMessage(
+                                    "Ajuste CAD por arrastre aplicado: " + layer.getName() + " -> " + CadPlacementSupport.buildPlacementSummary(layer)
+                            );
+                        }
+                    }
+
+                    @Override
+                    public void onDragCanceled() {
+                        if (CatgisDesktopApp.layersPanel != null) {
+                            CatgisDesktopApp.layersPanel.refreshLayerList();
+                        }
+                        if (CatgisDesktopApp.mapPanel != null) {
+                            CatgisDesktopApp.mapPanel.repaint();
+                        }
+                        if (CatgisDesktopApp.statusBar != null) {
+                            CatgisDesktopApp.statusBar.setMessage("Arrastre CAD cancelado: " + layer.getName());
+                        }
+                    }
+                },
+                "Arrastre CAD activo: clic izquierdo y arrastra sobre el mapa para mover la referencia. Suelta para aplicar. Clic derecho o Esc cancela.",
+                "Arrastre CAD aplicado.",
+                "Arrastre CAD cancelado."
+        );
+    }
 }

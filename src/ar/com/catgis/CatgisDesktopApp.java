@@ -27,6 +27,8 @@ public class CatgisDesktopApp extends JFrame {
     public static Project currentProject;
     public static FloatingVectorEditToolbar floatingVectorEditToolbar;
     public static CartographyToolbar cartographyToolbar;
+    public static CatserverToolbar catserverToolbar;
+    public static OnlineConnectionsToolbar onlineConnectionsToolbar;
     public static TopographyToolbar topographyToolbar;
     private static JLabel sidebarTitleLabel;
     private static JLabel sidebarSubtitleLabel;
@@ -35,12 +37,11 @@ public class CatgisDesktopApp extends JFrame {
     private static JLabel mapTitleLabel;
     private static JLabel mapSubtitleLabel;
     private static JLabel mapStatusHintLabel;
+    private boolean startupProjectCrsPromptShown;
 
     public CatgisDesktopApp() {
         setTitle("CATGIS Desktop");
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        setSize(1360, 860);
-        setMinimumSize(new Dimension(1100, 720));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
         AppBranding.applyFrameBranding(this);
@@ -56,6 +57,8 @@ public class CatgisDesktopApp extends JFrame {
         });
         floatingVectorEditToolbar = new FloatingVectorEditToolbar();
         cartographyToolbar = new CartographyToolbar();
+        catserverToolbar = new CatserverToolbar();
+        onlineConnectionsToolbar = new OnlineConnectionsToolbar();
         topographyToolbar = new TopographyToolbar();
 
         setJMenuBar(new MainMenuBar());
@@ -64,8 +67,10 @@ public class CatgisDesktopApp extends JFrame {
         add(statusBar, BorderLayout.SOUTH);
         FileDropSupport.install(getRootPane(), mapPanel, layersPanel);
 
-        initializeProjectAtStartup();
         installWindowCloseHandler();
+        initializeProjectAtStartup();
+        WindowLayoutSupport.fitFrameToScreen(this, 1280, 720, 1024, 680);
+        setLocationRelativeTo(null);
         SwingUtilities.invokeLater(() -> {
             if (mapPanel != null) {
                 mapPanel.refreshStatusBarScale();
@@ -95,21 +100,23 @@ public class CatgisDesktopApp extends JFrame {
         editToolsRow.setAlignmentX(LEFT_ALIGNMENT);
         editToolsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
-        JPanel servicesRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        servicesRow.setOpaque(false);
-        servicesRow.add(topographyToolbar);
-        servicesRow.setAlignmentX(LEFT_ALIGNMENT);
-        servicesRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+        JPanel topographyRow = new JPanel(new BorderLayout());
+        topographyRow.setOpaque(false);
+        topographyRow.add(topographyToolbar, BorderLayout.CENTER);
+        topographyRow.setAlignmentX(LEFT_ALIGNMENT);
+        topographyRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
 
-        JPanel cartographyRow = new JPanel(new BorderLayout());
-        cartographyRow.setOpaque(false);
-        cartographyRow.add(cartographyToolbar, BorderLayout.CENTER);
-        cartographyRow.setAlignmentX(LEFT_ALIGNMENT);
-        cartographyRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+        JPanel modulesRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        modulesRow.setOpaque(false);
+        modulesRow.add(cartographyToolbar);
+        modulesRow.add(catserverToolbar);
+        modulesRow.add(onlineConnectionsToolbar);
+        modulesRow.setAlignmentX(LEFT_ALIGNMENT);
+        modulesRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
 
         topContainer.add(mainToolsRow);
-        topContainer.add(cartographyRow);
-        topContainer.add(servicesRow);
+        topContainer.add(modulesRow);
+        topContainer.add(topographyRow);
         topContainer.add(editToolsRow);
         return topContainer;
     }
@@ -125,7 +132,7 @@ public class CatgisDesktopApp extends JFrame {
                 buildLeftSidebar(),
                 buildMapContainer()
         );
-        splitPane.setDividerLocation(300);
+        splitPane.setDividerLocation(280);
         splitPane.setResizeWeight(0.0);
         splitPane.setBorder(null);
         splitPane.setOpaque(false);
@@ -145,16 +152,11 @@ public class CatgisDesktopApp extends JFrame {
                 BorderFactory.createLineBorder(new Color(220, 224, 230)),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        sidebar.setPreferredSize(new Dimension(300, 100));
+        sidebar.setPreferredSize(new Dimension(280, 100));
 
         sidebar.add(buildSidebarHeader(), BorderLayout.NORTH);
 
-        JScrollPane scrollPane = new JScrollPane(layersPanel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.getViewport().setBackground(Color.WHITE);
-        scrollPane.setOpaque(false);
-
-        sidebar.add(scrollPane, BorderLayout.CENTER);
+        sidebar.add(layersPanel, BorderLayout.CENTER);
         return sidebar;
     }
 
@@ -269,42 +271,57 @@ public class CatgisDesktopApp extends JFrame {
         if (currentProject == null) {
             currentProject = new Project(I18n.t("Proyecto actual"));
         }
-
-        SwingUtilities.invokeLater(() -> {
-            promptInitialProjectCRS();
-            updateWindowTitle();
-        });
-    }
-
-    private void promptInitialProjectCRS() {
         String currentCode = currentProject.getProjectCRS();
         if (currentCode == null || currentCode.isBlank()) {
             currentProject.setProjectCRS("EPSG:4326");
-            currentCode = "EPSG:4326";
+            if (statusBar != null) {
+                statusBar.setMessage(I18n.format(
+                        "CRS del proyecto inicial: {0}. Podés cambiarlo desde Proyecto > CRS del proyecto.",
+                        CRSDefinitions.getLabelForCode("EPSG:4326")
+                ));
+            }
+        }
+        updateWindowTitle();
+    }
+
+    public void showStartupProjectCrsPromptIfNeeded() {
+        if (startupProjectCrsPromptShown) {
+            return;
+        }
+        startupProjectCrsPromptShown = true;
+
+        if (currentProject == null) {
+            currentProject = new Project(I18n.t("Proyecto actual"));
         }
 
-        final String fallbackCode = currentCode;
+        String fallbackCode = currentProject.getProjectCRS();
+        if (fallbackCode == null || fallbackCode.isBlank()) {
+            fallbackCode = "EPSG:4326";
+            currentProject.setProjectCRS(fallbackCode);
+        }
 
-        CRSSelectorDialog.open(
+        String chosenCode = CRSSelectorDialog.chooseBlocking(
+                this,
                 I18n.t("Seleccione el CRS inicial del proyecto"),
-                currentCode,
-                code -> {
-                    String finalCode = (code != null && !code.isBlank()) ? code : fallbackCode;
-                    currentProject.setProjectCRS(finalCode);
-
-                    if (statusBar != null) {
-                        statusBar.setMessage(I18n.format("CRS inicial del proyecto: {0}", CRSDefinitions.getLabelForCode(finalCode)));
-                    }
-
-                    if (mapPanel != null) {
-                        mapPanel.resetView();
-                        mapPanel.repaint();
-                    }
-
-                    syncFloatingVectorEditToolbar();
-                    updateWindowTitle();
-                }
+                fallbackCode
         );
+        if (chosenCode != null && !chosenCode.isBlank()) {
+            currentProject.setProjectCRS(chosenCode);
+        }
+
+        if (statusBar != null) {
+            statusBar.setMessage(I18n.format(
+                    "CRS inicial del proyecto: {0}",
+                    CRSDefinitions.getLabelForCode(currentProject.getProjectCRS())
+            ));
+        }
+
+        if (mapPanel != null) {
+            mapPanel.reloadRasterLayersForProjectCRS();
+            mapPanel.refreshStatusBarScale();
+        }
+
+        markProjectClean();
     }
 
     public static void updateWindowTitle() {
@@ -408,6 +425,10 @@ public class CatgisDesktopApp extends JFrame {
         if (floatingVectorEditToolbar != null) {
             floatingVectorEditToolbar.refreshState();
         }
+    }
+
+    public static void syncProInterpretationToolbar() {
+        // Pro desactivado en CATGIS Desktop base.
     }
 
     public static boolean confirmProjectContinuation(String actionLabel) {

@@ -444,8 +444,8 @@ public class GeoprocessingAssistantDialog extends JDialog {
             VectorLayerUtils.addResultLayer(outputName, result, layerA.layer, outputCrs, "");
             JOptionPane.showMessageDialog(this, "Proceso completado. Se agrego la capa de resultado al proyecto.");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al ejecutar la operacion:\n" + ex.getMessage());
+            AppErrorSupport.logFailure("Error al ejecutar la operacion de geoprocesamiento " + operation, ex);
+            AppErrorSupport.showErrorDialog(this, "Geoprocesamiento", "Error al ejecutar la operacion.", ex);
         } finally {
             setCursor(Cursor.getDefaultCursor());
         }

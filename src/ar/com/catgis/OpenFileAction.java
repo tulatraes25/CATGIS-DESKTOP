@@ -97,10 +97,21 @@ public class OpenFileAction extends AbstractAction {
                 layer.setVisible(true);
                 if (CadLayerSupport.isCadFile(layerStorageFile)) {
                     CadCrsAssignmentDialog.Result cadCrsResult = CadCrsAssignmentDialog.chooseForImport(parent, layerStorageFile, sourceCRS);
-                    if (!cadCrsResult.approved()) {
+                    if (cadCrsResult.selectorRequested()) {
+                        String chosenCode = CRSSelectorDialog.chooseBlocking(
+                                CatgisDesktopApp.getMainFrameSafe(),
+                                "Seleccionar CRS para CAD",
+                                cadCrsResult.sourceCrs()
+                        );
+                        if (chosenCode == null || chosenCode.isBlank()) {
+                            return false;
+                        }
+                        sourceCRS = chosenCode;
+                    } else if (!cadCrsResult.approved()) {
                         return false;
+                    } else {
+                        sourceCRS = cadCrsResult.sourceCrs() != null ? cadCrsResult.sourceCrs() : "";
                     }
-                    sourceCRS = cadCrsResult.sourceCrs() != null ? cadCrsResult.sourceCrs() : "";
                 }
                 layer.setSourceCRS(sourceCRS);
                 configureImportedLayerDefaults(layer, data, lowerName);
@@ -143,19 +154,14 @@ public class OpenFileAction extends AbstractAction {
             return false;
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            if (showDialogs) {
-                JOptionPane.showMessageDialog(
-                        parent,
-                        "No se pudo agregar la capa \"" + file.getName() + "\".\n\n"
-                                + (ex.getMessage() != null && !ex.getMessage().isBlank()
-                                ? ex.getMessage()
-                                : ex.getClass().getSimpleName()),
-                        "Cargar datos",
-                        JOptionPane.ERROR_MESSAGE
-                );
-            }
-            return false;
+            return handleOpenFailure(
+                    file,
+                    parent,
+                    showDialogs,
+                    "No se pudo agregar la capa \"" + file.getName() + "\".",
+                    "Cargar datos",
+                    ex
+            );
         }
     }
 
@@ -269,16 +275,7 @@ public class OpenFileAction extends AbstractAction {
             }
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            if (showDialogs) {
-                JOptionPane.showMessageDialog(
-                        parent,
-                        "Error al cargar GPX: " + ex.getMessage(),
-                        "Cargar datos",
-                        JOptionPane.ERROR_MESSAGE
-                );
-            }
-            return false;
+            return handleOpenFailure(file, parent, showDialogs, "Error al cargar GPX.", "Cargar datos", ex);
         }
     }
 
@@ -381,6 +378,99 @@ public class OpenFileAction extends AbstractAction {
         return openRasterFileInternal(file, parent, true, true);
     }
 
+    static boolean openProRasterEntry(ProDatasetOpenService.Entry entry, Component parent, boolean showDialogs) {
+        try {
+            PreparedProRaster prepared = prepareProRasterEntry(entry, ProJobMonitor.noop());
+            RasterLayer layer = commitPreparedProRaster(prepared);
+
+            if (CatgisDesktopApp.statusBar != null) {
+                CatgisDesktopApp.statusBar.setMessage(
+                        "Variable Pro agregada: " + layer.getName() + " | " + entry.methodologyLabel()
+                );
+            }
+            if (showDialogs) {
+                JOptionPane.showMessageDialog(
+                        parent,
+                        buildProRasterLoadMessage(layer, prepared),
+                        "Abrir dataset",
+                        layer.getSourceCRS().isBlank() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+            return true;
+        } catch (Exception ex) {
+            AppErrorSupport.logFailure("No se pudo abrir la variable Pro seleccionada.", ex);
+            if (showDialogs) {
+                AppErrorSupport.showErrorDialog(
+                        parent,
+                        "Abrir dataset",
+                        "No se pudo abrir la variable Pro seleccionada.",
+                        ex
+                );
+            }
+            return false;
+        }
+    }
+
+    static PreparedProRaster prepareProRasterEntry(ProDatasetOpenService.Entry entry) throws Exception {
+        return prepareProRasterEntry(entry, ProJobMonitor.noop());
+    }
+
+    static PreparedProRaster prepareProRasterEntry(ProDatasetOpenService.Entry entry, ProJobMonitor monitor) throws Exception {
+        ProJobMonitor effectiveMonitor = monitor != null ? monitor : ProJobMonitor.noop();
+        effectiveMonitor.checkCanceled();
+        if (entry == null || (entry.rasterFile() == null && !entry.openable())) {
+            throw new IllegalArgumentException("No hay una entrada Pro valida para preparar.");
+        }
+        effectiveMonitor.report("Validando variable Pro: " + entry.variableLabel());
+        String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        ProRasterMaterializationService.MaterializedRaster materialized = null;
+        File rasterFile = entry.rasterFile();
+        if ((rasterFile == null || !rasterFile.exists()) && entry.openable()) {
+            effectiveMonitor.report("Materializando variable Pro: " + entry.variableLabel());
+            materialized = ProRasterMaterializationService.materialize(entry, effectiveMonitor);
+            rasterFile = materialized.rasterFile();
+        }
+        effectiveMonitor.checkCanceled();
+        if (rasterFile == null || !rasterFile.exists()) {
+            throw new IllegalStateException("No se encontro el raster Pro materializado para abrir.");
+        }
+        effectiveMonitor.report("Cargando vista rapida Pro: " + entry.variableLabel());
+        LocalRasterData rasterData = RasterImageLoader.loadPreview(rasterFile, projectCRS, null);
+        effectiveMonitor.checkCanceled();
+        effectiveMonitor.report("Variable Pro preparada: " + entry.variableLabel());
+        return new PreparedProRaster(entry, materialized, rasterFile, rasterData, projectCRS);
+    }
+
+    static RasterLayer commitPreparedProRaster(PreparedProRaster prepared) {
+        if (prepared == null || prepared.entry() == null || prepared.rasterFile() == null || prepared.rasterData() == null) {
+            throw new IllegalArgumentException("No hay una apertura Pro preparada para incorporar al proyecto.");
+        }
+        ensureProject();
+        ProDatasetOpenService.Entry entry = prepared.entry();
+        LocalRasterData rasterData = prepared.rasterData();
+        RasterLayer layer = new RasterLayer(entry.layerName(), prepared.rasterFile().getAbsolutePath());
+        layer.setVisible(true);
+        layer.setSourceName(entry.dataset() != null && entry.dataset().getProvider() != null && !entry.dataset().getProvider().isBlank()
+                ? entry.dataset().getProvider()
+                : "CATGIS");
+        layer.setFeatureCount(1);
+        layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, prepared.projectCRS()));
+        layer.setRasterMode(rasterData.getRasterMode());
+        applyProMetadataToRasterLayer(layer, entry, prepared.materialized());
+
+        CatgisDesktopApp.currentProject.addLayer(layer);
+        CatgisDesktopApp.markProjectDirty();
+        if (CatgisDesktopApp.layersPanel != null) {
+            CatgisDesktopApp.layersPanel.addLayer(layer);
+        }
+        if (CatgisDesktopApp.mapPanel != null) {
+            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
+            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
+            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+        }
+        return layer;
+    }
+
     private static boolean openRasterFileInternal(File file, Component parent, boolean demMode, boolean showDialogs) {
         try {
             ensureProject();
@@ -435,17 +525,188 @@ public class OpenFileAction extends AbstractAction {
             }
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            if (showDialogs) {
-                JOptionPane.showMessageDialog(
-                        parent,
-                        (demMode ? I18n.t("Error al cargar DEM: ") : "Error al agregar capa: ") + ex.getMessage(),
-                        demMode ? I18n.t("Cargar datos DEM") : "Cargar datos",
-                        JOptionPane.ERROR_MESSAGE
-                );
-            }
-            return false;
+            return handleOpenFailure(
+                    file,
+                    parent,
+                    showDialogs,
+                    demMode ? I18n.t("Error al cargar DEM.") : "Error al agregar capa.",
+                    demMode ? I18n.t("Cargar datos DEM") : "Cargar datos",
+                    ex
+            );
         }
+    }
+
+    private static boolean handleOpenFailure(File file,
+                                             Component parent,
+                                             boolean showDialogs,
+                                             String intro,
+                                             String title,
+                                             Exception ex) {
+        String context = file != null
+                ? "Operacion de apertura fallida para " + file.getAbsolutePath()
+                : "Operacion de apertura fallida";
+        AppErrorSupport.logFailure(context, ex);
+        if (showDialogs) {
+            AppErrorSupport.showErrorDialog(parent, title, intro, ex);
+        }
+        return false;
+    }
+
+    private static void applyProMetadataToRasterLayer(RasterLayer layer,
+                                                      ProDatasetOpenService.Entry entry,
+                                                      ProRasterMaterializationService.MaterializedRaster materialized) {
+        if (layer == null || entry == null) {
+            return;
+        }
+        layer.setProDatasetRef(entry.datasetRef());
+        layer.setProVariableName(entry.variableLabel());
+        if (entry.dataset() != null) {
+            layer.setProAcquisitionStart(entry.dataset().getAcquisitionStart());
+        }
+        layer.setProMaturityLevel(entry.maturity());
+        File effectiveSidecar = materialized != null && materialized.sidecarFile() != null
+                ? materialized.sidecarFile()
+                : entry.sidecarFile();
+        if (effectiveSidecar == null && entry.dataset() != null && entry.variable() != null) {
+            effectiveSidecar = writeGeneratedProSidecar(layer, entry);
+        }
+        if (effectiveSidecar != null) {
+            layer.setProMetadataSidecarPath(effectiveSidecar.getAbsolutePath());
+        }
+        if (materialized != null && materialized.jobRef() != null && !materialized.jobRef().isBlank()) {
+            layer.setProJobRef(materialized.jobRef());
+        }
+    }
+
+    private static File writeGeneratedProSidecar(RasterLayer layer, ProDatasetOpenService.Entry entry) {
+        if (layer == null || entry == null || layer.getPath() == null || layer.getPath().isBlank()) {
+            return null;
+        }
+        try {
+            return ProMetadataSidecarSupport.write(
+                    new File(layer.getPath()),
+                    new ProMetadataSidecarSupport.Metadata(
+                            copyDataset(entry.dataset()),
+                            copyVariable(entry.variable()),
+                            entry.qualityPreset(),
+                            entry.flagsApplied() != null ? entry.flagsApplied() : List.of(),
+                            entry.recipe(),
+                            entry.maturity(),
+                            null
+                    )
+            );
+        } catch (Exception ex) {
+            throw new IllegalStateException("No se pudo persistir el sidecar Pro para " + layer.getName() + ".", ex);
+        }
+    }
+
+    private static ProDatasetDescriptor copyDataset(ProDatasetDescriptor source) {
+        ProDatasetDescriptor copy = new ProDatasetDescriptor();
+        if (source == null) {
+            return copy;
+        }
+        copy.setDatasetId(source.getDatasetId());
+        copy.setFamily(source.getFamily());
+        copy.setProvider(source.getProvider());
+        copy.setPlatform(source.getPlatform());
+        copy.setInstrument(source.getInstrument());
+        copy.setProcessingLevel(source.getProcessingLevel());
+        copy.setAcquisitionStart(source.getAcquisitionStart());
+        copy.setAcquisitionEnd(source.getAcquisitionEnd());
+        return copy;
+    }
+
+    private static ProVariableDescriptor copyVariable(ProVariableDescriptor source) {
+        ProVariableDescriptor copy = new ProVariableDescriptor();
+        if (source == null) {
+            return copy;
+        }
+        copy.setName(source.getName());
+        copy.setLongName(source.getLongName());
+        copy.setStandardName(source.getStandardName());
+        copy.setUnits(source.getUnits());
+        copy.setDimensions(source.getDimensions());
+        copy.setNodata(source.getNodata());
+        copy.setScaleFactor(source.getScaleFactor());
+        copy.setAddOffset(source.getAddOffset());
+        copy.setValidMin(source.getValidMin());
+        copy.setValidMax(source.getValidMax());
+        copy.setQaDescriptor(source.getQaDescriptor());
+        copy.setBandFamily(source.getBandFamily());
+        return copy;
+    }
+
+    private static String buildProRasterLoadMessage(RasterLayer layer, PreparedProRaster prepared) {
+        ProDatasetOpenService.Entry entry = prepared.entry();
+        LocalRasterData rasterData = prepared.rasterData();
+        ProRasterMaterializationService.MaterializedRaster materialized = prepared.materialized();
+        StringBuilder msg = new StringBuilder();
+        msg.append("Variable Pro agregada correctamente: ").append(layer.getName());
+        msg.append("\nVariable: ").append(entry.variableLabel());
+        if (entry.datasetRef() != null && !entry.datasetRef().isBlank()) {
+            msg.append("\nDataset: ").append(entry.datasetRef());
+        }
+        if (entry.dataset() != null && entry.dataset().getFamily() != null && !entry.dataset().getFamily().isBlank()) {
+            msg.append("\nFamilia: ").append(entry.dataset().getFamily());
+        }
+        if (entry.dataset() != null && entry.dataset().getProvider() != null && !entry.dataset().getProvider().isBlank()) {
+            msg.append("\nProveedor: ").append(entry.dataset().getProvider());
+        }
+        if (entry.dataset() != null && entry.dataset().getPlatform() != null && !entry.dataset().getPlatform().isBlank()) {
+            msg.append("\nPlataforma: ").append(entry.dataset().getPlatform());
+        }
+        if (entry.dataset() != null && entry.dataset().getInstrument() != null && !entry.dataset().getInstrument().isBlank()) {
+            msg.append("\nInstrumento: ").append(entry.dataset().getInstrument());
+        }
+        if (entry.dataset() != null && entry.dataset().getAcquisitionStart() != null && !entry.dataset().getAcquisitionStart().isBlank()) {
+            msg.append("\nTiempo: ").append(entry.dataset().getAcquisitionStart());
+        }
+        if (entry.maturity() != null && !entry.maturity().isBlank()) {
+            msg.append("\nMadurez: ").append(entry.maturity());
+        }
+        msg.append("\nClasificacion metodologica: ").append(entry.methodologyLabel());
+        msg.append("\nPreset tematico: ").append(entry.presetLabel());
+        if (entry.variable() != null && entry.variable().getQaDescriptor() != null && !entry.variable().getQaDescriptor().isBlank()) {
+            msg.append("\nQA fuente-especifico: ").append(entry.variable().getQaDescriptor());
+        }
+        String expectedQa = ProRasterDerivedService.describeExpectedQa(new ProMetadataSidecarSupport.Metadata(
+                entry.dataset(),
+                entry.variable(),
+                entry.qualityPreset(),
+                entry.flagsApplied(),
+                entry.recipe(),
+                entry.maturity(),
+                entry.sidecarFile()
+        ));
+        if (!expectedQa.isBlank()) {
+            msg.append("\nQA prevista: ").append(expectedQa);
+        }
+        if (materialized != null) {
+            msg.append("\nRaster gestionado: ").append(materialized.rasterFile().getAbsolutePath());
+        }
+        msg.append("\nBandas: ").append(rasterData.getBandCount());
+        if (layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank()) {
+            msg.append("\nCRS operativo: ").append(layer.getSourceCRS());
+        } else {
+            msg.append("\nCRS: no definido");
+        }
+        File sidecar = materialized != null && materialized.sidecarFile() != null
+                ? materialized.sidecarFile()
+                : entry.sidecarFile();
+        if (sidecar != null) {
+            msg.append("\nSidecar Pro: ").append(sidecar.getAbsolutePath());
+        }
+        msg.append("\nAlcance: ").append(entry.methodologyDescription());
+        msg.append("\n\nModo inicial: Vista rapida.");
+        msg.append("\nPuedes pasar a zoom virtual o real desde clic derecho sobre la capa.");
+        return msg.toString();
+    }
+
+    record PreparedProRaster(ProDatasetOpenService.Entry entry,
+                             ProRasterMaterializationService.MaterializedRaster materialized,
+                             File rasterFile,
+                             LocalRasterData rasterData,
+                             String projectCRS) {
     }
 
     private static String buildVectorLoadMessage(Layer layer) {

@@ -32,6 +32,7 @@ import java.util.function.Consumer;
 public class CadGeoreferenceDialog extends JDialog {
 
     private static final int ROW_COUNT = 4;
+    private enum CaptureType { NONE, CAD, DESTINATION }
 
     private final Layer layer;
     private final boolean captureEnabled;
@@ -40,13 +41,15 @@ public class CadGeoreferenceDialog extends JDialog {
     private final JRadioButton threePointRadio;
     private final JTextField[][] fields;
     private final JLabel[] rowLabels;
-    private final JButton[] captureButtons;
+    private final JButton[] captureCadButtons;
+    private final JButton[] captureDestinationButtons;
     private final JLabel modeSummaryLabel;
     private final JLabel currentSummaryLabel;
     private final JLabel residualSummaryLabel;
     private final JLabel captureSummaryLabel;
 
     private int activeCaptureRow = -1;
+    private CaptureType activeCaptureType = CaptureType.NONE;
     private boolean finishing = false;
     private CadGeoreferenceSupport.Result result = new CadGeoreferenceSupport.Result(
             false, "", 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, ""
@@ -84,7 +87,7 @@ public class CadGeoreferenceDialog extends JDialog {
         JLabel subtitle = new JLabel("<html>Defini puntos de control CAD y sus coordenadas destino en el CRS del proyecto. "
                 + "Con 2 puntos se calcula una transformacion rigida con escala/rotacion. Con 3 puntos se calcula una afin."
                 + (captureEnabled
-                ? "<br>Los puntos destino pueden capturarse directo desde el mapa."
+                ? "<br>Captura CAD y destino directamente en el mapa (ambos en CRS del proyecto)."
                 : "<br>Desde esta ventana podés cargar coordenadas manuales y usar puntos de control adicionales para verificar el ajuste.")
                 + "</html>");
         subtitle.setForeground(new Color(75, 85, 99));
@@ -115,13 +118,14 @@ public class CadGeoreferenceDialog extends JDialog {
         residualSummaryLabel = new JLabel("Residual: completá puntos obligatorios y, si querés verificar, agregá un punto de control extra.");
         residualSummaryLabel.setForeground(new Color(55, 65, 81));
         captureSummaryLabel = new JLabel(captureEnabled
-                ? "Captura mapa: disponible para puntos destino."
+                ? "Captura mapa: primero CAD y luego destino en cada punto."
                 : "Captura mapa: abrí esta herramienta desde el flujo CAD principal para usar captura interactiva.");
         captureSummaryLabel.setForeground(new Color(75, 85, 99));
 
         fields = new JTextField[ROW_COUNT][4];
         rowLabels = new JLabel[ROW_COUNT];
-        captureButtons = new JButton[ROW_COUNT];
+        captureCadButtons = new JButton[ROW_COUNT];
+        captureDestinationButtons = new JButton[ROW_COUNT];
 
         JPanel grid = new JPanel(new GridBagLayout());
         grid.setBorder(BorderFactory.createCompoundBorder(
@@ -132,11 +136,11 @@ public class CadGeoreferenceDialog extends JDialog {
         gc.insets = new Insets(4, 4, 4, 4);
         gc.fill = GridBagConstraints.HORIZONTAL;
 
-        String[] headers = {"Punto", "CAD X", "CAD Y", "Destino X", "Destino Y", "Mapa"};
+        String[] headers = {"Punto", "CAD X", "CAD Y", "Destino X", "Destino Y", "Mapa CAD", "Mapa destino"};
         for (int col = 0; col < headers.length; col++) {
             gc.gridx = col;
             gc.gridy = 0;
-            gc.weightx = col == 0 || col == 5 ? 0 : 1;
+            gc.weightx = col == 0 || col == 5 || col == 6 ? 0 : 1;
             grid.add(new JLabel(headers[col]), gc);
         }
 
@@ -155,11 +159,17 @@ public class CadGeoreferenceDialog extends JDialog {
             }
             gc.gridx = 5;
             gc.weightx = 0;
-            JButton captureButton = new JButton("Capturar destino");
+            JButton captureCadButton = new JButton("Capturar CAD");
             final int captureRow = row;
-            captureButton.addActionListener(e -> startDestinationCapture(captureRow));
-            captureButtons[row] = captureButton;
-            grid.add(captureButton, gc);
+            captureCadButton.addActionListener(e -> startCadCapture(captureRow));
+            captureCadButtons[row] = captureCadButton;
+            grid.add(captureCadButton, gc);
+
+            gc.gridx = 6;
+            JButton captureDestinationButton = new JButton("Capturar destino");
+            captureDestinationButton.addActionListener(e -> startDestinationCapture(captureRow));
+            captureDestinationButtons[row] = captureDestinationButton;
+            grid.add(captureDestinationButton, gc);
         }
 
         JPanel center = new JPanel(new BorderLayout(0, 10));
@@ -202,7 +212,7 @@ public class CadGeoreferenceDialog extends JDialog {
         buttons.add(apply);
         add(buttons, BorderLayout.SOUTH);
 
-        setMinimumSize(new java.awt.Dimension(captureEnabled ? 1060 : 980, 470));
+        setMinimumSize(new java.awt.Dimension(captureEnabled ? 1180 : 1000, 470));
         pack();
         setLocationRelativeTo(owner);
     }
@@ -224,13 +234,20 @@ public class CadGeoreferenceDialog extends JDialog {
         boolean threePoint = threePointRadio.isSelected();
         for (int row = 0; row < ROW_COUNT; row++) {
             boolean required = row < (threePoint ? 3 : 2);
+            boolean cadReady = !textOf(fields[row][0]).isBlank() && !textOf(fields[row][1]).isBlank();
             rowLabels[row].setText("P" + (row + 1) + (required ? " requerido" : " control"));
             rowLabels[row].setForeground(required ? new Color(15, 23, 42) : new Color(100, 116, 139));
-            captureButtons[row].setEnabled(captureEnabled);
+            boolean enabledForRow = captureEnabled && activeCaptureRow < 0;
+            captureCadButtons[row].setEnabled(enabledForRow);
+            captureDestinationButtons[row].setEnabled(enabledForRow && cadReady);
             if (!captureEnabled) {
-                captureButtons[row].setToolTipText("La captura desde mapa se usa desde el flujo CAD principal.");
+                captureCadButtons[row].setToolTipText("La captura desde mapa se usa desde el flujo CAD principal.");
+                captureDestinationButtons[row].setToolTipText("La captura desde mapa se usa desde el flujo CAD principal.");
             } else {
-                captureButtons[row].setToolTipText("Capturar coordenada destino sobre el mapa.");
+                captureCadButtons[row].setToolTipText("Capturar coordenada CAD sobre el mapa.");
+                captureDestinationButtons[row].setToolTipText(cadReady
+                        ? "Capturar coordenada destino sobre el mapa."
+                        : "Captura primero CAD X/Y de este punto para habilitar destino.");
             }
         }
         modeSummaryLabel.setText(threePoint
@@ -238,16 +255,68 @@ public class CadGeoreferenceDialog extends JDialog {
                 : "Modo actual: 2 puntos para una transformacion rigida con escala uniforme y rotacion. P3/P4 sirven como control independiente.");
     }
 
-    private void startDestinationCapture(int row) {
+    private void startCadCapture(int row) {
         if (!captureEnabled || CatgisDesktopApp.mapPanel == null || activeCaptureRow >= 0) {
             return;
         }
         activeCaptureRow = row;
-        captureSummaryLabel.setText("Capturando destino de P" + (row + 1) + " en el mapa...");
-        for (JButton button : captureButtons) {
-            button.setEnabled(false);
+        activeCaptureType = CaptureType.CAD;
+        captureSummaryLabel.setText("Capturando CAD de P" + (row + 1) + " en el mapa...");
+        refreshMode();
+        String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar CAD de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
+        String successMessage = "Georreferenciacion CAD: CAD P" + (row + 1) + " capturado.";
+        String cancelMessage = "Georreferenciacion CAD: captura de CAD P" + (row + 1) + " cancelada.";
+        CatgisDesktopApp.mapPanel.startPointCapture(new MapPanel.MapPointCaptureHandler() {
+            @Override
+            public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
+                if (finishing || coordinate == null) {
+                    return;
+                }
+                activeCaptureRow = -1;
+                activeCaptureType = CaptureType.NONE;
+                double[] cadCoordinates = convertProjectPointToCadCoordinates(coordinate);
+                fields[row][0].setText(formatDouble(cadCoordinates[0]));
+                fields[row][1].setText(formatDouble(cadCoordinates[1]));
+                captureSummaryLabel.setText("CAD P" + (row + 1) + " capturado en " + formatDouble(cadCoordinates[0]) + ", " + formatDouble(cadCoordinates[1]) + ". Ahora pulsa Capturar destino para ese punto.");
+                refreshMode();
+                previewResidualsSilently();
+                bringDialogToFront();
+            }
+
+            @Override
+            public void onCaptureCanceled() {
+                if (finishing) {
+                    return;
+                }
+                activeCaptureRow = -1;
+                activeCaptureType = CaptureType.NONE;
+                captureSummaryLabel.setText("Captura de CAD P" + (row + 1) + " cancelada.");
+                refreshMode();
+                bringDialogToFront();
+            }
+        }, startMessage, successMessage, cancelMessage);
+        if (!CatgisDesktopApp.mapPanel.isPointCaptureActive()) {
+            activeCaptureRow = -1;
+            activeCaptureType = CaptureType.NONE;
+            captureSummaryLabel.setText("No se pudo iniciar la captura sobre el mapa. Revisa si hay otra herramienta activa.");
+            refreshMode();
         }
-        String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar el destino de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
+    }
+
+    private void startDestinationCapture(int row) {
+        if (!captureEnabled || CatgisDesktopApp.mapPanel == null || activeCaptureRow >= 0) {
+            return;
+        }
+        if (textOf(fields[row][0]).isBlank() || textOf(fields[row][1]).isBlank()) {
+            captureSummaryLabel.setText("Primero captura CAD de P" + (row + 1) + " y luego destino.");
+            bringDialogToFront();
+            return;
+        }
+        activeCaptureRow = row;
+        activeCaptureType = CaptureType.DESTINATION;
+        captureSummaryLabel.setText("Capturando destino de P" + (row + 1) + " en el mapa...");
+        refreshMode();
+        String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar destino de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
         String successMessage = "Georreferenciacion CAD: destino P" + (row + 1) + " capturado.";
         String cancelMessage = "Georreferenciacion CAD: captura de destino P" + (row + 1) + " cancelada.";
         CatgisDesktopApp.mapPanel.startPointCapture(new MapPanel.MapPointCaptureHandler() {
@@ -257,6 +326,7 @@ public class CadGeoreferenceDialog extends JDialog {
                     return;
                 }
                 activeCaptureRow = -1;
+                activeCaptureType = CaptureType.NONE;
                 fields[row][2].setText(formatDouble(coordinate.x));
                 fields[row][3].setText(formatDouble(coordinate.y));
                 captureSummaryLabel.setText("Destino P" + (row + 1) + " capturado en " + formatDouble(coordinate.x) + ", " + formatDouble(coordinate.y) + ".");
@@ -271,6 +341,7 @@ public class CadGeoreferenceDialog extends JDialog {
                     return;
                 }
                 activeCaptureRow = -1;
+                activeCaptureType = CaptureType.NONE;
                 captureSummaryLabel.setText("Captura de destino P" + (row + 1) + " cancelada.");
                 refreshMode();
                 bringDialogToFront();
@@ -278,6 +349,7 @@ public class CadGeoreferenceDialog extends JDialog {
         }, startMessage, successMessage, cancelMessage);
         if (!CatgisDesktopApp.mapPanel.isPointCaptureActive()) {
             activeCaptureRow = -1;
+            activeCaptureType = CaptureType.NONE;
             captureSummaryLabel.setText("No se pudo iniciar la captura sobre el mapa. Revisa si hay otra herramienta activa.");
             refreshMode();
         }
@@ -433,6 +505,7 @@ public class CadGeoreferenceDialog extends JDialog {
         result = finalResult;
         if (activeCaptureRow >= 0 && CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isPointCaptureActive()) {
             activeCaptureRow = -1;
+            activeCaptureType = CaptureType.NONE;
             CatgisDesktopApp.mapPanel.cancelPointCapture();
         }
         if (resultHandler != null) {
@@ -443,6 +516,13 @@ public class CadGeoreferenceDialog extends JDialog {
 
     private String formatDouble(double value) {
         return String.format(Locale.US, "%.3f", value);
+    }
+
+    private double[] convertProjectPointToCadCoordinates(Coordinate coordinate) {
+        if (coordinate == null) {
+            return new double[]{0, 0};
+        }
+        return new double[]{coordinate.x, coordinate.y};
     }
 
     private record RowPoints(CadGeoreferenceSupport.ControlPoint source,

@@ -224,8 +224,8 @@ public class FieldCalculatorDialog extends JDialog {
         footer.add(footerRight, BorderLayout.EAST);
         add(footer, BorderLayout.SOUTH);
 
-        setSize(1280, 760);
-        setMinimumSize(new Dimension(1100, 680));
+        DialogKeyboardSupport.install(this, applyButton, this::dispose);
+        WindowLayoutSupport.fitDialogToScreen(this, 1280, 760, 980, 620);
         setLocationRelativeTo(tableWindow);
     }
 

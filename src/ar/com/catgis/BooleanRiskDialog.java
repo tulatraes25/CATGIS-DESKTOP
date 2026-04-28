@@ -112,10 +112,10 @@ public class BooleanRiskDialog extends JDialog {
         updateRuleFields();
         updateNote();
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 780, 520), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         pack();
-        setSize(Math.max(820, getWidth()), getHeight());
+        WindowLayoutSupport.fitDialogToScreen(this, 860, 680, 760, 560);
         setLocationRelativeTo(owner);
     }
 

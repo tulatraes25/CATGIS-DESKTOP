@@ -12,35 +12,51 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.concurrent.atomic.AtomicBoolean;
 public class SplashScreenWindow extends JWindow {
 
-    private static final int SPLASH_WIDTH = 1100;
-    private static final int SPLASH_HEIGHT = 620;
+    private static final int FALLBACK_SPLASH_WIDTH = 1100;
+    private static final int FALLBACK_SPLASH_HEIGHT = 620;
+    private static final int MAX_SPLASH_WIDTH = 1200;
+    private static final int MAX_SPLASH_HEIGHT = 800;
+    private final AtomicBoolean closeRequested = new AtomicBoolean(false);
+    private Runnable pendingAfterClose;
+    private final Dimension splashSize;
 
     public SplashScreenWindow() {
         setLayout(new BorderLayout());
         setBackground(new Color(0, 0, 0, 0));
 
         Image image = loadSplashImage();
+        splashSize = resolveSplashSize(image);
 
         if (image != null) {
-            add(new ImagePanel(image), BorderLayout.CENTER);
+            add(new ImagePanel(image, splashSize), BorderLayout.CENTER);
         } else {
             JLabel fallback = new JLabel("CATGIS Desktop", SwingConstants.CENTER);
             fallback.setOpaque(true);
             fallback.setBackground(new Color(9, 34, 52));
             fallback.setForeground(Color.WHITE);
-            fallback.setPreferredSize(new Dimension(SPLASH_WIDTH, SPLASH_HEIGHT));
+            fallback.setPreferredSize(splashSize);
             add(fallback, BorderLayout.CENTER);
         }
 
+        installDismissInteraction();
         pack();
-        setSize(SPLASH_WIDTH, SPLASH_HEIGHT);
+        setSize(splashSize);
         setLocationRelativeTo(null);
     }
 
     public void showFor(long millis, Runnable afterClose) {
+        closeRequested.set(false);
+        pendingAfterClose = afterClose;
         setVisible(true);
+        toFront();
+        requestFocus();
 
         Thread worker = new Thread(() -> {
             try {
@@ -48,29 +64,77 @@ public class SplashScreenWindow extends JWindow {
             } catch (InterruptedException ignored) {
             }
 
-            SwingUtilities.invokeLater(() -> {
-                setVisible(false);
-                dispose();
-                if (afterClose != null) {
-                    afterClose.run();
-                }
-            });
+            SwingUtilities.invokeLater(this::dismiss);
         }, "catgis-splash-thread");
 
         worker.setDaemon(true);
         worker.start();
     }
 
+    private void installDismissInteraction() {
+        MouseAdapter clickToDismiss = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                dismiss();
+            }
+        };
+        addMouseListener(clickToDismiss);
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE
+                        || e.getKeyCode() == KeyEvent.VK_ENTER
+                        || e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    dismiss();
+                }
+            }
+        });
+        setFocusableWindowState(true);
+    }
+
+    private void dismiss() {
+        if (!closeRequested.compareAndSet(false, true)) {
+            return;
+        }
+        setVisible(false);
+        dispose();
+        Runnable afterClose = pendingAfterClose;
+        pendingAfterClose = null;
+        if (afterClose != null) {
+            afterClose.run();
+        }
+    }
+
     private Image loadSplashImage() {
         return AppBranding.loadSplashImage();
     }
 
+    private static Dimension resolveSplashSize(Image image) {
+        if (image == null) {
+            return new Dimension(FALLBACK_SPLASH_WIDTH, FALLBACK_SPLASH_HEIGHT);
+        }
+        int imgW = image.getWidth(null);
+        int imgH = image.getHeight(null);
+        if (imgW <= 0 || imgH <= 0) {
+            return new Dimension(FALLBACK_SPLASH_WIDTH, FALLBACK_SPLASH_HEIGHT);
+        }
+        double scale = Math.min((double) MAX_SPLASH_WIDTH / imgW, (double) MAX_SPLASH_HEIGHT / imgH);
+        scale = Math.min(scale, 1.0d);
+        int width = Math.max(720, (int) Math.round(imgW * scale));
+        int height = Math.max(480, (int) Math.round(imgH * scale));
+        return new Dimension(width, height);
+    }
+
     private static class ImagePanel extends JLabel {
         private final Image image;
+        private final Dimension preferredSize;
 
-        public ImagePanel(Image image) {
+        public ImagePanel(Image image, Dimension preferredSize) {
             this.image = image;
-            setPreferredSize(new Dimension(SPLASH_WIDTH, SPLASH_HEIGHT));
+            this.preferredSize = preferredSize != null
+                    ? new Dimension(preferredSize)
+                    : new Dimension(FALLBACK_SPLASH_WIDTH, FALLBACK_SPLASH_HEIGHT);
+            setPreferredSize(this.preferredSize);
         }
 
         @Override

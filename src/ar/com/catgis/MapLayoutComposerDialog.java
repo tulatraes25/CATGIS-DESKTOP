@@ -99,6 +99,7 @@ public class MapLayoutComposerDialog extends JFrame {
     private final JTextField subtitleField;
     private final JTextField footerField;
     private final JTextField studyField;
+    private final JTextField cartoucheProjectField;
     private final JTextField companyField;
     private final JTextField cartographerField;
     private final JTextField imageSourceField;
@@ -160,6 +161,7 @@ public class MapLayoutComposerDialog extends JFrame {
     private JButton mapZoomToolButton;
     private LayoutSnapshot snapshot;
     private boolean syncingLayoutStructureSelection;
+    private final List<CatmapLayoutItem> catmapClipboard = new ArrayList<>();
 
     private MapLayoutComposerDialog(Window owner) {
         super("CATMAP - Workspace cartografico");
@@ -173,6 +175,7 @@ public class MapLayoutComposerDialog extends JFrame {
         subtitleField = new JTextField(defaultSubtitle(), 24);
         footerField = new JTextField(defaultFooter(), 24);
         studyField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getStudyName() : "", 24);
+        cartoucheProjectField = new JTextField(snapshot != null ? snapshot.projectName() : "", 24);
         companyField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCompanyName() : "", 24);
         cartographerField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCartographerName() : "", 24);
         imageSourceField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getImageSource() : "", 24);
@@ -339,12 +342,12 @@ public class MapLayoutComposerDialog extends JFrame {
 
         updateCurrentMapLabel();
         installListeners();
+        installCatmapKeyboardActions();
         applyTemplateDefaults((LayoutTemplate) templateCombo.getSelectedItem(), false);
         applyInitialDocumentDefaults();
         installInitialOpenBehavior();
 
-        setSize(1380, 900);
-        setMinimumSize(new Dimension(1120, 760));
+        WindowLayoutSupport.fitFrameToScreen(this, 1380, 900, 1040, 700);
         setLocationRelativeTo(owner);
     }
 
@@ -516,7 +519,7 @@ public class MapLayoutComposerDialog extends JFrame {
         scrollPane.setPreferredSize(new Dimension(290, 360));
         scrollPane.getViewport().setBackground(Color.WHITE);
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel buttons = new JPanel(new java.awt.GridLayout(0, 2, 6, 6));
         buttons.setOpaque(false);
         JButton visibilityButton = new JButton("Visible", AppIcons.visibleIcon());
         visibilityButton.addActionListener(e -> toggleSelectedProjectLayerVisibility());
@@ -750,7 +753,7 @@ public class MapLayoutComposerDialog extends JFrame {
     private JPanel buildScrollableControlsPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        panel.setPreferredSize(new Dimension(352, 900));
+        panel.setPreferredSize(new Dimension(352, 1180));
         panel.setBackground(Color.WHITE);
 
         GridBagConstraints gc = new GridBagConstraints();
@@ -1001,7 +1004,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void addCatmapElementsSection(JPanel panel, GridBagConstraints gc) {
-        JLabel tip = new JLabel("<html>Insertar texto libre, imagenes, rectangulos, elipses o lineas para maquetacion final.</html>");
+        JLabel tip = new JLabel("<html>Administra los elementos visibles del layout. Los predeterminados se editan desde el mapa o desde la lista.</html>");
         tip.setFont(tip.getFont().deriveFont(Font.PLAIN, 11f));
         tip.setForeground(new Color(88, 98, 112));
         panel.add(tip, gc);
@@ -1011,54 +1014,7 @@ public class MapLayoutComposerDialog extends JFrame {
         panel.add(structurePanel, gc);
         gc.gridy++;
 
-        JLabel stackLabel = new JLabel("Orden y pila de elementos");
-        stackLabel.setFont(stackLabel.getFont().deriveFont(Font.BOLD, 12f));
-        stackLabel.setForeground(new Color(63, 74, 88));
-        panel.add(stackLabel, gc);
-        gc.gridy++;
-
-        JScrollPane scrollPane = new JScrollPane(layoutItemsList);
-        scrollPane.setPreferredSize(new Dimension(280, 126));
-        JPanel emptyState = new JPanel(new GridBagLayout());
-        emptyState.setOpaque(true);
-        emptyState.setBackground(new Color(248, 250, 253));
-        emptyState.setPreferredSize(new Dimension(280, 92));
-        emptyState.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 224, 230)),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
-        JPanel emptyContent = new JPanel(new BorderLayout(0, 8));
-        emptyContent.setOpaque(false);
-        JLabel emptyIcon = new JLabel(AppIcons.attrEditIcon());
-        emptyIcon.setHorizontalAlignment(JLabel.CENTER);
-        JLabel emptyLabel = new JLabel("<html><div style='text-align:center'><b>Sin elementos CATMAP</b><br>Doble clic para empezar con Texto, Imagen, Rectangulo, Elipse o Linea.</div></html>");
-        emptyLabel.setForeground(new Color(88, 98, 112));
-        emptyLabel.setHorizontalAlignment(JLabel.CENTER);
-        emptyContent.add(emptyIcon, BorderLayout.NORTH);
-        emptyContent.add(emptyLabel, BorderLayout.CENTER);
-        emptyState.setToolTipText("Doble clic para agregar el primer elemento CATMAP.");
-        emptyState.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        emptyState.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    promptAndAddCatmapItem();
-                }
-            }
-        });
-        emptyState.add(emptyContent);
-        catmapElementsCardPanel.setOpaque(false);
-        catmapElementsCardPanel.setPreferredSize(new Dimension(296, 96));
-        catmapElementsCardPanel.add(scrollPane, "list");
-        catmapElementsCardPanel.add(emptyState, "empty");
-        panel.add(catmapElementsCardPanel, gc);
-        gc.gridy++;
-
-        JPanel inspectorPanel = buildCatmapInspectorPanel();
-        panel.add(inspectorPanel, gc);
-        gc.gridy++;
-
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel buttons = new JPanel(new java.awt.GridLayout(0, 2, 6, 6));
         buttons.setOpaque(false);
 
         JButton addTextButton = new JButton("Texto");
@@ -1076,51 +1032,92 @@ public class MapLayoutComposerDialog extends JFrame {
         JButton addLineButton = new JButton("Linea");
         addLineButton.addActionListener(e -> addCatmapItem(CatmapLayoutItem.Kind.LINE));
 
-        JButton editButton = new JButton("Editar");
-        editButton.addActionListener(e -> editSelectedCatmapItem());
-
         JButton duplicateButton = new JButton("Duplicar");
         duplicateButton.addActionListener(e -> duplicateSelectedCatmapItem());
 
-        JButton upButton = new JButton("Subir");
-        upButton.addActionListener(e -> moveSelectedCatmapItem(-1));
-
-        JButton downButton = new JButton("Bajar");
-        downButton.addActionListener(e -> moveSelectedCatmapItem(1));
-
         JButton removeButton = new JButton("Quitar");
         removeButton.addActionListener(e -> removeSelectedCatmapItem());
+
+        JButton restoreButton = new JButton("Restaurar base");
+        restoreButton.addActionListener(e -> restoreDefaultLayoutElements());
 
         buttons.add(addTextButton);
         buttons.add(addImageButton);
         buttons.add(addRectButton);
         buttons.add(addEllipseButton);
         buttons.add(addLineButton);
-        buttons.add(editButton);
         buttons.add(duplicateButton);
-        buttons.add(upButton);
-        buttons.add(downButton);
         buttons.add(removeButton);
+        buttons.add(restoreButton);
         panel.add(buttons, gc);
+        gc.gridy++;
+
+        JLabel stackLabel = new JLabel("Elementos agregados");
+        stackLabel.setFont(stackLabel.getFont().deriveFont(Font.BOLD, 12f));
+        stackLabel.setForeground(new Color(63, 74, 88));
+        panel.add(stackLabel, gc);
+        gc.gridy++;
+
+        JScrollPane scrollPane = new JScrollPane(layoutItemsList);
+        scrollPane.setPreferredSize(new Dimension(280, 104));
+        JPanel emptyState = new JPanel(new GridBagLayout());
+        emptyState.setOpaque(true);
+        emptyState.setBackground(new Color(248, 250, 253));
+        emptyState.setPreferredSize(new Dimension(280, 56));
+        emptyState.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 224, 230)),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+        JPanel emptyContent = new JPanel(new BorderLayout(8, 0));
+        emptyContent.setOpaque(false);
+        JLabel emptyIcon = new JLabel(AppIcons.attrEditIcon());
+        emptyIcon.setHorizontalAlignment(JLabel.CENTER);
+        JLabel emptyLabel = new JLabel("<html><b>Sin elementos agregados.</b><br>Usa los botones de arriba si necesitás texto, imagen o figuras.</html>");
+        emptyLabel.setForeground(new Color(88, 98, 112));
+        emptyLabel.setHorizontalAlignment(JLabel.LEFT);
+        emptyContent.add(emptyIcon, BorderLayout.WEST);
+        emptyContent.add(emptyLabel, BorderLayout.CENTER);
+        emptyState.setToolTipText("Doble clic para agregar el primer elemento CATMAP.");
+        emptyState.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        emptyState.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    promptAndAddCatmapItem();
+                }
+            }
+        });
+        emptyState.add(emptyContent);
+        catmapElementsCardPanel.setOpaque(false);
+        catmapElementsCardPanel.setPreferredSize(new Dimension(296, 66));
+        catmapElementsCardPanel.add(scrollPane, "list");
+        catmapElementsCardPanel.add(emptyState, "empty");
+        panel.add(catmapElementsCardPanel, gc);
+        gc.gridy++;
+
+        JPanel inspectorPanel = buildCatmapInspectorPanel();
+        panel.add(inspectorPanel, gc);
+        gc.gridy++;
+
     }
 
     private JPanel buildLayoutStructurePanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 6));
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Estructura CATMAP"),
+                BorderFactory.createTitledBorder("Elementos del layout"),
                 BorderFactory.createEmptyBorder(4, 4, 4, 4)
         ));
 
         JScrollPane treeScroll = new JScrollPane(layoutStructureTree);
-        treeScroll.setPreferredSize(new Dimension(286, 184));
+        treeScroll.setPreferredSize(new Dimension(286, 122));
         panel.add(treeScroll, BorderLayout.CENTER);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        JPanel actions = new JPanel(new java.awt.GridLayout(1, 3, 6, 0));
         actions.setOpaque(false);
         JButton editButton = new JButton("Editar");
         editButton.addActionListener(e -> handleLayoutStructureDoubleClick());
-        JButton visibilityButton = new JButton("Visible");
+        JButton visibilityButton = new JButton("Mostrar");
         visibilityButton.addActionListener(e -> toggleSelectedLayoutStructureVisibility());
         JButton lockButton = new JButton("Bloq");
         lockButton.addActionListener(e -> toggleSelectedLayoutStructureLock());
@@ -1128,7 +1125,7 @@ public class MapLayoutComposerDialog extends JFrame {
         actions.add(visibilityButton);
         actions.add(lockButton);
 
-        JLabel hint = new JLabel("<html>Doble clic en <b>Leyenda</b>, <b>Norte</b> o un elemento CATMAP para editarlo.</html>");
+        JLabel hint = new JLabel("<html>Doble clic edita el elemento seleccionado. Mostrar/Bloq controlan visibilidad y movimiento.</html>");
         hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 11f));
         hint.setForeground(new Color(88, 98, 112));
         JPanel footer = new JPanel(new BorderLayout(0, 6));
@@ -1638,6 +1635,27 @@ public class MapLayoutComposerDialog extends JFrame {
         refreshPreviewWorkspace();
     }
 
+    private void restoreDefaultLayoutElements() {
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                "Restaurar posiciones, tamanos, visibilidad y bloqueo de los elementos por defecto de CATMAP?",
+                "CATMAP - Restaurar elementos por defecto",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+        interactionState.restoreDefaultElementControls();
+        northCheck.setSelected(true);
+        scaleCheck.setSelected(true);
+        legendCheck.setSelected(true);
+        refreshLayoutStructureTree();
+        syncLayoutStructureSelection();
+        statusLabel.setText("Elementos por defecto de CATMAP restaurados.");
+        refreshPreviewWorkspace();
+    }
+
     private void configureNorthFromToolbar() {
         JCheckBox visibleCheck = new JCheckBox("Mostrar norte en el layout", northCheck.isSelected());
         JComboBox<NorthStyle> styleCombo = new JComboBox<>(NorthStyle.values());
@@ -1840,6 +1858,113 @@ public class MapLayoutComposerDialog extends JFrame {
         updateCatmapElementsListState();
         syncLayoutStructureSelection();
         previewPanel.repaint();
+    }
+
+    private void deleteSelectedLayoutObject() {
+        if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty()) {
+            removeSelectedCatmapItem();
+            return;
+        }
+        LayoutElementType selected = interactionState.getSelectedElement();
+        if (isFixedLayoutElement(selected)) {
+            interactionState.setElementVisible(selected, false);
+            if (selected == LayoutElementType.NORTH) {
+                northCheck.setSelected(false);
+                pushCatmapNorthSettingsToProject();
+            } else if (selected == LayoutElementType.SCALE) {
+                scaleCheck.setSelected(false);
+            } else if (selected == LayoutElementType.LEGEND) {
+                legendCheck.setSelected(false);
+            }
+            refreshLayoutStructureTree();
+            syncLayoutStructureSelection();
+            previewPanel.repaint();
+            statusLabel.setText(layoutElementLabel(selected) + " eliminado visualmente del layout. Podés restaurarlo desde 'Restaurar por defecto'.");
+        }
+    }
+
+    private void copySelectedCatmapItemsToClipboard() {
+        List<CatmapLayoutItem> selectedItems = getSelectedCatmapItems();
+        if (selectedItems.isEmpty()) {
+            statusLabel.setText("Selecciona un elemento CATMAP para copiar.");
+            return;
+        }
+        catmapClipboard.clear();
+        for (CatmapLayoutItem item : selectedItems) {
+            if (item != null) {
+                catmapClipboard.add(new CatmapLayoutItem(item));
+            }
+        }
+        statusLabel.setText(catmapClipboard.size() > 1 ? "Elementos CATMAP copiados." : "Elemento CATMAP copiado.");
+    }
+
+    private void cutSelectedCatmapItemsToClipboard() {
+        copySelectedCatmapItemsToClipboard();
+        if (!catmapClipboard.isEmpty()) {
+            removeSelectedCatmapItem();
+            statusLabel.setText("Elemento(s) CATMAP cortados al portapapeles interno.");
+        }
+    }
+
+    private void pasteCatmapItemsFromClipboard() {
+        if (catmapClipboard.isEmpty()) {
+            statusLabel.setText("No hay elementos CATMAP copiados para pegar.");
+            return;
+        }
+        int insertIndex = Math.max(0, layoutItemsList.getSelectedIndex() + 1);
+        if (insertIndex <= 0) {
+            insertIndex = layoutItemsModel.size();
+        }
+        List<Integer> newIndices = new ArrayList<>();
+        CatmapLayoutItem firstCopy = null;
+        int offset = 24;
+        for (CatmapLayoutItem source : catmapClipboard) {
+            CatmapLayoutItem copy = cloneCatmapItem(source, " copia", offset);
+            layoutItemsModel.add(insertIndex, copy);
+            newIndices.add(insertIndex);
+            if (firstCopy == null) {
+                firstCopy = copy;
+            }
+            insertIndex++;
+            offset += 10;
+        }
+        if (!newIndices.isEmpty()) {
+            layoutItemsList.setSelectedIndices(newIndices.stream().mapToInt(Integer::intValue).toArray());
+        }
+        if (firstCopy != null) {
+            interactionState.selectCustomItem(firstCopy.getId());
+        }
+        persistCatmapItems();
+        refreshInspectorFromSelection();
+        updateCatmapElementsListState();
+        syncLayoutStructureSelection();
+        previewPanel.repaint();
+        statusLabel.setText(catmapClipboard.size() > 1 ? "Elementos CATMAP pegados." : "Elemento CATMAP pegado.");
+    }
+
+    private CatmapLayoutItem cloneCatmapItem(CatmapLayoutItem source, String labelSuffix, int offset) {
+        CatmapLayoutItem copy = new CatmapLayoutItem(source != null ? source.getKind() : CatmapLayoutItem.Kind.TEXT);
+        if (source == null) {
+            return copy;
+        }
+        copy.setLabel(source.getLabel() + (labelSuffix != null ? labelSuffix : ""));
+        copy.setText(source.getText());
+        copy.setImagePath(source.getImagePath());
+        copy.setX(source.getX() + offset);
+        copy.setY(source.getY() + offset);
+        copy.setWidth(source.getWidth());
+        copy.setHeight(source.getHeight());
+        copy.setStrokeColor(source.getStrokeColor());
+        copy.setFillColor(source.getFillColor());
+        copy.setTextColor(source.getTextColor());
+        copy.setLineWidth(source.getLineWidth());
+        copy.setFontSize(source.getFontSize());
+        copy.setBold(source.isBold());
+        copy.setItalic(source.isItalic());
+        copy.setAlign(source.getAlign());
+        copy.setVisible(source.isVisible());
+        copy.setLocked(source.isLocked());
+        return copy;
     }
 
     private void applyInspectorToSelectedCatmapItem() {
@@ -2049,6 +2174,22 @@ public class MapLayoutComposerDialog extends JFrame {
         };
     }
 
+    private String layoutElementLabel(LayoutElementType type) {
+        if (type == null) {
+            return "Elemento";
+        }
+        return switch (type) {
+            case HEADER -> "Encabezado";
+            case MAP_CONTENT -> "Mapa principal";
+            case LEGEND -> "Leyenda";
+            case NORTH -> "Norte";
+            case SCALE -> "Escala";
+            case CARTOUCHE -> "Cartucho";
+            case PROFILE_IMAGE -> "Perfil / imagen";
+            case CATMAP_ITEM -> "Elemento CATMAP";
+        };
+    }
+
     private javax.swing.Icon iconForCatmapKind(CatmapLayoutItem.Kind kind) {
         return switch (kind != null ? kind : CatmapLayoutItem.Kind.TEXT) {
             case TEXT -> AppIcons.attrEditIcon();
@@ -2059,28 +2200,45 @@ public class MapLayoutComposerDialog extends JFrame {
         };
     }
 
+    private boolean isLayoutElementVisible(LayoutElementType type) {
+        if (!isFixedLayoutElement(type) || !interactionState.isElementVisible(type)) {
+            return false;
+        }
+        return switch (type) {
+            case NORTH -> northCheck.isSelected();
+            case SCALE -> scaleCheck.isSelected();
+            case LEGEND -> legendCheck.isSelected();
+            case PROFILE_IMAGE -> !safeTrim(layoutImagePathField.getText()).isBlank();
+            default -> true;
+        };
+    }
+
+    private boolean isLayoutElementLocked(LayoutElementType type) {
+        return isFixedLayoutElement(type) && interactionState.isElementLocked(type);
+    }
+
     private void refreshLayoutStructureTree() {
         if (layoutStructureTreeModel == null) {
             return;
         }
         DefaultMutableTreeNode root = new DefaultMutableTreeNode(LayoutStructureNode.root("CATMAP"));
         DefaultMutableTreeNode documentNode = new DefaultMutableTreeNode(LayoutStructureNode.group("Documento y mapa"));
-        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Encabezado", LayoutElementType.HEADER, true, false, null)));
-        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Mapa principal", LayoutElementType.MAP_CONTENT, true, false, null)));
-        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Escala", LayoutElementType.SCALE, scaleCheck.isSelected(), false, null)));
-        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Cartucho", LayoutElementType.CARTOUCHE, true, false, null)));
+        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Encabezado", LayoutElementType.HEADER, isLayoutElementVisible(LayoutElementType.HEADER), isLayoutElementLocked(LayoutElementType.HEADER), null)));
+        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Mapa principal", LayoutElementType.MAP_CONTENT, isLayoutElementVisible(LayoutElementType.MAP_CONTENT), isLayoutElementLocked(LayoutElementType.MAP_CONTENT), null)));
+        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Escala", LayoutElementType.SCALE, isLayoutElementVisible(LayoutElementType.SCALE), isLayoutElementLocked(LayoutElementType.SCALE), null)));
+        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Cartucho / firma / fecha", LayoutElementType.CARTOUCHE, isLayoutElementVisible(LayoutElementType.CARTOUCHE), isLayoutElementLocked(LayoutElementType.CARTOUCHE), null)));
         documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element(
                 "Perfil / imagen",
                 LayoutElementType.PROFILE_IMAGE,
-                !safeTrim(layoutImagePathField.getText()).isBlank(),
-                false,
+                isLayoutElementVisible(LayoutElementType.PROFILE_IMAGE),
+                isLayoutElementLocked(LayoutElementType.PROFILE_IMAGE),
                 null
         )));
         root.add(documentNode);
 
         DefaultMutableTreeNode referencesNode = new DefaultMutableTreeNode(LayoutStructureNode.group("Referencias"));
-        referencesNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Leyenda", LayoutElementType.LEGEND, legendCheck.isSelected(), false, null)));
-        referencesNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Norte", LayoutElementType.NORTH, northCheck.isSelected(), false, null)));
+        referencesNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Leyenda", LayoutElementType.LEGEND, isLayoutElementVisible(LayoutElementType.LEGEND), isLayoutElementLocked(LayoutElementType.LEGEND), null)));
+        referencesNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Norte", LayoutElementType.NORTH, isLayoutElementVisible(LayoutElementType.NORTH), isLayoutElementLocked(LayoutElementType.NORTH), null)));
         root.add(referencesNode);
 
         DefaultMutableTreeNode itemsNode = new DefaultMutableTreeNode(LayoutStructureNode.group("Elementos CATMAP"));
@@ -2226,6 +2384,97 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
+    private void handleLayoutItemsListPopup(MouseEvent e) {
+        if (!e.isPopupTrigger() && !SwingUtilities.isRightMouseButton(e)) {
+            return;
+        }
+        int index = layoutItemsList.locationToIndex(e.getPoint());
+        if (index >= 0) {
+            Rectangle cellBounds = layoutItemsList.getCellBounds(index, index);
+            if (cellBounds != null && cellBounds.contains(e.getPoint()) && !layoutItemsList.isSelectedIndex(index)) {
+                layoutItemsList.setSelectedIndex(index);
+            }
+        }
+        showCatmapContextMenu(layoutItemsList, e.getX(), e.getY());
+    }
+
+    private void handleLayoutStructurePopup(MouseEvent e) {
+        if (!e.isPopupTrigger() && !SwingUtilities.isRightMouseButton(e)) {
+            return;
+        }
+        TreePath path = layoutStructureTree.getPathForLocation(e.getX(), e.getY());
+        if (path != null) {
+            layoutStructureTree.setSelectionPath(path);
+        }
+        showCatmapContextMenu(layoutStructureTree, e.getX(), e.getY());
+    }
+
+    private void showCatmapContextMenu(Component invoker, int x, int y) {
+        LayoutElementType selected = interactionState.getSelectedElement();
+        boolean customSelected = selected == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty();
+        boolean fixedSelected = isFixedLayoutElement(selected);
+
+        javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+        addContextItem(menu, "Editar", customSelected || fixedSelected, this::editSelectedLayoutObject);
+        addContextItem(menu, "Propiedades", customSelected || fixedSelected, this::editSelectedLayoutObject);
+        menu.addSeparator();
+        addContextItem(menu, "Copiar", customSelected, this::copySelectedCatmapItemsToClipboard);
+        addContextItem(menu, "Cortar", customSelected, this::cutSelectedCatmapItemsToClipboard);
+        addContextItem(menu, "Pegar", !catmapClipboard.isEmpty(), this::pasteCatmapItemsFromClipboard);
+        addContextItem(menu, "Duplicar", customSelected, this::duplicateSelectedCatmapItem);
+        menu.addSeparator();
+        addContextItem(menu, "Visible / oculto", customSelected || fixedSelected, this::toggleSelectedLayoutObjectVisibility);
+        addContextItem(menu, "Bloquear / liberar", customSelected || fixedSelected, this::toggleSelectedLayoutObjectLock);
+        menu.addSeparator();
+        addContextItem(menu, "Traer al frente", customSelected, this::bringSelectedCatmapItemsToFront);
+        addContextItem(menu, "Enviar al fondo", customSelected, this::sendSelectedCatmapItemsToBack);
+        menu.addSeparator();
+        addContextItem(menu, "Eliminar", customSelected || fixedSelected, this::deleteSelectedLayoutObject);
+        addContextItem(menu, "Restaurar elementos por defecto", true, this::restoreDefaultLayoutElements);
+        menu.show(invoker, x, y);
+    }
+
+    private void addContextItem(javax.swing.JPopupMenu menu, String text, boolean enabled, Runnable action) {
+        javax.swing.JMenuItem item = new javax.swing.JMenuItem(text);
+        item.setEnabled(enabled);
+        item.addActionListener(e -> action.run());
+        menu.add(item);
+    }
+
+    private void installCatmapKeyboardActions() {
+        javax.swing.JComponent[] commandTargets = new javax.swing.JComponent[]{
+                previewPanel,
+                layoutItemsList,
+                layoutStructureTree
+        };
+        for (javax.swing.JComponent target : commandTargets) {
+            bindCatmapAction(target, "control C", "catmap-copy", this::copySelectedCatmapItemsToClipboard);
+            bindCatmapAction(target, "control X", "catmap-cut", this::cutSelectedCatmapItemsToClipboard);
+            bindCatmapAction(target, "control V", "catmap-paste", this::pasteCatmapItemsFromClipboard);
+            bindCatmapAction(target, "DELETE", "catmap-delete", this::deleteSelectedLayoutObject);
+            bindCatmapAction(target, "control D", "catmap-duplicate", this::duplicateSelectedCatmapItem);
+        }
+        bindCatmapAction(previewPanel, "LEFT", "catmap-left", () -> nudgeSelectedLayoutObject(-2, 0));
+        bindCatmapAction(previewPanel, "RIGHT", "catmap-right", () -> nudgeSelectedLayoutObject(2, 0));
+        bindCatmapAction(previewPanel, "UP", "catmap-up", () -> nudgeSelectedLayoutObject(0, -2));
+        bindCatmapAction(previewPanel, "DOWN", "catmap-down", () -> nudgeSelectedLayoutObject(0, 2));
+        bindCatmapAction(previewPanel, "shift LEFT", "catmap-shift-left", () -> nudgeSelectedLayoutObject(-12, 0));
+        bindCatmapAction(previewPanel, "shift RIGHT", "catmap-shift-right", () -> nudgeSelectedLayoutObject(12, 0));
+        bindCatmapAction(previewPanel, "shift UP", "catmap-shift-up", () -> nudgeSelectedLayoutObject(0, -12));
+        bindCatmapAction(previewPanel, "shift DOWN", "catmap-shift-down", () -> nudgeSelectedLayoutObject(0, 12));
+    }
+
+    private void bindCatmapAction(javax.swing.JComponent component, String keyStroke, String actionKey, Runnable action) {
+        component.getInputMap(javax.swing.JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+                .put(javax.swing.KeyStroke.getKeyStroke(keyStroke), actionKey);
+        component.getActionMap().put(actionKey, new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                action.run();
+            }
+        });
+    }
+
     private void toggleSelectedLayoutStructureVisibility() {
         LayoutStructureNode data = selectedLayoutStructureNode();
         if (data == null) {
@@ -2241,21 +2490,7 @@ public class MapLayoutComposerDialog extends JFrame {
             statusLabel.setText("Selecciona un elemento real del layout o un elemento CATMAP para cambiar visibilidad.");
             return;
         }
-        switch (data.elementType()) {
-            case LEGEND -> {
-                legendCheck.setSelected(!legendCheck.isSelected());
-                statusLabel.setText(legendCheck.isSelected() ? "Leyenda visible en CATMAP." : "Leyenda oculta en CATMAP.");
-            }
-            case NORTH -> {
-                northCheck.setSelected(!northCheck.isSelected());
-                statusLabel.setText(northCheck.isSelected() ? "Norte visible en CATMAP." : "Norte oculto en CATMAP.");
-            }
-            case SCALE -> {
-                scaleCheck.setSelected(!scaleCheck.isSelected());
-                statusLabel.setText(scaleCheck.isSelected() ? "Escala grafica visible." : "Escala grafica oculta.");
-            }
-            default -> statusLabel.setText("Ese bloque del layout no tiene visibilidad directa en esta ronda.");
-        }
+        toggleLayoutElementVisibility(data.elementType());
         refreshLayoutStructureTree();
         syncLayoutStructureSelection();
         previewPanel.repaint();
@@ -2272,7 +2507,150 @@ public class MapLayoutComposerDialog extends JFrame {
             toggleSelectedCatmapItemLock();
             return;
         }
-        statusLabel.setText("El bloqueo directo aplica a elementos CATMAP, no a bloques fijos del layout.");
+        if (data.kind() == LayoutStructureNodeKind.ELEMENT) {
+            toggleLayoutElementLock(data.elementType());
+            return;
+        }
+        statusLabel.setText("Selecciona un elemento real del layout o un elemento CATMAP para bloquear/liberar.");
+    }
+
+    private void toggleLayoutElementVisibility(LayoutElementType type) {
+        if (!isFixedLayoutElement(type)) {
+            return;
+        }
+        boolean makeVisible = !isLayoutElementVisible(type);
+        interactionState.setElementVisible(type, makeVisible);
+        switch (type) {
+            case LEGEND -> legendCheck.setSelected(makeVisible);
+            case NORTH -> northCheck.setSelected(makeVisible);
+            case SCALE -> scaleCheck.setSelected(makeVisible);
+            default -> {
+            }
+        }
+        if (type == LayoutElementType.NORTH) {
+            pushCatmapNorthSettingsToProject();
+        }
+        refreshLayoutStructureTree();
+        syncLayoutStructureSelection();
+        previewPanel.repaint();
+        statusLabel.setText(layoutElementLabel(type) + (makeVisible ? " visible en CATMAP." : " oculto en CATMAP."));
+    }
+
+    private void toggleLayoutElementLock(LayoutElementType type) {
+        if (!isFixedLayoutElement(type)) {
+            return;
+        }
+        boolean lock = !interactionState.isElementLocked(type);
+        interactionState.setElementLocked(type, lock);
+        refreshLayoutStructureTree();
+        syncLayoutStructureSelection();
+        previewPanel.repaint();
+        statusLabel.setText(layoutElementLabel(type) + (lock ? " bloqueado para mover/redimensionar." : " liberado para edicion visual."));
+    }
+
+    private void toggleSelectedLayoutObjectVisibility() {
+        if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty()) {
+            toggleSelectedCatmapItemVisibility();
+            return;
+        }
+        LayoutElementType selected = interactionState.getSelectedElement();
+        if (isFixedLayoutElement(selected)) {
+            toggleLayoutElementVisibility(selected);
+        }
+    }
+
+    private void toggleSelectedLayoutObjectLock() {
+        if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty()) {
+            toggleSelectedCatmapItemLock();
+            return;
+        }
+        LayoutElementType selected = interactionState.getSelectedElement();
+        if (isFixedLayoutElement(selected)) {
+            toggleLayoutElementLock(selected);
+        }
+    }
+
+    private void editSelectedLayoutObject() {
+        if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty()) {
+            editSelectedCatmapItem();
+            return;
+        }
+        LayoutElementType selected = interactionState.getSelectedElement();
+        if (selected == null) {
+            statusLabel.setText("Selecciona un elemento del layout para editar propiedades.");
+            return;
+        }
+        switch (selected) {
+            case LEGEND -> openLegendEditor();
+            case NORTH -> configureNorthFromToolbar();
+            case PROFILE_IMAGE -> chooseLayoutImageFile();
+            case MAP_CONTENT -> activateMapFrameTool();
+            case HEADER -> {
+                titleField.requestFocusInWindow();
+                titleField.selectAll();
+                statusLabel.setText("Encabezado listo para editar desde el panel lateral.");
+            }
+            default -> statusLabel.setText(layoutElementLabel(selected) + " se administra desde el panel lateral o con arrastre directo.");
+        }
+    }
+
+    private void bringSelectedCatmapItemsToFront() {
+        moveSelectedCatmapItemsToEdge(true);
+    }
+
+    private void sendSelectedCatmapItemsToBack() {
+        moveSelectedCatmapItemsToEdge(false);
+    }
+
+    private void moveSelectedCatmapItemsToEdge(boolean front) {
+        int[] selectedIndices = layoutItemsList.getSelectedIndices();
+        if (selectedIndices.length == 0) {
+            statusLabel.setText("Traer/enviar al fondo aplica a elementos CATMAP agregados.");
+            return;
+        }
+        List<CatmapLayoutItem> selected = getSelectedCatmapItems();
+        for (int i = selectedIndices.length - 1; i >= 0; i--) {
+            layoutItemsModel.remove(selectedIndices[i]);
+        }
+        List<Integer> newIndices = new ArrayList<>();
+        if (front) {
+            int start = layoutItemsModel.size();
+            for (CatmapLayoutItem item : selected) {
+                layoutItemsModel.addElement(item);
+                newIndices.add(start++);
+            }
+        } else {
+            int index = 0;
+            for (CatmapLayoutItem item : selected) {
+                layoutItemsModel.add(index, item);
+                newIndices.add(index++);
+            }
+        }
+        layoutItemsList.setSelectedIndices(newIndices.stream().mapToInt(Integer::intValue).toArray());
+        persistCatmapItems();
+        refreshInspectorFromSelection();
+        updateCatmapElementsListState();
+        syncLayoutStructureSelection();
+        previewPanel.repaint();
+        statusLabel.setText(front ? "Elemento(s) CATMAP traidos al frente." : "Elemento(s) CATMAP enviados al fondo.");
+    }
+
+    private void nudgeSelectedLayoutObject(int dx, int dy) {
+        LayoutElementType selected = interactionState.getSelectedElement();
+        if (selected == LayoutElementType.CATMAP_ITEM) {
+            for (CatmapLayoutItem item : getUnlockedSelectedCatmapItems()) {
+                if (item != null && item.isVisible()) {
+                    item.setX(item.getX() + dx);
+                    item.setY(item.getY() + dy);
+                }
+            }
+            persistCatmapItems();
+        } else if (isFixedLayoutElement(selected) && !interactionState.isElementLocked(selected)) {
+            interactionState.translate(selected, dx, dy);
+        }
+        refreshInspectorFromSelection();
+        syncLayoutStructureSelection();
+        previewPanel.repaint();
     }
 
     private void alignSelectedCatmapItems(AlignmentCommand command) {
@@ -2503,6 +2881,16 @@ public class MapLayoutComposerDialog extends JFrame {
                     editSelectedCatmapItem();
                 }
             }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handleLayoutItemsListPopup(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handleLayoutItemsListPopup(e);
+            }
         });
         layoutStructureTree.addTreeSelectionListener(e -> handleLayoutStructureSelectionChanged());
         layoutStructureTree.addMouseListener(new MouseAdapter() {
@@ -2511,6 +2899,16 @@ public class MapLayoutComposerDialog extends JFrame {
                 if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
                     handleLayoutStructureDoubleClick();
                 }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                handleLayoutStructurePopup(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                handleLayoutStructurePopup(e);
             }
         });
         projectLayersList.addListSelectionListener(e -> {
@@ -2700,7 +3098,8 @@ public class MapLayoutComposerDialog extends JFrame {
             ImageIO.write(output, format, file);
             announceExport("Composicion exportada", file);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo exportar la composicion:\n" + ex.getMessage(), "Composicion", JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("No se pudo exportar la composicion a imagen", ex);
+            showCompositionError("No se pudo exportar la composicion.", ex);
         }
     }
 
@@ -2724,7 +3123,8 @@ public class MapLayoutComposerDialog extends JFrame {
             LayoutRenderer.exportPdf(buildSettings(), snapshot, file, interactionState);
             announceExport("Composicion PDF exportada", file);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo exportar el PDF:\n" + ex.getMessage(), "Composicion", JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("No se pudo exportar la composicion a PDF", ex);
+            showCompositionError("No se pudo exportar el PDF.", ex);
         }
     }
 
@@ -2745,7 +3145,8 @@ public class MapLayoutComposerDialog extends JFrame {
             job.print();
             statusLabel.setText("Composicion enviada a impresion.");
         } catch (PrinterException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo imprimir la composicion:\n" + ex.getMessage(), "Composicion", JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("No se pudo imprimir la composicion", ex);
+            showCompositionError("No se pudo imprimir la composicion.", ex);
         }
     }
 
@@ -2755,6 +3156,10 @@ public class MapLayoutComposerDialog extends JFrame {
         }
         statusLabel.setText(prefix + ": " + file.getAbsolutePath());
         JOptionPane.showMessageDialog(this, prefix + " correctamente:\n" + file.getAbsolutePath());
+    }
+
+    private void showCompositionError(String intro, Throwable ex) {
+        AppErrorSupport.showErrorDialog(this, "Composicion", intro, ex);
     }
 
     private LayoutSettings buildSettings() {
@@ -2779,6 +3184,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 safeTrim(subtitleField.getText()),
                 safeTrim(footerField.getText()),
                 safeTrim(studyField.getText()),
+                safeTrim(cartoucheProjectField.getText()),
                 safeTrim(companyField.getText()),
                 safeTrim(cartographerField.getText()),
                 safeTrim(imageSourceField.getText()),
@@ -3206,6 +3612,10 @@ public class MapLayoutComposerDialog extends JFrame {
         CATMAP_ITEM
     }
 
+    private static boolean isFixedLayoutElement(LayoutElementType type) {
+        return type != null && type != LayoutElementType.CATMAP_ITEM;
+    }
+
     private enum LayoutStructureNodeKind {
         ROOT,
         GROUP,
@@ -3407,6 +3817,7 @@ public class MapLayoutComposerDialog extends JFrame {
                                   String subtitle,
                                   String footer,
                                   String studyName,
+                                  String cartoucheProjectName,
                                   String companyName,
                                   String cartographerName,
                                   String imageSource,
@@ -3474,6 +3885,8 @@ public class MapLayoutComposerDialog extends JFrame {
         private String selectedCustomItemId = null;
         private final EnumMap<LayoutElementType, Point> elementOffsets = new EnumMap<>(LayoutElementType.class);
         private final EnumMap<LayoutElementType, Dimension> elementSizeAdjustments = new EnumMap<>(LayoutElementType.class);
+        private final java.util.EnumSet<LayoutElementType> hiddenElements = java.util.EnumSet.noneOf(LayoutElementType.class);
+        private final java.util.EnumSet<LayoutElementType> lockedElements = java.util.EnumSet.noneOf(LayoutElementType.class);
 
         LayoutTemplate getTemplate() {
             return template;
@@ -3490,6 +3903,8 @@ public class MapLayoutComposerDialog extends JFrame {
             resetMapView();
             elementOffsets.clear();
             elementSizeAdjustments.clear();
+            hiddenElements.clear();
+            lockedElements.clear();
             mapFrameTool = MapFrameTool.MOVE_FRAME;
             selectedElement = null;
             selectedCustomItemId = null;
@@ -3562,6 +3977,44 @@ public class MapLayoutComposerDialog extends JFrame {
         Dimension getSizeAdjustment(LayoutElementType elementType) {
             Dimension dimension = elementSizeAdjustments.get(elementType);
             return dimension != null ? dimension : new Dimension();
+        }
+
+        boolean isElementVisible(LayoutElementType elementType) {
+            return elementType != null && !hiddenElements.contains(elementType);
+        }
+
+        void setElementVisible(LayoutElementType elementType, boolean visible) {
+            if (!isFixedLayoutElement(elementType)) {
+                return;
+            }
+            if (visible) {
+                hiddenElements.remove(elementType);
+            } else {
+                hiddenElements.add(elementType);
+            }
+        }
+
+        boolean isElementLocked(LayoutElementType elementType) {
+            return elementType != null && lockedElements.contains(elementType);
+        }
+
+        void setElementLocked(LayoutElementType elementType, boolean locked) {
+            if (!isFixedLayoutElement(elementType)) {
+                return;
+            }
+            if (locked) {
+                lockedElements.add(elementType);
+            } else {
+                lockedElements.remove(elementType);
+            }
+        }
+
+        void restoreDefaultElementControls() {
+            hiddenElements.clear();
+            lockedElements.clear();
+            elementOffsets.clear();
+            elementSizeAdjustments.clear();
+            resetMapView();
         }
 
         void translate(LayoutElementType elementType, int dx, int dy) {
@@ -3697,10 +4150,18 @@ public class MapLayoutComposerDialog extends JFrame {
         private final List<Integer> activeGuideXs = new ArrayList<>();
         private final List<Integer> activeGuideYs = new ArrayList<>();
         private final JTextField inlineTitleEditor;
+        private final JPanel inlineCartoucheEditor;
+        private final JTextField inlineCartoucheStudyField;
+        private final JTextField inlineCartoucheProjectField;
+        private final JTextField inlineCartoucheCompanyField;
+        private final JTextField inlineCartoucheCartographerField;
+        private final JTextField inlineCartoucheSourceField;
+        private final JTextField inlineCartoucheCrsField;
 
         private LayoutPreviewPanel() {
             setLayout(null);
             setOpaque(true);
+            setFocusable(true);
             setBackground(new Color(240, 243, 247));
             setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(220, 224, 230)),
@@ -3716,6 +4177,15 @@ public class MapLayoutComposerDialog extends JFrame {
                 }
             });
             add(inlineTitleEditor);
+            inlineCartoucheStudyField = new JTextField();
+            inlineCartoucheProjectField = new JTextField();
+            inlineCartoucheCompanyField = new JTextField();
+            inlineCartoucheCartographerField = new JTextField();
+            inlineCartoucheSourceField = new JTextField();
+            inlineCartoucheCrsField = new JTextField();
+            inlineCartoucheEditor = buildInlineCartoucheEditor();
+            inlineCartoucheEditor.setVisible(false);
+            add(inlineCartoucheEditor);
             installInteraction();
         }
 
@@ -3759,6 +4229,58 @@ public class MapLayoutComposerDialog extends JFrame {
             return new Dimension(980, 760);
         }
 
+        private JPanel buildInlineCartoucheEditor() {
+            JPanel editor = new JPanel(new GridBagLayout());
+            editor.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(37, 99, 235), 2),
+                    BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            ));
+            editor.setBackground(new Color(248, 250, 252));
+            editor.setOpaque(true);
+
+            GridBagConstraints gc = new GridBagConstraints();
+            gc.insets = new Insets(2, 4, 2, 4);
+            gc.anchor = GridBagConstraints.WEST;
+            gc.fill = GridBagConstraints.HORIZONTAL;
+            addInlineCartoucheField(editor, gc, 0, "Estudio", inlineCartoucheStudyField);
+            addInlineCartoucheField(editor, gc, 1, "Proyecto", inlineCartoucheProjectField);
+            addInlineCartoucheField(editor, gc, 2, "Empresa", inlineCartoucheCompanyField);
+            addInlineCartoucheField(editor, gc, 3, "Cartografo", inlineCartoucheCartographerField);
+            addInlineCartoucheField(editor, gc, 4, "Fuente", inlineCartoucheSourceField);
+            addInlineCartoucheField(editor, gc, 5, "Coord.", inlineCartoucheCrsField);
+
+            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+            buttons.setOpaque(false);
+            JButton apply = new JButton("Aplicar");
+            apply.addActionListener(e -> commitInlineCartoucheEdit());
+            JButton cancel = new JButton("Cancelar");
+            cancel.addActionListener(e -> cancelInlineCartoucheEdit());
+            buttons.add(apply);
+            buttons.add(cancel);
+
+            gc.gridx = 0;
+            gc.gridy = 6;
+            gc.gridwidth = 2;
+            gc.weightx = 1;
+            editor.add(buttons, gc);
+            return editor;
+        }
+
+        private void addInlineCartoucheField(JPanel editor, GridBagConstraints gc, int row, String label, JTextField field) {
+            JLabel fieldLabel = new JLabel(label + ":");
+            fieldLabel.setFont(fieldLabel.getFont().deriveFont(Font.BOLD, 11f));
+            gc.gridx = 0;
+            gc.gridy = row;
+            gc.gridwidth = 1;
+            gc.weightx = 0;
+            editor.add(fieldLabel, gc);
+
+            gc.gridx = 1;
+            gc.weightx = 1;
+            field.setColumns(22);
+            editor.add(field, gc);
+        }
+
         private void installInteraction() {
             MouseAdapter adapter = new MouseAdapter() {
                 @Override
@@ -3767,6 +4289,8 @@ public class MapLayoutComposerDialog extends JFrame {
                         Point pagePoint = toPagePoint(e.getPoint());
                         if (pagePoint != null && isInsideElement(LayoutElementType.HEADER, pagePoint)) {
                             beginInlineTitleEdit();
+                        } else if (pagePoint != null && isInsideElement(LayoutElementType.CARTOUCHE, pagePoint)) {
+                            beginInlineCartoucheEdit();
                         } else if (pagePoint != null && isInsideElement(LayoutElementType.LEGEND, pagePoint)) {
                             openLegendEditor();
                         } else if (pagePoint != null && isInsideElement(LayoutElementType.NORTH, pagePoint)) {
@@ -3780,11 +4304,20 @@ public class MapLayoutComposerDialog extends JFrame {
 
                 @Override
                 public void mousePressed(MouseEvent e) {
+                    requestFocusInWindow();
+                    if (e.isPopupTrigger() || SwingUtilities.isRightMouseButton(e)) {
+                        selectElementForPopup(e.getPoint());
+                        showCatmapContextMenu(LayoutPreviewPanel.this, e.getX(), e.getY());
+                        return;
+                    }
                     if (!SwingUtilities.isLeftMouseButton(e)) {
                         return;
                     }
                     clearSnapGuides();
                     commitInlineTitleEdit();
+                    if (inlineCartoucheEditor.isVisible() && !inlineCartoucheEditor.getBounds().contains(e.getPoint())) {
+                        commitInlineCartoucheEdit();
+                    }
                     Point pagePoint = toPagePoint(e.getPoint());
                     if (interactionState.isMapFramePanToolActive() || interactionState.isMapFrameZoomToolActive()) {
                         activeResizeHandle = ResizeHandle.NONE;
@@ -3839,6 +4372,15 @@ public class MapLayoutComposerDialog extends JFrame {
                         } else {
                             interactionState.select(resizeTarget.elementType());
                             selectCatmapItemInList(null);
+                            if (interactionState.isElementLocked(resizeTarget.elementType())) {
+                                lastDragPagePoint = null;
+                                activeResizeHandle = ResizeHandle.NONE;
+                                activeResizeElement = null;
+                                activeResizeCustomItemId = null;
+                                statusLabel.setText(layoutElementLabel(resizeTarget.elementType()) + " bloqueado. Liberalo desde la estructura para redimensionarlo.");
+                                repaint();
+                                return;
+                            }
                         }
                         activeResizeElement = resizeTarget.elementType();
                         activeResizeCustomItemId = resizeTarget.customItemId();
@@ -3868,6 +4410,16 @@ public class MapLayoutComposerDialog extends JFrame {
                     } else {
                         interactionState.select(hit);
                         selectCatmapItemInList(null);
+                        if (interactionState.isElementLocked(hit)) {
+                            activeResizeHandle = ResizeHandle.NONE;
+                            activeResizeElement = null;
+                            activeResizeCustomItemId = null;
+                            lastDragPagePoint = null;
+                            setCursor(Cursor.getDefaultCursor());
+                            statusLabel.setText(layoutElementLabel(hit) + " bloqueado. Podés seleccionarlo, pero no moverlo.");
+                            repaint();
+                            return;
+                        }
                     }
                     activeResizeHandle = ResizeHandle.NONE;
                     activeResizeElement = null;
@@ -3882,6 +4434,11 @@ public class MapLayoutComposerDialog extends JFrame {
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
+                    if (e.isPopupTrigger()) {
+                        selectElementForPopup(e.getPoint());
+                        showCatmapContextMenu(LayoutPreviewPanel.this, e.getX(), e.getY());
+                        return;
+                    }
                     lastDragPagePoint = null;
                     activeResizeHandle = ResizeHandle.NONE;
                     activeResizeElement = null;
@@ -3934,7 +4491,7 @@ public class MapLayoutComposerDialog extends JFrame {
                         interactionState.panMap(dx, dy);
                     } else if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM) {
                         translateCatmapItem(interactionState.getSelectedCustomItemId(), dx, dy);
-                    } else {
+                    } else if (!interactionState.isElementLocked(interactionState.getSelectedElement())) {
                         interactionState.translate(interactionState.getSelectedElement(), dx, dy);
                     }
                     lastDragPagePoint = pagePoint;
@@ -3991,6 +4548,28 @@ public class MapLayoutComposerDialog extends JFrame {
             addMouseWheelListener(adapter);
         }
 
+        private void selectElementForPopup(Point panelPoint) {
+            Point pagePoint = toPagePoint(panelPoint);
+            if (pagePoint == null || lastRenderResult == null) {
+                return;
+            }
+            String customItemId = findCustomItemIdAt(pagePoint);
+            if (customItemId != null) {
+                interactionState.selectCustomItem(customItemId);
+                selectCatmapItemInList(customItemId);
+                syncLayoutStructureSelection();
+                repaint();
+                return;
+            }
+            LayoutElementType hit = findElementAt(pagePoint);
+            if (hit != null) {
+                interactionState.select(hit);
+                selectCatmapItemInList(null);
+                syncLayoutStructureSelection();
+                repaint();
+            }
+        }
+
         private void beginInlineTitleEdit() {
             if (lastRenderResult == null) {
                 return;
@@ -4019,6 +4598,59 @@ public class MapLayoutComposerDialog extends JFrame {
                 titleField.setText(updated);
             }
             inlineTitleEditor.setVisible(false);
+            repaint();
+        }
+
+        private void beginInlineCartoucheEdit() {
+            if (lastRenderResult == null) {
+                return;
+            }
+            Rectangle cartoucheBounds = lastRenderResult.elementBounds().get(LayoutElementType.CARTOUCHE);
+            if (cartoucheBounds == null) {
+                return;
+            }
+            inlineCartoucheStudyField.setText(studyField.getText());
+            inlineCartoucheProjectField.setText(cartoucheProjectField.getText());
+            inlineCartoucheCompanyField.setText(companyField.getText());
+            inlineCartoucheCartographerField.setText(cartographerField.getText());
+            inlineCartoucheSourceField.setText(imageSourceField.getText());
+            inlineCartoucheCrsField.setText(coordinateReferenceField.getText());
+            placeInlineCartoucheEditor(cartoucheBounds);
+            inlineCartoucheEditor.setVisible(true);
+            inlineCartoucheEditor.requestFocusInWindow();
+            inlineCartoucheStudyField.requestFocusInWindow();
+            inlineCartoucheStudyField.selectAll();
+            statusLabel.setText("Editando cartucho directamente sobre el layout. Aplicar confirma los cambios.");
+        }
+
+        private void placeInlineCartoucheEditor(Rectangle cartoucheBounds) {
+            int editorX = lastPageBounds.x + (int) Math.round((cartoucheBounds.x + 4) * lastPreviewScale);
+            int editorY = lastPageBounds.y + (int) Math.round((cartoucheBounds.y + 4) * lastPreviewScale);
+            int editorWidth = Math.max(300, (int) Math.round(Math.max(cartoucheBounds.width - 8, 420) * lastPreviewScale));
+            int editorHeight = Math.max(190, inlineCartoucheEditor.getPreferredSize().height);
+            editorWidth = Math.min(editorWidth, Math.max(320, getWidth() - editorX - 24));
+            editorHeight = Math.min(editorHeight, Math.max(170, getHeight() - editorY - 24));
+            inlineCartoucheEditor.setBounds(editorX, editorY, editorWidth, editorHeight);
+        }
+
+        private void commitInlineCartoucheEdit() {
+            if (!inlineCartoucheEditor.isVisible()) {
+                return;
+            }
+            studyField.setText(safeTrim(inlineCartoucheStudyField.getText()));
+            cartoucheProjectField.setText(safeTrim(inlineCartoucheProjectField.getText()));
+            companyField.setText(safeTrim(inlineCartoucheCompanyField.getText()));
+            cartographerField.setText(safeTrim(inlineCartoucheCartographerField.getText()));
+            imageSourceField.setText(safeTrim(inlineCartoucheSourceField.getText()));
+            coordinateReferenceField.setText(safeTrim(inlineCartoucheCrsField.getText()));
+            inlineCartoucheEditor.setVisible(false);
+            statusLabel.setText("Cartucho actualizado desde el layout.");
+            repaint();
+        }
+
+        private void cancelInlineCartoucheEdit() {
+            inlineCartoucheEditor.setVisible(false);
+            statusLabel.setText("Edicion directa del cartucho cancelada.");
             repaint();
         }
 
@@ -4108,8 +4740,19 @@ public class MapLayoutComposerDialog extends JFrame {
                     }
                 }
             }
-            for (LayoutElementType type : new LayoutElementType[]{LayoutElementType.PROFILE_IMAGE, LayoutElementType.LEGEND, LayoutElementType.CARTOUCHE, LayoutElementType.MAP_CONTENT}) {
+            for (LayoutElementType type : new LayoutElementType[]{
+                    LayoutElementType.PROFILE_IMAGE,
+                    LayoutElementType.LEGEND,
+                    LayoutElementType.NORTH,
+                    LayoutElementType.SCALE,
+                    LayoutElementType.CARTOUCHE,
+                    LayoutElementType.HEADER,
+                    LayoutElementType.MAP_CONTENT
+            }) {
                 if (type == LayoutElementType.MAP_CONTENT && !interactionState.isMapFrameMoveToolActive()) {
+                    continue;
+                }
+                if (interactionState.isElementLocked(type)) {
                     continue;
                 }
                 Rectangle bounds = lastRenderResult != null ? lastRenderResult.elementBounds().get(type) : null;
@@ -4419,6 +5062,12 @@ public class MapLayoutComposerDialog extends JFrame {
                         );
                     }
                 }
+                if (inlineCartoucheEditor.isVisible()) {
+                    Rectangle cartoucheBounds = lastRenderResult.elementBounds().get(LayoutElementType.CARTOUCHE);
+                    if (cartoucheBounds != null) {
+                        placeInlineCartoucheEditor(cartoucheBounds);
+                    }
+                }
 
                 g2.setColor(new Color(57, 67, 82));
                 g2.setFont(getFont().deriveFont(Font.BOLD, 12f));
@@ -4462,7 +5111,10 @@ public class MapLayoutComposerDialog extends JFrame {
                 copy.drawRoundRect(x, y, w, h, 12, 12);
                 boolean showHandles = selected == LayoutElementType.MAP_CONTENT
                         ? interactionState.isMapFrameMoveToolActive()
-                        : (selected == LayoutElementType.LEGEND
+                        : (selected == LayoutElementType.HEADER
+                        || selected == LayoutElementType.LEGEND
+                        || selected == LayoutElementType.NORTH
+                        || selected == LayoutElementType.SCALE
                         || selected == LayoutElementType.CARTOUCHE
                         || selected == LayoutElementType.PROFILE_IMAGE
                         || selected == LayoutElementType.CATMAP_ITEM);
@@ -4530,6 +5182,10 @@ public class MapLayoutComposerDialog extends JFrame {
             return renderResult(settings, snapshot, width, height, interactionState, renderDpi).image();
         }
 
+        private static boolean isRenderableElementVisible(LayoutInteractionState interactionState, LayoutElementType type) {
+            return !isFixedLayoutElement(type) || interactionState == null || interactionState.isElementVisible(type);
+        }
+
         private static LayoutRenderResult renderResult(LayoutSettings settings, LayoutSnapshot snapshot, int width, int height, LayoutInteractionState interactionState, int renderDpi) {
             BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
             EnumMap<LayoutElementType, Rectangle> elementBounds = new EnumMap<>(LayoutElementType.class);
@@ -4559,41 +5215,55 @@ public class MapLayoutComposerDialog extends JFrame {
                 if (layoutImage != null) {
                     footerHeight = Math.max(220, footerHeight + 70);
                 }
-                boolean legendOutsideRight = settings.showLegend() && settings.legendPlacement() == LegendPlacement.RIGHT_PANEL;
-                boolean legendBottom = settings.showLegend() && settings.legendPlacement() == LegendPlacement.BOTTOM_PANEL;
+                boolean showHeader = isRenderableElementVisible(interactionState, LayoutElementType.HEADER);
+                boolean showMapContent = isRenderableElementVisible(interactionState, LayoutElementType.MAP_CONTENT);
+                boolean showNorth = settings.showNorth() && isRenderableElementVisible(interactionState, LayoutElementType.NORTH);
+                boolean showScale = settings.showScale() && isRenderableElementVisible(interactionState, LayoutElementType.SCALE);
+                boolean showLegend = settings.showLegend() && isRenderableElementVisible(interactionState, LayoutElementType.LEGEND);
+                boolean legendOutsideRight = showLegend && settings.legendPlacement() == LegendPlacement.RIGHT_PANEL;
+                boolean legendBottom = showLegend && settings.legendPlacement() == LegendPlacement.BOTTOM_PANEL;
                 int legendWidth = legendOutsideRight ? Math.max(260, width / 5) : 0;
                 int legendHeight = legendBottom ? Math.max(140, height / 5) : 0;
-                int gap = settings.showLegend() ? Math.max(18, width / 60) : 0;
+                int gap = showLegend ? Math.max(18, width / 60) : 0;
                 int mapX = margin;
                 int mapY = margin + headerHeight;
                 int mapW = Math.max(200, width - (margin * 2) - legendWidth - gap);
                 int mapH = Math.max(220, height - mapY - footerHeight - margin - (legendBottom ? legendHeight + gap : 0));
 
                 Rectangle headerBounds = applyElementAdjustment(new Rectangle(margin, margin, width - (margin * 2), headerHeight - 14), interactionState, LayoutElementType.HEADER);
-                drawHeader(g2, settings, snapshot, headerBounds);
-                elementBounds.put(LayoutElementType.HEADER, new Rectangle(headerBounds));
+                if (showHeader) {
+                    drawHeader(g2, settings, snapshot, headerBounds);
+                    elementBounds.put(LayoutElementType.HEADER, new Rectangle(headerBounds));
+                }
 
                 Rectangle requestedMapBounds = applyElementAdjustment(new Rectangle(mapX, mapY, mapW, mapH), interactionState, LayoutElementType.MAP_CONTENT);
                 if (!interactionState.hasCustomSize(LayoutElementType.MAP_CONTENT)) {
                     requestedMapBounds = optimizeMapFrame(requestedMapBounds, snapshot.mapImage(), settings.template());
                 }
-                mapFrame = drawMapFrame(g2, snapshot, requestedMapBounds, interactionState);
-                elementBounds.put(LayoutElementType.MAP_CONTENT, new Rectangle(mapFrame.frameBounds()));
-                if (settings.showGrid()) {
+                if (showMapContent) {
+                    mapFrame = drawMapFrame(g2, snapshot, requestedMapBounds, interactionState);
+                    elementBounds.put(LayoutElementType.MAP_CONTENT, new Rectangle(mapFrame.frameBounds()));
+                } else {
+                    Rectangle hiddenMapBounds = new Rectangle(requestedMapBounds);
+                    mapFrame = new MapFrameGeometry(hiddenMapBounds, hiddenMapBounds, 0d);
+                }
+                if (showMapContent && settings.showGrid()) {
                     drawGrid(g2, settings, mapFrame);
                 }
 
-                if (settings.showNorth()) {
+                if (showNorth) {
                     Rectangle northBounds = applyElementAdjustment(new Rectangle(
                             mapFrame.frameBounds().x + mapFrame.frameBounds().width - 92,
                             mapFrame.frameBounds().y + 20,
                             Math.max(54, width / 22),
                             Math.max(54, width / 22)
                     ), interactionState, LayoutElementType.NORTH);
-                    drawNorthArrow(g2, settings.northStyle(), northBounds.x, northBounds.y, northBounds.width);
-                    elementBounds.put(LayoutElementType.NORTH, northBounds);
+                    int northSize = Math.max(32, Math.min(northBounds.width, northBounds.height));
+                    Rectangle northVisualBounds = new Rectangle(northBounds.x, northBounds.y, northSize, northSize);
+                    drawNorthArrow(g2, settings.northStyle(), northVisualBounds.x, northVisualBounds.y, northVisualBounds.width);
+                    elementBounds.put(LayoutElementType.NORTH, northVisualBounds);
                 }
-                if (settings.showScale()) {
+                if (showScale && showMapContent) {
                     Rectangle scaleBounds = applyElementAdjustment(new Rectangle(
                             mapFrame.frameBounds().x + 8,
                             mapFrame.frameBounds().y + mapFrame.frameBounds().height - 74,
@@ -4603,7 +5273,7 @@ public class MapLayoutComposerDialog extends JFrame {
                     drawScaleBar(g2, settings, snapshot, mapFrame, scaleBounds.x + 14, scaleBounds.y + 18, renderDpi);
                     elementBounds.put(LayoutElementType.SCALE, scaleBounds);
                 }
-                if (settings.showLegend()) {
+                if (showLegend) {
                     Rectangle legendBounds = resolveLegendBounds(settings, width, margin, gap, legendWidth, legendHeight, mapFrame, mapFrame.frameBounds().y + mapFrame.frameBounds().height);
                     legendBounds = applyElementAdjustment(legendBounds, interactionState, LayoutElementType.LEGEND);
                     drawLegend(g2, settings, snapshot.visibleLayers(), legendBounds.x, legendBounds.y, legendBounds.width, legendBounds.height);
@@ -4611,7 +5281,9 @@ public class MapLayoutComposerDialog extends JFrame {
                 }
 
                 FooterRenderResult footerResult = drawFooter(g2, settings, snapshot, width, height, margin, footerHeight, mapFrame, interactionState, layoutImage, renderDpi);
-                elementBounds.put(LayoutElementType.CARTOUCHE, footerResult.cartoucheBounds());
+                if (footerResult.cartoucheBounds() != null) {
+                    elementBounds.put(LayoutElementType.CARTOUCHE, footerResult.cartoucheBounds());
+                }
                 if (footerResult.profileImageBounds() != null) {
                     elementBounds.put(LayoutElementType.PROFILE_IMAGE, footerResult.profileImageBounds());
                 }
@@ -4686,8 +5358,22 @@ public class MapLayoutComposerDialog extends JFrame {
             Point offset = interactionState.getOffset(type);
             Dimension sizeAdjustment = interactionState.getSizeAdjustment(type);
             result.translate(offset.x, offset.y);
-            result.width = Math.max(80, result.width + sizeAdjustment.width);
-            result.height = Math.max(60, result.height + sizeAdjustment.height);
+            int minWidth = switch (type) {
+                case NORTH -> 32;
+                case SCALE -> 96;
+                case HEADER -> 180;
+                case MAP_CONTENT -> 260;
+                default -> 80;
+            };
+            int minHeight = switch (type) {
+                case NORTH -> 32;
+                case SCALE -> 34;
+                case HEADER -> 56;
+                case MAP_CONTENT -> 180;
+                default -> 60;
+            };
+            result.width = Math.max(minWidth, result.width + sizeAdjustment.width);
+            result.height = Math.max(minHeight, result.height + sizeAdjustment.height);
             return result;
         }
 
@@ -4742,11 +5428,6 @@ public class MapLayoutComposerDialog extends JFrame {
             String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
             g2.drawString(meta, bounds.x, titleY + 56);
 
-            int chipX = bounds.x;
-            int chipY = titleY + 70;
-            drawChip(g2, chipX, chipY, "Capas visibles: " + snapshot.visibleLayers().size());
-            drawChip(g2, chipX + 164, chipY, settings.pageSize() + " - " + settings.orientation());
-            drawChip(g2, chipX + 328, chipY, settings.dpi() + " dpi");
         }
 
         private static void drawChip(Graphics2D g2, int x, int y, String text) {
@@ -4811,11 +5492,15 @@ public class MapLayoutComposerDialog extends JFrame {
             if (mapImage == null) {
                 mapImage = new BufferedImage(Math.max(1, contentW), Math.max(1, contentH), BufferedImage.TYPE_INT_ARGB);
             }
-            double scale = Math.min(contentW / (double) Math.max(1, mapImage.getWidth()), contentH / (double) Math.max(1, mapImage.getHeight()));
+            double scale = Math.max(contentW / (double) Math.max(1, mapImage.getWidth()), contentH / (double) Math.max(1, mapImage.getHeight()));
             int drawW = (int) Math.round(mapImage.getWidth() * scale);
             int drawH = (int) Math.round(mapImage.getHeight() * scale);
             int drawX = contentX + (contentW - drawW) / 2;
             int drawY = contentY + (contentH - drawH) / 2;
+            double visibleGroundMeters = shownGroundMeters;
+            if (drawW > 0 && contentW > 0 && shownGroundMeters > 0) {
+                visibleGroundMeters = shownGroundMeters * (contentW / (double) drawW);
+            }
             Graphics2D imageGraphics = (Graphics2D) g2.create();
             try {
                 imageGraphics.setClip(contentX, contentY, contentW, contentH);
@@ -4831,7 +5516,7 @@ public class MapLayoutComposerDialog extends JFrame {
             g2.drawLine(contentX + contentW / 2, contentY, contentX + contentW / 2, contentY + contentH);
             g2.drawLine(contentX, contentY + contentH / 2, contentX + contentW, contentY + contentH / 2);
 
-            return new MapFrameGeometry(new Rectangle(contentX, contentY, contentW, contentH), new Rectangle(drawX, drawY, drawW, drawH), shownGroundMeters);
+            return new MapFrameGeometry(new Rectangle(contentX, contentY, contentW, contentH), new Rectangle(contentX, contentY, contentW, contentH), visibleGroundMeters);
         }
 
         private static void drawGrid(Graphics2D g2, LayoutSettings settings, MapFrameGeometry mapFrame) {
@@ -5100,7 +5785,12 @@ public class MapLayoutComposerDialog extends JFrame {
             List<CatmapLegendItem> automaticEntries = new ArrayList<>();
             java.util.Map<String, LegendItem> automaticByKey = new java.util.LinkedHashMap<>();
             for (LegendItem item : automaticItems) {
-                automaticEntries.add(new CatmapLegendItem(item.key(), item.label(), item.subtitle(), true));
+                automaticEntries.add(new CatmapLegendItem(
+                        item.key(),
+                        item.label(),
+                        item.subtitle(),
+                        CatmapLegendSupport.isLegendVisibleByDefault(item.layer())
+                ));
                 automaticByKey.put(item.key(), item);
             }
 
@@ -5234,45 +5924,53 @@ public class MapLayoutComposerDialog extends JFrame {
 
         private static FooterRenderResult drawFooter(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, int width, int height, int margin, int footerHeight, MapFrameGeometry mapFrame, LayoutInteractionState interactionState, BufferedImage layoutImage, int renderDpi) {
             int top = height - margin - footerHeight;
-            g2.setColor(new Color(222, 227, 234));
-            g2.drawLine(margin, top, width - margin, top);
+            boolean showCartouche = isRenderableElementVisible(interactionState, LayoutElementType.CARTOUCHE);
+            boolean showProfileImage = layoutImage != null && isRenderableElementVisible(interactionState, LayoutElementType.PROFILE_IMAGE);
+            if (showCartouche || showProfileImage) {
+                g2.setColor(new Color(222, 227, 234));
+                g2.drawLine(margin, top, width - margin, top);
+            }
 
             int baseCartoucheWidth = switch (settings.template()) {
                 case CLEAN_CENTERED -> Math.min(width / 2, 420);
                 case STRONG_CARTOUCHE -> Math.min((int) (width * 0.58d), 660);
                 default -> Math.min(width / 2, 520);
             };
-            Rectangle cartoucheBounds = applyElementAdjustment(
+            Rectangle cartoucheBounds = showCartouche ? applyElementAdjustment(
                     new Rectangle(margin, top + 14, baseCartoucheWidth, footerHeight - 24),
                     interactionState,
                     LayoutElementType.CARTOUCHE
-            );
-            drawCartouche(g2, settings, snapshot, cartoucheBounds);
+            ) : null;
+            if (showCartouche) {
+                drawCartouche(g2, settings, snapshot, cartoucheBounds);
+            }
 
-            g2.setColor(new Color(37, 45, 58));
-            g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, width / 108)));
-            String footer = !settings.footer().isBlank() ? settings.footer() : "Generado desde CATGIS Desktop";
-            int infoX = cartoucheBounds.x + cartoucheBounds.width + 26;
-            g2.drawString(footer, infoX, top + 34);
+            int infoX = cartoucheBounds != null ? cartoucheBounds.x + cartoucheBounds.width + 26 : margin;
+            if (showCartouche) {
+                g2.setColor(new Color(37, 45, 58));
+                g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, width / 108)));
+                String footer = !settings.footer().isBlank() ? settings.footer() : "Generado desde CATGIS Desktop";
+                g2.drawString(footer, infoX, top + 34);
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(12, width / 115)));
-            g2.setColor(new Color(99, 110, 124));
-            String reference = "Proyecto: " + snapshot.projectName() + " | CRS: " + snapshot.projectCrsLabel();
-            g2.drawString(reference, infoX, top + 54);
+                g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(12, width / 115)));
+                g2.setColor(new Color(99, 110, 124));
+                String reference = "Proyecto: " + snapshot.projectName() + " | CRS: " + snapshot.projectCrsLabel();
+                g2.drawString(reference, infoX, top + 54);
 
-            java.awt.FontMetrics metrics = g2.getFontMetrics();
-            String generation = "Fecha de salida: " + FOOTER_DATE.format(LocalDateTime.now());
-            g2.drawString(generation, width - margin - metrics.stringWidth(generation), top + 34);
+                java.awt.FontMetrics metrics = g2.getFontMetrics();
+                String generation = "Fecha de salida: " + FOOTER_DATE.format(LocalDateTime.now());
+                g2.drawString(generation, width - margin - metrics.stringWidth(generation), top + 34);
 
-            double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
-            String scale = settings.showScale()
-                    ? "Escala tecnica: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
-                    : "Escala grafica oculta";
-            String mapArea = "Mapa: " + mapFrame.frameBounds().width + " x " + mapFrame.frameBounds().height + " px";
-            g2.drawString(scale, width - margin - metrics.stringWidth(scale), top + 54);
-            g2.drawString(mapArea, width - margin - metrics.stringWidth(mapArea), top + 74);
+                double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
+                String scale = settings.showScale()
+                        ? "Escala tecnica: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
+                        : "Escala grafica oculta";
+                String mapArea = "Mapa: " + mapFrame.frameBounds().width + " x " + mapFrame.frameBounds().height + " px";
+                g2.drawString(scale, width - margin - metrics.stringWidth(scale), top + 54);
+                g2.drawString(mapArea, width - margin - metrics.stringWidth(mapArea), top + 74);
+            }
             Rectangle profileImageBounds = null;
-            if (layoutImage != null) {
+            if (showProfileImage) {
                 Rectangle baseImageBounds = new Rectangle(
                         infoX,
                         top + 86,
@@ -5316,7 +6014,7 @@ public class MapLayoutComposerDialog extends JFrame {
             int rowY = contentY + 20;
             drawCartoucheRow(g2, "Estudio", blankOr(settings.studyName(), snapshot.projectName()), textX, rowY);
             rowY += 16;
-            drawCartoucheRow(g2, "Proyecto", snapshot.projectName(), textX, rowY);
+            drawCartoucheRow(g2, "Proyecto", blankOr(settings.cartoucheProjectName(), snapshot.projectName()), textX, rowY);
             rowY += 16;
             drawCartoucheRow(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), textX, rowY);
             rowY += 16;

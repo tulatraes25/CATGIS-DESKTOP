@@ -8,9 +8,9 @@ public final class CatgisAppInfo {
 
     private static final String FALLBACK_VERSION = "1.0.0";
     private static final String RELEASE_STAGE = "Beta final";
-    private static final int RELEASE_REVISION_COUNT = 14;
+    private static final int RELEASE_REVISION_COUNT = 18;
     private static final String FIRST_RELEASE_REVISION = "1.0.0.0";
-    private static final String CURRENT_RELEASE_REVISION = "1.0.0.14";
+    private static final String CURRENT_RELEASE_REVISION = "1.0.0.18";
 
     private CatgisAppInfo() {
     }
@@ -42,7 +42,7 @@ public final class CatgisAppInfo {
     }
 
     public static String getCollaboratorLine() {
-        return "Colaboradores de revisiones: Lic Daniel Warton y Geologo Federico Sanchez.";
+        return "Colaboradores de revisiones: Lic Daniel Warton y Geólogo Federico Sanchez.";
     }
 
     public static String getStatusLine() {
@@ -86,11 +86,12 @@ public final class CatgisAppInfo {
         return List.of(
                 I18n.t("OpenStreetMap y Esri World Imagery como mapas base integrados"),
                 I18n.t("Soporte GeoPackage, WMS, WFS y PostGIS en la arquitectura actual"),
+                I18n.t("CATSERVER como puerta de entrada de CATGIS para conectar servidores PostgreSQL/PostGIS"),
                 I18n.t("Motor cartografico propio para layout, exportacion e impresion"),
                 I18n.t("Snapping, CAD, geoprocesamiento basico y validacion topologica"),
                 I18n.t("DEM online/local, recorte DEM, curvas, relieve e hidrologia preliminar integrados en el mismo flujo"),
                 I18n.t("Suelos online y riesgo booleano preliminar integrados como bloques propios"),
-                I18n.t("Centro de ayuda integrado y manual tecnico embebido en la aplicacion"),
+                I18n.t("Centro de ayuda integrado con guía rápida y manual profesional 2026 embebido en PDF/DOCX"),
                 I18n.t("Iconografia, splash, branding e identidad visual propios de CATGIS"),
                 I18n.t("Compositor cartografico con leyenda, escala, norte, cartucho y exportacion"),
                 I18n.t("Gestor de modulos y bloques tematicos para crecer sin rehacer el nucleo")

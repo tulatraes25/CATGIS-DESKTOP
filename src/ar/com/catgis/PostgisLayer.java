@@ -120,7 +120,7 @@ public class PostgisLayer extends Layer implements ReadOnlyVectorLayerSource {
 
     @Override
     public String getReadOnlyReason() {
-        return "La capa PostGIS cargada en esta etapa funciona en modo lectura. Podes consultarla, verla en tabla y exportarla, pero no editarla.";
+        return "La capa PostGIS actual está en modo solo lectura. Podés consultarla, verla en tabla y exportarla, pero no editarla hasta volver a cargarla en modo editable.";
     }
 
     private void refreshPath() {

@@ -251,11 +251,12 @@ public class CoordinateConverterDialog extends JDialog {
 
             resultArea.setText(sb.toString());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
+            AppErrorSupport.logFailure("Error al convertir coordenadas", ex);
+            AppErrorSupport.showErrorDialog(
                     this,
-                    "Error al convertir coordenadas: " + ex.getMessage(),
                     "Conversor de coordenadas",
-                    JOptionPane.ERROR_MESSAGE
+                    "Error al convertir coordenadas.",
+                    ex
             );
         }
     }

@@ -61,9 +61,10 @@ public class DrainageExtractionDialog extends JDialog {
         cleanupCombo.addActionListener(e -> updateTechnicalHint());
         updateTechnicalHint();
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 740, 500), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         pack();
+        WindowLayoutSupport.fitDialogToScreen(this, 820, 640, 720, 520);
         setLocationRelativeTo(owner);
     }
 

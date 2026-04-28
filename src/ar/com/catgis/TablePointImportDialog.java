@@ -140,8 +140,8 @@ public class TablePointImportDialog extends JDialog {
             dispose();
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error al importar tabla: " + ex.getMessage());
+            AppErrorSupport.logFailure("Error al importar tabla como puntos desde " + file.getAbsolutePath(), ex);
+            AppErrorSupport.showErrorDialog(this, "Importar tabla", "Error al importar tabla como puntos.", ex);
         }
     }
 

@@ -11,6 +11,12 @@ public class RasterLayer extends Layer {
     private String rasterMode = "preview";
     private String derivedOperation = "";
     private String derivedParameters = "";
+    private String proDatasetRef = "";
+    private String proVariableName = "";
+    private String proAcquisitionStart = "";
+    private String proMaturityLevel = "";
+    private String proMetadataSidecarPath = "";
+    private String proJobRef = "";
 
     public RasterLayer(String name, String path) {
         super(name, path, "RASTER");
@@ -106,5 +112,62 @@ public class RasterLayer extends Layer {
 
     public boolean isDerivedLayer() {
         return derivedOperation != null && !derivedOperation.isBlank();
+    }
+
+    public String getProDatasetRef() {
+        return proDatasetRef;
+    }
+
+    public void setProDatasetRef(String proDatasetRef) {
+        this.proDatasetRef = proDatasetRef != null ? proDatasetRef.trim() : "";
+    }
+
+    public String getProVariableName() {
+        return proVariableName;
+    }
+
+    public void setProVariableName(String proVariableName) {
+        this.proVariableName = proVariableName != null ? proVariableName.trim() : "";
+    }
+
+    public String getProAcquisitionStart() {
+        return proAcquisitionStart;
+    }
+
+    public void setProAcquisitionStart(String proAcquisitionStart) {
+        this.proAcquisitionStart = proAcquisitionStart != null ? proAcquisitionStart.trim() : "";
+    }
+
+    public String getProMaturityLevel() {
+        return proMaturityLevel;
+    }
+
+    public void setProMaturityLevel(String proMaturityLevel) {
+        this.proMaturityLevel = proMaturityLevel != null ? proMaturityLevel.trim() : "";
+    }
+
+    public String getProMetadataSidecarPath() {
+        return proMetadataSidecarPath;
+    }
+
+    public void setProMetadataSidecarPath(String proMetadataSidecarPath) {
+        this.proMetadataSidecarPath = proMetadataSidecarPath != null ? proMetadataSidecarPath.trim() : "";
+    }
+
+    public String getProJobRef() {
+        return proJobRef;
+    }
+
+    public void setProJobRef(String proJobRef) {
+        this.proJobRef = proJobRef != null ? proJobRef.trim() : "";
+    }
+
+    public boolean hasProMetadata() {
+        return !(proDatasetRef == null || proDatasetRef.isBlank())
+                || !(proVariableName == null || proVariableName.isBlank())
+                || !(proAcquisitionStart == null || proAcquisitionStart.isBlank())
+                || !(proMaturityLevel == null || proMaturityLevel.isBlank())
+                || !(proMetadataSidecarPath == null || proMetadataSidecarPath.isBlank())
+                || !(proJobRef == null || proJobRef.isBlank());
     }
 }

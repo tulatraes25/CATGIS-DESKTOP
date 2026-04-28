@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.util.Locale;
 
 public class SaveProjectAction extends AbstractAction {
 
@@ -68,7 +69,11 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     static boolean saveProjectToFile(File file, boolean showDialogs) {
-        if (!persistVectorLayers()) {
+        if (file == null) {
+            return false;
+        }
+        CatgisDesktopApp.currentProject.setProjectFile(file);
+        if (!persistVectorLayers(file, showDialogs)) {
             return false;
         }
 
@@ -150,9 +155,14 @@ public class SaveProjectAction extends AbstractAction {
             }
             return true;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            AppErrorSupport.logFailure("Error al guardar proyecto " + file.getAbsolutePath(), ex);
             if (showDialogs) {
-                JOptionPane.showMessageDialog(null, "Error al guardar proyecto: " + ex.getMessage());
+                AppErrorSupport.showErrorDialog(
+                        CatgisDesktopApp.getMainFrameSafe(),
+                        "Guardar proyecto",
+                        "Error al guardar proyecto.",
+                        ex
+                );
             }
             return false;
         }
@@ -353,7 +363,7 @@ public class SaveProjectAction extends AbstractAction {
         return color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + color.getAlpha();
     }
 
-    private static boolean persistVectorLayers() {
+    private static boolean persistVectorLayers(File projectFile, boolean showDialogs) {
         if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.mapPanel == null) {
             return true;
         }
@@ -362,11 +372,6 @@ public class SaveProjectAction extends AbstractAction {
             if (layer == null || layer instanceof RasterLayer || VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
                 continue;
             }
-            if (TopographyWorkflowSupport.isTransientTopographyVector(layer)
-                    && !ExportVectorLayerAction.hasSupportedVectorPath(layer)) {
-                continue;
-            }
-
             ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
             if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
                 continue;
@@ -375,13 +380,24 @@ public class SaveProjectAction extends AbstractAction {
             boolean ok;
             if (ExportVectorLayerAction.hasSupportedVectorPath(layer)) {
                 ok = ExportVectorLayerAction.saveLayerToCurrentPath(layer, CatgisDesktopApp.getMainFrameSafe(), false);
-            } else {
-                JOptionPane.showMessageDialog(
+            } else if (TopographyWorkflowSupport.isTransientTopographyVector(layer)) {
+                File autoFile = buildAutoVectorFile(projectFile, layer, ".shp");
+                ok = ExportVectorLayerAction.saveLayerDataToFile(
+                        layer,
+                        data,
+                        autoFile,
                         CatgisDesktopApp.getMainFrameSafe(),
-                        "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegí dónde guardarla antes de guardar el proyecto.",
-                        "Guardar capa vectorial",
-                        JOptionPane.INFORMATION_MESSAGE
+                        false
                 );
+            } else {
+                if (showDialogs) {
+                    JOptionPane.showMessageDialog(
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegí dónde guardarla antes de guardar el proyecto.",
+                            "Guardar capa vectorial",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                }
                 File exported = ExportVectorLayerAction.exportLayerWithDialog(
                         layer,
                         data,
@@ -398,6 +414,37 @@ public class SaveProjectAction extends AbstractAction {
         }
 
         return true;
+    }
+
+    private static File buildAutoVectorFile(File projectFile, Layer layer, String extension) {
+        File projectDir = projectFile != null && projectFile.getParentFile() != null
+                ? projectFile.getParentFile()
+                : new File(".");
+        String projectBase = projectFile != null ? stripExtension(projectFile.getName()) : "proyecto";
+        File layersDir = new File(projectDir, sanitizeFileName(projectBase) + "_capas");
+        if (!layersDir.exists()) {
+            layersDir.mkdirs();
+        }
+        String layerName = layer != null && layer.getName() != null && !layer.getName().isBlank()
+                ? layer.getName()
+                : "capa_vectorial";
+        return new File(layersDir, sanitizeFileName(layerName) + extension);
+    }
+
+    private static String sanitizeFileName(String value) {
+        String text = value != null ? value.trim() : "";
+        if (text.isBlank()) {
+            text = "archivo";
+        }
+        text = text.replaceAll("[\\\\/:*?\"<>|]", "_");
+        text = text.replaceAll("\\s+", "_");
+        text = text.replaceAll("[^A-Za-z0-9._-]", "_");
+        text = text.replaceAll("_+", "_");
+        text = text.replaceAll("^[._-]+|[._-]+$", "");
+        if (text.isBlank()) {
+            text = "archivo";
+        }
+        return text.toLowerCase(Locale.ROOT);
     }
 
     private static String safe(String value) {

@@ -14,6 +14,8 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
@@ -93,6 +95,7 @@ public class AttributeTableWindow extends JFrame {
         table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         table.setRowHeight(18);
+        installTableContextMenu();
 
         sorter = new TableRowSorter<>(model);
         table.setRowSorter(sorter);
@@ -159,7 +162,7 @@ public class AttributeTableWindow extends JFrame {
         assignValueButton = createIconButton(AppIcons.attrAssignIcon(), "Asignar valor a un campo", new Color(14, 165, 233));
         JButton closeButton = createIconButton(AppIcons.attrCloseIcon(), "Cerrar", new Color(107, 114, 128));
 
-        copyButton.addActionListener(e -> copySelectedRow());
+        copyButton.addActionListener(e -> copySelectedRows());
         refreshButton.addActionListener(e -> reloadFromFeatures());
         editButton.addActionListener(e -> toggleEditMode());
         applyButton.addActionListener(e -> applyChanges());
@@ -950,7 +953,69 @@ public class AttributeTableWindow extends JFrame {
         }
     }
 
-    private void copySelectedRow() {
+    private void installTableContextMenu() {
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showTableContextMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showTableContextMenu(e);
+                }
+            }
+        });
+    }
+
+    private void showTableContextMenu(MouseEvent e) {
+        int viewRow = table.rowAtPoint(e.getPoint());
+        if (viewRow >= 0 && !table.isRowSelected(viewRow)) {
+            table.getSelectionModel().setSelectionInterval(viewRow, viewRow);
+            syncSelectionToMap();
+        }
+
+        int selectedCount = getSelectedModelRows().size();
+        JPopupMenu popup = new JPopupMenu();
+
+        JMenuItem copyItem = new JMenuItem(selectedCount > 1 ? "Copiar filas seleccionadas" : "Copiar fila", AppIcons.attrCopyIcon());
+        copyItem.setEnabled(selectedCount > 0);
+        copyItem.addActionListener(ev -> copySelectedRows());
+        popup.add(copyItem);
+
+        JMenuItem copyToEditingItem = new JMenuItem("Copiar y pegar en capa en edicion", AppIcons.attrCopyIcon());
+        boolean canCopyToEditing = selectedCount > 0
+                && CatgisDesktopApp.mapPanel != null
+                && CatgisDesktopApp.mapPanel.canCopySelectedFeaturesFromLayerToEditingLayer(layer);
+        copyToEditingItem.setEnabled(canCopyToEditing);
+        copyToEditingItem.addActionListener(ev -> copySelectedRowsToEditingLayer());
+        popup.add(copyToEditingItem);
+
+        popup.show(table, e.getX(), e.getY());
+    }
+
+    private void copySelectedRows() {
+        List<Integer> selectedRows = getSelectedModelRows();
+        if (!selectedRows.isEmpty()) {
+            StringBuilder multi = new StringBuilder();
+            for (int r = 0; r < selectedRows.size(); r++) {
+                if (r > 0) {
+                    multi.append(System.lineSeparator());
+                }
+                int row = selectedRows.get(r);
+                for (int i = 0; i < rawColumnNames.size(); i++) {
+                    if (i > 0) multi.append("\t");
+                    Object value = model.getValueAt(row, i);
+                    multi.append(value != null ? value : "");
+                }
+            }
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(multi.toString()), null);
+            statusLabel.setText(selectedRows.size() == 1 ? "Fila copiada al portapapeles." : selectedRows.size() + " filas copiadas al portapapeles.");
+            return;
+        }
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) {
             statusLabel.setText("Seleccioná una fila para copiarla.");
@@ -967,6 +1032,21 @@ public class AttributeTableWindow extends JFrame {
 
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(sb.toString()), null);
         statusLabel.setText("Fila copiada al portapapeles.");
+    }
+
+    private void copySelectedRowsToEditingLayer() {
+        if (CatgisDesktopApp.mapPanel == null) {
+            return;
+        }
+        syncSelectionToMap();
+        boolean copied = CatgisDesktopApp.mapPanel.copySelectedFeaturesFromLayerToEditingLayer(layer);
+        if (copied) {
+            statusLabel.setText("Seleccion copiada a la capa en edicion.");
+            AttributeTableWindow editingWindow = OpenAttributeTableAction.getOpenWindow(CatgisDesktopApp.mapPanel.getEditingLayerRef());
+            if (editingWindow != null && editingWindow != this) {
+                editingWindow.reloadFromFeatures();
+            }
+        }
     }
 
     private void reloadFromFeatures() {
@@ -1048,11 +1128,8 @@ public class AttributeTableWindow extends JFrame {
                     "Cambios aplicados correctamente en la capa cargada en CATGIS.\n\n" +
                             "Solo se modificaron los campos marcados como editables.");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error al aplicar cambios: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            AppErrorSupport.logFailure("Error al aplicar cambios en la tabla de atributos", ex);
+            AppErrorSupport.showErrorDialog(this, "Tabla de atributos", "Error al aplicar cambios.", ex);
         }
     }
 

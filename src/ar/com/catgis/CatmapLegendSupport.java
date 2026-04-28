@@ -26,7 +26,7 @@ public final class CatmapLegendSupport {
                             buildKey(layer, rule, "POINT"),
                             rule.getValue(),
                             layer.getName(),
-                            true
+                            isLegendVisibleByDefault(layer)
                     ));
                 }
                 continue;
@@ -37,7 +37,7 @@ public final class CatmapLegendSupport {
                             buildKey(layer, rule, "LINE"),
                             rule.getValue(),
                             layer.getName(),
-                            true
+                            isLegendVisibleByDefault(layer)
                     ));
                 }
                 continue;
@@ -48,7 +48,7 @@ public final class CatmapLegendSupport {
                             buildKey(layer, rule, "POLYGON"),
                             rule.getValue(),
                             layer.getName(),
-                            true
+                            isLegendVisibleByDefault(layer)
                     ));
                 }
                 continue;
@@ -57,10 +57,14 @@ public final class CatmapLegendSupport {
                     buildKey(layer, null, resolveLegendGeometryType(layer)),
                     layer.getName(),
                     resolveLayerTypeLabel(layer),
-                    true
+                    isLegendVisibleByDefault(layer)
             ));
         }
         return items;
+    }
+
+    public static boolean isLegendVisibleByDefault(Layer layer) {
+        return !(layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer);
     }
 
     public static List<CatmapLegendItem> mergeEntries(List<CatmapLegendItem> automaticEntries, List<CatmapLegendItem> overrides) {

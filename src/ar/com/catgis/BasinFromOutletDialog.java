@@ -90,10 +90,11 @@ public class BasinFromOutletDialog extends JDialog {
         refreshSourceModeState();
         updateTechnicalHint();
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 760, 500), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         tryPrefillFromSelectedPoint();
         pack();
+        WindowLayoutSupport.fitDialogToScreen(this, 840, 680, 740, 540);
         setLocationRelativeTo(owner);
     }
 

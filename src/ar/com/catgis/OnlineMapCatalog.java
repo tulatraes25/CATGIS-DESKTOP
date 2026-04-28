@@ -27,7 +27,7 @@ public final class OnlineMapCatalog {
                 0,
                 19,
                 256,
-                "© OpenStreetMap contributors",
+                "\u00A9 OpenStreetMap contributors",
                 "https://operations.osmfoundation.org/policies/tiles/",
                 false,
                 "EPSG:3857"

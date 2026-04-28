@@ -1009,6 +1009,19 @@ public class LayerPropertiesDialog extends JDialog {
 
     private void editCadSourceCrs() {
         CadCrsAssignmentDialog.Result result = CadCrsAssignmentDialog.chooseForLayer(this, layer);
+        if (result.selectorRequested()) {
+            String chosenCode = CRSSelectorDialog.chooseBlocking(
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "Seleccionar CRS para CAD",
+                    result.sourceCrs()
+            );
+            if (chosenCode == null || chosenCode.isBlank()) {
+                return;
+            }
+            selectedSourceCrs = chosenCode;
+            refreshSourceCrsField();
+            return;
+        }
         if (!result.approved()) {
             return;
         }

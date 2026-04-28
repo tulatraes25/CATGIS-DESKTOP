@@ -104,12 +104,12 @@ public class NewVectorLayerAction extends AbstractAction {
 
             return layer;
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(
+            AppErrorSupport.logFailure("No se pudo crear la nueva capa vectorial " + file.getAbsolutePath(), ex);
+            AppErrorSupport.showErrorDialog(
                     owner,
-                    "No se pudo crear la nueva capa vectorial: " + ex.getMessage(),
                     "Nueva capa vectorial",
-                    JOptionPane.ERROR_MESSAGE
+                    "No se pudo crear la nueva capa vectorial.",
+                    ex
             );
             return null;
         }

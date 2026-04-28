@@ -20,6 +20,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
+import javax.swing.Icon;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -924,6 +925,14 @@ public class FloatingVectorEditToolbar extends JPanel {
         button.setBorder(BorderFactory.createLineBorder(new Color(188, 194, 203)));
         button.setOpaque(true);
         button.setContentAreaFilled(true);
+        Icon icon = button.getIcon();
+        if (icon != null) {
+            button.setDisabledIcon(icon);
+            button.setPressedIcon(icon);
+            if (button instanceof JToggleButton toggle) {
+                toggle.setDisabledSelectedIcon(icon);
+            }
+        }
         button.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {

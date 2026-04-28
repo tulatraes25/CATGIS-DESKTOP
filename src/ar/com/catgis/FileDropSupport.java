@@ -43,7 +43,7 @@ public final class FileDropSupport {
                     }
                     return OpenFileAction.openDroppedFiles(files.toArray(new File[0]), CatgisDesktopApp.getMainFrameSafe());
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    AppErrorSupport.logFailure("No se pudieron importar archivos por arrastre", ex);
                     return false;
                 }
             }

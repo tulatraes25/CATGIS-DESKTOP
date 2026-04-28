@@ -19,6 +19,7 @@ import java.awt.Insets;
 
 public class CadPlacementDialog extends JDialog {
 
+    private final Layer layer;
     private final JSpinner offsetXSpinner;
     private final JSpinner offsetYSpinner;
     private final JSpinner scaleSpinner;
@@ -27,6 +28,7 @@ public class CadPlacementDialog extends JDialog {
 
     public CadPlacementDialog(Frame owner, Layer layer) {
         super(owner, "Ajuste geografico CAD", true);
+        this.layer = layer;
         setLayout(new BorderLayout(10, 10));
         ((JPanel) getContentPane()).setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
@@ -108,11 +110,17 @@ public class CadPlacementDialog extends JDialog {
             scaleSpinner.setValue(1d);
             rotationSpinner.setValue(0d);
         });
+        JButton dragOnMap = new JButton("Arrastrar en mapa");
+        dragOnMap.addActionListener(e -> {
+            dispose();
+            CadWorkflowSupport.openCadDragPlacementWorkflow(owner, this.layer);
+        });
         JButton apply = new JButton("Aplicar");
         apply.addActionListener(e -> applyAndClose());
         JButton cancel = new JButton("Cancelar");
         cancel.addActionListener(e -> dispose());
         buttons.add(reset);
+        buttons.add(dragOnMap);
         buttons.add(cancel);
         buttons.add(apply);
         add(buttons, BorderLayout.SOUTH);

@@ -12,9 +12,10 @@ public class Main {
             AppBranding.applyTaskbarIcon();
 
             SplashScreenWindow splash = new SplashScreenWindow();
-            splash.showFor(2800, () -> {
+            splash.showFor(1200, () -> {
                 CatgisDesktopApp app = new CatgisDesktopApp();
                 app.setVisible(true);
+                SwingUtilities.invokeLater(app::showStartupProjectCrsPromptIfNeeded);
             });
         });
     }

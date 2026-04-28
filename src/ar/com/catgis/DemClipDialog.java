@@ -62,10 +62,10 @@ public class DemClipDialog extends JDialog {
         refreshPolygonMaskModel();
         refreshClipTargetState();
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 740, 460), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
         pack();
-        setSize(Math.max(760, getWidth()), getHeight());
+        WindowLayoutSupport.fitDialogToScreen(this, 800, 600, 720, 500);
         setLocationRelativeTo(owner);
     }
 

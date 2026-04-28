@@ -9,22 +9,29 @@ import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
+import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Window;
+import java.io.File;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.net.URL;
 
@@ -40,8 +47,7 @@ public class HelpCenterDialog extends JDialog {
         super(owner, I18n.t("Panel de ayuda"), ModalityType.MODELESS);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(0, 0));
-        setMinimumSize(new Dimension(900, 620));
-        setSize(980, 680);
+        WindowLayoutSupport.fitDialogToScreen(this, 980, 680, 820, 560);
         setLocationRelativeTo(owner);
         setIconImages(AppBranding.getApplicationIconImages());
 
@@ -52,6 +58,7 @@ public class HelpCenterDialog extends JDialog {
         contentPane.setOpaque(false);
         contentPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
         contentPane.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        contentPane.addHyperlinkListener(this::handleHyperlinkActivation);
 
         add(buildHeader(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
@@ -202,8 +209,14 @@ public class HelpCenterDialog extends JDialog {
     private List<HelpTopic> buildTopics() {
         return List.of(
                 new HelpTopic(
-                        "Manual actualizado 2026",
-                        "Versión integrada del manual técnico de uso con glosario de iconos y flujos recomendados.",
+                        "Manual profesional 2026 final",
+                        "Versión oficial embebida en PDF y DOCX, accesible desde el HelpCenter.",
+                        loadHelpHtmlResource("/help/CATGIS_Manual_Profesional_2026_FINAL.html"),
+                        true
+                ),
+                new HelpTopic(
+                        "Guía integrada 2026",
+                        "Versión HTML de consulta rápida con glosario de iconos y flujos recomendados.",
                         loadHelpHtmlResource("/help/CATGIS_Manual_Integrado_2026.html"),
                         true
                 ),
@@ -379,6 +392,76 @@ public class HelpCenterDialog extends JDialog {
                 + escape("La ayuda rapida sigue disponible en las demas secciones del HelpCenter.")
                 + "</p>"
                 + "</body></html>";
+    }
+
+    private void handleHyperlinkActivation(HyperlinkEvent event) {
+        if (event == null || event.getEventType() != HyperlinkEvent.EventType.ACTIVATED) {
+            return;
+        }
+        String description = event.getDescription();
+        if (description != null && description.startsWith("catgis-help:")) {
+            openSpecialHelpLink(description.substring("catgis-help:".length()));
+            return;
+        }
+        if (event.getURL() != null) {
+            openExternalUrl(event.getURL());
+        }
+    }
+
+    private void openSpecialHelpLink(String action) {
+        if (action == null || action.isBlank()) {
+            return;
+        }
+        switch (action) {
+            case "manual-final-pdf" ->
+                    openBundledHelpDocument("/help/docs/CATGIS_Manual_Profesional_2026_FINAL.pdf",
+                            "CATGIS_Manual_Profesional_2026_FINAL.pdf");
+            case "manual-final-docx" ->
+                    openBundledHelpDocument("/help/docs/CATGIS_Manual_Profesional_2026_FINAL.docx",
+                            "CATGIS_Manual_Profesional_2026_FINAL.docx");
+            default -> showHelpError("No se reconoció el enlace solicitado: " + action);
+        }
+    }
+
+    private void openExternalUrl(URL url) {
+        try {
+            if (url == null) {
+                return;
+            }
+            if (!Desktop.isDesktopSupported()) {
+                showHelpError("La apertura externa no está disponible en este entorno.");
+                return;
+            }
+            Desktop.getDesktop().browse(url.toURI());
+        } catch (Exception ex) {
+            showHelpError("No se pudo abrir el enlace externo. " + ex.getMessage());
+        }
+    }
+
+    private void openBundledHelpDocument(String resourcePath, String fileName) {
+        try (InputStream in = HelpCenterDialog.class.getResourceAsStream(resourcePath)) {
+            if (in == null) {
+                showHelpError("No se encontró el documento embebido: " + fileName);
+                return;
+            }
+            Path helpTempDir = Files.createDirectories(Path.of(System.getProperty("java.io.tmpdir"), "catgis-helpcenter"));
+            Path target = helpTempDir.resolve(fileName);
+            Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            File file = target.toFile();
+            file.deleteOnExit();
+
+            if (!Desktop.isDesktopSupported()) {
+                showHelpError("El documento fue extraído en: " + file.getAbsolutePath());
+                return;
+            }
+            Desktop.getDesktop().open(file);
+        } catch (Exception ex) {
+            showHelpError("No se pudo abrir el documento solicitado. " + ex.getMessage());
+        }
+    }
+
+    private void showHelpError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Centro de ayuda CATGIS", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private String section(String title, String... blocks) {

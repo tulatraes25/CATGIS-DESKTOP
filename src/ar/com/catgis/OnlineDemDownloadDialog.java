@@ -77,12 +77,12 @@ public class OnlineDemDownloadDialog extends JDialog {
         refreshProviderState();
         outputField.setText(defaultOutputFile().getAbsolutePath());
 
-        add(buildForm(), BorderLayout.CENTER);
+        add(WindowLayoutSupport.createVerticalScrollPane(buildForm(), 760, 500), BorderLayout.CENTER);
         add(buildButtons(), BorderLayout.SOUTH);
 
         loadCurrentViewEnvelope();
         pack();
-        setSize(Math.max(780, getWidth()), Math.max(480, getHeight()));
+        WindowLayoutSupport.fitDialogToScreen(this, 840, 650, 740, 520);
         setLocationRelativeTo(owner);
     }
 
@@ -220,7 +220,8 @@ public class OnlineDemDownloadDialog extends JDialog {
             eastField.setText(formatCoord(latLon.getMaxX()));
             refreshDownloadSummary();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("No se pudo leer la vista actual para el DEM online.") + "\n" + ex.getMessage());
+            AppErrorSupport.logFailure("No se pudo leer la vista actual para el DEM online", ex);
+            showDemError(I18n.t("No se pudo leer la vista actual para el DEM online."), ex);
         }
     }
 
@@ -290,7 +291,8 @@ public class OnlineDemDownloadDialog extends JDialog {
                     return;
                 }
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, I18n.t("No se pudo estimar la descarga DEM publica:") + "\n" + ex.getMessage());
+                AppErrorSupport.logFailure("No se pudo estimar la descarga DEM publica", ex);
+                showDemError(I18n.t("No se pudo estimar la descarga DEM publica."), ex);
                 return;
             }
         }
@@ -321,16 +323,15 @@ public class OnlineDemDownloadDialog extends JDialog {
                     addRasterLayer(result.file(), result.displayName(), result.sourceLabel(), result.sourceCrsCode());
                     dispose();
                 } catch (Exception ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(
-                            OnlineDemDownloadDialog.this,
-                            I18n.t("No se pudo descargar el DEM online:") + "\n" + describeThrowable(ex),
-                            I18n.t("DEM online"),
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    AppErrorSupport.logFailure("No se pudo descargar el DEM online", ex);
+                    showDemError(I18n.t("No se pudo descargar el DEM online."), ex);
                 }
             }
         }.execute();
+    }
+
+    private void showDemError(String intro, Throwable ex) {
+        AppErrorSupport.showErrorDialog(this, I18n.t("DEM online"), intro, ex);
     }
 
     private void addRasterLayer(File file, String datasetName, String sourceLabel, String sourceCrsCode) throws Exception {

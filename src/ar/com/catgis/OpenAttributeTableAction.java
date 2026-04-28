@@ -8,8 +8,6 @@ import javax.swing.AbstractAction;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import java.awt.event.ActionEvent;
-import java.io.File;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -128,11 +126,13 @@ public class OpenAttributeTableAction extends AbstractAction {
             return window;
 
         } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(null,
-                    "Error al abrir la tabla de atributos: " + ex.getMessage(),
+            AppErrorSupport.logFailure("Error al abrir la tabla de atributos para " + layer.getName(), ex);
+            AppErrorSupport.showErrorDialog(
+                    CatgisDesktopApp.getMainFrameSafe(),
                     "Tabla de atributos",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error al abrir la tabla de atributos.",
+                    ex
+            );
             return null;
         }
     }
@@ -251,134 +251,27 @@ public class OpenAttributeTableAction extends AbstractAction {
     }
 
     private static ShapefileData ensureDataLoaded(Layer layer) {
-        ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
-
-        if (data == null) {
-            try {
-                if (layer instanceof PostgisLayer) {
-                    PostgisConnectionInfo info = PostgisConnectionStore.applyStoredPassword(((PostgisLayer) layer).toConnectionInfo());
-                    if (info == null || info.getPassword().isBlank()) {
-                        info = PostgisConnectionStore.promptForPassword(
-                                CatgisDesktopApp.getMainFrameSafe(),
-                                ((PostgisLayer) layer).toConnectionInfo(),
-                                "Ingresá la clave para abrir la tabla de la capa PostGIS."
-                        );
-                        if (info == null) {
-                            return null;
-                        }
-                    }
-                    data = PostgisLoader.loadLayerData((PostgisLayer) layer, info);
-                    if (data != null) {
-                        layer.setSourceName(data.getSourceName());
-                        layer.setFeatureCount(data.getFeatureCount());
-                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                    }
-                    return data;
-                }
-                if (layer instanceof GeoPackageLayer) {
-                    data = GeoPackageLoader.loadLayerData((GeoPackageLayer) layer);
-                    if (data != null) {
-                        layer.setSourceName(data.getSourceName());
-                        layer.setFeatureCount(data.getFeatureCount());
-                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                    }
-                    return data;
-                }
-                if (layer instanceof OnlineWfsLayer) {
-                    data = WfsFeatureLoader.loadLayerData((OnlineWfsLayer) layer);
-                    if (data != null) {
-                        layer.setSourceName(data.getSourceName());
-                        layer.setFeatureCount(data.getFeatureCount());
-                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                    }
-                    return data;
-                }
-
-                String path = layer.getPath() != null ? layer.getPath().toLowerCase() : "";
-
-                if (path.endsWith(".shp")) {
-                    data = invokeLoader(ShapefileLoader.class, layer.getPath(),
-                            new String[]{"load", "loadShapefile", "open", "openShapefile", "read", "readShapefile"});
-                } else if (path.endsWith(".dxf")) {
-                    data = invokeLoader(DxfLoader.class, layer.getPath(),
-                            new String[]{"load", "open", "read"});
-                } else if (path.endsWith(".dwg")) {
-                    DwgImportSupport.ResolvedCadReference resolvedCad = DwgImportSupport.resolveDwgReference(
-                            new File(layer.getPath()),
-                            CatgisDesktopApp.getMainFrameSafe(),
-                            true
-                    );
-                    if (resolvedCad != null && resolvedCad.dxfFile() != null) {
-                        data = DxfLoader.load(resolvedCad.dxfFile());
-                    }
-                } else if (path.endsWith(".geojson") || path.endsWith(".json")) {
-                    data = invokeLoader(GeoJsonLoader.class, layer.getPath(),
-                            new String[]{"load", "loadGeoJson", "open", "read"});
-                } else if (layer instanceof GpxLayer gpxLayer && path.endsWith(".gpx")) {
-                    data = GpxLoader.load(new File(layer.getPath()), gpxLayer.getContentKind());
-                } else if (path.endsWith(".kml") || path.endsWith(".kmz")) {
-                    data = invokeLoader(KmlLoader.class, layer.getPath(),
-                            new String[]{"load", "loadKml", "loadKmz", "open", "read"});
-                }
-
-                if (data != null) {
-                    layer.setSourceName(data.getSourceName());
-                    layer.setFeatureCount(data.getFeatureCount());
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                if (layer instanceof PostgisLayer) {
-                    JOptionPane.showMessageDialog(
-                            CatgisDesktopApp.getMainFrameSafe(),
-                            PostgisErrorSupport.toUserMessage(ex, ((PostgisLayer) layer).toConnectionInfo()),
-                            "PostGIS",
-                            JOptionPane.ERROR_MESSAGE
-                    );
-                }
-            }
+        try {
+            return LayerVectorDataSupport.ensureDataLoaded(
+                    layer,
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "Ingresá la clave para abrir la tabla de la capa PostGIS.",
+                    true
+            );
+        } catch (Exception ex) {
+            LayerVectorDataSupport.showLoadFailure(
+                    layer,
+                    CatgisDesktopApp.getMainFrameSafe(),
+                    "Tabla de atributos",
+                    "No se pudieron cargar los datos de la capa seleccionada.",
+                    ex
+            );
+            return null;
         }
-
-        return data;
     }
 
     private static String buildReadOnlyMessage(Layer layer) {
         String reason = VectorLayerUtils.getReadOnlyVectorLayerReason(layer);
         return !reason.isBlank() ? reason : "La capa seleccionada esta en modo lectura.";
-    }
-
-    private static ShapefileData invokeLoader(Class<?> clazz, String path, String[] methodNames) throws Exception {
-        if (path == null || path.isBlank()) {
-            return null;
-        }
-
-        File file = new File(path);
-        if (!file.exists()) {
-            return null;
-        }
-
-        for (String methodName : methodNames) {
-            try {
-                Method m = clazz.getMethod(methodName, String.class);
-                Object result = m.invoke(null, path);
-                if (result instanceof ShapefileData) {
-                    return (ShapefileData) result;
-                }
-            } catch (NoSuchMethodException ignored) {
-            }
-        }
-
-        for (String methodName : methodNames) {
-            try {
-                Method m = clazz.getMethod(methodName, File.class);
-                Object result = m.invoke(null, file);
-                if (result instanceof ShapefileData) {
-                    return (ShapefileData) result;
-                }
-            } catch (NoSuchMethodException ignored) {
-            }
-        }
-
-        return null;
     }
 }
