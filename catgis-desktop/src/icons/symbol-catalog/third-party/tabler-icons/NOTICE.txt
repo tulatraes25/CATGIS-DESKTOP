@@ -1,0 +1,11 @@
+CATGIS incluye en este catalogo una seleccion curada de iconos derivados de Tabler Icons.
+
+Fuente:
+https://github.com/tabler/tabler-icons
+
+Licencia:
+MIT. Ver LICENSE.txt en esta misma carpeta.
+
+Alcance de esta ronda:
+- seleccion curada ampliada para petroleo y gas, energia, transporte, industria, infraestructura, edificaciones, salud y educacion, agua, servicios, fauna, flora, campo y relevamiento, y cartografia general
+- integrada como base ampliable del catalogo puntual interno de CATGIS
