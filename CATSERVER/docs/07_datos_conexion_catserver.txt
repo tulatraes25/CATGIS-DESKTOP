@@ -1,0 +1,26 @@
+CATSERVER - datos de conexion
+
+Servidor: localhost
+Puerto: 5432
+Base de datos: catserver
+
+Usuario administrador:
+- usuario: catserver_admin_user
+- clave: CatAdmin2026
+- acceso: lectura y administracion
+
+Usuario visor:
+- usuario: catserver_viewer_user
+- clave: CatVisor2026
+- acceso: solo lectura
+
+Uso en CATGIS / pgAdmin:
+- host: localhost
+- port: 5432
+- database: catserver
+- username: uno de los usuarios de arriba
+- password: la clave correspondiente
+
+Nota:
+- el usuario visor no puede modificar datos
+- este archivo no incluye la clave del usuario postgres

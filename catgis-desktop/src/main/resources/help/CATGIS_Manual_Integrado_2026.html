@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CATGIS Desktop - Manual Integrado 2026</title>
+    <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; color: #243146; margin: 0; padding: 22px 26px; line-height: 1.55; background: #ffffff; }
+        h1, h2, h3 { color: #162544; margin: 0 0 10px 0; }
+        h1 { font-size: 28px; }
+        h2 { font-size: 20px; margin-top: 28px; padding-bottom: 4px; border-bottom: 2px solid #dbe5f2; }
+        h3 { font-size: 15px; margin-top: 18px; }
+        p { margin: 8px 0 12px 0; }
+        ul, ol { margin: 8px 0 14px 20px; }
+        li { margin: 4px 0; }
+        code { background: #f3f6fb; border: 1px solid #d8e1ee; border-radius: 4px; padding: 1px 5px; }
+        .hero { background: linear-gradient(180deg, #eef5ff 0%, #f9fbff 100%); border: 1px solid #d9e6f8; border-radius: 14px; padding: 18px 20px; margin-bottom: 18px; }
+        .meta { color: #5f7085; font-size: 12px; }
+        .note { background: #edf5ff; border: 1px solid #c8defa; border-radius: 10px; padding: 12px 14px; margin: 14px 0; }
+        .warn { background: #fff6e8; border: 1px solid #efd197; border-radius: 10px; padding: 12px 14px; margin: 14px 0; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .card { border: 1px solid #dbe3ef; border-radius: 10px; padding: 12px 14px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0 16px 0; font-size: 13px; }
+        th, td { border: 1px solid #dbe3ef; padding: 8px 9px; text-align: left; vertical-align: top; }
+        th { background: #f2f6fb; }
+        .small { color: #5f7085; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>CATGIS Desktop</h1>
+        <p><strong>Manual integrado de uso 2026</strong></p>
+        <p class="meta">Version de referencia: 1.0.0 Beta final (rev. 13) | Autor: Lic Claudio Alejandro Tula | Colaboradores: Lic Daniel Warton y Geologo Federico Sanchez</p>
+        <p>Este manual resume el estado funcional real auditado de CATGIS Desktop y sirve como base para ayuda integrada, consulta operativa y exportacion a PDF.</p>
+    </div>
+
+    <h2>1. Que es CATGIS</h2>
+    <p>CATGIS Desktop es un GIS de escritorio para Windows orientado a trabajo tecnico diario. Integra carga de datos, visualizacion, edicion vectorial, servicios remotos, topografia con DEM, hidrologia preliminar, suelos online, riesgo booleano preliminar y composicion cartografica.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Bloques mas fuertes hoy</h3>
+            <ul>
+                <li>proyectos y capas</li>
+                <li>edicion vectorial con apoyo CAD</li>
+                <li>DEM, relieve y curvas</li>
+                <li>hidrologia preliminar</li>
+                <li>cartografia / CATMAP</li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Bloques preliminares</h3>
+            <ul>
+                <li>inundacion preliminar</li>
+                <li>suelos online globales</li>
+                <li>riesgo booleano preliminar</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="warn">
+        <strong>Advertencia tecnica:</strong> los bloques de inundacion preliminar, suelos globales y riesgo booleano no reemplazan estudios hidraulicos, geotecnicos o parcelarios de detalle.
+    </div>
+
+    <h2>2. Interfaz general</h2>
+    <ul>
+        <li><strong>Barra de menus:</strong> Archivo, Edicion, Vista, Herramientas, Cartografia, Modulos, Ventana, Proyecto y Ayuda.</li>
+        <li><strong>Barra principal:</strong> accesos rapidos a proyecto, carga, zoom, dibujo, tabla y CRS.</li>
+        <li><strong>Bloque CATMAP:</strong> composicion cartografica y mapas base online.</li>
+        <li><strong>Bloque Topografia:</strong> DEM, curvas, drenajes, cuencas, inundacion, suelos y riesgo.</li>
+        <li><strong>Gestor de proyecto:</strong> panel izquierdo de capas y orden de dibujo.</li>
+        <li><strong>Vista de mapa:</strong> area central de exploracion, edicion y analisis.</li>
+    </ul>
+    <p><strong>Regla visual del panel:</strong> arriba = frente, abajo = fondo.</p>
+
+    <h2>3. Carga de datos y conexiones</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Vectores y tablas</h3>
+            <ul>
+                <li>SHP</li>
+                <li>GeoPackage</li>
+                <li>GeoJSON / JSON</li>
+                <li>GPX</li>
+                <li>KML / KMZ</li>
+                <li>DXF / DWG</li>
+                <li>CSV / XLSX / XLS / ODS / DBF</li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Raster y conexiones</h3>
+            <ul>
+                <li>GeoTIFF / TIFF</li>
+                <li>IMG</li>
+                <li>ASC</li>
+                <li>JPG / PNG / BMP / GIF</li>
+                <li>WMS</li>
+                <li>WFS</li>
+                <li>PostGIS</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>4. CRS y coordenadas</h2>
+    <ul>
+        <li>selector de CRS</li>
+        <li>CRS del proyecto</li>
+        <li>CRS de capa</li>
+        <li>asignacion de CRS para CAD</li>
+        <li>conversor de coordenadas</li>
+        <li>exportacion reproyectada de capas vectoriales</li>
+    </ul>
+    <div class="note">
+        <strong>Buena practica:</strong> definir bien el CRS del proyecto al inicio y verificarlo antes de correr topografia, hidrologia o riesgo.
+    </div>
+
+    <h2>5. Edicion vectorial y CAD</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Edicion</h3>
+            <ul>
+                <li>dibujar punto, multipunto, linea, poligono y rectangulo</li>
+                <li>mover entidades y vertices</li>
+                <li>agregar / quitar vertices</li>
+                <li>cortar geometria</li>
+                <li>crear agujero</li>
+                <li>merge y explode</li>
+                <li>undo / redo</li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>CAD</h3>
+            <ul>
+                <li>SNAP</li>
+                <li>continuar linea</li>
+                <li>circulo y circulo por 3 puntos</li>
+                <li>extender / acortar linea</li>
+                <li>paralela</li>
+                <li>perpendicular</li>
+                <li>georreferenciacion CAD</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>6. Geoprocesamiento y validacion</h2>
+    <p><strong>Operaciones vectoriales disponibles:</strong> Buffer, Dissolve, Clip, Interseccion, Merge, Diferencia, Spatial Join y Union geometrica.</p>
+    <p><strong>Topologia:</strong> validacion de geometrias invalidas, duplicados, extremos colgantes, superposiciones y huecos simples.</p>
+
+    <h2>7. DEM, relieve e hidrologia</h2>
+    <ul>
+        <li>DEM online</li>
+        <li>DEM local</li>
+        <li>recortar DEM</li>
+        <li>curvas de nivel</li>
+        <li>hillshade</li>
+        <li>pendiente</li>
+        <li>aspecto</li>
+        <li>direccion de flujo</li>
+        <li>acumulacion de flujo</li>
+        <li>escorrentias</li>
+        <li>analisis hidro</li>
+        <li>cuencas y outlets</li>
+        <li>perfil topografico</li>
+    </ul>
+    <div class="note">
+        <strong>Recomendacion:</strong> cuando el area real sea mas chica que el raster completo, usar <em>Recortar DEM</em> antes de generar drenajes, cuencas o curvas.
+    </div>
+
+    <h2>8. Inundacion, suelos y riesgo booleano</h2>
+    <h3>Inundacion preliminar</h3>
+    <ul>
+        <li>escenarios por lluvia en mm</li>
+        <li>corrida multiple</li>
+        <li>comparacion simple</li>
+        <li>exportacion a GeoTIFF</li>
+    </ul>
+    <h3>Suelos online</h3>
+    <ul>
+        <li>integracion SoilGrids</li>
+        <li>arcilla</li>
+        <li>arena</li>
+        <li>limo</li>
+        <li>carbono organico</li>
+    </ul>
+    <h3>Riesgo booleano preliminar</h3>
+    <ul>
+        <li>umbral de pendiente</li>
+        <li>umbral de suelo</li>
+        <li>logica AND / OR</li>
+        <li>mascara de pendiente</li>
+        <li>mascara de suelo</li>
+        <li>raster de riesgo preliminar</li>
+        <li>vectorizacion positiva</li>
+    </ul>
+
+    <h2>9. Glosario de iconos</h2>
+    <p>El texto siguiente explica el significado operativo de los iconos principales de la interfaz. Cuando un icono no puede reconstruirse con precision visual absoluta solo por nombre interno, se lo describe por su funcion real.</p>
+
+    <h3>9.1 Proyecto y archivo</h3>
+    <table>
+        <thead><tr><th>Herramienta</th><th>Descripcion visual breve</th><th>Funcion</th><th>Resultado</th></tr></thead>
+        <tbody>
+            <tr><td>Nuevo proyecto</td><td>icono de proyecto/hoja con signo +</td><td>crea un proyecto nuevo</td><td>accion</td></tr>
+            <tr><td>Abrir proyecto</td><td>icono de carpeta/proyecto abierto</td><td>abre un archivo <code>.catgis</code></td><td>accion</td></tr>
+            <tr><td>Agregar capa</td><td>icono de carpeta/capa con +</td><td>incorpora capas al proyecto</td><td>accion</td></tr>
+            <tr><td>Nueva capa vectorial</td><td>icono de capa con vertices y +</td><td>crea una capa vacia editable</td><td>accion</td></tr>
+            <tr><td>Guardar proyecto</td><td>disquete</td><td>guarda el proyecto</td><td>accion</td></tr>
+            <tr><td>Salvar vista del mapa</td><td>camara</td><td>exporta imagen de la vista actual</td><td>archivo</td></tr>
+        </tbody>
+    </table>
+
+    <h3>9.2 Navegacion y consulta</h3>
+    <table>
+        <thead><tr><th>Herramienta</th><th>Descripcion visual breve</th><th>Funcion</th><th>Resultado</th></tr></thead>
+        <tbody>
+            <tr><td>Zoom +</td><td>lupa con +</td><td>acerca la vista</td><td>modo/accion</td></tr>
+            <tr><td>Zoom -</td><td>lupa con -</td><td>aleja la vista</td><td>modo/accion</td></tr>
+            <tr><td>Zoom a capa</td><td>zoom sobre capa</td><td>encuadra la capa seleccionada</td><td>accion</td></tr>
+            <tr><td>Zoom a todas</td><td>zoom general</td><td>encuadra todo el proyecto</td><td>accion</td></tr>
+            <tr><td>Pan</td><td>icono de mover mapa</td><td>desplaza la vista</td><td>modo</td></tr>
+            <tr><td>Identificar</td><td>icono de consulta</td><td>lee informacion de entidades</td><td>modo/dialogo</td></tr>
+            <tr><td>Buscar por coordenadas</td><td>lupa con XY</td><td>ubica coordenadas</td><td>accion</td></tr>
+        </tbody>
+    </table>
+
+    <h3>9.3 Dibujo y edicion</h3>
+    <table>
+        <thead><tr><th>Herramienta</th><th>Descripcion visual breve</th><th>Funcion</th><th>Dependencia</th></tr></thead>
+        <tbody>
+            <tr><td>Punto</td><td>icono de punto</td><td>dibuja punto</td><td>capa editable</td></tr>
+            <tr><td>Multipunto</td><td>icono de varios puntos</td><td>dibuja multipunto</td><td>capa editable</td></tr>
+            <tr><td>Linea</td><td>icono de segmento</td><td>dibuja linea</td><td>capa editable</td></tr>
+            <tr><td>Poligono</td><td>icono de poligono</td><td>dibuja poligono</td><td>capa editable</td></tr>
+            <tr><td>Rectangulo</td><td>icono rectangular</td><td>dibuja rectangulo</td><td>capa editable</td></tr>
+            <tr><td>SNAP</td><td>boton SNAP</td><td>ajusta a vertices y segmentos</td><td>edicion precisa</td></tr>
+            <tr><td>Mover vertice</td><td>icono de vertice movil</td><td>mueve vertices</td><td>seleccion activa</td></tr>
+            <tr><td>Agregar vertice</td><td>vertice con +</td><td>inserta vertices</td><td>seleccion activa</td></tr>
+            <tr><td>Quitar vertice</td><td>vertice con -</td><td>elimina vertices</td><td>seleccion activa</td></tr>
+            <tr><td>Cortar geometria</td><td>tijera/corte</td><td>divide geometria</td><td>seleccion activa</td></tr>
+        </tbody>
+    </table>
+
+    <h3>9.4 CAD, topografia y cartografia</h3>
+    <table>
+        <thead><tr><th>Herramienta</th><th>Descripcion visual breve</th><th>Funcion</th><th>Resultado</th></tr></thead>
+        <tbody>
+            <tr><td>Paralela</td><td>icono de paralelismo</td><td>genera desplazamiento paralelo</td><td>modo CAD</td></tr>
+            <tr><td>Perpendicular</td><td>icono de perpendicularidad</td><td>genera perpendicular</td><td>modo CAD</td></tr>
+            <tr><td>Curvas de nivel</td><td>icono de linea topografica</td><td>genera curvas</td><td>capa vectorial</td></tr>
+            <tr><td>Escorrentias</td><td>icono de drenaje</td><td>genera red preliminar</td><td>capa vectorial</td></tr>
+            <tr><td>Analisis hidro</td><td>icono de analisis de relieve</td><td>genera derivados raster/vectoriales</td><td>capas nuevas</td></tr>
+            <tr><td>Inundacion</td><td>icono del bloque de inundacion</td><td>genera escenario preliminar</td><td>raster</td></tr>
+            <tr><td>Riesgo booleano</td><td>icono del bloque de riesgo</td><td>combina pendiente y suelo</td><td>raster y vector</td></tr>
+            <tr><td>Abrir CATMAP</td><td>icono de compositor</td><td>abre el layout cartografico</td><td>ventana</td></tr>
+            <tr><td>WMS</td><td>icono WMS</td><td>agrega servicio WMS</td><td>capa remota</td></tr>
+        </tbody>
+    </table>
+
+    <h2>10. Flujos recomendados</h2>
+    <ol>
+        <li>crear o abrir proyecto</li>
+        <li>verificar CRS del proyecto</li>
+        <li>cargar capas y mapas base</li>
+        <li>editar o consultar atributos si hace falta</li>
+        <li>si hay topografia, cargar o recortar DEM</li>
+        <li>generar curvas, drenajes, cuencas o perfil</li>
+        <li>si aplica, descargar suelos y correr riesgo booleano</li>
+        <li>guardar proyecto y exportar resultados</li>
+        <li>abrir CATMAP para salida final</li>
+    </ol>
+
+    <div class="small">
+        Documento integrado al HelpCenter. Para salida formal en PDF puede exportarse desde la version HTML de este mismo manual.
+    </div>
+</body>
+</html>
