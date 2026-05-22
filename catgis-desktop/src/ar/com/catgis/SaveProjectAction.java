@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 public class SaveProjectAction extends AbstractAction {
@@ -77,7 +78,7 @@ public class SaveProjectAction extends AbstractAction {
             return false;
         }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
             writer.write("CATGIS_PROJECT");
             writer.newLine();
 

@@ -50,7 +50,7 @@ public class GeoJsonLoader {
 
         FeatureJSON featureJSON = new FeatureJSON();
         SimpleFeatureType detectedType = null;
-        try (FileReader reader = new FileReader(file)) {
+        try (FileReader reader = new FileReader(file, java.nio.charset.StandardCharsets.UTF_8)) {
             detectedType = featureJSON.readFeatureCollectionSchema(reader, true);
         } catch (Exception ignored) {
         }
@@ -59,7 +59,7 @@ public class GeoJsonLoader {
         }
 
         SimpleFeatureCollection featureCollection;
-        try (FileReader reader = new FileReader(file)) {
+        try (FileReader reader = new FileReader(file, java.nio.charset.StandardCharsets.UTF_8)) {
             featureCollection = (SimpleFeatureCollection) featureJSON.readFeatureCollection(reader);
         }
 

@@ -10,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
 
 public class LoadProjectAction extends AbstractAction {
 
@@ -54,7 +55,7 @@ public class LoadProjectAction extends AbstractAction {
             return false;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             String firstLine = reader.readLine();
 
             if (firstLine == null || !firstLine.trim().equals("CATGIS_PROJECT")) {
@@ -705,21 +706,39 @@ public class LoadProjectAction extends AbstractAction {
         if (project == null || key == null) {
             return;
         }
+        String repaired = repairMojibake(value);
         switch (key) {
-            case "STUDY_NAME" -> project.setStudyName(value);
-            case "COMPANY_NAME" -> project.setCompanyName(value);
-            case "CARTOGRAPHER_NAME" -> project.setCartographerName(value);
-            case "IMAGE_SOURCE" -> project.setImageSource(value);
-            case "COORDINATE_REFERENCE" -> project.setCoordinateReference(value);
-            case "LEGEND_TITLE" -> project.setLegendTitle(value);
-            case "LEGEND_SUBTITLE" -> project.setLegendSubtitle(value);
-            case "LOGO_PATH" -> project.setLogoPath(value);
-            case "LAYOUT_IMAGE_PATH" -> project.setLayoutImagePath(value);
-            case "CATMAP_NORTH_STYLE" -> project.setCatmapNorthStyle(value);
-            case "CATMAP_SHOW_NORTH" -> project.setCatmapShowNorth(Boolean.parseBoolean(value));
+            case "STUDY_NAME" -> project.setStudyName(repaired);
+            case "COMPANY_NAME" -> project.setCompanyName(repaired);
+            case "CARTOGRAPHER_NAME" -> project.setCartographerName(repaired);
+            case "IMAGE_SOURCE" -> project.setImageSource(repaired);
+            case "COORDINATE_REFERENCE" -> project.setCoordinateReference(repaired);
+            case "LEGEND_TITLE" -> project.setLegendTitle(repaired);
+            case "LEGEND_SUBTITLE" -> project.setLegendSubtitle(repaired);
+            case "LOGO_PATH" -> project.setLogoPath(repaired);
+            case "LAYOUT_IMAGE_PATH" -> project.setLayoutImagePath(repaired);
+            case "CATMAP_NORTH_STYLE" -> project.setCatmapNorthStyle(repaired);
+            case "CATMAP_SHOW_NORTH" -> project.setCatmapShowNorth(Boolean.parseBoolean(repaired));
             default -> {
             }
         }
+    }
+
+    static String repairMojibake(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        if (value.contains("\u00C3\u00B3") || value.contains("\u00C3\u00A1")
+                || value.contains("\u00C3\u00A9") || value.contains("\u00C3\u00B1")
+                || value.contains("\u00C3\u00BA") || value.contains("\u00C3\u00AD")
+                || value.contains("\u00C3\u00B1") || value.contains("\u00C3\u00BC")
+                || value.contains("\u00C2\u00A1") || value.contains("\u00C2\u00BF")) {
+            try {
+                return new String(value.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1),
+                        java.nio.charset.StandardCharsets.UTF_8);
+            } catch (Exception ignored) { }
+        }
+        return value;
     }
 
     private static Color parseColor(String text) {
