@@ -421,10 +421,10 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void applyInitialDocumentDefaults() {
         if (templateCombo.getSelectedItem() == null) {
-            templateCombo.setSelectedItem(LayoutTemplate.TECHNICAL_RIGHT);
+            templateCombo.setSelectedItem(LayoutTemplate.CLEAN_CENTERED);
         }
         if (pageSizeCombo.getSelectedItem() == null) {
-            pageSizeCombo.setSelectedItem(PageSizePreset.A3);
+            pageSizeCombo.setSelectedItem(PageSizePreset.A4);
         }
         if (orientationCombo.getSelectedItem() != PageOrientation.LANDSCAPE) {
             orientationCombo.setSelectedItem(PageOrientation.LANDSCAPE);
@@ -5299,7 +5299,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 }
                 if (showScale && showMapContent) {
                     int scaleMaxW = settings.template() == LayoutTemplate.CLEAN_CENTERED
-                            ? Math.min(200, mapFrame.frameBounds().width / 4)
+                            ? Math.min(160, mapFrame.frameBounds().width / 5)
                             : Math.min(240, mapFrame.frameBounds().width / 3);
                     Rectangle scaleBounds = applyElementAdjustment(new Rectangle(
                             mapFrame.frameBounds().x + 8,
