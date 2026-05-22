@@ -15,7 +15,7 @@ public class CsvTableReader {
 
         TablePointData data = new TablePointData();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader reader = new BufferedReader(new java.io.FileReader(file, java.nio.charset.StandardCharsets.UTF_8))) {
             String headerLine = reader.readLine();
             if (headerLine == null || headerLine.isBlank()) {
                 throw new RuntimeException("El CSV está vacío.");
