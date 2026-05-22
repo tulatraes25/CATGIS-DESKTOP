@@ -93,6 +93,10 @@ public class MapLayoutComposerDialog extends JFrame {
     private static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final int CATMAP_SPLASH_MILLIS = 1100;
     private static final int PREVIEW_RENDER_DPI = 110;
+    private static final double CLEAN_HEADER_HEIGHT_RATIO = 1d / 14d;
+    private static final double CLEAN_FOOTER_HEIGHT_RATIO = 1d / 9d;
+    private static final int CLEAN_HEADER_MIN_HEIGHT = 72;
+    private static final int CLEAN_FOOTER_MIN_HEIGHT = 120;
     private static MapLayoutComposerDialog openInstance;
 
     private final JTextField titleField;
@@ -5212,8 +5216,8 @@ public class MapLayoutComposerDialog extends JFrame {
                 int headerHeight = Math.max(112, height / 8);
                 int footerHeight = Math.max(150, height / 6);
                 if (settings.template() == LayoutTemplate.CLEAN_CENTERED) {
-                    headerHeight = Math.max(96, height / 10);
-                    footerHeight = Math.max(160, height / 5);
+                    headerHeight = Math.max(CLEAN_HEADER_MIN_HEIGHT, (int) Math.round(height * CLEAN_HEADER_HEIGHT_RATIO));
+                    footerHeight = Math.max(CLEAN_FOOTER_MIN_HEIGHT, (int) Math.round(height * CLEAN_FOOTER_HEIGHT_RATIO));
                 } else if (settings.template() == LayoutTemplate.STRONG_CARTOUCHE) {
                     footerHeight = Math.max(180, height / 5);
                 } else if (settings.template() == LayoutTemplate.BOTTOM_REFERENCE) {
@@ -5271,10 +5275,13 @@ public class MapLayoutComposerDialog extends JFrame {
                     elementBounds.put(LayoutElementType.NORTH, northVisualBounds);
                 }
                 if (showScale && showMapContent) {
+                    int scaleMaxW = settings.template() == LayoutTemplate.CLEAN_CENTERED
+                            ? Math.min(200, mapFrame.frameBounds().width / 4)
+                            : Math.min(240, mapFrame.frameBounds().width / 3);
                     Rectangle scaleBounds = applyElementAdjustment(new Rectangle(
                             mapFrame.frameBounds().x + 8,
                             mapFrame.frameBounds().y + mapFrame.frameBounds().height - 74,
-                            Math.min(240, mapFrame.frameBounds().width / 3),
+                            scaleMaxW,
                             54
                     ), interactionState, LayoutElementType.SCALE);
                     drawScaleBar(g2, settings, snapshot, mapFrame, scaleBounds.x + 14, scaleBounds.y + 18, renderDpi);
@@ -5332,22 +5339,30 @@ public class MapLayoutComposerDialog extends JFrame {
             return switch (settings.legendPlacement()) {
                 case BOTTOM_PANEL -> new Rectangle(margin, bottomY + gap, width - (margin * 2), legendHeight);
                 case MAP_TOP_RIGHT -> new Rectangle(
-                        mapFrame.frameBounds().x + mapFrame.frameBounds().width - Math.max(220, mapFrame.frameBounds().width / 3),
+                        mapFrame.frameBounds().x + mapFrame.frameBounds().width - Math.max(180, mapFrame.frameBounds().width / 4),
                         mapFrame.frameBounds().y + 18,
-                        Math.max(220, mapFrame.frameBounds().width / 3),
-                        Math.max(150, mapFrame.frameBounds().height / 3)
+                        Math.max(180, mapFrame.frameBounds().width / 4),
+                        Math.max(120, mapFrame.frameBounds().height / 4)
                 );
-                case MAP_BOTTOM_RIGHT -> new Rectangle(
-                        mapFrame.frameBounds().x + mapFrame.frameBounds().width - Math.max(220, mapFrame.frameBounds().width / 3),
-                        mapFrame.frameBounds().y + mapFrame.frameBounds().height - Math.max(150, mapFrame.frameBounds().height / 3) - 18,
-                        Math.max(220, mapFrame.frameBounds().width / 3),
-                        Math.max(150, mapFrame.frameBounds().height / 3)
-                );
+                case MAP_BOTTOM_RIGHT -> {
+                    int maxW = Math.max(180, mapFrame.frameBounds().width / 4);
+                    int maxH = Math.max(120, mapFrame.frameBounds().height / 4);
+                    if (settings.template() == LayoutTemplate.CLEAN_CENTERED) {
+                        maxW = Math.min(maxW, 260);
+                        maxH = Math.min(maxH, 200);
+                    }
+                    yield new Rectangle(
+                            mapFrame.frameBounds().x + mapFrame.frameBounds().width - maxW - 12,
+                            mapFrame.frameBounds().y + mapFrame.frameBounds().height - maxH - 12,
+                            maxW,
+                            maxH
+                    );
+                }
                 case MAP_BOTTOM_LEFT -> new Rectangle(
                         mapFrame.frameBounds().x + 18,
-                        mapFrame.frameBounds().y + mapFrame.frameBounds().height - Math.max(150, mapFrame.frameBounds().height / 3) - 18,
-                        Math.max(220, mapFrame.frameBounds().width / 3),
-                        Math.max(150, mapFrame.frameBounds().height / 3)
+                        mapFrame.frameBounds().y + mapFrame.frameBounds().height - Math.max(120, mapFrame.frameBounds().height / 4) - 18,
+                        Math.max(180, mapFrame.frameBounds().width / 4),
+                        Math.max(120, mapFrame.frameBounds().height / 4)
                 );
                 default -> new Rectangle(
                         mapFrame.frameBounds().x + mapFrame.frameBounds().width + gap,
@@ -5428,21 +5443,31 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         private static void drawHeader(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, Rectangle bounds) {
-            int titleY = bounds.y + Math.max(30, bounds.height / 4);
+            boolean cleanTemplate = settings.template() == LayoutTemplate.CLEAN_CENTERED;
+            int titleFontSize = cleanTemplate ? Math.max(22, bounds.width / 48) : Math.max(28, bounds.width / 34);
+            int subtitleFontSize = cleanTemplate ? Math.max(12, bounds.width / 110) : Math.max(15, bounds.width / 90);
+            int metaFontSize = cleanTemplate ? Math.max(11, bounds.width / 120) : Math.max(13, bounds.width / 100);
+            int titleY = bounds.y + Math.max(22, bounds.height / 5);
+            int rowGap = cleanTemplate ? 22 : 30;
+
             g2.setColor(new Color(27, 38, 56));
-            g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(28, bounds.width / 34)));
+            g2.setFont(new Font("SansSerif", Font.BOLD, titleFontSize));
             String title = !settings.title().isBlank() ? settings.title() : snapshot.projectName();
+            java.awt.FontMetrics titleMetrics = g2.getFontMetrics();
+            if (cleanTemplate && titleMetrics.stringWidth(title) > bounds.width - 10) {
+                title = clipText(title, (bounds.width - 10) / Math.max(1, (int) Math.round(titleMetrics.stringWidth("W"))));
+            }
             g2.drawString(title, bounds.x, titleY);
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(15, bounds.width / 90)));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, subtitleFontSize));
             g2.setColor(new Color(91, 103, 120));
             String subtitle = !settings.subtitle().isBlank() ? settings.subtitle() : "Salida cartografica del proyecto actual";
-            g2.drawString(subtitle, bounds.x, titleY + 30);
+            g2.drawString(subtitle, bounds.x, titleY + rowGap);
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(13, bounds.width / 100)));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, metaFontSize));
             g2.setColor(new Color(105, 114, 126));
             String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
-            g2.drawString(meta, bounds.x, titleY + 56);
+            g2.drawString(meta, bounds.x, titleY + rowGap * 2);
 
         }
 
@@ -5769,39 +5794,54 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         private static void drawLegend(Graphics2D g2, LayoutSettings settings, List<Layer> layers, int x, int y, int width, int height) {
+            List<LegendItem> items = buildLegendItems(layers);
+
+            int titleH = 28;
+            int subH = 20;
+            int itemH = 30;
+            int padBottom = 14;
+            int neededHeight = titleH + subH + (items.size() * itemH) + padBottom;
+            if (neededHeight < height) {
+                int diff = height - neededHeight;
+                y += diff / 2;
+                height = neededHeight;
+            }
+            if (items.isEmpty()) {
+                height = Math.max(60, titleH + subH + padBottom);
+            }
+
             g2.setColor(new Color(250, 252, 255));
-            g2.fillRoundRect(x, y, width, height, 18, 18);
+            g2.fillRoundRect(x, y, width, height, 14, 14);
             g2.setColor(new Color(210, 216, 224));
-            g2.drawRoundRect(x, y, width, height, 18, 18);
+            g2.drawRoundRect(x, y, width, height, 14, 14);
 
             g2.setColor(new Color(26, 36, 52));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 16));
+            g2.setFont(new Font("SansSerif", Font.BOLD, 14));
             String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Leyenda";
-            g2.drawString(legendTitle, x + 18, y + 28);
+            g2.drawString(legendTitle, x + 14, y + 22);
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 12));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
             g2.setColor(new Color(103, 114, 128));
             String legendSubtitle = !settings.legendSubtitle().isBlank() ? settings.legendSubtitle() : "Capas visibles del mapa";
-            g2.drawString(legendSubtitle, x + 18, y + 46);
+            g2.drawString(legendSubtitle, x + 14, y + 38);
 
-            List<LegendItem> items = buildLegendItems(layers);
             if (items.isEmpty()) {
-                g2.drawString("No hay capas visibles.", x + 18, y + 68);
+                g2.drawString("No hay capas visibles.", x + 14, y + 56);
                 return;
             }
 
-            int itemY = y + 76;
+            int itemY = y + 62;
             int count = 0;
             for (LegendItem item : items) {
-                if (itemY > y + height - 46) {
+                if (itemY + itemH > y + height - 8) {
                     int remaining = Math.max(0, items.size() - count);
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+                    g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
                     g2.setColor(new Color(108, 116, 128));
-                    g2.drawString("+" + remaining + " items mas...", x + 18, y + height - 18);
+                    g2.drawString("+" + remaining + " mas", x + 14, y + height - 8);
                     break;
                 }
-                drawLegendItem(g2, item, x + 18, itemY, width - 36);
-                itemY += 30;
+                drawLegendItem(g2, item, x + 14, itemY, width - 28);
+                itemY += itemH;
                 count++;
             }
         }
@@ -5956,9 +5996,54 @@ public class MapLayoutComposerDialog extends JFrame {
             int top = height - margin - footerHeight;
             boolean showCartouche = isRenderableElementVisible(interactionState, LayoutElementType.CARTOUCHE);
             boolean showProfileImage = layoutImage != null && isRenderableElementVisible(interactionState, LayoutElementType.PROFILE_IMAGE);
+
+            boolean cleanTemplate = settings.template() == LayoutTemplate.CLEAN_CENTERED;
+
             if (showCartouche || showProfileImage) {
-                g2.setColor(new Color(222, 227, 234));
+                g2.setColor(new Color(190, 198, 210));
                 g2.drawLine(margin, top, width - margin, top);
+            }
+
+            if (cleanTemplate && showCartouche) {
+                java.awt.FontMetrics baseMetrics = g2.getFontMetrics(g2.getFont().deriveFont(Font.PLAIN, Math.max(11, width / 130)));
+                int lineHeight = baseMetrics.getHeight() + 2;
+                int colW = (width - (margin * 2)) / 3;
+
+                g2.setColor(new Color(27, 38, 56));
+                g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, width / 120)));
+                g2.drawString("Datos cartograficos", margin, top + 18);
+
+                g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(11, width / 130)));
+                int rowY = top + 20 + lineHeight;
+
+                int col1x = margin;
+                int col2x = margin + colW;
+                int col3x = margin + colW * 2;
+
+                String projName = blankOr(settings.cartoucheProjectName(), snapshot.projectName());
+                drawCompactFooterRow(g2, "Estudio", blankOr(settings.studyName(), projName), col1x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "Proyecto", projName, col2x, rowY, colW - 6);
+                String genText = "Fecha: " + FOOTER_DATE.format(LocalDateTime.now());
+                drawCompactFooterRow(g2, genText, "", col3x, rowY, colW - 6);
+                rowY += lineHeight + 2;
+
+                drawCompactFooterRow(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), col1x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), col2x, rowY, colW - 6);
+                double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
+                String scaleText = settings.showScale()
+                        ? "Escala: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
+                        : "Escala: —";
+                drawCompactFooterRow(g2, scaleText, "", col3x, rowY, colW - 6);
+                rowY += lineHeight + 2;
+
+                drawCompactFooterRow(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), col1x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "CRS", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), col2x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "Generado en CATGIS Desktop", "", col3x, rowY, colW - 6);
+
+                return new FooterRenderResult(
+                        new Rectangle(margin, top + 4, width - (margin * 2), footerHeight - 12),
+                        null
+                );
             }
 
             int baseCartoucheWidth = switch (settings.template()) {
@@ -6009,6 +6094,22 @@ public class MapLayoutComposerDialog extends JFrame {
                 drawLayoutImage(g2, profileImageBounds, layoutImage);
             }
             return new FooterRenderResult(cartoucheBounds, profileImageBounds);
+        }
+
+        private static void drawCompactFooterRow(Graphics2D g2, String label, String value, int x, int y, int maxWidth) {
+            g2.setColor(new Color(58, 68, 84));
+            g2.setFont(g2.getFont().deriveFont(Font.BOLD));
+            String line;
+            if (value != null && !value.isBlank()) {
+                line = label + ": " + clipText(value, Math.max(8, maxWidth / 8));
+            } else {
+                line = label;
+            }
+            java.awt.FontMetrics fm = g2.getFontMetrics();
+            if (fm.stringWidth(line) > maxWidth) {
+                line = clipText(line, Math.max(4, (int) Math.round(maxWidth / (fm.stringWidth("W") + 1))));
+            }
+            g2.drawString(line, x, y + fm.getAscent());
         }
 
         private static void drawCartouche(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, Rectangle bounds) {
