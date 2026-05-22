@@ -187,23 +187,20 @@ public class CRSDefinitions {
             return CRS.decode(DEFAULT_CRS);
         }
         try {
-            if (longitudeFirst) {
-                return CRS.decode(normalized, true);
-            }
             return CRS.decode(normalized);
         } catch (Exception first) {
             try {
                 return CRS.decode(normalized, longitudeFirst);
             } catch (Exception second) {
+                String epsgCode = normalized.toUpperCase(Locale.ROOT).startsWith("EPSG:")
+                        ? normalized.substring(5).trim() : normalized;
                 try {
-                    String epsgCode = normalized.toUpperCase(Locale.ROOT).startsWith("EPSG:")
-                            ? normalized.substring(5).trim() : normalized;
                     return org.geotools.referencing.ReferencingFactoryFinder
                             .getCRSAuthorityFactory("EPSG", null)
                             .createCoordinateReferenceSystem(epsgCode);
                 } catch (Exception third) {
                     throw new Exception("No se pudo decodificar el CRS: " + normalized
-                            + ". Verifique que el codigo EPSG exista o pruebe seleccionarlo desde el catalogo mundial.", first);
+                            + ". Verifique que el codigo EPSG exista o pruebe desde el catalogo mundial.", first);
                 }
             }
         }
