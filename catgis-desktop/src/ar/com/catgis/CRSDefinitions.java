@@ -8,7 +8,6 @@ import org.geotools.api.referencing.crs.ProjectedCRS;
 import org.geotools.api.referencing.crs.SingleCRS;
 import org.geotools.api.referencing.datum.Datum;
 import org.geotools.referencing.CRS;
-import org.geotools.referencing.ReferencingFactoryFinder;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 
 import java.io.InputStream;
@@ -188,25 +187,24 @@ public class CRSDefinitions {
 
     public static CoordinateReferenceSystem decode(String code, boolean longitudeFirst) throws Exception {
         String normalized = normalizeCode(code);
-        if (normalized.isBlank() || normalized.equalsIgnoreCase(DEFAULT_CRS)) {
-            return CRS.decode(DEFAULT_CRS);
+        if (normalized.isBlank()) {
+            return org.geotools.referencing.CRS.decode("EPSG:4326");
         }
+
+        String epsgCode = normalized.toUpperCase(Locale.ROOT).startsWith("EPSG:")
+                ? normalized.substring(5).trim() : normalized;
+
         try {
-            return CRS.decode(normalized);
-        } catch (Exception first) {
+            return org.geotools.referencing.CRS.getAuthorityFactory(true)
+                    .createCoordinateReferenceSystem(epsgCode);
+        } catch (Throwable t) {
             try {
-                return CRS.decode(normalized, longitudeFirst);
-            } catch (Exception second) {
-                String epsgCode = normalized.toUpperCase(Locale.ROOT).startsWith("EPSG:")
-                        ? normalized.substring(5).trim() : normalized;
-                try {
-                    return org.geotools.referencing.ReferencingFactoryFinder
-                            .getCRSAuthorityFactory("EPSG", null)
-                            .createCoordinateReferenceSystem(epsgCode);
-                } catch (Exception third) {
-                    throw new Exception("No se pudo decodificar el CRS: " + normalized
-                            + ". Verifique que el codigo EPSG exista o pruebe desde el catalogo mundial.", first);
-                }
+                return org.geotools.referencing.CRS.decode(normalized);
+            } catch (Throwable t2) {
+                throw new Exception(
+                        "No se pudo validar el CRS " + normalized
+                        + ". Verifique el codigo o seleccione del catalogo mundial.",
+                        t);
             }
         }
     }
