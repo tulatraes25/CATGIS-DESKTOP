@@ -5448,7 +5448,7 @@ public class MapLayoutComposerDialog extends JFrame {
             int subtitleFontSize = cleanTemplate ? Math.max(12, bounds.width / 110) : Math.max(15, bounds.width / 90);
             int metaFontSize = cleanTemplate ? Math.max(11, bounds.width / 120) : Math.max(13, bounds.width / 100);
             int titleY = bounds.y + Math.max(22, bounds.height / 5);
-            int rowGap = cleanTemplate ? 22 : 30;
+            int rowGap = cleanTemplate ? 24 : 30;
 
             g2.setColor(new Color(27, 38, 56));
             g2.setFont(new Font("SansSerif", Font.BOLD, titleFontSize));
@@ -5459,15 +5459,22 @@ public class MapLayoutComposerDialog extends JFrame {
             }
             g2.drawString(title, bounds.x, titleY);
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, subtitleFontSize));
-            g2.setColor(new Color(91, 103, 120));
-            String subtitle = !settings.subtitle().isBlank() ? settings.subtitle() : "Salida cartografica del proyecto actual";
-            g2.drawString(subtitle, bounds.x, titleY + rowGap);
+            if (cleanTemplate) {
+                g2.setFont(new Font("SansSerif", Font.PLAIN, metaFontSize));
+                g2.setColor(new Color(105, 114, 126));
+                String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
+                g2.drawString(meta, bounds.x, titleY + rowGap);
+            } else {
+                g2.setFont(new Font("SansSerif", Font.PLAIN, subtitleFontSize));
+                g2.setColor(new Color(91, 103, 120));
+                String subtitle = !settings.subtitle().isBlank() ? settings.subtitle() : "Salida cartografica del proyecto actual";
+                g2.drawString(subtitle, bounds.x, titleY + rowGap);
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, metaFontSize));
-            g2.setColor(new Color(105, 114, 126));
-            String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
-            g2.drawString(meta, bounds.x, titleY + rowGap * 2);
+                g2.setFont(new Font("SansSerif", Font.PLAIN, metaFontSize));
+                g2.setColor(new Color(105, 114, 126));
+                String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
+                g2.drawString(meta, bounds.x, titleY + rowGap * 2);
+            }
 
         }
 
@@ -5489,13 +5496,13 @@ public class MapLayoutComposerDialog extends JFrame {
             int y = requestedBounds.y;
             int w = requestedBounds.width;
             int h = requestedBounds.height;
-            g2.setColor(new Color(249, 250, 252));
-            g2.fillRoundRect(x, y, w, h, 18, 18);
-            g2.setColor(new Color(195, 204, 216));
-            g2.setStroke(new BasicStroke(1.6f));
-            g2.drawRoundRect(x, y, w, h, 18, 18);
+            g2.setColor(new Color(255, 255, 255));
+            g2.fillRoundRect(x, y, w, h, 12, 12);
+            g2.setColor(new Color(180, 190, 204));
+            g2.setStroke(new BasicStroke(0.7f));
+            g2.drawRoundRect(x, y, w, h, 12, 12);
 
-            int innerPadding = Math.max(16, Math.min(w, h) / 40);
+            int innerPadding = Math.max(12, Math.min(w, h) / 50);
             int contentX = x + innerPadding;
             int contentY = y + innerPadding;
             int contentW = w - (innerPadding * 2);
@@ -6000,8 +6007,10 @@ public class MapLayoutComposerDialog extends JFrame {
             boolean cleanTemplate = settings.template() == LayoutTemplate.CLEAN_CENTERED;
 
             if (showCartouche || showProfileImage) {
-                g2.setColor(new Color(190, 198, 210));
+                g2.setColor(new Color(200, 208, 218));
+                g2.setStroke(new BasicStroke(0.5f));
                 g2.drawLine(margin, top, width - margin, top);
+                g2.setStroke(new BasicStroke(1.0f));
             }
 
             if (cleanTemplate && showCartouche) {
