@@ -5314,7 +5314,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 if (showLegend) {
                     Rectangle legendBounds = resolveLegendBounds(settings, width, margin, gap, legendWidth, legendHeight, mapFrame, mapFrame.frameBounds().y + mapFrame.frameBounds().height);
                     legendBounds = applyElementAdjustment(legendBounds, interactionState, LayoutElementType.LEGEND);
-                    drawLegend(g2, settings, snapshot.visibleLayers(), legendBounds.x, legendBounds.y, legendBounds.width, legendBounds.height);
+                    drawLegend(g2, settings, snapshot.visibleLayers(), legendBounds.x, legendBounds.y, legendBounds.width, legendBounds.height, interactionState);
                     elementBounds.put(LayoutElementType.LEGEND, legendBounds);
                 }
 
@@ -5829,14 +5829,17 @@ public class MapLayoutComposerDialog extends JFrame {
             return 120d;
         }
 
-        private static void drawLegend(Graphics2D g2, LayoutSettings settings, List<Layer> layers, int x, int y, int width, int height) {
+        private static void drawLegend(Graphics2D g2, LayoutSettings settings, List<Layer> layers, int x, int y, int width, int height, LayoutInteractionState interactionState) {
             List<LegendItem> items = buildLegendItems(layers);
+
+            boolean userResized = interactionState != null && !interactionState.getSizeAdjustment(LayoutElementType.LEGEND).equals(new java.awt.Dimension(0, 0));
 
             int headerH = 62;
             int itemH = 26;
             int padBottom = 18;
             int neededHeight = headerH + (items.size() * itemH) + padBottom;
-            if (neededHeight < height) {
+
+            if (!userResized && neededHeight < height) {
                 height = Math.max(neededHeight, height / 2);
                 y += (Math.abs(height - neededHeight)) / 2;
             }
@@ -5849,33 +5852,46 @@ public class MapLayoutComposerDialog extends JFrame {
             g2.setColor(new Color(210, 216, 224));
             g2.drawRoundRect(x, y, width, height, 14, 14);
 
-            g2.setColor(new Color(26, 36, 52));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-            String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Referencias";
-            g2.drawString(legendTitle, x + 14, y + 20);
+            int fontSizeTitle = userResized ? Math.max(11, Math.min(18, height / 10)) : 13;
+            int fontSizeSub = userResized ? Math.max(9, Math.min(14, height / 14)) : 11;
+            int padX = userResized ? Math.max(8, width / 30) : 14;
+            int titleYOff = userResized ? Math.max(14, height / 10) : 20;
+            int subYOff = userResized ? Math.max(28, height / 7) : 36;
+            int itemsStartY = userResized ? Math.max(42, height / 3) : 56;
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            if (userResized) {
+                headerH = itemsStartY;
+                itemH = Math.max(20, Math.min(34, (height - headerH - padBottom) / Math.max(1, items.size())));
+                padBottom = Math.max(8, height / 20);
+            }
+
+            g2.setColor(new Color(26, 36, 52));
+            g2.setFont(new Font("SansSerif", Font.BOLD, fontSizeTitle));
+            String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Referencias";
+            g2.drawString(legendTitle, x + padX, y + titleYOff);
+
+            g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
             g2.setColor(new Color(103, 114, 128));
             String legendSubtitle = !settings.legendSubtitle().isBlank() ? settings.legendSubtitle() : "Capas del mapa";
-            g2.drawString(legendSubtitle, x + 14, y + 36);
+            g2.drawString(legendSubtitle, x + padX, y + subYOff);
 
             if (items.isEmpty()) {
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-                g2.drawString("No hay capas para mostrar.", x + 14, y + 56);
+                g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
+                g2.drawString("No hay capas para mostrar.", x + padX, y + itemsStartY);
                 return;
             }
 
-            int itemY = y + 56;
+            int itemY = y + itemsStartY;
             int count = 0;
             for (LegendItem item : items) {
                 if (itemY + itemH > y + height - padBottom) {
                     int remaining = Math.max(0, items.size() - count);
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
+                    g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(9, fontSizeSub - 1)));
                     g2.setColor(new Color(108, 116, 128));
-                    g2.drawString("+" + remaining + " mas", x + 14, y + height - 6);
+                    g2.drawString("+" + remaining + " mas", x + padX, y + height - 6);
                     break;
                 }
-                drawLegendItem(g2, item, x + 14, itemY, width - 28);
+                drawLegendItem(g2, item, x + padX, itemY, width - (padX * 2));
                 itemY += itemH;
                 count++;
             }
