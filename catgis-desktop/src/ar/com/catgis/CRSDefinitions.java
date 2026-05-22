@@ -173,6 +173,11 @@ public class CRSDefinitions {
             return DEFAULT_CRS;
         }
         String normalized = normalizeCode(code);
+        for (CrsCatalogEntry entry : buildFeaturedEntries()) {
+            if (normalized.equalsIgnoreCase(entry.code())) {
+                return entry.label();
+            }
+        }
         for (CrsCatalogEntry entry : getCatalogEntries()) {
             if (normalized.equalsIgnoreCase(entry.code())) {
                 return entry.label();
@@ -477,43 +482,9 @@ public class CRSDefinitions {
             }
 
             if (merged.size() < MIN_WORLD_CATALOG_SIZE) {
-                try {
-                    Collection<String> supportedCodes = CRS.getSupportedCodes("EPSG");
-                    var factory = CRS.getAuthorityFactory(true);
-                    TreeMap<String, CrsCatalogEntry> authorityEntries = new TreeMap<>();
-                    for (String rawCode : supportedCodes) {
-                        String code = normalizeCode(rawCode);
-                        if (code.isBlank() || merged.containsKey(code)) {
-                            continue;
-                        }
-                        try {
-                            String description = factory.getDescriptionText(code).toString();
-                            if (description == null || description.isBlank()) {
-                                continue;
-                            }
-                            authorityEntries.put(
-                                    code + "|" + description,
-                                    CrsCatalogEntry.catalog(
-                                            code,
-                                            code + " - " + description,
-                                            description,
-                                            buildSearchText(code, description),
-                                            "",
-                                            "",
-                                            "",
-                                            0d,
-                                            0d,
-                                            0d,
-                                            0d,
-                                            false
-                                    )
-                            );
-                        } catch (Exception ignored) { CatgisLogger.warn("Error al interpretar entrada de catalogo CRS", ignored); }
-                    }
-                    for (CrsCatalogEntry entry : authorityEntries.values()) {
-                        merged.put(entry.code(), entry);
-                    }
-                } catch (Exception ignored) { CatgisLogger.warn("Error al enriquecer catalogo con autoridad EPSG", ignored); }
+                CatgisLogger.warn("Catalogo mundial reducido (" + merged.size()
+                        + " entradas). Se usaran las entradas destacadas mientras se completa la carga.",
+                        null);
             }
 
             List<CrsCatalogEntry> result = new ArrayList<>(merged.values());
