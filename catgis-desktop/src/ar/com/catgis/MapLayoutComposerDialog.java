@@ -3561,7 +3561,7 @@ public class MapLayoutComposerDialog extends JFrame {
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    private enum LayoutTemplate {
+    enum LayoutTemplate {
         TECHNICAL_RIGHT("Tecnica - leyenda derecha", LegendPlacement.RIGHT_PANEL),
         BOTTOM_REFERENCE("Referencia inferior", LegendPlacement.BOTTOM_PANEL),
         CLEAN_CENTERED("Limpia centrada", LegendPlacement.MAP_BOTTOM_RIGHT),
@@ -3585,7 +3585,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
-    private enum PageSizePreset {
+    enum PageSizePreset {
         A3("A3", 297d, 420d),
         A4("A4", 210d, 297d),
         A5("A5", 148d, 210d),
@@ -3721,7 +3721,7 @@ public class MapLayoutComposerDialog extends JFrame {
         SOUTH_WEST
     }
 
-    private enum PageOrientation {
+    enum PageOrientation {
         LANDSCAPE("Horizontal"),
         PORTRAIT("Vertical");
 
@@ -3907,7 +3907,7 @@ public class MapLayoutComposerDialog extends JFrame {
     private record FooterRenderResult(Rectangle cartoucheBounds, Rectangle profileImageBounds) {
     }
 
-    private static class LayoutInteractionState {
+    static class LayoutInteractionState {
         private LayoutTemplate template = LayoutTemplate.TECHNICAL_RIGHT;
         private PreviewScaleMode previewScaleMode = PreviewScaleMode.FIT_PAGE;
         private double customPreviewZoom = 1d;
@@ -5207,7 +5207,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
-    private static class LayoutRenderer {
+    static class LayoutRenderer {
 
         private LayoutRenderer() {
         }
