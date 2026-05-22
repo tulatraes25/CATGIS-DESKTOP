@@ -5834,17 +5834,40 @@ public class MapLayoutComposerDialog extends JFrame {
 
             boolean userResized = interactionState != null && !interactionState.getSizeAdjustment(LayoutElementType.LEGEND).equals(new java.awt.Dimension(0, 0));
 
-            int headerH = 62;
-            int itemH = 26;
-            int padBottom = 18;
-            int neededHeight = headerH + (items.size() * itemH) + padBottom;
+            int fontSizeTitle;
+            int fontSizeSub;
+            int fontSizeItem;
+            int itemH;
+            int headerH;
+            int padBottom;
+            int padX;
 
-            if (!userResized && neededHeight < height) {
-                height = Math.max(neededHeight, height / 2);
-                y += (Math.abs(height - neededHeight)) / 2;
+            if (userResized) {
+                fontSizeTitle = Math.max(12, Math.min(22, height / 8));
+                fontSizeSub = Math.max(10, Math.min(16, height / 12));
+                fontSizeItem = Math.max(10, Math.min(16, height / 12));
+                padX = Math.max(10, Math.min(20, width / 18));
+                headerH = Math.max(40, height / 4);
+                itemH = Math.max(22, Math.min(40, (height - headerH - 14) / Math.max(1, items.size())));
+                padBottom = Math.max(10, height / 16);
+            } else {
+                fontSizeTitle = 14;
+                fontSizeSub = 12;
+                fontSizeItem = 12;
+                padX = 14;
+                headerH = 56;
+                itemH = 28;
+                padBottom = 16;
+                int needed = headerH + (items.size() * itemH) + padBottom;
+                if (needed < height) {
+                    int diff = height - needed;
+                    y += diff / 2;
+                    height = needed;
+                }
             }
+
             if (items.isEmpty()) {
-                height = Math.max(56, headerH);
+                height = Math.max(56, headerH + padBottom);
             }
 
             g2.setColor(new Color(250, 252, 255));
@@ -5852,49 +5875,79 @@ public class MapLayoutComposerDialog extends JFrame {
             g2.setColor(new Color(210, 216, 224));
             g2.drawRoundRect(x, y, width, height, 14, 14);
 
-            int fontSizeTitle = userResized ? Math.max(11, Math.min(18, height / 10)) : 13;
-            int fontSizeSub = userResized ? Math.max(9, Math.min(14, height / 14)) : 11;
-            int padX = userResized ? Math.max(8, width / 30) : 14;
-            int titleYOff = userResized ? Math.max(14, height / 10) : 20;
-            int subYOff = userResized ? Math.max(28, height / 7) : 36;
-            int itemsStartY = userResized ? Math.max(42, height / 3) : 56;
-
-            if (userResized) {
-                headerH = itemsStartY;
-                itemH = Math.max(20, Math.min(34, (height - headerH - padBottom) / Math.max(1, items.size())));
-                padBottom = Math.max(8, height / 20);
-            }
-
             g2.setColor(new Color(26, 36, 52));
             g2.setFont(new Font("SansSerif", Font.BOLD, fontSizeTitle));
             String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Referencias";
-            g2.drawString(legendTitle, x + padX, y + titleYOff);
+            g2.drawString(legendTitle, x + padX, y + fontSizeTitle + 6);
 
             g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
             g2.setColor(new Color(103, 114, 128));
             String legendSubtitle = !settings.legendSubtitle().isBlank() ? settings.legendSubtitle() : "Capas del mapa";
-            g2.drawString(legendSubtitle, x + padX, y + subYOff);
+            g2.drawString(legendSubtitle, x + padX, y + fontSizeTitle + fontSizeSub + 12);
 
             if (items.isEmpty()) {
-                g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
-                g2.drawString("No hay capas para mostrar.", x + padX, y + itemsStartY);
+                g2.drawString("Sin capas para mostrar.", x + padX, y + headerH);
                 return;
             }
 
-            int itemY = y + itemsStartY;
+            int itemY = y + headerH;
             int count = 0;
             for (LegendItem item : items) {
                 if (itemY + itemH > y + height - padBottom) {
                     int remaining = Math.max(0, items.size() - count);
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(9, fontSizeSub - 1)));
+                    g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
                     g2.setColor(new Color(108, 116, 128));
                     g2.drawString("+" + remaining + " mas", x + padX, y + height - 6);
                     break;
                 }
-                drawLegendItem(g2, item, x + padX, itemY, width - (padX * 2));
+                drawLegendItemScaled(g2, item, x + padX, itemY, width - (padX * 2), fontSizeItem, userResized);
                 itemY += itemH;
                 count++;
             }
+        }
+
+        private static void drawLegendItemScaled(Graphics2D g2, LegendItem item, int x, int y, int availableWidth, int fontSize, boolean scaled) {
+            Layer layer = item.layer();
+            ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+            String geometryFamily = VectorLayerUtils.resolveGeometryFamily(data);
+
+            int symSize = scaled ? Math.max(12, fontSize + 4) : 20;
+
+            if (layer instanceof RasterLayer || layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) {
+                g2.setPaint(new GradientPaint(x, y, new Color(96, 165, 250), x + symSize, y + symSize, new Color(59, 130, 246)));
+                g2.fillRect(x, y - symSize/2, symSize, symSize/2 + 4);
+                g2.setColor(new Color(30, 41, 59));
+                g2.drawRect(x, y - symSize/2, symSize, symSize/2 + 4);
+            } else if ("POINT".equalsIgnoreCase(item.geometryType())) {
+                drawPointSymbolPreview(g2, layer, x, y, item.categoryRule());
+            } else if ("LINE".equalsIgnoreCase(item.geometryType())) {
+                drawLineSymbolPreview(g2, layer, x, y, item.categoryRule());
+            } else if ("POLYGON".equalsIgnoreCase(item.geometryType())) {
+                drawPolygonSymbolPreview(g2, layer, x, y, item.categoryRule());
+            } else if ("POINT".equalsIgnoreCase(geometryFamily)) {
+                drawPointSymbolPreview(g2, layer, x, y, null);
+            } else if ("LINE".equalsIgnoreCase(geometryFamily)) {
+                drawLineSymbolPreview(g2, layer, x, y, null);
+            } else {
+                drawPolygonSymbolPreview(g2, layer, x, y, null);
+            }
+
+            g2.setFont(new Font("SansSerif", Font.BOLD, fontSize));
+            g2.setColor(new Color(37, 45, 58));
+            String name = item.label() != null ? item.label() : "Capa";
+            int maxChars = Math.max(8, (availableWidth - 30) / (fontSize / 2));
+            if (name.length() > maxChars) {
+                name = name.substring(0, Math.max(1, maxChars - 3)) + "...";
+            }
+            g2.drawString(name, x + 32, y + (fontSize / 3));
+
+            g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(9, fontSize - 1)));
+            g2.setColor(new Color(107, 114, 128));
+            String detail = item.subtitle() != null ? item.subtitle() : layerTypeLabel(layer);
+            if (detail.length() > maxChars) {
+                detail = detail.substring(0, Math.max(1, maxChars - 3)) + "...";
+            }
+            g2.drawString(detail, x + 32, y + fontSize + 2);
         }
 
         private static List<LegendItem> buildLegendItems(List<Layer> layers) {
