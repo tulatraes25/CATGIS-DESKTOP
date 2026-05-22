@@ -92,7 +92,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final int CATMAP_SPLASH_MILLIS = 1100;
-    private static final int PREVIEW_RENDER_DPI = 110;
+    private static final int PREVIEW_RENDER_DPI = 200;
     private static final double CLEAN_HEADER_HEIGHT_RATIO = 1d / 14d;
     private static final double CLEAN_FOOTER_HEIGHT_RATIO = 1d / 9d;
     private static final int CLEAN_HEADER_MIN_HEIGHT = 72;
