@@ -5796,18 +5796,17 @@ public class MapLayoutComposerDialog extends JFrame {
         private static void drawLegend(Graphics2D g2, LayoutSettings settings, List<Layer> layers, int x, int y, int width, int height) {
             List<LegendItem> items = buildLegendItems(layers);
 
-            int titleH = 28;
-            int subH = 20;
-            int itemH = 30;
-            int padBottom = 14;
-            int neededHeight = titleH + subH + (items.size() * itemH) + padBottom;
+            int headerH = 62;
+            int itemH = 26;
+            int padBottom = 18;
+            int neededHeight = headerH + (items.size() * itemH) + padBottom;
             if (neededHeight < height) {
                 int diff = height - neededHeight;
                 y += diff / 2;
                 height = neededHeight;
             }
             if (items.isEmpty()) {
-                height = Math.max(60, titleH + subH + padBottom);
+                height = Math.max(56, headerH);
             }
 
             g2.setColor(new Color(250, 252, 255));
@@ -5816,28 +5815,29 @@ public class MapLayoutComposerDialog extends JFrame {
             g2.drawRoundRect(x, y, width, height, 14, 14);
 
             g2.setColor(new Color(26, 36, 52));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 14));
-            String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Leyenda";
-            g2.drawString(legendTitle, x + 14, y + 22);
+            g2.setFont(new Font("SansSerif", Font.BOLD, 13));
+            String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Referencias";
+            g2.drawString(legendTitle, x + 14, y + 20);
 
             g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
             g2.setColor(new Color(103, 114, 128));
-            String legendSubtitle = !settings.legendSubtitle().isBlank() ? settings.legendSubtitle() : "Capas visibles del mapa";
-            g2.drawString(legendSubtitle, x + 14, y + 38);
+            String legendSubtitle = !settings.legendSubtitle().isBlank() ? settings.legendSubtitle() : "Capas del mapa";
+            g2.drawString(legendSubtitle, x + 14, y + 36);
 
             if (items.isEmpty()) {
-                g2.drawString("No hay capas visibles.", x + 14, y + 56);
+                g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+                g2.drawString("No hay capas para mostrar.", x + 14, y + 56);
                 return;
             }
 
-            int itemY = y + 62;
+            int itemY = y + 56;
             int count = 0;
             for (LegendItem item : items) {
-                if (itemY + itemH > y + height - 8) {
+                if (itemY + itemH > y + height - padBottom) {
                     int remaining = Math.max(0, items.size() - count);
                     g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
                     g2.setColor(new Color(108, 116, 128));
-                    g2.drawString("+" + remaining + " mas", x + 14, y + height - 8);
+                    g2.drawString("+" + remaining + " mas", x + 14, y + height - 6);
                     break;
                 }
                 drawLegendItem(g2, item, x + 14, itemY, width - 28);
