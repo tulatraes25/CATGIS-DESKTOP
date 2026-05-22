@@ -799,7 +799,7 @@ public class MapLayoutComposerDialog extends JFrame {
         panel.add(legendCheck, gc);
         gc.gridy++;
 
-        addSection(panel, gc, "Cartucho y metadatos");
+        addSection(panel, gc, "Datos cartograficos y metadatos");
         gc.gridy++;
         addField(panel, gc, "Nombre del estudio", studyField);
         gc.gridy += 2;
@@ -2184,7 +2184,7 @@ public class MapLayoutComposerDialog extends JFrame {
             case LEGEND -> "Leyenda";
             case NORTH -> "Norte";
             case SCALE -> "Escala";
-            case CARTOUCHE -> "Cartucho";
+            case CARTOUCHE -> "Datos cartograficos";
             case PROFILE_IMAGE -> "Perfil / imagen";
             case CATMAP_ITEM -> "Elemento CATMAP";
         };
@@ -2226,7 +2226,7 @@ public class MapLayoutComposerDialog extends JFrame {
         documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Encabezado", LayoutElementType.HEADER, isLayoutElementVisible(LayoutElementType.HEADER), isLayoutElementLocked(LayoutElementType.HEADER), null)));
         documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Mapa principal", LayoutElementType.MAP_CONTENT, isLayoutElementVisible(LayoutElementType.MAP_CONTENT), isLayoutElementLocked(LayoutElementType.MAP_CONTENT), null)));
         documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Escala", LayoutElementType.SCALE, isLayoutElementVisible(LayoutElementType.SCALE), isLayoutElementLocked(LayoutElementType.SCALE), null)));
-        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Cartucho / firma / fecha", LayoutElementType.CARTOUCHE, isLayoutElementVisible(LayoutElementType.CARTOUCHE), isLayoutElementLocked(LayoutElementType.CARTOUCHE), null)));
+        documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element("Datos cartograficos / firma / fecha", LayoutElementType.CARTOUCHE, isLayoutElementVisible(LayoutElementType.CARTOUCHE), isLayoutElementLocked(LayoutElementType.CARTOUCHE), null)));
         documentNode.add(new DefaultMutableTreeNode(LayoutStructureNode.element(
                 "Perfil / imagen",
                 LayoutElementType.PROFILE_IMAGE,
@@ -3104,6 +3104,13 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void exportPdf() {
+        if (snapshot == null) {
+            refreshSnapshot();
+        }
+        if (snapshot == null || snapshot.mapImage() == null) {
+            showCompositionError("No se pudo exportar el PDF porque no hay mapa capturado.", null);
+            return;
+        }
         JFileChooser chooser = FileChooserSupport.createChooser("layout-export", "Exportar composicion a PDF");
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.addChoosableFileFilter(new FileNameExtensionFilter("PDF (*.pdf)", "pdf"));
@@ -3531,7 +3538,7 @@ public class MapLayoutComposerDialog extends JFrame {
         TECHNICAL_RIGHT("Tecnica - leyenda derecha", LegendPlacement.RIGHT_PANEL),
         BOTTOM_REFERENCE("Referencia inferior", LegendPlacement.BOTTOM_PANEL),
         CLEAN_CENTERED("Limpia centrada", LegendPlacement.MAP_BOTTOM_RIGHT),
-        STRONG_CARTOUCHE("Cartucho tecnico", LegendPlacement.RIGHT_PANEL);
+        STRONG_CARTOUCHE("Datos cartograficos enfatizados", LegendPlacement.RIGHT_PANEL);
 
         private final String label;
         private final LegendPlacement defaultLegendPlacement;
@@ -4644,7 +4651,7 @@ public class MapLayoutComposerDialog extends JFrame {
             imageSourceField.setText(safeTrim(inlineCartoucheSourceField.getText()));
             coordinateReferenceField.setText(safeTrim(inlineCartoucheCrsField.getText()));
             inlineCartoucheEditor.setVisible(false);
-            statusLabel.setText("Cartucho actualizado desde el layout.");
+            statusLabel.setText("Datos cartograficos actualizados desde el layout.");
             repaint();
         }
 
@@ -5206,7 +5213,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 int footerHeight = Math.max(150, height / 6);
                 if (settings.template() == LayoutTemplate.CLEAN_CENTERED) {
                     headerHeight = Math.max(96, height / 10);
-                    footerHeight = Math.max(128, height / 7);
+                    footerHeight = Math.max(160, height / 5);
                 } else if (settings.template() == LayoutTemplate.STRONG_CARTOUCHE) {
                     footerHeight = Math.max(180, height / 5);
                 } else if (settings.template() == LayoutTemplate.BOTTOM_REFERENCE) {
@@ -5267,7 +5274,7 @@ public class MapLayoutComposerDialog extends JFrame {
                     Rectangle scaleBounds = applyElementAdjustment(new Rectangle(
                             mapFrame.frameBounds().x + 8,
                             mapFrame.frameBounds().y + mapFrame.frameBounds().height - 74,
-                            Math.min(280, mapFrame.frameBounds().width / 2),
+                            Math.min(240, mapFrame.frameBounds().width / 3),
                             54
                     ), interactionState, LayoutElementType.SCALE);
                     drawScaleBar(g2, settings, snapshot, mapFrame, scaleBounds.x + 14, scaleBounds.y + 18, renderDpi);
@@ -5302,7 +5309,16 @@ public class MapLayoutComposerDialog extends JFrame {
                 document.addPage(page);
 
                 Dimension size = settings.pageSize().pixelSize(settings.orientation(), settings.dpi());
-                BufferedImage layout = render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
+                BufferedImage layoutArgb = render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
+                BufferedImage layout = new BufferedImage(layoutArgb.getWidth(), layoutArgb.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D rgbG2 = layout.createGraphics();
+                try {
+                    rgbG2.setColor(Color.WHITE);
+                    rgbG2.fillRect(0, 0, layout.getWidth(), layout.getHeight());
+                    rgbG2.drawImage(layoutArgb, 0, 0, null);
+                } finally {
+                    rgbG2.dispose();
+                }
                 PDImageXObject pdfImage = LosslessFactory.createFromImage(document, layout);
 
                 try (PDPageContentStream content = new PDPageContentStream(document, page)) {
@@ -5692,7 +5708,7 @@ public class MapLayoutComposerDialog extends JFrame {
             }
 
             double metersPerPixel = mapFrame.shownGroundMeters() / Math.max(1d, mapFrame.imageBounds().width);
-            double targetMeters = metersPerPixel * Math.min(180d, mapFrame.imageBounds().width / 3d);
+            double targetMeters = metersPerPixel * Math.min(drawScaleBarMaxMetricMeters(mapFrame), mapFrame.imageBounds().width / 4d);
             double roundedMeters = settings.scaleRule().roundValue(targetMeters);
             int barWidth = (int) Math.max(72, Math.round(roundedMeters / metersPerPixel));
             int segmentCount = barWidth >= 160 ? 4 : 2;
@@ -5736,6 +5752,20 @@ public class MapLayoutComposerDialog extends JFrame {
             }
             g2.drawString("0", x - 4, y + 28);
             g2.drawString(formatDistance(roundedMeters), x + barWidth - 12, y + 28);
+        }
+
+        private static double drawScaleBarMaxMetricMeters(MapFrameGeometry mapFrame) {
+            if (mapFrame == null || mapFrame.imageBounds().width <= 0) {
+                return 120d;
+            }
+            double aspectRatio = mapFrame.imageBounds().width / Math.max(1d, mapFrame.imageBounds().height);
+            if (aspectRatio > 1.6d) {
+                return 96d;
+            }
+            if (aspectRatio < 1.1d) {
+                return 150d;
+            }
+            return 120d;
         }
 
         private static void drawLegend(Graphics2D g2, LayoutSettings settings, List<Layer> layers, int x, int y, int width, int height) {
@@ -5965,9 +5995,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 String scale = settings.showScale()
                         ? "Escala tecnica: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
                         : "Escala grafica oculta";
-                String mapArea = "Mapa: " + mapFrame.frameBounds().width + " x " + mapFrame.frameBounds().height + " px";
                 g2.drawString(scale, width - margin - metrics.stringWidth(scale), top + 54);
-                g2.drawString(mapArea, width - margin - metrics.stringWidth(mapArea), top + 74);
             }
             Rectangle profileImageBounds = null;
             if (showProfileImage) {
@@ -5989,6 +6017,9 @@ public class MapLayoutComposerDialog extends JFrame {
             g2.setColor(new Color(201, 210, 222));
             g2.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18);
 
+            java.awt.Shape clip = g2.getClip();
+            g2.clip(new java.awt.geom.RoundRectangle2D.Double(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18));
+
             int contentX = bounds.x + 16;
             int contentY = bounds.y + 18;
             int textX = contentX;
@@ -6005,33 +6036,45 @@ public class MapLayoutComposerDialog extends JFrame {
                 textX += logoBoxW + 14;
             }
 
-            g2.setColor(new Color(27, 38, 56));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 13));
-            g2.drawString("Cartucho del mapa", textX, contentY);
+            int fontTitleSize = bounds.height >= 160 ? 13 : 11;
+            int fontRowSize = bounds.height >= 160 ? 11 : 10;
+            int rowSpacing = bounds.height >= 160 ? 16 : 13;
 
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setColor(new Color(27, 38, 56));
+            g2.setFont(new Font("SansSerif", Font.BOLD, fontTitleSize));
+            g2.drawString("Datos cartograficos", textX, contentY);
+
+            g2.setFont(new Font("SansSerif", Font.PLAIN, fontRowSize));
             g2.setColor(new Color(86, 96, 110));
             int rowY = contentY + 20;
-            drawCartoucheRow(g2, "Estudio", blankOr(settings.studyName(), snapshot.projectName()), textX, rowY);
-            rowY += 16;
-            drawCartoucheRow(g2, "Proyecto", blankOr(settings.cartoucheProjectName(), snapshot.projectName()), textX, rowY);
-            rowY += 16;
-            drawCartoucheRow(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), textX, rowY);
-            rowY += 16;
-            drawCartoucheRow(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), textX, rowY);
-            rowY += 16;
-            drawCartoucheRow(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), textX, rowY);
-            rowY += 16;
-            drawCartoucheRow(g2, "Coord.", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), textX, rowY);
+            drawCartoucheRowScaled(g2, "Estudio", blankOr(settings.studyName(), snapshot.projectName()), textX, rowY, fontRowSize);
+            rowY += rowSpacing;
+            drawCartoucheRowScaled(g2, "Proyecto", blankOr(settings.cartoucheProjectName(), snapshot.projectName()), textX, rowY, fontRowSize);
+            rowY += rowSpacing;
+            drawCartoucheRowScaled(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), textX, rowY, fontRowSize);
+            rowY += rowSpacing;
+            drawCartoucheRowScaled(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), textX, rowY, fontRowSize);
+            rowY += rowSpacing;
+            drawCartoucheRowScaled(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), textX, rowY, fontRowSize);
+            rowY += rowSpacing;
+            drawCartoucheRowScaled(g2, "Coord.", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), textX, rowY, fontRowSize);
+
+            g2.setClip(clip);
+        }
+
+        private static void drawCartoucheRowScaled(Graphics2D g2, String label, String value, int x, int y, int fontSize) {
+            g2.setColor(new Color(28, 38, 54));
+            g2.setFont(new Font("SansSerif", Font.BOLD, fontSize));
+            g2.drawString(label + ":", x, y);
+            g2.setColor(new Color(86, 96, 110));
+            g2.setFont(new Font("SansSerif", Font.PLAIN, fontSize));
+            int maxChars = fontSize >= 11 ? 38 : 30;
+            int offsetX = fontSize >= 11 ? 62 : 54;
+            g2.drawString(clipText(value, maxChars), x + offsetX, y);
         }
 
         private static void drawCartoucheRow(Graphics2D g2, String label, String value, int x, int y) {
-            g2.setColor(new Color(28, 38, 54));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 11));
-            g2.drawString(label + ":", x, y);
-            g2.setColor(new Color(86, 96, 110));
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-            g2.drawString(clipText(value, 38), x + 62, y);
+            drawCartoucheRowScaled(g2, label, value, x, y, 11);
         }
 
         private static void drawLayoutImage(Graphics2D g2, Rectangle bounds, BufferedImage image) {

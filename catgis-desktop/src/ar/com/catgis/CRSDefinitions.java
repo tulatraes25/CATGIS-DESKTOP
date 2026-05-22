@@ -150,6 +150,259 @@ public class CRSDefinitions {
         }
     }
 
+    public static String normalizeCode(String code) {
+        if (code == null || code.isBlank()) {
+            return DEFAULT_CRS;
+        }
+        String trimmed = code.trim();
+        if (trimmed.toUpperCase(Locale.ROOT).startsWith("EPSG:")) {
+            return "EPSG:" + trimmed.substring(5).trim();
+        }
+        if (trimmed.startsWith("urn:") || trimmed.startsWith("AUTO:")) {
+            return trimmed;
+        }
+        if (trimmed.matches("^\\d{4,6}$")) {
+            return "EPSG:" + trimmed;
+        }
+        return trimmed;
+    }
+
+    public static String getLabelForCode(String code) {
+        if (code == null || code.isBlank()) {
+            return DEFAULT_CRS;
+        }
+        String normalized = normalizeCode(code);
+        for (CrsCatalogEntry entry : getCatalogEntries()) {
+            if (normalized.equalsIgnoreCase(entry.code())) {
+                return entry.label();
+            }
+        }
+        return normalized;
+    }
+
+    public static CoordinateReferenceSystem decode(String code, boolean longitudeFirst) throws Exception {
+        String normalized = normalizeCode(code);
+        if (normalized.isBlank() || normalized.equalsIgnoreCase(DEFAULT_CRS)) {
+            return CRS.decode(DEFAULT_CRS);
+        }
+        return CRS.decode(normalized);
+    }
+
+    public static boolean isManualDefinition(String code) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
+        String trimmed = code.trim();
+        return trimmed.contains("GEOGCS[") || trimmed.contains("PROJCS[")
+                || trimmed.contains("GEOCCS[") || trimmed.contains("COMPD_CS[")
+                || trimmed.contains("VERT_CS[") || trimmed.contains("+proj=")
+                || trimmed.startsWith("urn:") || trimmed.startsWith("AUTO:");
+    }
+
+    public static String buildManualDefinitionValue(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        String trimmed = raw.trim();
+        if (isManualDefinition(trimmed)) {
+            return trimmed;
+        }
+        return normalizeCode(trimmed);
+    }
+
+    public static CrsTechnicalDetails describe(String code) {
+        if (code == null || code.isBlank()) {
+            return CrsTechnicalDetails.unavailable(DEFAULT_CRS);
+        }
+        String normalized = normalizeCode(code);
+        CrsTechnicalDetails cached = cachedDetails.get(normalized);
+        if (cached != null) {
+            return cached;
+        }
+
+        CrsTechnicalDetails fast = buildFastDetails(normalized);
+        cachedDetails.put(normalized, fast);
+        return fast;
+    }
+
+    private static CrsTechnicalDetails buildFastDetails(String normalized) {
+        if (normalized.isBlank()) {
+            return CrsTechnicalDetails.unavailable(DEFAULT_CRS);
+        }
+        for (CrsCatalogEntry entry : getCatalogEntries()) {
+            if (normalized.equalsIgnoreCase(entry.code())) {
+                boolean geographicHint = entry.searchText() != null
+                        && (entry.searchText().toLowerCase(Locale.ROOT).contains("geograph")
+                        || entry.searchText().toLowerCase(Locale.ROOT).contains("lat/long"));
+                return new CrsTechnicalDetails(
+                        normalized,
+                        entry.label(),
+                        entry.description(),
+                        geographicHint ? "Geografico" : "Proyectado",
+                        "Consultar catalogo",
+                        geographicHint ? "deg" : "m",
+                        entry.hasBounds()
+                                ? String.format(Locale.US, "Oeste %.4f, Sur %.4f, Este %.4f, Norte %.4f",
+                                        entry.west(), entry.south(), entry.east(), entry.north())
+                                : "Sin area de uso reportada",
+                        "Consultar catalogo",
+                        "Sin parametros adicionales.",
+                        entry.west(),
+                        entry.south(),
+                        entry.east(),
+                        entry.north(),
+                        entry.hasBounds(),
+                        geographicHint,
+                        false
+                );
+            }
+        }
+        try {
+            CoordinateReferenceSystem crs = decode(normalized, true);
+            boolean geographic = crs instanceof GeographicCRS;
+            boolean isManual = isManualDefinition(normalized);
+            String name = getName(crs);
+            String typeStr = geographic ? "Geografico" : describeFallbackKind("projec", geographic);
+            String datumStr = describeDatum(crs);
+            String unitStr = geographic ? "deg" : describeUnit(crs);
+            Bounds bounds = resolveBounds(crs);
+            String areaStr = bounds.formatArea();
+            String methodStr = describeProjectionMethod(crs);
+            String paramsStr = describeParameters(crs);
+            var details = new CrsTechnicalDetails(
+                    normalized, normalized, name, typeStr, datumStr, unitStr,
+                    areaStr, methodStr, paramsStr,
+                    bounds.west(), bounds.south(), bounds.east(), bounds.north(),
+                    bounds.hasBounds(), geographic, isManual
+            );
+            cachedDetails.put(normalized, details);
+            return details;
+        } catch (Throwable t) {
+            CatgisLogger.warn("No se pudo describir el CRS " + normalized, t instanceof Exception ? (Exception) t : new Exception(t));
+            return CrsTechnicalDetails.unavailable(normalized);
+        }
+    }
+
+    private static String getName(CoordinateReferenceSystem crs) {
+        try {
+            if (crs != null && crs.getName() != null) {
+                return crs.getName().toString();
+            }
+        } catch (Exception ignored) { }
+        return "No disponible";
+    }
+
+    private static String describeDatum(CoordinateReferenceSystem crs) {
+        try {
+            Datum datum = null;
+            if (crs instanceof SingleCRS single) {
+                datum = single.getDatum();
+            }
+            if (datum != null && datum.getName() != null) {
+                return datum.getName().toString();
+            }
+        } catch (Exception ignored) { }
+        return "No disponible";
+    }
+
+    public static List<CrsCatalogEntry> filterEntries(String query, List<CrsCatalogEntry> source) {
+        if (source == null || source.isEmpty()) {
+            return List.of();
+        }
+        String normalized = safeTrim(query).toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return new ArrayList<>(source);
+        }
+        normalized = Normalizer.normalize(normalized, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        List<CrsCatalogEntry> result = new ArrayList<>();
+        for (CrsCatalogEntry entry : source) {
+            if (entry == null) {
+                continue;
+            }
+            String searchText = safeTrim(entry.searchText()).toLowerCase(Locale.ROOT);
+            searchText = Normalizer.normalize(searchText, Normalizer.Form.NFD)
+                    .replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+            if (searchText.contains(normalized)) {
+                result.add(entry);
+            }
+        }
+        return result;
+    }
+
+    public static List<CrsCatalogEntry> filterEntries(String query) {
+        return filterEntries(query, getCatalogEntries());
+    }
+
+    private static List<CrsCatalogEntry> buildFeaturedEntries() {
+        List<CrsCatalogEntry> entries = new ArrayList<>();
+        entries.add(CrsCatalogEntry.featured("EPSG:4326", "EPSG:4326 - WGS 84 | World (by country)",
+                "WGS 84", "EPSG:4326 wgs 84 world"));
+        entries.add(CrsCatalogEntry.featured("EPSG:3857", "EPSG:3857 - WGS 84 / Pseudo-Mercator | World (by country)",
+                "WGS 84 / Pseudo-Mercator", "EPSG:3857 wgs 84 pseudo mercator world web"));
+        entries.add(CrsCatalogEntry.featured("EPSG:4269", "EPSG:4269 - NAD83 | North America (by country)",
+                "NAD83", "EPSG:4269 nad83 north america"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22182", "EPSG:22182 - POSGAR 2007 / Argentina 2 | Argentina",
+                "POSGAR 2007 / Argentina 2", "EPSG:22182 posgar 2007 argentina 2"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22183", "EPSG:22183 - POSGAR 2007 / Argentina 3 | Argentina",
+                "POSGAR 2007 / Argentina 3", "EPSG:22183 posgar 2007 argentina 3"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22184", "EPSG:22184 - POSGAR 2007 / Argentina 4 | Argentina",
+                "POSGAR 2007 / Argentina 4", "EPSG:22184 posgar 2007 argentina 4"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22185", "EPSG:22185 - POSGAR 2007 / Argentina 5 | Argentina",
+                "POSGAR 2007 / Argentina 5", "EPSG:22185 posgar 2007 argentina 5"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22186", "EPSG:22186 - POSGAR 2007 / Argentina 6 | Argentina",
+                "POSGAR 2007 / Argentina 6", "EPSG:22186 posgar 2007 argentina 6"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22187", "EPSG:22187 - POSGAR 2007 / Argentina 7 | Argentina",
+                "POSGAR 2007 / Argentina 7", "EPSG:22187 posgar 2007 argentina 7"));
+        entries.add(CrsCatalogEntry.featured("EPSG:32719", "EPSG:32719 - WGS 84 / UTM zone 19S | Argentina",
+                "WGS 84 / UTM zone 19S", "EPSG:32719 wgs 84 utm zone 19s argentina"));
+        entries.add(CrsCatalogEntry.featured("EPSG:32720", "EPSG:32720 - WGS 84 / UTM zone 20S | Argentina",
+                "WGS 84 / UTM zone 20S", "EPSG:32720 wgs 84 utm zone 20s argentina"));
+        entries.add(CrsCatalogEntry.featured("EPSG:32721", "EPSG:32721 - WGS 84 / UTM zone 21S | Argentina",
+                "WGS 84 / UTM zone 21S", "EPSG:32721 wgs 84 utm zone 21s argentina"));
+        return entries;
+    }
+
+    private static String buildSearchText(String code, String description) {
+        return safeTrim(code) + " " + safeTrim(description);
+    }
+
+    private static String buildSearchText(String name, String description, String isoA2, String isoA3, String countries) {
+        StringBuilder sb = new StringBuilder();
+        appendPart(sb, name);
+        appendPart(sb, description);
+        appendPart(sb, isoA2);
+        appendPart(sb, isoA3);
+        appendPart(sb, countries);
+        return sb.toString();
+    }
+
+    private static String buildSearchText(String code, String name, String kind, String areaName,
+                                           String areaDescription, String isoA2, String isoA3,
+                                           String countries, String intersecting) {
+        StringBuilder sb = new StringBuilder();
+        appendPart(sb, code);
+        appendPart(sb, name);
+        appendPart(sb, kind);
+        appendPart(sb, areaName);
+        appendPart(sb, areaDescription);
+        appendPart(sb, isoA2);
+        appendPart(sb, isoA3);
+        appendPart(sb, countries);
+        appendPart(sb, intersecting);
+        return sb.toString();
+    }
+
+    private static void appendPart(StringBuilder sb, String part) {
+        if (part == null || part.isBlank()) {
+            return;
+        }
+        if (sb.length() > 0) {
+            sb.append(' ');
+        }
+        sb.append(part.trim());
+    }
+
     public static LinkedHashMap<String, String> createCRSMap() {
         LinkedHashMap<String, String> map = cachedCatalogMap;
         if (map != null) {
@@ -230,8 +483,13 @@ public class CRSDefinitions {
                     for (CrsCatalogEntry entry : authorityEntries.values()) {
                         merged.put(entry.code(), entry);
                     }
-        } catch (Exception ignored) { CatgisLogger.warn("Error al interpretar datum CRS", ignored); }
-        return "No disponible";
+                } catch (Exception ignored) { CatgisLogger.warn("Error al enriquecer catalogo con autoridad EPSG", ignored); }
+            }
+
+            List<CrsCatalogEntry> result = new ArrayList<>(merged.values());
+            cachedCatalog = result;
+            return result;
+        }
     }
 
     private static boolean isGeographicKind(String kind, String description) {

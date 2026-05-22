@@ -142,11 +142,15 @@ public final class PostgisConnectionStore {
         String seed = System.getProperty("user.name", "catgis")
                 + System.getProperty("os.arch", "")
                 + "CATGIS_FIXED_SALT_2026";
-        byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(
-                seed.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        byte[] key = new byte[16];
-        System.arraycopy(hash, 0, key, 0, 16);
-        return key;
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(
+                    seed.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] key = new byte[16];
+            System.arraycopy(hash, 0, key, 0, 16);
+            return key;
+        } catch (java.security.NoSuchAlgorithmException e) {
+            return seed.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
     }
 
     public static PostgisConnectionInfo applyStoredPassword(PostgisConnectionInfo info) {

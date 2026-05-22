@@ -6067,8 +6067,9 @@ public class MapPanel extends JPanel {
             drawSnapPreview(g2);
             drawSelectionBox(g2);
         }
-        drawOnlineAttribution(g2);
-        drawOnlineResolutionNotice(g2);
+        if (!layoutRenderMode) {
+            drawOnlineAttribution(g2);
+        }
 
         g2.dispose();
     }
@@ -6371,16 +6372,20 @@ public class MapPanel extends JPanel {
             if (failure != null && !failure.isBlank()) {
                 onlineResolutionNoticeVisible = true;
                 onlineResolutionNotice = "No se pudieron descargar teselas de " + source.getName() + ": " + failure;
+                pushTileStatusToBar();
             } else if (range.tileCount() > 0) {
                 onlineResolutionNoticeVisible = true;
                 onlineResolutionNotice = "Cargando teselas de " + source.getName() + "...";
+                pushTileStatusToBar();
             }
         } else if (detailLimited) {
             onlineResolutionNoticeVisible = true;
             onlineResolutionNotice = "Zoom mayor al detalle disponible en " + source.getName() + ". Se muestra la ultima resolucion util.";
+            pushTileStatusToBar();
         } else if (usedFallbackTile && !onlineResolutionNoticeVisible) {
             onlineResolutionNoticeVisible = true;
             onlineResolutionNotice = "Algunas teselas no estan disponibles en este zoom. Se mantiene el ultimo detalle disponible.";
+            pushTileStatusToBar();
         }
     }
 
@@ -10996,6 +11001,16 @@ public class MapPanel extends JPanel {
             copy.drawString(onlineResolutionNotice, x + padding, y + metrics.getAscent() + 3);
         } finally {
             copy.dispose();
+        }
+    }
+
+    private void pushTileStatusToBar() {
+        if (layoutRenderMode) {
+            return;
+        }
+        if (onlineResolutionNotice != null && !onlineResolutionNotice.isBlank()
+                && CatgisDesktopApp.statusBar != null) {
+            CatgisDesktopApp.statusBar.setMessage(onlineResolutionNotice);
         }
     }
 
