@@ -194,6 +194,7 @@ public class MapLayoutComposerDialog extends JFrame {
         templateCombo = new JComboBox<>(LayoutTemplate.values());
         templateCombo.setSelectedItem(interactionState.getTemplate());
         pageSizeCombo = new JComboBox<>(PageSizePreset.values());
+        pageSizeCombo.setSelectedItem(PageSizePreset.A4);
         orientationCombo = new JComboBox<>(PageOrientation.values());
         orientationCombo.setSelectedItem(PageOrientation.LANDSCAPE);
         dpiCombo = new JComboBox<>(new Integer[]{150, 200, 300});
@@ -5766,10 +5767,11 @@ public class MapLayoutComposerDialog extends JFrame {
             }
 
             double metersPerPixel = mapFrame.shownGroundMeters() / Math.max(1d, mapFrame.imageBounds().width);
-            double maxMeters = metersPerPixel * Math.min(drawScaleBarMaxMetricMeters(mapFrame), mapFrame.imageBounds().width / 5d);
-            double targetMeters = Math.min(maxMeters, metersPerPixel * mapFrame.imageBounds().width * 0.28d);
-            double roundedMeters = settings.scaleRule().roundValue(targetMeters);
+            double maxMeters = metersPerPixel * Math.min(drawScaleBarMaxMetricMeters(mapFrame), mapFrame.imageBounds().width * 0.28d);
+            double roundedMeters = settings.scaleRule().roundValue(maxMeters);
             int barWidth = (int) Math.max(72, Math.round(roundedMeters / metersPerPixel));
+            int maxBarPx = (int) (mapFrame.imageBounds().width * 0.30d);
+            barWidth = Math.min(barWidth, maxBarPx);
             int segmentCount = barWidth >= 160 ? 4 : 2;
             int segmentWidth = Math.max(1, barWidth / segmentCount);
 
@@ -5835,9 +5837,8 @@ public class MapLayoutComposerDialog extends JFrame {
             int padBottom = 18;
             int neededHeight = headerH + (items.size() * itemH) + padBottom;
             if (neededHeight < height) {
-                int diff = height - neededHeight;
-                y += diff / 2;
-                height = neededHeight;
+                height = Math.max(neededHeight, height / 2);
+                y += (Math.abs(height - neededHeight)) / 2;
             }
             if (items.isEmpty()) {
                 height = Math.max(56, headerH);
