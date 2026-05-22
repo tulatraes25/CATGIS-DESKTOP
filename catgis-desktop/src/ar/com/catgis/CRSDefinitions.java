@@ -8,6 +8,7 @@ import org.geotools.api.referencing.crs.ProjectedCRS;
 import org.geotools.api.referencing.crs.SingleCRS;
 import org.geotools.api.referencing.datum.Datum;
 import org.geotools.referencing.CRS;
+import org.geotools.referencing.ReferencingFactoryFinder;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 
 import java.io.InputStream;
@@ -185,7 +186,27 @@ public class CRSDefinitions {
         if (normalized.isBlank() || normalized.equalsIgnoreCase(DEFAULT_CRS)) {
             return CRS.decode(DEFAULT_CRS);
         }
-        return CRS.decode(normalized);
+        try {
+            if (longitudeFirst) {
+                return CRS.decode(normalized, true);
+            }
+            return CRS.decode(normalized);
+        } catch (Exception first) {
+            try {
+                return CRS.decode(normalized, longitudeFirst);
+            } catch (Exception second) {
+                try {
+                    String epsgCode = normalized.toUpperCase(Locale.ROOT).startsWith("EPSG:")
+                            ? normalized.substring(5).trim() : normalized;
+                    return org.geotools.referencing.ReferencingFactoryFinder
+                            .getCRSAuthorityFactory("EPSG", null)
+                            .createCoordinateReferenceSystem(epsgCode);
+                } catch (Exception third) {
+                    throw new Exception("No se pudo decodificar el CRS: " + normalized
+                            + ". Verifique que el codigo EPSG exista o pruebe seleccionarlo desde el catalogo mundial.", first);
+                }
+            }
+        }
     }
 
     public static boolean isManualDefinition(String code) {
@@ -342,18 +363,30 @@ public class CRSDefinitions {
                 "WGS 84 / Pseudo-Mercator", "EPSG:3857 wgs 84 pseudo mercator world web"));
         entries.add(CrsCatalogEntry.featured("EPSG:4269", "EPSG:4269 - NAD83 | North America (by country)",
                 "NAD83", "EPSG:4269 nad83 north america"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22182", "EPSG:22182 - POSGAR 2007 / Argentina 2 | Argentina",
-                "POSGAR 2007 / Argentina 2", "EPSG:22182 posgar 2007 argentina 2"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22183", "EPSG:22183 - POSGAR 2007 / Argentina 3 | Argentina",
-                "POSGAR 2007 / Argentina 3", "EPSG:22183 posgar 2007 argentina 3"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22184", "EPSG:22184 - POSGAR 2007 / Argentina 4 | Argentina",
-                "POSGAR 2007 / Argentina 4", "EPSG:22184 posgar 2007 argentina 4"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22185", "EPSG:22185 - POSGAR 2007 / Argentina 5 | Argentina",
-                "POSGAR 2007 / Argentina 5", "EPSG:22185 posgar 2007 argentina 5"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22186", "EPSG:22186 - POSGAR 2007 / Argentina 6 | Argentina",
-                "POSGAR 2007 / Argentina 6", "EPSG:22186 posgar 2007 argentina 6"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22187", "EPSG:22187 - POSGAR 2007 / Argentina 7 | Argentina",
-                "POSGAR 2007 / Argentina 7", "EPSG:22187 posgar 2007 argentina 7"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22182", "EPSG:22182 - POSGAR 94 / Argentina 2 | Argentina",
+                "POSGAR 94 / Argentina 2", "EPSG:22182 posgar 94 argentina 2"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22183", "EPSG:22183 - POSGAR 94 / Argentina 3 | Argentina",
+                "POSGAR 94 / Argentina 3", "EPSG:22183 posgar 94 argentina 3"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22184", "EPSG:22184 - POSGAR 94 / Argentina 4 | Argentina",
+                "POSGAR 94 / Argentina 4", "EPSG:22184 posgar 94 argentina 4"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22185", "EPSG:22185 - POSGAR 94 / Argentina 5 | Argentina",
+                "POSGAR 94 / Argentina 5", "EPSG:22185 posgar 94 argentina 5"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22186", "EPSG:22186 - POSGAR 94 / Argentina 6 | Argentina",
+                "POSGAR 94 / Argentina 6", "EPSG:22186 posgar 94 argentina 6"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22187", "EPSG:22187 - POSGAR 94 / Argentina 7 | Argentina",
+                "POSGAR 94 / Argentina 7", "EPSG:22187 posgar 94 argentina 7"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22192", "EPSG:22192 - POSGAR 2007 / Argentina 2 | Argentina",
+                "POSGAR 2007 / Argentina 2", "EPSG:22192 posgar 2007 argentina 2"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22193", "EPSG:22193 - POSGAR 2007 / Argentina 3 | Argentina",
+                "POSGAR 2007 / Argentina 3", "EPSG:22193 posgar 2007 argentina 3"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22194", "EPSG:22194 - POSGAR 2007 / Argentina 4 | Argentina",
+                "POSGAR 2007 / Argentina 4", "EPSG:22194 posgar 2007 argentina 4"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22195", "EPSG:22195 - POSGAR 2007 / Argentina 5 | Argentina",
+                "POSGAR 2007 / Argentina 5", "EPSG:22195 posgar 2007 argentina 5"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22196", "EPSG:22196 - POSGAR 2007 / Argentina 6 | Argentina",
+                "POSGAR 2007 / Argentina 6", "EPSG:22196 posgar 2007 argentina 6"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22197", "EPSG:22197 - POSGAR 2007 / Argentina 7 | Argentina",
+                "POSGAR 2007 / Argentina 7", "EPSG:22197 posgar 2007 argentina 7"));
         entries.add(CrsCatalogEntry.featured("EPSG:32719", "EPSG:32719 - WGS 84 / UTM zone 19S | Argentina",
                 "WGS 84 / UTM zone 19S", "EPSG:32719 wgs 84 utm zone 19s argentina"));
         entries.add(CrsCatalogEntry.featured("EPSG:32720", "EPSG:32720 - WGS 84 / UTM zone 20S | Argentina",
