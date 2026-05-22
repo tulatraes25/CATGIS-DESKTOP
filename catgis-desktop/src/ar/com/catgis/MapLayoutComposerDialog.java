@@ -5371,8 +5371,8 @@ public class MapLayoutComposerDialog extends JFrame {
                     int maxW = Math.max(180, mapFrame.frameBounds().width / 4);
                     int maxH = Math.max(120, mapFrame.frameBounds().height / 4);
                     if (settings.template() == LayoutTemplate.CLEAN_CENTERED) {
-                        maxW = Math.min(maxW, 260);
-                        maxH = Math.min(maxH, 200);
+                        maxW = Math.max(maxW, mapFrame.frameBounds().width / 5);
+                        maxH = Math.max(maxH, mapFrame.frameBounds().height / 4);
                     }
                     yield new Rectangle(
                             mapFrame.frameBounds().x + mapFrame.frameBounds().width - maxW - 12,
@@ -5766,7 +5766,8 @@ public class MapLayoutComposerDialog extends JFrame {
             }
 
             double metersPerPixel = mapFrame.shownGroundMeters() / Math.max(1d, mapFrame.imageBounds().width);
-            double targetMeters = metersPerPixel * Math.min(drawScaleBarMaxMetricMeters(mapFrame), mapFrame.imageBounds().width / 4d);
+            double maxMeters = metersPerPixel * Math.min(drawScaleBarMaxMetricMeters(mapFrame), mapFrame.imageBounds().width / 5d);
+            double targetMeters = Math.min(maxMeters, metersPerPixel * mapFrame.imageBounds().width * 0.28d);
             double roundedMeters = settings.scaleRule().roundValue(targetMeters);
             int barWidth = (int) Math.max(72, Math.round(roundedMeters / metersPerPixel));
             int segmentCount = barWidth >= 160 ? 4 : 2;
