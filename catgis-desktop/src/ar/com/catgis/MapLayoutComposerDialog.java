@@ -979,6 +979,9 @@ public class MapLayoutComposerDialog extends JFrame {
         clearButton.addActionListener(e -> {
             logoPathField.setText("");
             pushProjectMetadataFromControls();
+            removeExistingLogoItem();
+            persistCatmapItems();
+            refreshLayoutStructureTree();
             previewPanel.repaint();
         });
         buttons.add(chooseButton);
@@ -1290,11 +1293,31 @@ public class MapLayoutComposerDialog extends JFrame {
             return;
         }
         File file = chooser.getSelectedFile();
-        if (file != null) {
+        if (file != null && file.isFile()) {
             FileChooserSupport.rememberSelection("layout-logo", chooser);
             logoPathField.setText(file.getAbsolutePath());
             pushProjectMetadataFromControls();
+            removeExistingLogoItem();
+            CatmapLayoutItem logoItem = new CatmapLayoutItem(CatmapLayoutItem.Kind.IMAGE);
+            logoItem.setLabel("Logo de empresa");
+            logoItem.setImagePath(file.getAbsolutePath());
+            logoItem.setX(Math.max(40, previewPanel.getWidth() / 2 - 60));
+            logoItem.setY(40);
+            logoItem.setWidth(120);
+            logoItem.setHeight(80);
+            layoutItemsModel.addElement(logoItem);
+            persistCatmapItems();
+            refreshLayoutStructureTree();
             previewPanel.repaint();
+        }
+    }
+
+    private void removeExistingLogoItem() {
+        for (int i = layoutItemsModel.size() - 1; i >= 0; i--) {
+            CatmapLayoutItem item = layoutItemsModel.get(i);
+            if (item != null && "Logo de empresa".equals(item.getLabel())) {
+                layoutItemsModel.remove(i);
+            }
         }
     }
 
@@ -5409,6 +5432,9 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         private static Rectangle optimizeMapFrame(Rectangle availableBounds, BufferedImage mapImage, LayoutTemplate template) {
+            if (template == LayoutTemplate.CLEAN_CENTERED) {
+                return new Rectangle(availableBounds);
+            }
             if (mapImage == null || availableBounds.width <= 0 || availableBounds.height <= 0) {
                 return new Rectangle(availableBounds);
             }
@@ -6016,7 +6042,19 @@ public class MapLayoutComposerDialog extends JFrame {
             if (cleanTemplate && showCartouche) {
                 java.awt.FontMetrics baseMetrics = g2.getFontMetrics(g2.getFont().deriveFont(Font.PLAIN, Math.max(11, width / 130)));
                 int lineHeight = baseMetrics.getHeight() + 2;
-                int colW = (width - (margin * 2)) / 3;
+
+                int logoAreaW = 0;
+                BufferedImage logoImage = loadImageAsset(settings.logoPath());
+                if (logoImage != null) {
+                    int logoMaxH = footerHeight - 18;
+                    double s = Math.min(1d, logoMaxH / (double) Math.max(1, logoImage.getHeight()));
+                    int logoW = Math.max(1, (int) Math.round(logoImage.getWidth() * s));
+                    int logoH = Math.max(1, (int) Math.round(logoImage.getHeight() * s));
+                    int logoX = width - margin - logoW;
+                    int logoY = top + (footerHeight - logoH) / 2;
+                    g2.drawImage(logoImage, logoX, logoY, logoW, logoH, null);
+                    logoAreaW = logoW + 14;
+                }
 
                 g2.setColor(new Color(27, 38, 56));
                 g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, width / 120)));
@@ -6026,28 +6064,30 @@ public class MapLayoutComposerDialog extends JFrame {
                 int rowY = top + 20 + lineHeight;
 
                 int col1x = margin;
-                int col2x = margin + colW;
-                int col3x = margin + colW * 2;
+                int availW = (width - (margin * 2) - logoAreaW);
+                int colW3 = availW / 3;
+                int col2x = margin + colW3;
+                int col3x = margin + colW3 * 2;
 
                 String projName = blankOr(settings.cartoucheProjectName(), snapshot.projectName());
-                drawCompactFooterRow(g2, "Estudio", blankOr(settings.studyName(), projName), col1x, rowY, colW - 6);
-                drawCompactFooterRow(g2, "Proyecto", projName, col2x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "Estudio", blankOr(settings.studyName(), projName), col1x, rowY, colW3 - 6);
+                drawCompactFooterRow(g2, "Proyecto", projName, col2x, rowY, colW3 - 6);
                 String genText = "Fecha: " + FOOTER_DATE.format(LocalDateTime.now());
-                drawCompactFooterRow(g2, genText, "", col3x, rowY, colW - 6);
+                drawCompactFooterRow(g2, genText, "", col3x, rowY, colW3 - 6);
                 rowY += lineHeight + 2;
 
-                drawCompactFooterRow(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), col1x, rowY, colW - 6);
-                drawCompactFooterRow(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), col2x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), col1x, rowY, colW3 - 6);
+                drawCompactFooterRow(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), col2x, rowY, colW3 - 6);
                 double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
                 String scaleText = settings.showScale()
                         ? "Escala: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
                         : "Escala: —";
-                drawCompactFooterRow(g2, scaleText, "", col3x, rowY, colW - 6);
+                drawCompactFooterRow(g2, scaleText, "", col3x, rowY, colW3 - 6);
                 rowY += lineHeight + 2;
 
-                drawCompactFooterRow(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), col1x, rowY, colW - 6);
-                drawCompactFooterRow(g2, "CRS", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), col2x, rowY, colW - 6);
-                drawCompactFooterRow(g2, "Generado en CATGIS Desktop", "", col3x, rowY, colW - 6);
+                drawCompactFooterRow(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), col1x, rowY, colW3 - 6);
+                drawCompactFooterRow(g2, "CRS", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), col2x, rowY, colW3 - 6);
+                drawCompactFooterRow(g2, "Generado en CATGIS Desktop", "", col3x, rowY, colW3 - 6);
 
                 return new FooterRenderResult(
                         new Rectangle(margin, top + 4, width - (margin * 2), footerHeight - 12),
