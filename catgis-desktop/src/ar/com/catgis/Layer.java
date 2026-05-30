@@ -145,6 +145,8 @@ public class Layer {
     private int cadGeorefCheckCount = 0;
     private final Set<String> cadHiddenInternalLayers = new LinkedHashSet<>();
 
+    private float opacity = 1.0f;
+
     private final Map<String, FieldConfig> fieldConfigs = new LinkedHashMap<>();
 
     public Layer(String name, String path, String type) {
@@ -610,5 +612,13 @@ public class Layer {
     @Override
     public String toString() {
         return name + (visible ? "" : " [Oculta]");
+    }
+
+    public float getOpacity() {
+        return opacity;
+    }
+
+    public void setOpacity(float opacity) {
+        this.opacity = Math.max(0f, Math.min(1f, opacity));
     }
 }

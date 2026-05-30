@@ -3,19 +3,25 @@ package ar.com.catgis;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JSplitPane;
+import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FlowLayout;
+import java.awt.Insets;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -38,6 +44,9 @@ public class CatgisDesktopApp extends JFrame {
     private static JLabel mapSubtitleLabel;
     private static JLabel mapStatusHintLabel;
     private boolean startupProjectCrsPromptShown;
+    private JPanel moduleCards;
+    private CardLayout moduleCardLayout;
+    private JToggleButton datosBtn, edicionBtn, topografiaBtn, salidaBtn;
 
     public CatgisDesktopApp() {
         setTitle("CATGIS Desktop");
@@ -82,50 +91,200 @@ public class CatgisDesktopApp extends JFrame {
         JPanel topContainer = new JPanel();
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setOpaque(true);
-        topContainer.setBackground(new Color(245, 247, 250));
-        topContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(218, 223, 230)),
-                BorderFactory.createEmptyBorder(3, 6, 4, 6)
-        ));
+        topContainer.setBackground(new Color(0xF7F8FA));
 
         JPanel mainToolsRow = new JPanel(new BorderLayout());
         mainToolsRow.setOpaque(false);
         mainToolsRow.add(new MainToolBar(), BorderLayout.CENTER);
         mainToolsRow.setAlignmentX(LEFT_ALIGNMENT);
-        mainToolsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
 
-        JPanel editToolsRow = new JPanel(new BorderLayout());
-        editToolsRow.setOpaque(false);
-        editToolsRow.add(floatingVectorEditToolbar, BorderLayout.CENTER);
-        editToolsRow.setAlignmentX(LEFT_ALIGNMENT);
-        editToolsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
-
-        JPanel topographyRow = new JPanel(new BorderLayout());
-        topographyRow.setOpaque(false);
-        topographyRow.add(topographyToolbar, BorderLayout.CENTER);
-        topographyRow.setAlignmentX(LEFT_ALIGNMENT);
-        topographyRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
-
-        JPanel modulesRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        modulesRow.setOpaque(false);
-        modulesRow.add(cartographyToolbar);
-        modulesRow.add(catserverToolbar);
-        modulesRow.add(onlineConnectionsToolbar);
-        modulesRow.setAlignmentX(LEFT_ALIGNMENT);
-        modulesRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
+        JPanel tabRow = buildModuleTabPane();
+        tabRow.setAlignmentX(LEFT_ALIGNMENT);
 
         topContainer.add(mainToolsRow);
-        topContainer.add(modulesRow);
-        topContainer.add(topographyRow);
-        topContainer.add(editToolsRow);
+        topContainer.add(tabRow);
         return topContainer;
     }
 
+    private JPanel buildModuleTabPane() {
+        JPanel panel = new JPanel(new BorderLayout(0, 0));
+        panel.setOpaque(true);
+        panel.setBackground(new Color(0xF7F8FA));
+
+        JPanel selectorBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        selectorBar.setOpaque(true);
+        selectorBar.setBackground(new Color(0xF7F8FA));
+        selectorBar.setPreferredSize(new Dimension(Integer.MAX_VALUE, 32));
+        selectorBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(0, 4, 0, 4),
+                BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY)
+        ));
+
+        moduleCardLayout = new CardLayout();
+        moduleCards = new JPanel(moduleCardLayout);
+        moduleCards.setOpaque(true);
+        moduleCards.setBackground(new Color(0xF7F8FA));
+        moduleCards.setPreferredSize(new Dimension(Integer.MAX_VALUE, 36));
+        moduleCards.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xE0E0E0)));
+
+        JPanel datosInner = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        datosInner.setOpaque(false);
+        datosInner.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        datosInner.add(onlineConnectionsToolbar);
+        datosInner.add(new JSeparator(JSeparator.VERTICAL));
+        datosInner.add(buildCatserverButton());
+        JPanel datosCard = new JPanel(new BorderLayout());
+        datosCard.setOpaque(true);
+        datosCard.setBackground(new Color(0xF7F8FA));
+        datosCard.add(datosInner, BorderLayout.WEST);
+
+        JPanel edicionStrip = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        edicionStrip.setOpaque(false);
+        JButton startEditBtn = new JButton("Iniciar edicion", AppIcons.attrEditIcon());
+        startEditBtn.setFont(startEditBtn.getFont().deriveFont(Font.PLAIN, 11f));
+        startEditBtn.setMargin(new Insets(2, 8, 2, 8));
+        startEditBtn.addActionListener(e -> startEditingSelectedLayer());
+        JButton editToolsBtn = new JButton("Herramientas", AppIcons.toolboxIcon());
+        editToolsBtn.setFont(editToolsBtn.getFont().deriveFont(Font.PLAIN, 11f));
+        editToolsBtn.setMargin(new Insets(2, 8, 2, 8));
+        editToolsBtn.addActionListener(e -> EditingToolsWindow.showWindow());
+        JButton saveEditBtn = new JButton("Guardar y cerrar", AppIcons.saveIcon());
+        saveEditBtn.setFont(saveEditBtn.getFont().deriveFont(Font.PLAIN, 11f));
+        saveEditBtn.setMargin(new Insets(2, 8, 2, 8));
+        saveEditBtn.addActionListener(e -> { if (EditingToolsWindow.isOpen()) EditingToolsWindow.saveAndClose(); });
+        JButton cancelEditBtn = new JButton("Cancelar", AppIcons.cancelIcon());
+        cancelEditBtn.setFont(cancelEditBtn.getFont().deriveFont(Font.PLAIN, 11f));
+        cancelEditBtn.setMargin(new Insets(2, 8, 2, 8));
+        cancelEditBtn.addActionListener(e -> { if (EditingToolsWindow.isOpen()) EditingToolsWindow.cancelEditing(); });
+        edicionStrip.add(startEditBtn);
+        edicionStrip.add(editToolsBtn);
+        edicionStrip.add(saveEditBtn);
+        edicionStrip.add(cancelEditBtn);
+
+        JPanel edicionCard = new JPanel(new BorderLayout());
+        edicionCard.setOpaque(false);
+        edicionCard.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
+        edicionCard.add(edicionStrip, BorderLayout.WEST);
+
+        JPanel topografiaCard = new JPanel(new BorderLayout());
+        topografiaCard.setOpaque(false);
+        topografiaCard.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
+        topografiaCard.add(topographyToolbar, BorderLayout.CENTER);
+
+        JPanel salidaInner = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        salidaInner.setOpaque(false);
+        salidaInner.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+        salidaInner.add(cartographyToolbar);
+        JPanel salidaCard = new JPanel(new BorderLayout());
+        salidaCard.setOpaque(true);
+        salidaCard.setBackground(new Color(0xF7F8FA));
+        salidaCard.add(salidaInner, BorderLayout.WEST);
+
+        moduleCards.add(datosCard, "Datos");
+        moduleCards.add(edicionCard, "Edicion");
+        moduleCards.add(topografiaCard, "Topografia");
+        moduleCards.add(salidaCard, "Salida");
+
+        datosBtn = createModuleButton("Datos", 0);
+        edicionBtn = createModuleButton("Edicion", 1);
+        topografiaBtn = createModuleButton("Topografia", 2);
+        salidaBtn = createModuleButton("Salida", 3);
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(datosBtn);
+        group.add(edicionBtn);
+        group.add(topografiaBtn);
+        group.add(salidaBtn);
+
+        selectorBar.add(datosBtn);
+        selectorBar.add(edicionBtn);
+        selectorBar.add(topografiaBtn);
+        selectorBar.add(salidaBtn);
+
+        selectModule(0);
+
+        panel.add(selectorBar, BorderLayout.NORTH);
+        panel.add(moduleCards, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JButton buildCatserverButton() {
+        JButton btn = new JButton("CATSERVER");
+        btn.setFont(btn.getFont().deriveFont(Font.PLAIN, 11f));
+        btn.setFocusable(false);
+        btn.setMargin(new Insets(2, 10, 2, 10));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setOpaque(false);
+        btn.setToolTipText(I18n.t("Conectar CATSERVER para capas PostgreSQL / PostGIS."));
+        btn.addActionListener(e -> PostgisDataSourceAction.openCatserverBrowser());
+        return btn;
+    }
+
+    private JToggleButton createModuleButton(String text, int index) {
+        JToggleButton btn = new JToggleButton(text);
+        btn.setFont(btn.getFont().deriveFont(Font.PLAIN, 11f));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(true);
+        btn.setBorderPainted(true);
+        btn.setBackground(new Color(0xF7F8FA));
+        btn.setForeground(new Color(0x555555));
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0xF7F8FA)),
+                BorderFactory.createEmptyBorder(5, 16, 5, 16)
+        ));
+        btn.addActionListener(e -> selectModule(index));
+        return btn;
+    }
+
+    private void startEditingSelectedLayer() {
+        Layer selected = layersPanel.getSelectedLayer();
+        if (selected == null) {
+            javax.swing.JOptionPane.showMessageDialog(this, "Selecciona una capa vectorial en el panel Capas.", "Iniciar edicion", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        if (selected instanceof RasterLayer || selected instanceof OnlineTileLayer) {
+            javax.swing.JOptionPane.showMessageDialog(this, "La capa seleccionada no es vectorial editable.", "Iniciar edicion", javax.swing.JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Layer existing = mapPanel != null ? mapPanel.getEditingLayerRef() : null;
+        if (existing != null && existing != selected) {
+            int r = javax.swing.JOptionPane.showConfirmDialog(this, "Ya hay una capa en edicion: " + existing.getName() + ".\nDesea finalizarla y editar " + selected.getName() + "?", "Cambiar capa de edicion", javax.swing.JOptionPane.YES_NO_OPTION);
+            if (r != javax.swing.JOptionPane.YES_OPTION) return;
+            EditingToolsWindow.hideIfOpen();
+        }
+        if (mapPanel != null) {
+            mapPanel.prepareLayerForEditing(selected);
+        }
+        syncFloatingVectorEditToolbar();
+        EditingToolsWindow.showWindow();
+        if (statusBar != null) statusBar.setMessage("Editando capa: " + selected.getName());
+    }
+
+    private void selectModule(int index) {
+        JToggleButton[] buttons = {datosBtn, edicionBtn, topografiaBtn, salidaBtn};
+        String[] names = {"Datos", "Edicion", "Topografia", "Salida"};
+        for (int i = 0; i < buttons.length; i++) {
+            if (buttons[i] != null) {
+                boolean sel = i == index;
+                buttons[i].setSelected(sel);
+                buttons[i].setBackground(sel ? Color.WHITE : new Color(0xF7F8FA));
+                buttons[i].setForeground(sel ? new Color(0x1976D2) : new Color(0x555555));
+                buttons[i].setFont(buttons[i].getFont().deriveFont(sel ? Font.BOLD : Font.PLAIN, 11f));
+                buttons[i].setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 0, sel ? 2 : 1, 0, sel ? new Color(0x1976D2) : new Color(0xF7F8FA)),
+                        BorderFactory.createEmptyBorder(5, 16, 5, 16)
+                ));
+            }
+        }
+        moduleCardLayout.show(moduleCards, names[index]);
+    }
+
     private JPanel buildCenterContainer() {
-        JPanel centerContainer = new JPanel(new BorderLayout(10, 10));
+        JPanel centerContainer = new JPanel(new BorderLayout(0, 0));
         centerContainer.setOpaque(true);
-        centerContainer.setBackground(new Color(240, 243, 247));
-        centerContainer.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        centerContainer.setBackground(new Color(0xE8E8E8));
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -133,10 +292,10 @@ public class CatgisDesktopApp extends JFrame {
                 buildMapContainer()
         );
         splitPane.setDividerLocation(280);
+        splitPane.setDividerSize(4);
         splitPane.setResizeWeight(0.0);
-        splitPane.setBorder(null);
-        splitPane.setOpaque(false);
-        splitPane.setBackground(new Color(240, 243, 247));
+        splitPane.setOpaque(true);
+        splitPane.setBackground(new Color(0xE8E8E8));
         splitPane.setContinuousLayout(true);
         splitPane.setOneTouchExpandable(true);
 
@@ -145,13 +304,10 @@ public class CatgisDesktopApp extends JFrame {
     }
 
     private JPanel buildLeftSidebar() {
-        JPanel sidebar = new JPanel(new BorderLayout(0, 8));
+        JPanel sidebar = new JPanel(new BorderLayout(0, 4));
         sidebar.setOpaque(true);
-        sidebar.setBackground(Color.WHITE);
-        sidebar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 224, 230)),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        ));
+        sidebar.setBackground(new Color(0xFAFAFA));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         sidebar.setPreferredSize(new Dimension(280, 100));
 
         sidebar.add(buildSidebarHeader(), BorderLayout.NORTH);
@@ -164,62 +320,34 @@ public class CatgisDesktopApp extends JFrame {
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setOpaque(false);
-        header.setBorder(BorderFactory.createEmptyBorder(0, 2, 6, 2));
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xE0E0E0)),
+                BorderFactory.createEmptyBorder(0, 2, 4, 2)
+        ));
 
-        sidebarTitleLabel = new JLabel(I18n.t("Gestor de proyecto"));
-        sidebarTitleLabel.setFont(sidebarTitleLabel.getFont().deriveFont(Font.BOLD, 17f));
-        sidebarTitleLabel.setForeground(new Color(28, 37, 54));
+        sidebarTitleLabel = new JLabel(I18n.t("Capas"));
+        sidebarTitleLabel.setFont(sidebarTitleLabel.getFont().deriveFont(Font.BOLD, 11f));
+        sidebarTitleLabel.setForeground(new Color(0x333333));
         sidebarTitleLabel.setAlignmentX(LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel(I18n.t("Gestion visual de capas y accesos rapidos"));
-        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 11.5f));
-        subtitle.setForeground(new Color(106, 116, 130));
+        JLabel subtitle = new JLabel(I18n.t("Gestion visual de capas"));
+        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 10f));
+        subtitle.setForeground(new Color(0x999999));
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
-
-        JLabel orderHint = new JLabel(I18n.t("Arriba = frente | Abajo = fondo"));
-        orderHint.setFont(orderHint.getFont().deriveFont(Font.BOLD, 10.5f));
-        orderHint.setForeground(new Color(33, 120, 210));
-        orderHint.setAlignmentX(LEFT_ALIGNMENT);
-
-        JPanel badgePanel = new JPanel(new BorderLayout());
-        badgePanel.setOpaque(false);
-        badgePanel.setAlignmentX(LEFT_ALIGNMENT);
-        badgePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-
-        JLabel badge = new JLabel("CATGIS", SwingConstants.CENTER);
-        badge.setOpaque(true);
-        badge.setBackground(new Color(33, 120, 210));
-        badge.setForeground(Color.WHITE);
-        badge.setFont(badge.getFont().deriveFont(Font.BOLD, 10.5f));
-        badge.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-        sidebarBadgeLabel = badge;
         sidebarSubtitleLabel = subtitle;
-        sidebarOrderHintLabel = orderHint;
-
-        JPanel badgeWrap = new JPanel(new BorderLayout());
-        badgeWrap.setOpaque(false);
-        badgeWrap.add(badge, BorderLayout.WEST);
-        badgePanel.add(badgeWrap, BorderLayout.WEST);
 
         header.add(sidebarTitleLabel);
         header.add(Box.createVerticalStrut(2));
         header.add(sidebarSubtitleLabel);
-        header.add(Box.createVerticalStrut(3));
-        header.add(sidebarOrderHintLabel);
-        header.add(Box.createVerticalStrut(8));
-        header.add(badgePanel);
 
         return header;
     }
 
     private JPanel buildMapContainer() {
-        JPanel mapContainer = new JPanel(new BorderLayout(0, 8));
+        JPanel mapContainer = new JPanel(new BorderLayout(0, 4));
         mapContainer.setOpaque(true);
         mapContainer.setBackground(Color.WHITE);
-        mapContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 224, 230)),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        ));
+        mapContainer.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
 
         mapContainer.add(buildMapHeader(), BorderLayout.NORTH);
         mapContainer.add(buildMapWorkspace(), BorderLayout.CENTER);
@@ -237,15 +365,18 @@ public class CatgisDesktopApp extends JFrame {
     private JPanel buildMapHeader() {
         JPanel header = new JPanel(new BorderLayout());
         header.setOpaque(false);
-        header.setBorder(BorderFactory.createEmptyBorder(0, 2, 6, 2));
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xE0E0E0)),
+                BorderFactory.createEmptyBorder(0, 2, 4, 2)
+        ));
 
-        mapTitleLabel = new JLabel(I18n.t("Vista de mapa"));
-        mapTitleLabel.setFont(mapTitleLabel.getFont().deriveFont(Font.BOLD, 17f));
-        mapTitleLabel.setForeground(new Color(28, 37, 54));
+        mapTitleLabel = new JLabel(I18n.t("Mapa"));
+        mapTitleLabel.setFont(mapTitleLabel.getFont().deriveFont(Font.BOLD, 11f));
+        mapTitleLabel.setForeground(new Color(0x333333));
 
-        mapSubtitleLabel = new JLabel(I18n.t("Exploracion, edicion y analisis visual"));
-        mapSubtitleLabel.setFont(mapSubtitleLabel.getFont().deriveFont(Font.PLAIN, 11.5f));
-        mapSubtitleLabel.setForeground(new Color(106, 116, 130));
+        mapSubtitleLabel = new JLabel(I18n.t("Exploracion y edicion visual"));
+        mapSubtitleLabel.setFont(mapSubtitleLabel.getFont().deriveFont(Font.PLAIN, 10f));
+        mapSubtitleLabel.setForeground(new Color(0x999999));
 
         JPanel left = new JPanel();
         left.setOpaque(false);
@@ -254,16 +385,7 @@ public class CatgisDesktopApp extends JFrame {
         left.add(Box.createVerticalStrut(2));
         left.add(mapSubtitleLabel);
 
-        JLabel statusHint = new JLabel(I18n.t("Proyecto activo"));
-        statusHint.setOpaque(true);
-        statusHint.setBackground(new Color(236, 245, 255));
-        statusHint.setForeground(new Color(33, 120, 210));
-        statusHint.setFont(statusHint.getFont().deriveFont(Font.BOLD, 10.5f));
-        statusHint.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-        mapStatusHintLabel = statusHint;
-
         header.add(left, BorderLayout.WEST);
-        header.add(statusHint, BorderLayout.EAST);
         return header;
     }
 
@@ -354,19 +476,19 @@ public class CatgisDesktopApp extends JFrame {
         int layerCount = currentProject.getLayers() != null ? currentProject.getLayers().size() : 0;
 
         if (sidebarTitleLabel != null) {
-            sidebarTitleLabel.setText(I18n.t("Gestor de proyecto"));
+            sidebarTitleLabel.setText(I18n.t("Capas"));
         }
         if (sidebarSubtitleLabel != null) {
             sidebarSubtitleLabel.setText(projectName + " | " + CRSDefinitions.getLabelForCode(crs));
         }
         if (sidebarOrderHintLabel != null) {
-            sidebarOrderHintLabel.setText(I18n.t("Arriba = frente | Abajo = fondo"));
+            sidebarOrderHintLabel.setText("");
         }
         if (sidebarBadgeLabel != null) {
-            sidebarBadgeLabel.setText(currentProject.isModified() ? "CATGIS *" : "CATGIS");
+            sidebarBadgeLabel.setText("");
         }
         if (mapTitleLabel != null) {
-            mapTitleLabel.setText(I18n.t("Vista de mapa"));
+            mapTitleLabel.setText(I18n.t("Mapa"));
         }
         if (mapSubtitleLabel != null) {
             mapSubtitleLabel.setText(I18n.t("Exploracion, edicion y analisis visual"));

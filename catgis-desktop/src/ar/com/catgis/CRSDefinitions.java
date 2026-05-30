@@ -27,10 +27,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -941,5 +945,103 @@ public class CRSDefinitions {
             double countryArea = Math.max(0.01d, Math.abs(east - west) * Math.abs(north - south));
             return crsArea <= countryArea * COUNTRY_ALIAS_SCALE_FACTOR;
         }
+    }
+
+    // --- Favorites and Recent CRS persistence ---
+
+    private static final Preferences FAV_PREFS = Preferences.userNodeForPackage(CRSDefinitions.class).node("crs-favorites");
+    private static final Preferences RECENT_PREFS = Preferences.userNodeForPackage(CRSDefinitions.class).node("crs-recent");
+    private static final int MAX_RECENT = 10;
+
+    public static Set<String> getFavoriteCodes() {
+        Set<String> codes = new LinkedHashSet<>();
+        String raw = FAV_PREFS.get("codes", "");
+        if (raw != null && !raw.isBlank()) {
+            for (String code : raw.split(",")) {
+                String trimmed = code.trim();
+                if (!trimmed.isBlank()) codes.add(trimmed);
+            }
+        }
+        return codes;
+    }
+
+    public static boolean isFavorite(String code) {
+        return code != null && getFavoriteCodes().contains(normalizeCode(code));
+    }
+
+    public static void toggleFavorite(String code) {
+        String normalized = normalizeCode(code);
+        Set<String> codes = getFavoriteCodes();
+        if (codes.contains(normalized)) {
+            codes.remove(normalized);
+        } else {
+            codes.add(normalized);
+        }
+        FAV_PREFS.put("codes", String.join(",", codes));
+    }
+
+    public static List<String> getRecentCodes() {
+        List<String> codes = new ArrayList<>();
+        for (int i = 0; i < MAX_RECENT; i++) {
+            String code = RECENT_PREFS.get("r" + i, "");
+            if (code != null && !code.isBlank()) codes.add(code);
+        }
+        return codes;
+    }
+
+    public static void addRecentCode(String code) {
+        String normalized = normalizeCode(code);
+        if (normalized.isBlank()) return;
+        List<String> existing = getRecentCodes();
+        existing.remove(normalized);
+        existing.add(0, normalized);
+        while (existing.size() > MAX_RECENT) existing.remove(existing.size() - 1);
+        for (int i = 0; i < MAX_RECENT; i++) {
+            RECENT_PREFS.put("r" + i, i < existing.size() ? existing.get(i) : "");
+        }
+    }
+
+    public static List<CrsCatalogEntry> getFavoriteEntries() {
+        List<CrsCatalogEntry> entries = new ArrayList<>();
+        for (String code : getFavoriteCodes()) {
+            CrsTechnicalDetails details = describe(code);
+            if (details.code() != null && !details.code().isBlank()) {
+                entries.add(new CrsCatalogEntry(
+                        details.code(),
+                        details.name() != null ? details.name() : code,
+                        details.type() != null ? details.type() : "CRS",
+                        true,
+                        (details.name() != null ? details.name() : "") + " " + details.code() + " " + (details.areaOfUse() != null ? details.areaOfUse() : ""),
+                        details.type() != null ? details.type() : "CRS",
+                        details.areaOfUse() != null ? details.areaOfUse() : "",
+                        details.datum() != null ? details.datum() : "",
+                        details.west(), details.south(), details.east(), details.north(),
+                        details.hasBounds()
+                ));
+            }
+        }
+        return entries;
+    }
+
+    public static List<CrsCatalogEntry> getRecentEntries() {
+        List<CrsCatalogEntry> entries = new ArrayList<>();
+        for (String code : getRecentCodes()) {
+            CrsTechnicalDetails details = describe(code);
+            if (details.code() != null && !details.code().isBlank()) {
+                entries.add(new CrsCatalogEntry(
+                        details.code(),
+                        details.name() != null ? details.name() : code,
+                        details.type() != null ? details.type() : "CRS",
+                        false,
+                        (details.name() != null ? details.name() : "") + " " + details.code() + " " + (details.areaOfUse() != null ? details.areaOfUse() : ""),
+                        details.type() != null ? details.type() : "CRS",
+                        details.areaOfUse() != null ? details.areaOfUse() : "",
+                        details.datum() != null ? details.datum() : "",
+                        details.west(), details.south(), details.east(), details.north(),
+                        details.hasBounds()
+                ));
+            }
+        }
+        return entries;
     }
 }

@@ -1,68 +1,35 @@
 package ar.com.catgis;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class CartographyToolbar extends JPanel {
 
     public CartographyToolbar() {
-        setLayout(new BorderLayout(10, 0));
-        setOpaque(true);
-        setBackground(new Color(246, 249, 255));
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(201, 214, 235)),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+        setLayout(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        setOpaque(false);
 
-        add(buildInfoPanel(), BorderLayout.WEST);
-        add(buildButtonsPanel(), BorderLayout.CENTER);
-    }
-
-    private JPanel buildInfoPanel() {
-        JPanel panel = new JPanel();
-        panel.setOpaque(false);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
-        JLabel title = new JLabel(I18n.t("CATMAP"));
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
-        title.setForeground(new Color(24, 40, 72));
-
-        JLabel subtitle = new JLabel(I18n.t("Composicion, impresion y salida cartografica"));
-        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 11.5f));
-        subtitle.setForeground(new Color(88, 98, 112));
-
-        panel.add(title);
-        panel.add(Box.createVerticalStrut(2));
-        panel.add(subtitle);
-        return panel;
-    }
-
-    private JPanel buildButtonsPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        panel.setOpaque(false);
-
-        JButton compositorButton = createButton(I18n.t("Abrir CATMAP"), AppIcons.projectIcon());
+        JButton compositorButton = new JButton(I18n.t("Abrir CATMAP"));
+        compositorButton.setFont(compositorButton.getFont().deriveFont(Font.PLAIN, 11f));
+        compositorButton.setFocusable(false);
+        compositorButton.setMargin(new Insets(2, 8, 2, 8));
+        compositorButton.setContentAreaFilled(false);
+        compositorButton.setBorderPainted(false);
+        compositorButton.setOpaque(false);
+        compositorButton.setToolTipText(I18n.t("Compositor cartografico para maquetacion, impresion y salida final."));
         compositorButton.addActionListener(e -> MapLayoutComposerDialog.open());
+        compositorButton.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { compositorButton.setOpaque(true); compositorButton.setBackground(new Color(0xE0E0E0)); }
+            public void mouseExited(MouseEvent e) { compositorButton.setOpaque(false); compositorButton.repaint(); }
+        });
 
-        panel.add(compositorButton);
-        return panel;
-    }
-
-    private JButton createButton(String text, javax.swing.Icon icon) {
-        JButton button = new JButton(text, icon);
-        button.setFocusable(false);
-        button.setMargin(new Insets(6, 10, 6, 10));
-        button.setPreferredSize(new Dimension(Math.max(190, button.getPreferredSize().width), 34));
-        return button;
+        add(compositorButton);
     }
 }

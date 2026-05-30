@@ -2,7 +2,6 @@ package ar.com.catgis;
 
 public class RasterLayer extends Layer {
 
-    private float opacity = 1.0f;
     private boolean grayscale = false;
     private boolean autoContrast = true;
     private int redBand = 0;
@@ -20,14 +19,6 @@ public class RasterLayer extends Layer {
 
     public RasterLayer(String name, String path) {
         super(name, path, "RASTER");
-    }
-
-    public float getOpacity() {
-        return opacity;
-    }
-
-    public void setOpacity(float opacity) {
-        this.opacity = Math.max(0f, Math.min(1f, opacity));
     }
 
     public boolean isGrayscale() {

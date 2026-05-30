@@ -18,6 +18,9 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JMenuItem;
+import javax.swing.JSeparator;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 import javax.swing.Icon;
@@ -25,9 +28,12 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
@@ -411,24 +417,86 @@ public class FloatingVectorEditToolbar extends JPanel {
     }
 
     private void addButtons(JPanel body) {
-        JPanel strip = new JPanel();
+        JPanel strip = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         strip.setOpaque(false);
-        strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
-        strip.setAlignmentX(Component.LEFT_ALIGNMENT);
+        strip.setPreferredSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        strip.add(createSection("Seleccion", btnMove, btnSelect, btnSnap, btnZoomSelected, btnCopy, btnCopyToEditingLayer, btnPaste, btnDeleteSelection, btnClearSelection, btnEditAttributes, btnMoveFeature));
-        strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Puntos", btnPoint, btnMultiPoint));
-        strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Lineas", btnLine, btnContinueLine, btnExtendLine, btnShortenLine, btnParallel, btnPerpendicular, btnCut));
-        strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Vertices", btnMoveVertex, btnAddVertex, btnRemoveVertex, btnJoinVertices));
-        strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Poligonos", btnRectangle, btnCircle, btnCircle3P, btnPolygon, btnSplitPolygon, btnHole, btnIncreaseArea, btnDecreaseArea, btnAdjacentPolygon));
-        strip.add(Box.createHorizontalStrut(2));
-        strip.add(createSection("Sesion", btnUndo, btnRedo, btnMerge, btnExplode, btnOptions, btnSaveChanges, btnFinish, btnCancel));
+        addToolBtn(strip, btnSelect);
+        addToolBtn(strip, btnMove);
+        addToolBtn(strip, btnSnap);
+        addToolBtn(strip, btnEditAttributes);
+        addToolBtn(strip, btnZoomSelected);
+        addSep(strip);
+
+        addDropButton(strip, "Crear \u25BC", btnPoint, btnMultiPoint, btnLine, btnRectangle, btnCircle, btnPolygon);
+        addSep(strip);
+
+        addToolBtn(strip, btnMoveVertex);
+        addToolBtn(strip, btnAddVertex);
+        addToolBtn(strip, btnRemoveVertex);
+        addToolBtn(strip, btnJoinVertices);
+        addSep(strip);
+
+        addDropButton(strip, "Editar \u25BC", btnMoveFeature, btnCut, btnContinueLine, btnExtendLine,
+                btnShortenLine, btnParallel, btnPerpendicular, btnSplitPolygon, btnHole,
+                btnIncreaseArea, btnDecreaseArea, btnAdjacentPolygon, btnCircle3P,
+                btnCopy, btnPaste, btnDeleteSelection, btnClearSelection, btnCopyToEditingLayer, btnMerge, btnExplode);
+        addSep(strip);
+
+        addToolBtn(strip, btnUndo);
+        addToolBtn(strip, btnRedo);
+        addSep(strip);
+
+        addToolBtn(strip, btnSaveChanges);
+        addToolBtn(strip, btnFinish);
+        addToolBtn(strip, btnCancel);
 
         body.add(strip, BorderLayout.CENTER);
+    }
+
+    private void addToolBtn(JPanel strip, AbstractButton btn) {
+        if (btn == null) return;
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setMargin(new Insets(2, 2, 2, 2));
+        btn.setText("");
+        btn.setPreferredSize(new Dimension(32, 32));
+        strip.add(btn);
+    }
+
+    private void addDropButton(JPanel strip, String label, AbstractButton... buttons) {
+        JButton dropBtn = new JButton(label);
+        dropBtn.setFont(dropBtn.getFont().deriveFont(Font.PLAIN, 10f));
+        dropBtn.setFocusable(false);
+        dropBtn.setMargin(new Insets(2, 6, 2, 6));
+        dropBtn.setContentAreaFilled(false);
+        dropBtn.setBorderPainted(false);
+        dropBtn.setOpaque(false);
+        dropBtn.addActionListener(e -> {
+            JPopupMenu menu = new JPopupMenu();
+            for (AbstractButton btn : buttons) {
+                if (btn == null) continue;
+                JMenuItem item = new JMenuItem(btn.getToolTipText() != null ? btn.getToolTipText() : "");
+                item.addActionListener(ev -> btn.doClick());
+                menu.add(item);
+            }
+            menu.show(dropBtn, 0, dropBtn.getHeight());
+        });
+        dropBtn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { dropBtn.setOpaque(true); dropBtn.setBackground(new Color(0xE0E0E0)); }
+            public void mouseExited(MouseEvent e) { dropBtn.setOpaque(false); dropBtn.repaint(); }
+        });
+        strip.add(dropBtn);
+    }
+
+    private void addSep(JPanel strip) {
+        JSeparator sep = new JSeparator(JSeparator.VERTICAL);
+        sep.setPreferredSize(new Dimension(1, 28));
+        sep.setForeground(new Color(0xCCCCCC));
+        sep.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 4));
+        strip.add(sep);
     }
 
     public void refreshState() {
@@ -979,4 +1047,22 @@ public class FloatingVectorEditToolbar extends JPanel {
         button.setSelected(CatgisDesktopApp.mapPanel == null || CatgisDesktopApp.mapPanel.isSnapEnabled());
     }
 
+    public static void triggerDrawPoint() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnPoint); }
+    public static void triggerDrawMultiPoint() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnMultiPoint); }
+    public static void triggerDrawLine() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnLine); }
+    public static void triggerDrawRectangle() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnRectangle); }
+    public static void triggerDrawPolygon() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnPolygon); }
+    public static void triggerMoveVertex() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnMoveVertex); }
+    public static void triggerAddVertex() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnAddVertex); }
+    public static void triggerRemoveVertex() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnRemoveVertex); }
+    public static void triggerJoinVertices() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnJoinVertices); }
+    public static void triggerCut() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnCut); }
+    public static void triggerMoveFeature() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnMoveFeature); }
+    public static void triggerDeleteSelection() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnDeleteSelection); }
+    public static void triggerSaveChanges() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnSaveChanges); }
+    public static void triggerCancel() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnCancel); }
+
+    private static void clickStaticBtn(AbstractButton btn) {
+        if (btn != null && btn.isEnabled()) btn.doClick();
+    }
 }

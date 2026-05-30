@@ -73,6 +73,8 @@ public class LayersPanel extends JPanel {
     private final JButton scrollTopButton;
     private final JButton scrollBottomButton;
     private final JScrollPane layerScrollPane;
+    private final JLabel emptyStateLabel;
+    private java.awt.CardLayout tocCardLayout;
     private int dragSourceIndex = -1;
     private int dragTargetInsertIndex = -1;
     private boolean dragReorderActive = false;
@@ -109,7 +111,18 @@ public class LayersPanel extends JPanel {
         layerScrollPane = new JScrollPane(layerList);
         layerScrollPane.setBorder(BorderFactory.createEmptyBorder());
         layerScrollPane.getVerticalScrollBar().setUnitIncrement(18);
-        add(layerScrollPane, BorderLayout.CENTER);
+
+        emptyStateLabel = new JLabel(I18n.t("Arrastra capas aqui o usa el menu Datos"), SwingConstants.CENTER);
+        emptyStateLabel.setForeground(new Color(160, 160, 170));
+        emptyStateLabel.setFont(emptyStateLabel.getFont().deriveFont(Font.PLAIN, 13f));
+        emptyStateLabel.setVisible(model.isEmpty());
+
+        JPanel centerPanel = new JPanel(new java.awt.CardLayout());
+        centerPanel.setOpaque(false);
+        centerPanel.add(layerScrollPane, "layers");
+        centerPanel.add(emptyStateLabel, "empty");
+        tocCardLayout = (java.awt.CardLayout) centerPanel.getLayout();
+        add(centerPanel, BorderLayout.CENTER);
 
         MouseAdapter layerMouseAdapter = new MouseAdapter() {
             @Override
@@ -501,6 +514,9 @@ public class LayersPanel extends JPanel {
 
         restoreSelection(previousSelection);
         layerList.repaint();
+        if (tocCardLayout != null) {
+            tocCardLayout.show((JPanel) emptyStateLabel.getParent(), model.isEmpty() ? "empty" : "layers");
+        }
         CatgisDesktopApp.syncProInterpretationToolbar();
     }
 
@@ -672,6 +688,10 @@ public class LayersPanel extends JPanel {
         popupMenu.addSeparator();
 
         addCommonTopItems(popupMenu, selectedLayer, "Ocultar capa", "Mostrar capa");
+
+        JMenuItem displayItem = createMenuItem("Ajustes de visualizacion...", AppIcons.attrEditIcon());
+        displayItem.addActionListener(ev -> openVectorDisplaySettings(selectedLayer));
+        popupMenu.add(displayItem);
 
         JMenuItem editItem = createMenuItem(readOnlyVector ? "Capa en solo lectura" : "Editar vector", AppIcons.attrEditIcon());
         editItem.setEnabled(!readOnlyVector);
@@ -1238,10 +1258,11 @@ public class LayersPanel extends JPanel {
         }
 
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
+        EditingToolsWindow.showWindow();
 
         if (CatgisDesktopApp.statusBar != null) {
             CatgisDesktopApp.statusBar.setMessage(
-                    "Edicion vectorial preparada para la capa: " + layer.getName()
+                    "Editando capa: " + layer.getName()
             );
         }
     }
@@ -2014,6 +2035,22 @@ public class LayersPanel extends JPanel {
 
     private String nonBlank(String value, String fallback) {
         return value != null && !value.isBlank() ? value : fallback;
+    }
+
+    private void openVectorDisplaySettings(Layer layer) {
+        try {
+            Class<?> dialogClass = Class.forName("ar.com.catgis.RasterDisplaySettingsDialog");
+            Constructor<?> ctor = dialogClass.getConstructor(java.awt.Component.class, Layer.class);
+            ctor.newInstance(this, layer);
+            return;
+        } catch (Exception ignored) {
+        }
+        JOptionPane.showMessageDialog(
+                this,
+                "No se pudo abrir el dialogo de ajustes de visualizacion.",
+                "Error",
+                JOptionPane.ERROR_MESSAGE
+        );
     }
 
     private void openRasterDisplaySettings(Layer layer) {
