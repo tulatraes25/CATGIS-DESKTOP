@@ -1,50 +1,39 @@
 package ar.com.catgis;
 
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class OnlineConnectionsToolbar extends JPanel {
 
     public OnlineConnectionsToolbar() {
-        setOpaque(true);
-        setBackground(new Color(248, 250, 252));
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(222, 228, 236)),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-        setLayout(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        setOpaque(false);
+        setLayout(new FlowLayout(FlowLayout.LEFT, 2, 0));
 
-        JLabel title = new JLabel(I18n.t("Conexiones online"));
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 12f));
-        title.setForeground(new Color(41, 54, 75));
-
-        JButton osmButton = createButton("OSM", I18n.t("Activar OpenStreetMap"), AppIcons.basemapIcon());
-        osmButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM));
-
-        JButton esriButton = createButton("Esri", I18n.t("Activar Esri World Imagery"), AppIcons.imageryIcon());
-        esriButton.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY));
-
-        JButton wfsButton = createButton("WFS", I18n.t("Agregar capa WFS"), AppIcons.tableIcon());
-        wfsButton.addActionListener(e -> AddWfsAction.openDialog());
-
-        add(title);
-        add(osmButton);
-        add(esriButton);
-        add(wfsButton);
+        add(flatButton("OSM", AppIcons.osmIcon(), I18n.t("Activar OpenStreetMap"), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM)));
+        add(flatButton("Esri", AppIcons.esriIcon(), I18n.t("Activar Esri World Imagery"), () -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY)));
+        add(flatButton("WFS", AppIcons.wfsIcon(), I18n.t("Agregar capa WFS"), AddWfsAction::openDialog));
     }
 
-    private JButton createButton(String text, String tooltip, javax.swing.Icon icon) {
-        JButton button = new JButton(text, icon);
-        button.setToolTipText(tooltip);
-        button.setFocusable(false);
-        button.setMargin(new Insets(4, 8, 4, 8));
-        button.setFont(button.getFont().deriveFont(Font.PLAIN, 12f));
-        return button;
+    static JButton flatButton(String text, javax.swing.Icon icon, String tip, Runnable action) {
+        JButton btn = new JButton(text, icon);
+        btn.setToolTipText(tip);
+        btn.setFocusable(false);
+        btn.setMargin(new Insets(2, 6, 2, 6));
+        btn.setFont(btn.getFont().deriveFont(Font.PLAIN, 11f));
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setOpaque(false);
+        btn.addActionListener(e -> action.run());
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btn.setOpaque(true); btn.setBackground(new Color(0xE0E0E0)); }
+            public void mouseExited(MouseEvent e) { btn.setOpaque(false); btn.repaint(); }
+        });
+        return btn;
     }
 }

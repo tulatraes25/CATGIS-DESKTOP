@@ -1,0 +1,359 @@
+Summary for C:\Kosmo-3.0\bin\kosmo_desktop.jar
+Decompiled with CFR 0.152
+
+
+com.vividsolutions.jump.util.FileUtil
+----------------------------
+
+calculateMd5(java.lang.String com.vividsolutions.jump.workbench.ui.task.TaskMonitorDialog )
+  Loose catch block
+
+
+com.vividsolutions.jump.workbench.datasource.SaveDatasetAsPlugIn
+----------------------------
+
+run(com.vividsolutions.jump.task.TaskMonitor com.vividsolutions.jump.workbench.plugin.PlugInContext )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [6[CATCHBLOCK]], but top level block is 5[CATCHBLOCK]
+
+
+com.vividsolutions.jump.workbench.ui.cursortool.FeatureInfoTool
+----------------------------
+
+gestureFinished()
+  Unable to fully structure code
+
+
+com.vividsolutions.jump.workbench.ui.plugin.AbstractLoadProjectPlugIn
+----------------------------
+
+loadCategory(com.vividsolutions.jump.workbench.model.Task com.vividsolutions.jump.workbench.model.Category com.vividsolutions.jump.task.TaskMonitor java.util.List<org.saig.jump.widgets.summary.SummaryMessage> boolean )
+  Unable to fully structure code
+  Could not resolve type clashes
+
+
+com.vividsolutions.jump.workbench.ui.plugin.edit.SegmentsExtracter
+----------------------------
+
+add(com.vividsolutions.jump.feature.FeatureCollection )
+  Handled impossible loop by duplicating code
+
+
+com.vividsolutions.wms.MapLayer
+----------------------------
+
+getAllBoundingBoxList()
+  Unable to fully structure code
+
+
+de.latlon.deejump.wfs.data.JUMPFeatureFactory2
+----------------------------
+
+createFromJUMPFeatureCollection(com.vividsolutions.jump.feature.FeatureCollection long org.cresques.cts.IProjection )
+  Handled impossible loop by duplicating code
+
+
+es.kosmo.core.dao.datasource.filedatasource.dxf.AbstractDxfWriter
+----------------------------
+
+writeEntity(com.vividsolutions.jump.feature.FeatureCollection )
+  Unable to fully structure code
+writeFeatureBlocks(com.vividsolutions.jump.feature.FeatureCollection )
+  Handled impossible loop by duplicating code
+addBlocks(com.vividsolutions.jump.feature.FeatureCollection )
+  Handled impossible loop by duplicating code
+
+
+es.kosmo.core.geometry.operations.IntersectionOp
+----------------------------
+
+executeOperation(com.vividsolutions.jump.task.TaskMonitor )
+  Unable to fully structure code
+
+
+es.kosmo.core.model.relations.topology.impl.NoGapsTopologyRelation
+----------------------------
+
+checkFeature(com.vividsolutions.jump.feature.Feature java.util.Collection<com.vividsolutions.jump.feature.Feature> com.vividsolutions.jump.feature.FeatureCollection )
+  Unable to fully structure code
+
+
+es.kosmo.core.renderer.label.LineStringCursor
+----------------------------
+
+moveRelative(double )
+  Unable to fully structure code
+
+
+es.kosmo.desktop.plugins.analysis.ConvexHullLayerPlugIn
+----------------------------
+
+run(com.vividsolutions.jump.task.TaskMonitor com.vividsolutions.jump.workbench.plugin.PlugInContext )
+  Unable to fully structure code
+
+
+org.geotools.util.SoftValueHashMap
+----------------------------
+
+findNext()
+  Unable to fully structure code
+
+
+org.gvsig.crs.CrsWkt
+----------------------------
+
+fromWKT(java.lang.String boolean )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [42[DOLOOP]], but top level block is 45[DOLOOP]
+
+
+org.gvsig.crs.gui.panels.CrsAndTransformationRecentsPanel
+----------------------------
+
+loadRecents(org.gvsig.crs.CrsWkt org.gvsig.crs.ICrs )
+  Unable to fully structure code
+
+
+org.saig.core.dao.datasource.dbdatasource.AbstractJDBCDataSource
+----------------------------
+
+getFeatures()
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
+
+
+org.saig.core.dao.datasource.filedatasource.shape.iterators.ShapeEditionIterator
+----------------------------
+
+hasNext()
+  Unable to fully structure code
+
+
+org.saig.core.dao.datasource.filedatasource.shape.iterators.ShapeIterator
+----------------------------
+
+hasNext()
+  Unable to fully structure code
+
+
+org.saig.core.dao.datasource.filedatasource.shape.writers.SHP
+----------------------------
+
+checkMultiGeometry(java.util.Iterator int )
+  Unable to fully structure code
+createShapeFile(com.vividsolutions.jump.feature.FeatureSchema int org.saig.core.model.feature.FeatureIterator java.io.File boolean boolean java.nio.charset.Charset )
+  Unable to fully structure code
+createShapeFile(com.vividsolutions.jump.feature.FeatureSchema org.saig.core.dao.datasource.filedatasource.shape.geometry.IShapeGeometry org.saig.core.model.feature.FeatureIterator java.io.File long java.nio.charset.Charset )
+  Unable to fully structure code
+
+
+org.saig.core.dao.datasource.filedatasource.utils.FileCharsetDetector
+----------------------------
+
+getCharset(java.io.InputStream )
+  Loose catch block
+
+
+org.saig.core.dao.datasource.memory.FeatureDatasetIterator
+----------------------------
+
+hasNext()
+  Unable to fully structure code
+
+
+org.saig.core.filter.ExpressionDOMParser
+----------------------------
+
+parseExpression(org.w3c.dom.Node int com.vividsolutions.jump.feature.FeatureSchema )
+  Unable to fully structure code
+
+
+org.saig.core.filter.LogicFilterImpl
+----------------------------
+
+toString()
+  Unable to fully structure code
+
+
+org.saig.core.model.data.dao.dbf.DBFRecordDataSource
+----------------------------
+
+getRecords(java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+getByAttribute(java.lang.String[] java.lang.Object[] java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+
+
+org.saig.core.model.data.dao.jdbc.MDBDataSource
+----------------------------
+
+getRecords(java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+getByAttribute(java.lang.String[] java.lang.Object[] java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+
+
+org.saig.core.model.data.dao.jdbc.MySQLDataSource
+----------------------------
+
+getRecords(java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+getByAttribute(java.lang.String[] java.lang.Object[] java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+
+
+org.saig.core.model.data.dao.jdbc.OracleDataSource
+----------------------------
+
+getRecords(java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+getByAttribute(java.lang.String[] java.lang.Object[] java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+
+
+org.saig.core.model.data.dao.jdbc.PostgreSQLDataSource
+----------------------------
+
+getRecords(java.lang.String org.saig.core.filter.Filter boolean )
+  Unable to fully structure code
+
+
+org.saig.core.model.data.dao.memory.iterators.TableInMemoryIterator
+----------------------------
+
+hasNext()
+  Unable to fully structure code
+
+
+org.saig.core.model.data.widgets.tables.management.control.AdvancedDBControlPanel
+----------------------------
+
+insertButtonActionPerformed(java.awt.event.ActionEvent )
+  Loose catch block
+
+
+org.saig.core.model.data.widgets.tables.management.navigation.TableNavigationHelper
+----------------------------
+
+getElements(int int )
+  Unable to fully structure code
+
+
+org.saig.core.model.relations.LayerRelation
+----------------------------
+
+getDistintsValues(java.lang.String int )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [14[DOLOOP]], but top level block is 16[SIMPLE_IF_TAKEN]
+
+
+org.saig.core.model.relations.TableRelation
+----------------------------
+
+getDistintsValues(java.lang.String int )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [14[DOLOOP]], but top level block is 16[SIMPLE_IF_TAKEN]
+
+
+org.saig.core.model.relations.topology.topologyRelationsImpl.DisjointTopologyRelation
+----------------------------
+
+checkFeature(com.vividsolutions.jump.feature.Feature java.util.Collection<com.vividsolutions.jump.feature.Feature> com.vividsolutions.jump.feature.FeatureCollection )
+  Unable to fully structure code
+
+
+org.saig.core.renderer2.AbstractRenderer
+----------------------------
+
+paintOneQueryByFilter(com.vividsolutions.jump.workbench.model.Layer com.vividsolutions.jump.workbench.ui.renderer.ThreadSafeImage java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange com.vividsolutions.jts.geom.Envelope boolean )
+  Unable to fully structure code
+paintOnlyQuery(com.vividsolutions.jump.workbench.model.Layer com.vividsolutions.jump.workbench.ui.renderer.ThreadSafeImage java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange com.vividsolutions.jts.geom.Envelope boolean boolean java.util.List<java.lang.String> )
+  Unable to fully structure code
+
+
+org.saig.core.renderer2.CadRenderer
+----------------------------
+
+paintOnlyQuery(com.vividsolutions.jump.workbench.model.Layer com.vividsolutions.jump.workbench.ui.renderer.ThreadSafeImage java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange com.vividsolutions.jts.geom.Envelope boolean boolean java.util.List<java.lang.String> )
+  Handled impossible loop by duplicating code
+
+
+org.saig.core.renderer2.SelectionRenderer
+----------------------------
+
+renderSelection(com.vividsolutions.jump.workbench.ui.renderer.ThreadSafeImage com.vividsolutions.jump.workbench.model.Layerable com.vividsolutions.jump.workbench.ui.Viewport java.util.Iterator<com.vividsolutions.jump.feature.Feature> org.saig.core.styling.Rule boolean org.saig.core.styling.PointSymbolizer com.vividsolutions.jump.workbench.ui.renderer.AbstractSelectionRenderer )
+  Unable to fully structure code
+
+
+org.saig.core.renderer2.ShapeRenderer
+----------------------------
+
+paintAll(java.util.Iterator<com.vividsolutions.jump.feature.Feature> java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange boolean boolean java.awt.geom.Rectangle2D java.lang.String )
+  Unable to fully structure code
+
+
+org.saig.core.renderer3.AbstractRenderer
+----------------------------
+
+paintOneQueryByFilter(com.vividsolutions.jump.workbench.model.Layer java.awt.Graphics2D java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange com.vividsolutions.jts.geom.Envelope boolean )
+  Unable to fully structure code
+paintOnlyQuery(com.vividsolutions.jump.workbench.model.Layer java.awt.Graphics2D java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange com.vividsolutions.jts.geom.Envelope boolean boolean java.util.List<java.lang.String> )
+  Unable to fully structure code
+
+
+org.saig.core.renderer3.CadRenderer
+----------------------------
+
+paintOnlyQuery(com.vividsolutions.jump.workbench.model.Layer java.awt.Graphics2D java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange com.vividsolutions.jts.geom.Envelope boolean boolean java.util.List<java.lang.String> )
+  Handled impossible loop by duplicating code
+
+
+org.saig.core.renderer3.SelectionRenderer
+----------------------------
+
+renderSelection(com.vividsolutions.jump.workbench.ui.renderer.ThreadSafeImage int int com.vividsolutions.jts.geom.Envelope com.vividsolutions.jump.workbench.model.Layerable double double boolean javax.measure.unit.Unit<javax.measure.quantity.Length> java.util.Iterator<com.vividsolutions.jump.feature.Feature> org.saig.core.styling.Rule boolean org.saig.core.styling.PointSymbolizer com.vividsolutions.jump.workbench.ui.renderer.AbstractRenderer )
+  Unable to fully structure code
+
+
+org.saig.core.renderer3.ShapeRenderer
+----------------------------
+
+paintAll(java.util.Iterator<com.vividsolutions.jump.feature.Feature> java.util.List<org.saig.core.renderer.style.RuleStyle> java.awt.geom.AffineTransform org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.opengis.referencing.operation.MathTransform2D org.geotools.util.NumberRange boolean boolean java.awt.geom.Rectangle2D java.lang.String )
+  Unable to fully structure code
+
+
+org.saig.core.renderer.lite.ImageLoader
+----------------------------
+
+run()
+  Unable to fully structure code
+
+
+org.saig.core.renderer.print.PrintRenderer
+----------------------------
+
+drawCadShape(java.awt.Graphics2D org.saig.core.renderer.style.RuleStyle org.saig.core.renderer.lite.LabelCache org.saig.core.renderer.print.PrintElement double java.lang.String )
+  Unable to fully structure code
+
+
+org.saig.core.renderer.style.ImageLoader
+----------------------------
+
+run()
+  Unable to fully structure code
+
+
+org.saig.jump.plugin.check.CheckTopologyRulesPlugIn
+----------------------------
+
+run(com.vividsolutions.jump.task.TaskMonitor com.vividsolutions.jump.workbench.plugin.PlugInContext )
+  Loose catch block
+
+
+org.saig.jump.plugin.stats.StatsOperatorsFactory
+----------------------------
+
+queryStats(java.util.Map<java.lang.String, java.util.Set<java.lang.String>> java.util.List<java.lang.String> java.util.List<org.saig.jump.widgets.stats.CalculateStatsDialog$StatPair> java.util.Set<java.lang.String> int org.saig.core.model.feature.FeatureIterator org.saig.core.dao.datasource.AbstractDataSource )
+  Unable to fully structure code
+
+
+org.saig.jump.plugin.utils.CrossesLayersPlugIn
+----------------------------
+
+run(com.vividsolutions.jump.task.TaskMonitor com.vividsolutions.jump.workbench.plugin.PlugInContext )
+  Unable to fully structure code

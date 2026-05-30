@@ -7364,14 +7364,24 @@ public class MapPanel extends JPanel {
             return;
         }
 
-        boolean editingLayer = isLayerArmedForEditing(layer);
-        forEachVisibleFeatureGeometry(List.of(layer), "Error al dibujar la capa ", (currentLayer, featureGeometry) -> {
-            if (editingLayer) {
-                drawGeometryForEditingLayer(g2, featureGeometry.geometry(), currentLayer);
-            } else {
-                drawGeometry(g2, featureGeometry.geometry(), currentLayer, featureGeometry.feature());
-            }
-        });
+        float opacity = layer.getOpacity();
+        Graphics2D vecG2 = opacity >= 1.0f ? g2 : (Graphics2D) g2.create();
+        if (opacity < 1.0f) {
+            vecG2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0.1f, opacity)));
+        }
+
+        try {
+            boolean editingLayer = isLayerArmedForEditing(layer);
+            forEachVisibleFeatureGeometry(List.of(layer), "Error al dibujar la capa ", (currentLayer, featureGeometry) -> {
+                if (editingLayer) {
+                    drawGeometryForEditingLayer(vecG2, featureGeometry.geometry(), currentLayer);
+                } else {
+                    drawGeometry(vecG2, featureGeometry.geometry(), currentLayer, featureGeometry.feature());
+                }
+            });
+        } finally {
+            if (opacity < 1.0f) vecG2.dispose();
+        }
     }
 
     private void drawGeometry(Graphics2D g2, Geometry geometry, Layer layer, SimpleFeature feature) {

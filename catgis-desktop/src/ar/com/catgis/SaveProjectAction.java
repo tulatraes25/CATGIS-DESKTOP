@@ -232,6 +232,8 @@ public class SaveProjectAction extends AbstractAction {
                 sb.append("|").append("DERIVED_OP=").append(safe(raster.getDerivedOperation()))
                   .append("|").append("DERIVED_ARGS=").append(safe(raster.getDerivedParameters()));
             }
+        } else {
+            sb.append("|").append(layer.getOpacity());
         }
 
         if (layer instanceof OnlineTileLayer) {

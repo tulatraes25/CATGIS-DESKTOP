@@ -466,6 +466,12 @@ public class LoadProjectAction extends AbstractAction {
                 if (parts.length > payloadStart + 8 && parts[payloadStart + 8].startsWith("DERIVED_ARGS=")) {
                     raster.setDerivedParameters(parts[payloadStart + 8].substring("DERIVED_ARGS=".length()).trim());
                 }
+            } else {
+                if (parts.length > payloadStart) {
+                    try {
+                        layer.setOpacity(Float.parseFloat(parts[payloadStart].trim().replace(",", ".")));
+                    } catch (Exception ignored) { CatgisLogger.warn("Error al interpretar valor numerico de proyecto CATGIS", ignored); }
+                }
             }
 
             if (layer instanceof OnlineTileLayer) {

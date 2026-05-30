@@ -77,6 +77,7 @@ public class CRSSelectorDialog extends JDialog {
     private JButton useSelectedButton;
     private JButton useManualButton;
     private JButton closeButton;
+    private JButton favButton;
     private final Consumer<String> onSelect;
 
     private final List<CRSDefinitions.CrsCatalogEntry> featuredEntries;
@@ -87,6 +88,7 @@ public class CRSSelectorDialog extends JDialog {
     private boolean syncingManualCode;
     private boolean syncingListSelection;
     private Timer searchDebounceTimer;
+    private int activeTabIndex = 0;
 
     public CRSSelectorDialog(Window owner, String title, String currentCode, Consumer<String> onSelect) {
         super(
@@ -198,13 +200,28 @@ public class CRSSelectorDialog extends JDialog {
         title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
         title.setForeground(new Color(29, 45, 71));
 
-        JLabel hint = new JLabel(I18n.t("Lista moderna con EPSG destacados y catalogo mundial completo"));
+        JPanel tabBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        tabBar.setOpaque(false);
+        JButton featuredTab = createTabButton(I18n.t("Destacados"), true);
+        JButton favoritesTab = createTabButton(I18n.t("Favoritos"), false);
+        JButton recentTab = createTabButton(I18n.t("Recientes"), false);
+        tabBar.add(featuredTab);
+        tabBar.add(favoritesTab);
+        tabBar.add(recentTab);
+
+        final int[] activeTab = {0};
+        featuredTab.addActionListener(e -> { activeTab[0] = 0; selectTab(0, featuredTab, favoritesTab, recentTab); });
+        favoritesTab.addActionListener(e -> { activeTab[0] = 1; selectTab(1, featuredTab, favoritesTab, recentTab); });
+        recentTab.addActionListener(e -> { activeTab[0] = 2; selectTab(2, featuredTab, favoritesTab, recentTab); });
+
+        JLabel hint = new JLabel(I18n.t("Lista con EPSG destacados, favoritos, recientes y catalogo mundial completo"));
         hint.setForeground(new Color(91, 103, 121));
         hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 11.5f));
 
-        JPanel top = new JPanel(new BorderLayout(0, 4));
+        JPanel top = new JPanel(new BorderLayout(0, 2));
         top.setOpaque(false);
         top.add(title, BorderLayout.NORTH);
+        top.add(tabBar, BorderLayout.CENTER);
         top.add(hint, BorderLayout.SOUTH);
 
         listModel = new DefaultListModel<>();
@@ -222,6 +239,52 @@ public class CRSSelectorDialog extends JDialog {
         return panel;
     }
 
+    private JButton createTabButton(String text, boolean selected) {
+        JButton btn = new JButton(text);
+        btn.setFont(btn.getFont().deriveFont(Font.PLAIN, 12f));
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(selected ? new Color(33, 120, 210) : new Color(200, 208, 218)),
+                BorderFactory.createEmptyBorder(3, 10, 3, 10)
+        ));
+        btn.setBackground(selected ? new Color(235, 245, 255) : Color.WHITE);
+        btn.setForeground(selected ? new Color(21, 101, 192) : new Color(80, 90, 110));
+        btn.setOpaque(true);
+        return btn;
+    }
+
+    private void selectTab(int index, JButton... buttons) {
+        for (int i = 0; i < buttons.length; i++) {
+            boolean sel = i == index;
+            buttons[i].setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(sel ? new Color(33, 120, 210) : new Color(200, 208, 218)),
+                    BorderFactory.createEmptyBorder(3, 10, 3, 10)
+            ));
+            buttons[i].setBackground(sel ? new Color(235, 245, 255) : Color.WHITE);
+            buttons[i].setForeground(sel ? new Color(21, 101, 192) : new Color(80, 90, 110));
+        }
+        refreshListNow();
+    }
+
+    private List<CRSDefinitions.CrsCatalogEntry> resolveTabSource() {
+        int tab = activeTabIndex();
+        if (tab == 1) return getFavoritesList();
+        if (tab == 2) return getRecentsList();
+        return featuredEntries;
+    }
+
+    private int activeTabIndex() {
+        return activeTabIndex;
+    }
+
+    private List<CRSDefinitions.CrsCatalogEntry> getFavoritesList() {
+        return CRSDefinitions.getFavoriteEntries();
+    }
+
+    private List<CRSDefinitions.CrsCatalogEntry> getRecentsList() {
+        return CRSDefinitions.getRecentEntries();
+    }
+
     private JPanel buildDetailsPanel() {
         JPanel panel = new JPanel(new BorderLayout(8, 8));
         panel.setOpaque(true);
@@ -234,7 +297,27 @@ public class CRSSelectorDialog extends JDialog {
         JLabel title = new JLabel(I18n.t("Panel tecnico"));
         title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
         title.setForeground(new Color(29, 45, 71));
-        topCard.add(title, BorderLayout.NORTH);
+
+        favButton = new JButton(I18n.t("★"));
+        favButton.setFont(favButton.getFont().deriveFont(Font.BOLD, 16f));
+        favButton.setFocusPainted(false);
+        favButton.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        favButton.setContentAreaFilled(false);
+        favButton.setToolTipText(I18n.t("Agregar o quitar de favoritos"));
+        favButton.addActionListener(e -> {
+            String code = getSelectedListCode();
+            if (code != null && !code.isBlank()) {
+                CRSDefinitions.toggleFavorite(code);
+                updateFavoriteButtonStyle(favButton, code);
+                if (activeTabIndex == 1) refreshListNow();
+            }
+        });
+
+        JPanel topCardHeader = new JPanel(new BorderLayout(4, 0));
+        topCardHeader.setOpaque(false);
+        topCardHeader.add(title, BorderLayout.WEST);
+        topCardHeader.add(favButton, BorderLayout.EAST);
+        topCard.add(topCardHeader, BorderLayout.NORTH);
 
         JPanel detailsGrid = new JPanel(new GridBagLayout());
         detailsGrid.setOpaque(false);
@@ -532,9 +615,10 @@ public class CRSSelectorDialog extends JDialog {
         if (hasQuery && !worldCatalogLoaded) {
             loadFullCatalogAsync();
         }
+        List<CRSDefinitions.CrsCatalogEntry> tabSource = hasQuery ? featuredEntries : resolveTabSource();
         List<CRSDefinitions.CrsCatalogEntry> source = hasQuery
-                ? (allEntries != null ? allEntries : featuredEntries)
-                : featuredEntries;
+                ? (allEntries != null ? allEntries : tabSource)
+                : tabSource;
         List<CRSDefinitions.CrsCatalogEntry> filtered = CRSDefinitions.filterEntries(query, source);
         int visibleCount = Math.min(filtered.size(), MAX_VISIBLE_RESULTS);
         for (int i = 0; i < visibleCount; i++) {
@@ -587,6 +671,7 @@ public class CRSSelectorDialog extends JDialog {
         }
         setManualCodeSilently(entry.code());
         updateDetails(CRSDefinitions.describe(entry.code()));
+        updateFavoriteButtonStyle(entry.code());
         updateActionState();
     }
 
@@ -819,6 +904,7 @@ public class CRSSelectorDialog extends JDialog {
         try {
             String normalized = CRSDefinitions.normalizeCode(value);
             CRSDefinitions.decode(normalized, true);
+            CRSDefinitions.addRecentCode(normalized);
             if (onSelect != null) {
                 onSelect.accept(normalized);
             }
@@ -833,6 +919,20 @@ public class CRSSelectorDialog extends JDialog {
         }
     }
 
+    private void updateFavoriteButtonStyle(String code) {
+        if (favButton == null) return;
+        boolean isFav = CRSDefinitions.isFavorite(code);
+        favButton.setText(isFav ? I18n.t("★") : I18n.t("☆"));
+        favButton.setForeground(isFav ? new Color(240, 160, 20) : new Color(140, 150, 170));
+        favButton.setToolTipText(isFav ? I18n.t("Quitar de favoritos") : I18n.t("Agregar a favoritos"));
+    }
+
+    private void updateFavoriteButtonStyle(JButton btn, String code) {
+        boolean isFav = CRSDefinitions.isFavorite(code);
+        btn.setText(isFav ? I18n.t("★") : I18n.t("☆"));
+        btn.setForeground(isFav ? new Color(240, 160, 20) : new Color(140, 150, 170));
+        btn.setToolTipText(isFav ? I18n.t("Quitar de favoritos") : I18n.t("Agregar a favoritos"));
+    }
     private JLabel createValueLabel() {
         JLabel label = new JLabel("-");
         label.setForeground(new Color(31, 41, 55));
