@@ -7458,6 +7458,8 @@ public class MapLayoutComposerDialog extends JFrame {
         propertiesCardPanel.add(new JLabel("."), "legend");
         // Map card (built lazily)
         propertiesCardPanel.add(new JLabel("."), "map");
+        // Label card (built lazily)
+        propertiesCardPanel.add(new JLabel("."), "label");
 
         JScrollPane sp = new JScrollPane(propertiesCardPanel);
         sp.setBorder(null);
@@ -7999,6 +8001,9 @@ public class MapLayoutComposerDialog extends JFrame {
         } else if (sel instanceof LayoutMap) {
             rebuildMapCard((LayoutMap) sel);
             cl.show(propertiesCardPanel, "map");
+        } else if (sel instanceof LayoutLabel) {
+            rebuildLabelCard((LayoutLabel) sel);
+            cl.show(propertiesCardPanel, "label");
         } else if (sel == null) {
             propertiesInfoLabel.setText("<html>Sin elemento<br>seleccionado</html>");
             cl.show(propertiesCardPanel, "generic");
@@ -8023,6 +8028,61 @@ public class MapLayoutComposerDialog extends JFrame {
                 + " Y:" + String.format("%.1f", sel.getBoundsMm().y) + "</html>");
             cl.show(propertiesCardPanel, "generic");
         }
+    }
+
+    private void rebuildLabelCard(LayoutLabel label) {
+        if (propertiesCardPanel == null) return;
+        JPanel form = new JPanel(new java.awt.GridBagLayout());
+        form.setOpaque(false);
+        java.awt.GridBagConstraints g = new java.awt.GridBagConstraints();
+        g.insets = new Insets(1, 2, 1, 2);
+        g.anchor = java.awt.GridBagConstraints.WEST;
+        g.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        g.weightx = 1;
+        int y = 0;
+
+        // Elemento
+        sectionLabel(form, g, y, "Elemento"); y++;
+        JTextField nameField = field(form, g, y, "Nombre:", label.getName());
+        nameField.addActionListener(e -> { label.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
+        y++;
+        JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", label.getBoundsMm().x));
+        xField.addActionListener(e -> { try { label.setBoundsMm(Double.parseDouble(xField.getText()), label.getBoundsMm().y, label.getBoundsMm().width, label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", label.getBoundsMm().y));
+        yField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, Double.parseDouble(yField.getText()), label.getBoundsMm().width, label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", label.getBoundsMm().width));
+        wField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, label.getBoundsMm().y, Double.parseDouble(wField.getText()), label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", label.getBoundsMm().height));
+        hField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, label.getBoundsMm().y, label.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        y = addBoolRow(form, g, y, "Visible:", label.isVisible(), v -> { label.setVisible(v); refreshElementList(); previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Bloqueado:", label.isLocked(), v -> { label.setLocked(v); refreshElementList(); previewPanel.repaint(); });
+
+        // Texto
+        y++; sectionLabel(form, g, y, "Texto"); y++;
+        JTextField textField = field(form, g, y, "Contenido:", label.getText() != null ? label.getText() : "");
+        textField.addActionListener(e -> { label.setText(textField.getText()); previewPanel.repaint(); });
+        y++;
+        Font f = label.getFont();
+        JTextField fontField = field(form, g, y, "Fuente:", f.getFamily());
+        y++;
+        JTextField sizeField = field(form, g, y, "Tamano:", String.valueOf(f.getSize()));
+        sizeField.addActionListener(e -> { try { label.setFont(label.getFont().deriveFont((float)Integer.parseInt(sizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        java.awt.Font currentFont = label.getFont();
+        y = addBoolRow(form, g, y, "Negrita:", currentFont.isBold(), v -> { label.setFont(label.getFont().deriveFont(v ? Font.BOLD : Font.PLAIN)); previewPanel.repaint(); });
+
+        // Spacer
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
+        form.add(Box.createVerticalGlue(), g);
+
+        propertiesCardPanel.remove(3);
+        propertiesCardPanel.add(form, "label", 3);
+        propertiesCardPanel.revalidate();
+        propertiesCardPanel.repaint();
     }
 
     private void rebuildMapCard(LayoutMap map) {
