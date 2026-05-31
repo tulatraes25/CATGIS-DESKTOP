@@ -4561,8 +4561,8 @@ public class MapLayoutComposerDialog extends JFrame {
                     Point pagePoint = toPagePoint(e.getPoint());
                     RectMm pageRect = toPageRectMm();
                     if (pagePoint != null && pageRect != null) {
-                        double xMm = pageRect.xMm + (pagePoint.x / lastPreviewScale) * pageRect.pxToMmScale;
-                        double yMm = pageRect.yMm + (pagePoint.y / lastPreviewScale) * pageRect.pxToMmScale;
+                    double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
+                    double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
                         LayoutElement clicked = layoutModel.findElementAtMm(xMm, yMm);
                         if (clicked != null) {
                             // Only allow resize if element is already selected; otherwise select+move first
@@ -4764,7 +4764,7 @@ public class MapLayoutComposerDialog extends JFrame {
                         if (p != null) {
                             RectMm r = toPageRectMm();
                             if (r != null) {
-                                double sc = r.pxToMmScale / lastPreviewScale;
+                                double sc = r.pxToMmScale;
                                 if (activeResizeHandleIndex >= 0) {
                                     resizeElement(activeResizeHandleIndex, p.x - dragStartPagePoint.x, p.y - dragStartPagePoint.y);
                                 } else {
@@ -4833,8 +4833,8 @@ public class MapLayoutComposerDialog extends JFrame {
                     LayoutElement oldHover = hoveredElement;
                     hoveredElement = null;
                     if (pagePoint != null && pageRect != null && layoutModel.size() > 0) {
-                        double xMm = pageRect.xMm + (pagePoint.x / lastPreviewScale) * pageRect.pxToMmScale;
-                        double yMm = pageRect.yMm + (pagePoint.y / lastPreviewScale) * pageRect.pxToMmScale;
+                    double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
+                    double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
                         hoveredElement = layoutModel.findHoverAtMm(xMm, yMm);
                         if (hoveredElement != null) {
                             if (hoveredElement.isLocked()) {
@@ -7280,7 +7280,14 @@ public class MapLayoutComposerDialog extends JFrame {
         double hMm = ps.heightMm;
         if (settings.orientation() == PageOrientation.LANDSCAPE) { double tmp = wMm; wMm = hMm; hMm = tmp; }
         LayoutRenderContext ctx = new LayoutRenderContext(LayoutRenderContext.Mode.PREVIEW, dpi, wMm, hMm);
+        // The page template already renders the map at MAP_CONTENT; skip LayoutMap in overlay
+        boolean templateHasMap = true; // standard templates always include MAP_CONTENT
         for (LayoutElement el : layoutModel.getVisibleElementsSortedByZ()) {
+            if (el instanceof LayoutMap && templateHasMap) continue;
+            if (el instanceof LayoutScaleBar) {
+                double mapScale = estimateMapScale();
+                ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, mapScale));
+            }
             Graphics2D g2el = (Graphics2D) g2.create();
             try {
                 g2el.translate(pageX, pageY);
@@ -7573,6 +7580,17 @@ public class MapLayoutComposerDialog extends JFrame {
         JMenuItem mi = new JMenuItem(text);
         mi.addActionListener(e -> action.run());
         return mi;
+    }
+
+    private double estimateMapScale() {
+        try {
+            ar.com.catgis.MapPanel mp = CatgisDesktopApp.mapPanel;
+            if (mp != null) {
+                double denom = mp.getCurrentScaleDenominator();
+                if (denom > 0) return denom;
+            }
+        } catch (Exception ignored) {}
+        return 10000;
     }
 
     private JButton miniBtn(String text, String tip, java.awt.event.ActionListener al) {

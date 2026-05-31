@@ -39,51 +39,57 @@ public class LayoutScaleBar implements LayoutElement {
     @Override public boolean isSelected() { return selected; }
     @Override public void setSelected(boolean s) { this.selected = s; }
 
+    private transient double mapScaleDenominator = 10000;
+
+    public void setMapScaleDenominator(double d) { this.mapScaleDenominator = d; }
+
     @Override
     public void render(Graphics2D g2, LayoutRenderContext ctx) {
         int x = ctx.mmToPxInt(boundsMm.x);
         int y = ctx.mmToPxInt(boundsMm.y);
         int w = ctx.mmToPxInt(boundsMm.width);
         int barH = Math.max(ctx.mmToPxInt(2.5), 8);
-        double scale = ctx.getDpi() / 72.0;
+        double dpiScale = ctx.getDpi() / 72.0;
 
-        // Calculate nice round segment length
-        double maxMeters = boundsMm.width / 1000.0 * 5000; // rough estimate
-        double segMeters = 1;
+        // Real map meters for the scale bar width in mm
+        double mmToMetersOnGround = mapScaleDenominator / 1000.0;
+        double maxMeters = (boundsMm.width / 1000.0) * mapScaleDenominator;
         double[] steps = {1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000};
+        double idealSegMeters = maxMeters / segments;
+        double segMeters = steps[0];
         for (double step : steps) {
-            if (step * segments / maxMeters * boundsMm.width <= boundsMm.width * 1.1) segMeters = step;
+            if (step <= idealSegMeters * 1.2) segMeters = step;
         }
         double totalMeters = segMeters * segments;
-        double totalPx = (totalMeters / maxMeters) * boundsMm.width * ctx.getDpi() / 25.4;
-        if (totalPx > w * 1.1) totalPx = w * 0.9;
+        double totalPx = (totalMeters / maxMeters) * w;
+        totalPx = Math.max(w * 0.3, Math.min(w * 1.05, totalPx));
 
-        Font sFont = font.deriveFont((float)(font.getSize2D() * scale));
+        Font sFont = font.deriveFont((float) Math.max(6, Math.min(font.getSize2D(), barH * 0.55)));
         g2.setFont(sFont);
         g2.setColor(color);
         FontMetrics fm = g2.getFontMetrics();
         double segPx = totalPx / segments;
-        int barY = y + fm.getHeight() + 4;
+        int barY = y + fm.getHeight() + 2;
 
-        // Draw segments alternating black/white
         for (int i = 0; i < segments; i++) {
             int sx = (int)(x + i * segPx);
             g2.setColor(i % 2 == 0 ? color : Color.WHITE);
-            g2.fillRect(sx, barY, (int)segPx, barH);
+            g2.fillRect(sx, barY, (int) Math.ceil(segPx), barH);
+            g2.setColor(new Color(180, 185, 190));
+            g2.setStroke(new BasicStroke(0.5f));
+            g2.drawRect(sx, barY, (int) Math.ceil(segPx), barH);
             g2.setColor(color);
-            g2.setStroke(new BasicStroke(0.8f));
-            g2.drawRect(sx, barY, (int)segPx, barH);
-            String label = String.valueOf((int)(i * segMeters));
-            if (segMeters >= 1000) label = String.valueOf((int)(i * segMeters / 1000)) + "k";
+            String label = formatScaleLabel(i * segMeters);
             int lw = fm.stringWidth(label);
-            g2.drawString(label, sx + (int)(segPx - lw) / 2, y + fm.getAscent());
+            g2.drawString(label, Math.max(x + 1, sx + (int)(segPx - lw) / 2), y + fm.getAscent());
         }
-        // Right end label
-        String totalLabel = String.valueOf((int)totalMeters);
-        if (totalMeters >= 1000) totalLabel = String.valueOf((int)(totalMeters / 1000)) + "k";
-        totalLabel += " " + unitLabel;
-        g2.drawString(totalLabel, x + (int)totalPx + 4, barY + barH / 2 + fm.getAscent() / 2);
-        boundsMm.height = (barY + barH - y + 4) / ctx.getDpi() * 25.4;
+        String totalLabel = formatScaleLabel(totalMeters);
+        g2.drawString(totalLabel, x + (int) totalPx + 3, barY + barH / 2 + fm.getAscent() / 2 - 1);
+    }
+
+    private String formatScaleLabel(double meters) {
+        if (meters >= 1000) return String.valueOf(Math.round(meters / 1000)) + "k m";
+        return String.valueOf((int) meters) + " m";
     }
 
     @Override public boolean containsMm(double xMm, double yMm) { return boundsMm.contains(xMm, yMm); }
