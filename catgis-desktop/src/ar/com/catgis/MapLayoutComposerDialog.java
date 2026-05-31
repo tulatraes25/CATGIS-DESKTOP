@@ -12,6 +12,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -7407,6 +7408,8 @@ public class MapLayoutComposerDialog extends JFrame {
 
         // Legend card (built lazily)
         propertiesCardPanel.add(new JLabel("."), "legend");
+        // Map card (built lazily)
+        propertiesCardPanel.add(new JLabel("."), "map");
 
         JScrollPane sp = new JScrollPane(propertiesCardPanel);
         sp.setBorder(null);
@@ -7420,7 +7423,7 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(4, 4));
         panel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         panel.setBackground(new Color(0xF7F8FA));
-        panel.setPreferredSize(new Dimension(180, 100));
+        panel.setPreferredSize(new Dimension(185, 100));
         JLabel hdr = new JLabel("Elementos del layout");
         hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, 11f));
         hdr.setForeground(new Color(0x333333));
@@ -7464,7 +7467,11 @@ public class MapLayoutComposerDialog extends JFrame {
             }
         });
 
-        // [+] Elemento dropdown
+        // Section: Agregar
+        JLabel addSec = new JLabel("Agregar");
+        addSec.setFont(addSec.getFont().deriveFont(Font.BOLD, 9f));
+        addSec.setForeground(new Color(0x1976D2));
+
         JPopupMenu addMenu = new JPopupMenu();
         addMenu.add(menuItem("Mapa", "map"));
         addMenu.add(menuItem("Leyenda", "legend"));
@@ -7481,15 +7488,14 @@ public class MapLayoutComposerDialog extends JFrame {
         addBtn.setMargin(new Insets(3, 8, 3, 8));
         addBtn.addActionListener(e -> addMenu.show(addBtn, 0, addBtn.getHeight()));
 
-        // Action bar: [+ Elemento] [Duplicar] [Eliminar] [↩] [↪]
         JPanel actionBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
         actionBar.setOpaque(false);
         actionBar.add(addBtn);
-        actionBar.add(miniBtn("Duplicar", "Duplicar seleccionado", e -> {
+        actionBar.add(miniBtn("Duplicar", "Duplicar seleccionado (Ctrl+D)", e -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { duplicateLayoutElement(sel); refreshElementList(); previewPanel.repaint(); }
         }));
-        JButton delBtn2 = miniBtn("Eliminar", "Eliminar seleccionado", e -> {
+        JButton delBtn2 = miniBtn("Eliminar", "Eliminar seleccionado (Supr)", e -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.removeElement(sel.getId()); refreshElementList(); previewPanel.repaint(); }
         });
@@ -7499,12 +7505,15 @@ public class MapLayoutComposerDialog extends JFrame {
         actionBar.add(miniBtn("\u21A9", "Deshacer (Ctrl+Z)", e -> undo()));
         actionBar.add(miniBtn("\u21AA", "Rehacer (Ctrl+Y)", e -> redo()));
 
-        // Align dropdown
+        // Section: Organizar
+        JLabel orgSec = new JLabel("Organizar");
+        orgSec.setFont(orgSec.getFont().deriveFont(Font.BOLD, 9f));
+        orgSec.setForeground(new Color(0x1976D2));
+
         JPopupMenu alignMenu = new JPopupMenu();
-        int[] alignModes = {0, 1, 2, 3, 4, 5};
         String[] alignLabels = {"Izquierda", "Centro horizontal", "Derecha", "Arriba", "Medio vertical", "Abajo"};
-        for (int i = 0; i < alignModes.length; i++) {
-            final int mode = alignModes[i];
+        for (int i = 0; i < 6; i++) {
+            final int mode = i;
             alignMenu.add(menuItem(alignLabels[i], () -> alignElements(mode)));
         }
         JButton alignBtn = new JButton("Alinear \u25BE");
@@ -7512,7 +7521,6 @@ public class MapLayoutComposerDialog extends JFrame {
         alignBtn.setMargin(new Insets(3, 6, 3, 6));
         alignBtn.addActionListener(e -> alignMenu.show(alignBtn, 0, alignBtn.getHeight()));
 
-        // Order dropdown
         JPopupMenu orderMenu = new JPopupMenu();
         orderMenu.add(menuItem("Traer al frente", () -> {
             LayoutElement sel = layoutModel.getSelected();
@@ -7522,11 +7530,11 @@ public class MapLayoutComposerDialog extends JFrame {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.moveToBack(sel); refreshElementList(); previewPanel.repaint(); }
         }));
-        orderMenu.add(menuItem("Subir", () -> {
+        orderMenu.add(menuItem("Subir uno", () -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.moveUp(sel); refreshElementList(); previewPanel.repaint(); }
         }));
-        orderMenu.add(menuItem("Bajar", () -> {
+        orderMenu.add(menuItem("Bajar uno", () -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.moveDown(sel); refreshElementList(); previewPanel.repaint(); }
         }));
@@ -7535,39 +7543,59 @@ public class MapLayoutComposerDialog extends JFrame {
         orderBtn.setMargin(new Insets(3, 6, 3, 6));
         orderBtn.addActionListener(e -> orderMenu.show(orderBtn, 0, orderBtn.getHeight()));
 
-        JPanel secondRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
-        secondRow.setOpaque(false);
-        secondRow.add(alignBtn);
-        secondRow.add(orderBtn);
+        JPanel orgRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
+        orgRow.setOpaque(false);
+        orgRow.add(alignBtn);
+        orgRow.add(orderBtn);
 
-        // Visibility + Lock toggles
-        JPanel toggleBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+        // Section: Estado
+        JLabel stSec = new JLabel("Estado");
+        stSec.setFont(stSec.getFont().deriveFont(Font.BOLD, 9f));
+        stSec.setForeground(new Color(0x1976D2));
+
+        JPanel toggleBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
         toggleBar.setOpaque(false);
-        toggleBar.add(miniBtn("Visible", "Mostrar/Ocultar", e -> {
+        toggleBar.add(miniBtn("Visible", "Mostrar/Ocultar seleccionado", e -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { sel.setVisible(!sel.isVisible()); refreshElementList(); previewPanel.repaint(); }
         }));
-        toggleBar.add(miniBtn("Bloquear", "Bloquear/Desbloquear", e -> {
+        toggleBar.add(miniBtn("Bloquear", "Bloquear/Desbloquear seleccionado", e -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { sel.setLocked(!sel.isLocked()); refreshElementList(); previewPanel.repaint(); }
         }));
 
-        JPanel topArea = new JPanel(new BorderLayout(0, 2));
-        topArea.setOpaque(false);
-        topArea.add(actionBar, BorderLayout.NORTH);
-        topArea.add(secondRow, BorderLayout.CENTER);
-        topArea.add(toggleBar, BorderLayout.SOUTH);
+        // Assemble top area with sections
+        JPanel sectionsPanel = new JPanel();
+        sectionsPanel.setLayout(new BoxLayout(sectionsPanel, BoxLayout.Y_AXIS));
+        sectionsPanel.setOpaque(false);
+        JPanel addPanel = wrapSection(addSec, actionBar);
+        JPanel orgPanel = wrapSection(orgSec, orgRow);
+        JPanel stPanel = wrapSection(stSec, toggleBar);
+        sectionsPanel.add(addPanel);
+        sectionsPanel.add(Box.createVerticalStrut(2));
+        sectionsPanel.add(orgPanel);
+        sectionsPanel.add(Box.createVerticalStrut(2));
+        sectionsPanel.add(stPanel);
 
-        JPanel northWrap = new JPanel(new BorderLayout(0, 2));
+        JPanel northWrap = new JPanel(new BorderLayout(0, 3));
         northWrap.setOpaque(false);
         northWrap.add(hdr, BorderLayout.NORTH);
-        northWrap.add(topArea, BorderLayout.SOUTH);
+        northWrap.add(sectionsPanel, BorderLayout.SOUTH);
 
         panel.add(northWrap, BorderLayout.NORTH);
         JScrollPane sp = new JScrollPane(list);
         sp.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(0xE0E0E0)));
         panel.add(sp, BorderLayout.CENTER);
         return panel;
+    }
+
+    private JPanel wrapSection(JLabel title, JPanel content) {
+        JPanel p = new JPanel(new BorderLayout(0, 1));
+        p.setOpaque(false);
+        p.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        p.add(title, BorderLayout.NORTH);
+        p.add(content, BorderLayout.SOUTH);
+        return p;
     }
 
     private JMenuItem menuItem(String text, String type) {
@@ -7920,6 +7948,9 @@ public class MapLayoutComposerDialog extends JFrame {
         if (sel instanceof LayoutLegend) {
             rebuildLegendCard((LayoutLegend) sel);
             cl.show(propertiesCardPanel, "legend");
+        } else if (sel instanceof LayoutMap) {
+            rebuildMapCard((LayoutMap) sel);
+            cl.show(propertiesCardPanel, "map");
         } else if (sel == null) {
             propertiesInfoLabel.setText("<html>Sin elemento<br>seleccionado</html>");
             cl.show(propertiesCardPanel, "generic");
@@ -7944,6 +7975,80 @@ public class MapLayoutComposerDialog extends JFrame {
                 + " Y:" + String.format("%.1f", sel.getBoundsMm().y) + "</html>");
             cl.show(propertiesCardPanel, "generic");
         }
+    }
+
+    private void rebuildMapCard(LayoutMap map) {
+        if (propertiesCardPanel == null) return;
+        JPanel form = new JPanel(new java.awt.GridBagLayout());
+        form.setOpaque(false);
+        java.awt.GridBagConstraints g = new java.awt.GridBagConstraints();
+        g.insets = new Insets(1, 2, 1, 2);
+        g.anchor = java.awt.GridBagConstraints.WEST;
+        g.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        g.weightx = 1;
+        int y = 0;
+
+        // Elemento
+        sectionLabel(form, g, y, "Elemento"); y++;
+        JTextField nameField = field(form, g, y, "Nombre:", map.getName());
+        nameField.addActionListener(e -> { map.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
+        y++;
+        JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", map.getBoundsMm().x));
+        xField.addActionListener(e -> { try { map.setBoundsMm(Double.parseDouble(xField.getText()), map.getBoundsMm().y, map.getBoundsMm().width, map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", map.getBoundsMm().y));
+        yField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, Double.parseDouble(yField.getText()), map.getBoundsMm().width, map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", map.getBoundsMm().width));
+        wField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, map.getBoundsMm().y, Double.parseDouble(wField.getText()), map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", map.getBoundsMm().height));
+        hField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, map.getBoundsMm().y, map.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        y = addBoolRow(form, g, y, "Visible:", map.isVisible(), v -> { map.setVisible(v); refreshElementList(); previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Bloqueado:", map.isLocked(), v -> { map.setLocked(v); refreshElementList(); previewPanel.repaint(); });
+
+        // Escala
+        y++; sectionLabel(form, g, y, "Escala"); y++;
+        double scaleDenom = estimateMapScale();
+        JLabel scaleLbl = new JLabel("1:" + String.format("%,.0f", scaleDenom));
+        scaleLbl.setFont(scaleLbl.getFont().deriveFont(Font.PLAIN, 10f));
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2;
+        form.add(scaleLbl, g);
+        y++;
+
+        // Grilla
+        y++; sectionLabel(form, g, y, "Grilla"); y++;
+        y = addBoolRow(form, g, y, "Mostrar:", gridCheck.isSelected(), v -> { gridCheck.setSelected(v); previewPanel.repaint(); });
+        JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(gridColumnsSpinner.getValue()));
+        colsField.addActionListener(e -> { try { gridColumnsSpinner.setValue(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField rowsField = field(form, g, y, "Filas:", String.valueOf(gridRowsSpinner.getValue()));
+        rowsField.addActionListener(e -> { try { gridRowsSpinner.setValue(Integer.parseInt(rowsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        y = addBoolRow(form, g, y, "Etiquetas:", gridLabelsCheck.isSelected(), v -> { gridLabelsCheck.setSelected(v); previewPanel.repaint(); });
+
+        // Acciones
+        y++; sectionLabel(form, g, y, "Acciones"); y++;
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+        btnRow.setOpaque(false);
+        JButton refBtn = new JButton("Actualizar");
+        refBtn.setFont(refBtn.getFont().deriveFont(Font.PLAIN, 9f));
+        refBtn.setMargin(new Insets(2, 6, 2, 6));
+        refBtn.addActionListener(e -> { previewPanel.repaint(); });
+        btnRow.add(refBtn);
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2;
+        form.add(btnRow, g);
+        y++;
+
+        // Spacer
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
+        form.add(Box.createVerticalGlue(), g);
+
+        propertiesCardPanel.remove(2);
+        propertiesCardPanel.add(form, "map", 2);
+        propertiesCardPanel.revalidate();
+        propertiesCardPanel.repaint();
     }
 
     private void rebuildLegendCard(LayoutLegend legend) {
