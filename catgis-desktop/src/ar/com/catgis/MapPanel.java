@@ -7505,6 +7505,15 @@ public class MapPanel extends JPanel {
         CategoryStyleRule categoryRule = resolveCategoryRule(layer.getPointCategorizedSymbology(), feature);
         int size = Math.max(4, categoryRule != null ? categoryRule.getPointSize() : layer.getPointSize());
         int half = size / 2;
+
+        // Use catalog symbol if available
+        String catId = categoryRule != null ? categoryRule.getCatalogSymbolId() : layer.getCatalogSymbolId();
+        if (catId != null && !catId.isEmpty() && !"circle".equals(catId)) {
+            Color c = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor();
+            PointSymbolCatalog.render(g2, catId, x, y, size + 4, c, c.darker(), 1.2f);
+            return;
+        }
+
         if (categoryRule == null && PointGraphicSymbolSupport.paintLayerSymbol(g2, layer, x, y, Math.max(14, size + 6))) {
             return;
         }

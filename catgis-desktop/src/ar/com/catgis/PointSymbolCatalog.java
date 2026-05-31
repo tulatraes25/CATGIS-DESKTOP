@@ -1,5 +1,11 @@
 package ar.com.catgis;
 
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Polygon;
+import java.awt.RenderingHints;
+import java.awt.geom.Path2D;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -200,5 +206,34 @@ public final class PointSymbolCatalog {
             }
             return category + " | " + label;
         }
+    }
+
+    /**
+     * Render a catalog symbol centered at (cx, cy).
+     */
+    public static void render(Graphics2D g, String symbolId, int cx, int cy, int size,
+                               Color fill, Color stroke, float strokeWidth) {
+        if (symbolId == null || symbolId.isEmpty()) return;
+        Entry e = findByReference(symbolId);
+        if (e == null) e = findByReference(CATALOG_PREFIX + symbolId);
+        if (e == null && !ENTRIES.isEmpty()) e = ENTRIES.get(0);
+        if (e == null) return;
+        String id = e.getId();
+        int h = size / 2;
+        Color f = fill != null ? fill : Color.BLUE;
+        Color st = stroke != null ? stroke : f.darker();
+
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setStroke(new BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+        if ("circle".equals(id)) { g.setColor(f); g.fillOval(cx-h, cy-h, size, size); if (strokeWidth > 0) { g.setColor(st); g.drawOval(cx-h, cy-h, size, size); } }
+        else if ("square".equals(id)) { g.setColor(f); g.fillRect(cx-h, cy-h, size, size); if (strokeWidth > 0) { g.setColor(st); g.drawRect(cx-h, cy-h, size, size); } }
+        else if ("diamond".equals(id)) { Polygon p = new Polygon(); p.addPoint(cx,cy-h); p.addPoint(cx+h,cy); p.addPoint(cx,cy+h); p.addPoint(cx-h,cy); g.setColor(f); g.fillPolygon(p); if (strokeWidth>0){g.setColor(st);g.drawPolygon(p);} }
+        else if ("triangle".equals(id)) { Polygon p = new Polygon(); p.addPoint(cx,cy-h); p.addPoint(cx+h,cy+h); p.addPoint(cx-h,cy+h); g.setColor(f); g.fillPolygon(p); if (strokeWidth>0){g.setColor(st);g.drawPolygon(p);} }
+        else if ("star".equals(id)) { Polygon p = new Polygon(); for (int i=0;i<10;i++){ double a=Math.PI/2+i*Math.PI/5; int r=i%2==0?h:h/2; p.addPoint(cx+(int)(Math.cos(a)*r),cy-(int)(Math.sin(a)*r)); } g.setColor(f); g.fillPolygon(p); if (strokeWidth>0){g.setColor(st);g.drawPolygon(p);} }
+        else if ("cross".equals(id)) { g.setColor(f); g.fillRect(cx-h/4,cy-h,size/4,size); g.fillRect(cx-h,cy-h/4,size,size/4); }
+        else if ("pin".equals(id)) { Path2D.Double pn=new Path2D.Double(); pn.moveTo(cx,cy+h); pn.curveTo(cx+h*0.8,cy+h*0.3,cx+h,cy-h*0.5,cx,cy-h); pn.curveTo(cx-h,cy-h*0.5,cx-h*0.8,cy+h*0.3,cx,cy+h); g.setColor(f); g.fill(pn); if(strokeWidth>0){g.setColor(st);g.draw(pn);} g.setColor(new Color(255,255,255,150)); g.fillOval(cx-h/3,cy-h/2,2*h/3,2*h/3); }
+        else if ("target".equals(id)) { g.setColor(st); g.drawOval(cx-h,cy-h,size,size); g.setColor(f); g.fillOval(cx-h/2,cy-h/2,h,h); g.setColor(Color.WHITE); g.fillOval(cx-h/4,cy-h/4,h/2,h/2); }
+        else { g.setColor(f); g.fillOval(cx-h,cy-h,size,size); if(strokeWidth>0){g.setColor(st);g.drawOval(cx-h,cy-h,size,size);} }
     }
 }

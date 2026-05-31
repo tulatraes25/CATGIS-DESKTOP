@@ -7057,6 +7057,11 @@ public class MapLayoutComposerDialog extends JFrame {
             int left = x + 3;
             int top = y - 11;
             int size = Math.max(12, categoryRule != null ? categoryRule.getPointSize() + 2 : 12);
+            String catId = categoryRule != null ? categoryRule.getCatalogSymbolId() : layer.getCatalogSymbolId();
+            if (catId != null && !catId.isEmpty() && !"circle".equals(catId)) {
+                PointSymbolCatalog.render(g2, catId, left + size/2, top + size/2, size + 2, color, color.darker(), 1.2f);
+                return;
+            }
             if (categoryRule == null && PointGraphicSymbolSupport.paintLayerSymbol(g2, layer, left + (size / 2), top + (size / 2), 18)) {
                 return;
             }

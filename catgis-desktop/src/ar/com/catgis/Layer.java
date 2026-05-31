@@ -120,6 +120,7 @@ public class Layer {
     private Color pointColor = Color.BLUE;
     private int pointSize = 8;
     private PointSymbolStyle pointSymbolStyle = PointSymbolStyle.CIRCLE;
+    private String catalogSymbolId = "circle"; // ID from PointSymbolCatalog
     private String pointGraphicSymbol = "";
     private LineSymbolStyle lineSymbolStyle = LineSymbolStyle.SOLID;
     private PolygonFillStyle polygonFillStyle = PolygonFillStyle.SOLID;
@@ -300,6 +301,9 @@ public class Layer {
             this.pointSymbolStyle = pointSymbolStyle;
         }
     }
+
+    public String getCatalogSymbolId() { return catalogSymbolId; }
+    public void setCatalogSymbolId(String id) { this.catalogSymbolId = id != null ? id : "circle"; }
 
     public String getPointGraphicSymbol() {
         return pointGraphicSymbol;
