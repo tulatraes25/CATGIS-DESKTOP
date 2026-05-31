@@ -37,6 +37,11 @@ public class LayoutModel {
         double toleranceMm = 5.0;
         for (int i = sorted.size() - 1; i >= 0; i--) {
             LayoutElement e = sorted.get(i);
+            if (e.containsMm(xMm, yMm)) return e;
+        }
+        // Fallback: expand with tolerance for small elements
+        for (int i = sorted.size() - 1; i >= 0; i--) {
+            LayoutElement e = sorted.get(i);
             double ex = e.getBoundsMm().x, ey = e.getBoundsMm().y;
             double ew = e.getBoundsMm().width, eh = e.getBoundsMm().height;
             double minW = Math.max(ew, toleranceMm), minH = Math.max(eh, toleranceMm);

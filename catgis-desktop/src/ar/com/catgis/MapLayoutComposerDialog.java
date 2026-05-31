@@ -4565,15 +4565,18 @@ public class MapLayoutComposerDialog extends JFrame {
                         double yMm = pageRect.yMm + (pagePoint.y / lastPreviewScale) * pageRect.pxToMmScale;
                         LayoutElement clicked = layoutModel.findElementAtMm(xMm, yMm);
                         if (clicked != null) {
-                            int handleIdx = hitTestHandle(clicked, pagePoint, pageRect);
-                            if (handleIdx >= 0 && !clicked.isLocked()) {
-                                activeResizeHandleIndex = handleIdx;
-                                draggingLayoutElement = clicked;
-                                dragStartPagePoint = pagePoint;
-                                dragStartBoundsMm = new java.awt.geom.Rectangle2D.Double(
-                                    clicked.getBoundsMm().x, clicked.getBoundsMm().y,
-                                    clicked.getBoundsMm().width, clicked.getBoundsMm().height);
-                                return;
+                            // Only allow resize if element is already selected; otherwise select+move first
+                            if (clicked.isSelected() && !clicked.isLocked()) {
+                                int handleIdx = hitTestHandle(clicked, pagePoint, pageRect);
+                                if (handleIdx >= 0) {
+                                    activeResizeHandleIndex = handleIdx;
+                                    draggingLayoutElement = clicked;
+                                    dragStartPagePoint = pagePoint;
+                                    dragStartBoundsMm = new java.awt.geom.Rectangle2D.Double(
+                                        clicked.getBoundsMm().x, clicked.getBoundsMm().y,
+                                        clicked.getBoundsMm().width, clicked.getBoundsMm().height);
+                                    return;
+                                }
                             }
                             if (!clicked.isLocked()) {
                                 layoutModel.clearSelection();
@@ -4584,10 +4587,14 @@ public class MapLayoutComposerDialog extends JFrame {
                                     clicked.getBoundsMm().x, clicked.getBoundsMm().y,
                                     clicked.getBoundsMm().width, clicked.getBoundsMm().height);
                                 activeResizeHandleIndex = -1;
+                                refreshElementList();
+                                repaint();
                                 return;
                             }
                             layoutModel.clearSelection();
                             clicked.setSelected(true);
+                            refreshElementList();
+                            repaint();
                             return;
                         }
                         layoutModel.clearSelection();
