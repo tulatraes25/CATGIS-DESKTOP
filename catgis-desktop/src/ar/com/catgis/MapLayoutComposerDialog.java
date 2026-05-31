@@ -403,6 +403,25 @@ public class MapLayoutComposerDialog extends JFrame {
         legend.setTitle("Leyenda");
         populateLegendFromProject(legend);
         layoutModel.addElement(legend);
+
+        // Header: title and subtitle as LayoutElements
+        String titleText = defaultTitle();
+        if (titleText == null || titleText.isBlank()) titleText = "Mapa";
+        LayoutLabel titleEl = new LayoutLabel("header-title", titleText, 12, 10, 270, 16);
+        titleEl.setZOrder(layoutModel.nextZ());
+        titleEl.setName("Titulo");
+        titleEl.setFont(new Font("SansSerif", Font.BOLD, 20));
+        titleEl.setColor(new Color(0x1B2638));
+        layoutModel.addElement(titleEl);
+
+        String subText = defaultSubtitle();
+        if (subText == null || subText.isBlank()) subText = "Salida cartografica";
+        LayoutLabel subEl = new LayoutLabel("header-subtitle", subText, 12, 29, 270, 12);
+        subEl.setZOrder(layoutModel.nextZ());
+        subEl.setName("Subtitulo");
+        subEl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        subEl.setColor(new Color(0x5B6778));
+        layoutModel.addElement(subEl);
     }
 
     private void installDropTarget() {
@@ -5458,12 +5477,18 @@ public class MapLayoutComposerDialog extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            // Disable hardcoded legend when LayoutModel has LayoutLegend
-            boolean hasModelLegend = false;
+            // Disable hardcoded legend/header/cartouche when LayoutModel has equivalents
+            boolean hasModelLegend = false, hasModelHeader = false;
             for (LayoutElement el : layoutModel.getElements()) {
-                if (el instanceof LayoutLegend) { hasModelLegend = true; break; }
+                if (el instanceof LayoutLegend) hasModelLegend = true;
+                if (el instanceof LayoutLabel) {
+                    String n = el.getName();
+                    if (n != null && (n.equals("Titulo") || n.startsWith("Titulo ") || n.equals("Subtitulo")))
+                        hasModelHeader = true;
+                }
             }
             if (hasModelLegend) legendCheck.setSelected(false);
+            if (hasModelHeader) interactionState.setElementVisible(LayoutElementType.HEADER, false);
             LayoutSettings settings = buildSettings();
             LayoutSnapshot currentSnapshot = getSnapshot();
             if (settings == null || currentSnapshot == null) return;
