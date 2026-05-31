@@ -422,6 +422,26 @@ public class MapLayoutComposerDialog extends JFrame {
         subEl.setFont(new Font("SansSerif", Font.PLAIN, 11));
         subEl.setColor(new Color(0x5B6778));
         layoutModel.addElement(subEl);
+
+        // Footer / cartouche data as LayoutLabels
+        String company = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCompanyName() : null;
+        if (company != null && !company.isBlank()) {
+            LayoutLabel coEl = new LayoutLabel("footer-company", company, 12, 192, 130, 10);
+            coEl.setZOrder(layoutModel.nextZ());
+            coEl.setName("Empresa");
+            coEl.setFont(new Font("SansSerif", Font.PLAIN, 8));
+            coEl.setColor(new Color(0x6B7280));
+            layoutModel.addElement(coEl);
+        }
+        String cartographer = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCartographerName() : null;
+        if (cartographer != null && !cartographer.isBlank()) {
+            LayoutLabel caEl = new LayoutLabel("footer-cartographer", cartographer, 148, 192, 130, 10);
+            caEl.setZOrder(layoutModel.nextZ());
+            caEl.setName("Cartografo");
+            caEl.setFont(new Font("SansSerif", Font.PLAIN, 8));
+            caEl.setColor(new Color(0x6B7280));
+            layoutModel.addElement(caEl);
+        }
     }
 
     private void installDropTarget() {
@@ -5478,17 +5498,20 @@ public class MapLayoutComposerDialog extends JFrame {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             // Disable hardcoded legend/header/cartouche when LayoutModel has equivalents
-            boolean hasModelLegend = false, hasModelHeader = false;
+            boolean hasModelLegend = false, hasModelHeader = false, hasModelCartouche = false;
             for (LayoutElement el : layoutModel.getElements()) {
                 if (el instanceof LayoutLegend) hasModelLegend = true;
                 if (el instanceof LayoutLabel) {
                     String n = el.getName();
                     if (n != null && (n.equals("Titulo") || n.startsWith("Titulo ") || n.equals("Subtitulo")))
                         hasModelHeader = true;
+                    if (n != null && (n.equals("Empresa") || n.equals("Cartografo") || n.equals("Estudio") || n.startsWith("Datos")))
+                        hasModelCartouche = true;
                 }
             }
             if (hasModelLegend) legendCheck.setSelected(false);
             if (hasModelHeader) interactionState.setElementVisible(LayoutElementType.HEADER, false);
+            if (hasModelCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
             LayoutSettings settings = buildSettings();
             LayoutSnapshot currentSnapshot = getSnapshot();
             if (settings == null || currentSnapshot == null) return;
