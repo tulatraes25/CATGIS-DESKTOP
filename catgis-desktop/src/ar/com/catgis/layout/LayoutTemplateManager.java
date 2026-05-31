@@ -51,18 +51,21 @@ public class LayoutTemplateManager {
         addNorth(m, "Norte", 260, 165, 18, 18, z); }
     private static void buildTecnico(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Tecnico", 15, 8, 267, 14, new Font("SansSerif", Font.BOLD, 18), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Salida cartografica del proyecto", 15, 23, 267, 10, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
         addMap(m, "Mapa principal", 15, 25, 175, 165, z);
         addLegend(m, "Leyenda", 195, 25, 85, 40, z, true);
         addScale(m, "Escala", 15, 193, 120, 10, z);
         addNorth(m, "Norte", 175, 180, 16, 16, z); }
     private static void buildA3Tecnico(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Tecnico A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Salida cartografica del proyecto", 20, 29, 380, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
         addMap(m, "Mapa principal", 20, 32, 380, 244, z);
         addLegend(m, "Leyenda", 20, 280, 250, 40, z, false);
         addScale(m, "Escala", 280, 280, 120, 10, z);
         addNorth(m, "Norte", 370, 270, 22, 22, z); }
     private static void buildMuestreo(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa de Muestreo", 15, 8, 267, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Planilla de puntos de muestreo", 15, 23, 267, 10, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
         addMap(m, "Mapa principal", 15, 25, 267, 155, z);
         addLegend(m, "Leyenda", 15, 183, 140, 40, z, false);
         addScale(m, "Escala", 155, 183, 120, 10, z);
@@ -74,6 +77,7 @@ public class LayoutTemplateManager {
         addNorth(m, "Norte", 268, 8, 14, 14, z); }
     private static void buildVertical(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Informe", 12, 8, 186, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Documento tecnico", 12, 23, 186, 10, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
         addMap(m, "Mapa principal", 12, 25, 186, 210, z);
         addLegend(m, "Leyenda", 12, 238, 100, 40, z, false);
         addScale(m, "Escala", 115, 238, 80, 10, z);
