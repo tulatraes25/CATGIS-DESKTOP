@@ -96,6 +96,7 @@ import ar.com.catgis.layout.LayoutModel;
 import ar.com.catgis.layout.LayoutNorthArrow;
 import ar.com.catgis.layout.LayoutRenderContext;
 import ar.com.catgis.layout.LayoutScaleBar;
+import ar.com.catgis.layout.LayoutTemplateManager;
 
 public class MapLayoutComposerDialog extends JFrame {
 
@@ -7276,6 +7277,16 @@ public class MapLayoutComposerDialog extends JFrame {
 
         return panel;
     }
+
+    private void showTemplateDialog() {
+        java.util.Map<String, String> tmpl = LayoutTemplateManager.getTemplateList();
+        String[] ks = tmpl.keySet().toArray(new String[0]), ns = tmpl.values().toArray(new String[0]);
+        String ch = (String) javax.swing.JOptionPane.showInputDialog(this, "Plantilla:", "CATMAP", javax.swing.JOptionPane.QUESTION_MESSAGE, null, ns, ns[0]);
+        if (ch == null) return;
+        for (int i = 0; i < ns.length; i++) if (ns[i].equals(ch)) { LayoutTemplateManager.applyTemplate(ks[i], layoutModel); refreshAll(); statusLabel.setText("Plantilla: " + ch); return; }
+    }
+
+    private LayoutElement findEl(String id) { for (LayoutElement e : layoutModel.getElements()) if (e.getId().equals(id)) return e; return null; }
 
     private void refreshElementList() {
         if (elementListModel == null) return;
