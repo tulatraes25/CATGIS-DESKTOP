@@ -541,6 +541,7 @@ public class MapLayoutComposerDialog extends JFrame {
         if (orientationCombo.getSelectedItem() != PageOrientation.LANDSCAPE) {
             orientationCombo.setSelectedItem(PageOrientation.LANDSCAPE);
         }
+        activateSelectionTool();
         previewPanel.revalidate();
         refreshLayoutStructureTree();
         syncLayoutStructureSelection();
@@ -561,7 +562,7 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel toolbarSection = new JPanel(new BorderLayout(0, 4));
         toolbarSection.setOpaque(false);
         toolbarSection.add(buildPreviewToolbar(), BorderLayout.NORTH);
-        JLabel hint = new JLabel("CATMAP en vivo: rueda = zoom de composicion | Mover layout = reubica elementos y el bloque mapa | Pan mapa = desplaza el contenido | Lupa + rueda = zoom interno");
+            JLabel hint = new JLabel("Seleccionar: click para seleccionar, arrastrar para mover | Pan mapa: desplaza el contenido | Zoom mapa: rueda = zoom interno | Rueda sola = zoom de pagina");
         hint.setForeground(new Color(77, 87, 101));
         hint.setFont(hint.getFont().deriveFont(Font.PLAIN, 11f));
         toolbarSection.add(hint, BorderLayout.SOUTH);
@@ -1710,7 +1711,7 @@ public class MapLayoutComposerDialog extends JFrame {
         interactionState.setMapFrameTool(MapFrameTool.MOVE_FRAME);
         selectCatmapItemInList(null);
         syncLayoutStructureSelection();
-        statusLabel.setText("Mover layout activo. Arrastra titulos, leyenda, norte, cartucho, imagenes y tambien el bloque completo del mapa.");
+        statusLabel.setText("Seleccionar activo. Click para seleccionar, arrastrar para mover elementos.");
         updateActiveWorkToolButtons();
         previewPanel.repaint();
     }
