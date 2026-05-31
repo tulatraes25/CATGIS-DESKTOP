@@ -97,6 +97,7 @@ import ar.com.catgis.layout.LayoutNorthArrow;
 import ar.com.catgis.layout.LayoutRenderContext;
 import ar.com.catgis.layout.LayoutScaleBar;
 import ar.com.catgis.layout.LayoutTemplateManager;
+import ar.com.catgis.layout.QgisQptImporter;
 
 public class MapLayoutComposerDialog extends JFrame {
 
@@ -624,7 +625,8 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Abrir", AppIcons.openIcon(), "Abrir layout .catmap.", this::loadCatmapLayout),
                 createToolbarButton("Imagen", AppIcons.exportIcon(), "Exporta la composicion actual como imagen.", this::exportImage),
                 createToolbarButton("PDF", AppIcons.saveIcon(), "Exporta la composicion actual a PDF.", this::exportPdf),
-                createToolbarButton("Imprimir", AppIcons.projectIcon(), "Envia la composicion actual a impresion.", this::printLayout)
+                createToolbarButton("Imprimir", AppIcons.projectIcon(), "Envia la composicion actual a impresion.", this::printLayout),
+                createToolbarButton("QGIS", null, "Importar plantilla QGIS .qpt.", this::importQpt)
         ));
 
         toolbar.add(buildToolbarGroup("Trabajo",
@@ -7276,6 +7278,22 @@ public class MapLayoutComposerDialog extends JFrame {
         panel.add(northWrap, BorderLayout.NORTH);
 
         return panel;
+    }
+
+    private void importQpt() {
+        javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+        fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("QGIS Template (*.qpt)", "qpt"));
+        if (fc.showOpenDialog(this) != javax.swing.JFileChooser.APPROVE_OPTION) return;
+        try {
+            QgisQptImporter.ImportResult res = QgisQptImporter.importQpt(fc.getSelectedFile());
+            for (LayoutElement el : res.imported) layoutModel.addElement(el);
+            for (String skip : res.skipped) javax.swing.JOptionPane.showMessageDialog(this, skip, "Elemento omitido", javax.swing.JOptionPane.WARNING_MESSAGE);
+            refreshAll();
+            statusLabel.setText("Importado: " + fc.getSelectedFile().getName() + " (" + res.imported.size() + " elementos)");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            javax.swing.JOptionPane.showMessageDialog(this, "Error al importar: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void showTemplateDialog() {

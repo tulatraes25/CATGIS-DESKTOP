@@ -185,8 +185,8 @@ public class LayoutLegend implements LayoutElement {
 
         for (LegendItem item : activeItems) {
             int itemTop = curY;
-            g2.setColor(item.color != null ? item.color : Color.GRAY);
-            g2.fillRect(xPx + padPx, curY, symPx, symPx);
+            int symY = curY;
+            renderSymbol(g2, xPx + padPx, symY, symPx, item);
             g2.setColor(itemColor);
 
             String display = item.displayName != null ? item.displayName : item.label;
@@ -241,6 +241,35 @@ public class LayoutLegend implements LayoutElement {
 
     private Font deriveFont(Font base, double scale) {
         return base.deriveFont((float)(base.getSize2D() * scale));
+    }
+
+    private void renderSymbol(Graphics2D g, int sx, int sy, int size, LegendItem item) {
+        Color c = item.color != null ? item.color : Color.GRAY;
+        String type = item.geometryType != null ? item.geometryType.toUpperCase() : "";
+        g.setColor(c);
+        g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        if (type.contains("POINT")) {
+            int r = size / 2;
+            g.fillOval(sx + r/3, sy, r, r);
+            g.setColor(c.darker());
+            g.drawOval(sx + r/3, sy, r, r);
+        } else if (type.contains("LINE")) {
+            int ly = sy + size / 2;
+            g.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.drawLine(sx + 1, ly, sx + size - 1, ly);
+            g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.setColor(c.darker());
+            g.drawLine(sx, ly + 3, sx + size/2, ly + 1);
+            g.drawLine(sx + size/2, ly - 1, sx + size, ly + 2);
+        } else if (type.contains("POLYGON")) {
+            g.fillRect(sx + 1, sy + 2, size - 2, size - 3);
+            g.setColor(c.darker());
+            g.drawRect(sx, sy + 1, size, size - 3);
+        } else {
+            g.fillRect(sx, sy, size, size);
+            g.setColor(c.darker());
+            g.drawRect(sx, sy, size, size);
+        }
     }
 
     private List<String> wrapLines(String text, FontMetrics fm, int maxW) {
