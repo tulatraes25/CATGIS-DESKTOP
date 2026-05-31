@@ -120,8 +120,12 @@ public class LayoutMap implements LayoutElement {
 
     public void setShowGrid(boolean g) { this.showGrid = g; }
     public boolean isShowGrid() { return showGrid; }
+    public int getGridCols() { return gridCols; }
     public void setGridCols(int c) { this.gridCols = c; }
+    public int getGridRows() { return gridRows; }
     public void setGridRows(int r) { this.gridRows = r; }
+    public Color getGridColor() { return gridColor; }
+    public void setGridColor(Color c) { if (c != null) this.gridColor = c; }
 
     @Override
     public boolean containsMm(double xMm, double yMm) {

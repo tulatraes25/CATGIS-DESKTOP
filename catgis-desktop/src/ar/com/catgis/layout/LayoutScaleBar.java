@@ -39,15 +39,27 @@ public class LayoutScaleBar implements LayoutElement {
     @Override public boolean isSelected() { return selected; }
     @Override public void setSelected(boolean s) { this.selected = s; }
 
-    private transient double mapScaleDenominator = 10000;
+    private double mapScaleDenominator = 10000;
 
-    public void setMapScaleDenominator(double d) { this.mapScaleDenominator = d; }
+    public double getMapScaleDenominator() { return mapScaleDenominator; }
+    public void setMapScaleDenominator(double d) { this.mapScaleDenominator = d > 0 ? d : 10000; }
+    public double getMetersPerUnit() { return metersPerUnit; }
+    public void setMetersPerUnit(double v) { metersPerUnit = v; }
+    public String getUnitLabel() { return unitLabel; }
+    public void setUnitLabel(String v) { unitLabel = v; }
+    public int getSegments() { return segments; }
+    public void setSegments(int v) { segments = Math.max(2, v); }
+    public Color getColor() { return color; }
+    public void setColor(Color c) { if (c != null) color = c; }
+    public Font getFont() { return font; }
+    public void setFont(Font f) { if (f != null) font = f; }
 
     @Override
     public void render(Graphics2D g2, LayoutRenderContext ctx) {
         int x = ctx.mmToPxInt(boundsMm.x);
         int y = ctx.mmToPxInt(boundsMm.y);
         int w = ctx.mmToPxInt(boundsMm.width);
+        if (w < 5 || boundsMm.width <= 0 || mapScaleDenominator <= 0) return;
         int barH = Math.max(ctx.mmToPxInt(2.5), 8);
         double dpiScale = ctx.getDpi() / 72.0;
 
