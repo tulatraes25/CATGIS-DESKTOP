@@ -16,6 +16,10 @@ public class LayoutMap implements LayoutElement {
 
     private transient BufferedImage cachedImage;
     private transient long cacheKey;
+    private boolean showGrid = false;
+    private int gridCols = 3;
+    private int gridRows = 3;
+    private Color gridColor = new Color(0, 0, 0, 40);
 
     public LayoutMap(String id, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -62,6 +66,18 @@ public class LayoutMap implements LayoutElement {
                 mg.dispose();
             }
         }
+        if (showGrid && gridCols > 0 && gridRows > 0) {
+            g2.setColor(gridColor);
+            g2.setStroke(new java.awt.BasicStroke(0.5f));
+            for (int i = 1; i < gridCols; i++) {
+                int gx = px + (pw * i) / gridCols;
+                g2.drawLine(gx, py, gx, py + ph);
+            }
+            for (int i = 1; i < gridRows; i++) {
+                int gy = py + (ph * i) / gridRows;
+                g2.drawLine(px, gy, px + pw, gy);
+            }
+        }
     }
 
     private long computeCacheKey() {
@@ -101,6 +117,11 @@ public class LayoutMap implements LayoutElement {
             return null;
         }
     }
+
+    public void setShowGrid(boolean g) { this.showGrid = g; }
+    public boolean isShowGrid() { return showGrid; }
+    public void setGridCols(int c) { this.gridCols = c; }
+    public void setGridRows(int r) { this.gridRows = r; }
 
     @Override
     public boolean containsMm(double xMm, double yMm) {
