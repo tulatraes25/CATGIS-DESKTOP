@@ -8153,19 +8153,19 @@ public class MapLayoutComposerDialog extends JFrame {
         y++; sectionLabel(form, g, y, "Caja"); y++;
         y = addBoolRow(form, g, y, "Mostrar fondo:", legend.isShowBackground(), v -> { legend.setShowBackground(v); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Mostrar borde:", legend.isShowBorder(), v -> { legend.setShowBorder(v); previewPanel.repaint(); });
-        JTextField paddingField = field(form, g, y, "Padding (mm):", String.format("%.1f", 2.5));
+        JTextField paddingField = field(form, g, y, "Padding (mm):", String.format("%.1f", legend.getPaddingMm()));
         y++;
-        JTextField opacityField = field(form, g, y, "Opacidad:", String.format("%.0f%%", 85.0));
-        opacityField.addActionListener(e -> { try { legend.setBgOpacity(Float.parseFloat(opacityField.getText().replace("%","")) / 100f); previewPanel.repaint(); } catch (Exception ignored) {} });
+        JTextField opacityField = field(form, g, y, "Opacidad:", String.format("%.0f%%", legend.getBgOpacity() * 100));
+        opacityField.addActionListener(e -> { try { float v = Float.parseFloat(opacityField.getText().replace("%","")); legend.setBgOpacity(Math.max(0, Math.min(100, v)) / 100f); previewPanel.repaint(); } catch (Exception ignored) {} });
         y++;
 
         // Seccion: Ajuste
         y++; sectionLabel(form, g, y, "Ajuste"); y++;
         y = addBoolRow(form, g, y, "Alto automatico:", legend.isAutoHeight(), v -> { legend.setAutoHeight(v); previewPanel.repaint(); });
-        JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(1));
+        JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(legend.getColumns()));
         colsField.addActionListener(e -> { try { legend.setColumns(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
         y++;
-        JTextField symSizeField = field(form, g, y, "Tamano simbolo:", String.format("%.1f", 3.0));
+        JTextField symSizeField = field(form, g, y, "Tamano simbolo:", String.format("%.1f", legend.getSymbolSizeMm()));
         symSizeField.addActionListener(e -> { try { legend.setSymbolSizeMm(Double.parseDouble(symSizeField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
         y++;
 

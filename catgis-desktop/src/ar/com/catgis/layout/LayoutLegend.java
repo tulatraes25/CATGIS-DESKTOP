@@ -94,9 +94,13 @@ public class LayoutLegend implements LayoutElement {
     public void setBorderColor(Color c) { this.borderColor = c; }
     public void setBorderThickness(float t) { this.borderThickness = t; }
     public void setCornerRadius(int r) { this.cornerRadius = r; }
+    public double getPaddingMm() { return paddingMm; }
     public void setPaddingMm(double p) { this.paddingMm = p; }
+    public double getSymbolSizeMm() { return symbolSizeMm; }
     public void setSymbolSizeMm(double s) { this.symbolSizeMm = s; }
+    public int getColumns() { return columns; }
     public void setColumns(int c) { this.columns = Math.max(1, c); }
+    public float getBgOpacity() { return bgOpacity; }
     public void setFitTextToFrame(boolean b) { this.fitTextToFrame = b; }
 
     public static boolean isBasemapName(String name) {
