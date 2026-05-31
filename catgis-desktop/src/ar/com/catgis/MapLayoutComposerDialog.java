@@ -4489,8 +4489,8 @@ public class MapLayoutComposerDialog extends JFrame {
                         Point pp = toPagePoint(e.getPoint());
                         RectMm pr = toPageRectMm();
                         if (pp != null && pr != null && layoutModel.size() > 0) {
-                            double xMm = pr.xMm + (pp.x / lastPreviewScale) * pr.pxToMmScale;
-                            double yMm = pr.yMm + (pp.y / lastPreviewScale) * pr.pxToMmScale;
+                    double xMm = pr.xMm + pp.x * pr.pxToMmScale;
+                    double yMm = pr.yMm + pp.y * pr.pxToMmScale;
                             LayoutElement el = layoutModel.findTopmostElementAtMm(xMm, yMm);
                             if (el instanceof LayoutMap) {
                                 layoutModel.clearSelection();
@@ -5253,9 +5253,9 @@ public class MapLayoutComposerDialog extends JFrame {
             RectMm pageRect = toPageRectMm();
             LayoutElement rightClicked = null;
             if (pagePoint != null && pageRect != null && layoutModel.size() > 0) {
-                double xMm = pageRect.xMm + (pagePoint.x / lastPreviewScale) * pageRect.pxToMmScale;
-                double yMm = pageRect.yMm + (pagePoint.y / lastPreviewScale) * pageRect.pxToMmScale;
-                rightClicked = layoutModel.findTopmostElementAtMm(xMm, yMm);
+            double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
+            double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
+            rightClicked = layoutModel.findTopmostElementAtMm(xMm, yMm);
             }
             JPopupMenu menu = new JPopupMenu();
             if (rightClicked != null) {
@@ -7793,7 +7793,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
-        double sc = pageRect.pxToMmScale / previewPanel.lastPreviewScale;
+        double sc = pageRect.pxToMmScale;
         int px = (int)(el.getBoundsMm().x / sc);
         int py = (int)(el.getBoundsMm().y / sc);
         int pw = (int)(el.getBoundsMm().width / sc);
@@ -7808,7 +7808,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void resizeElement(int idx, int dx, int dy) {
-        double s = 25.4 / PREVIEW_RENDER_DPI / previewPanel.lastPreviewScale;
+        double s = 25.4 / PREVIEW_RENDER_DPI;
         double dmmx = dx * s, dmmy = dy * s;
         double x = dragStartBoundsMm.x, y = dragStartBoundsMm.y, w = dragStartBoundsMm.width, h = dragStartBoundsMm.height;
         if (idx == 0 || idx == 3 || idx == 5) { x += dmmx; w -= dmmx; }
