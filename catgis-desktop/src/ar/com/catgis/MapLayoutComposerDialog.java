@@ -97,7 +97,9 @@ import ar.com.catgis.layout.LayoutNorthArrow;
 import ar.com.catgis.layout.LayoutRenderContext;
 import ar.com.catgis.layout.LayoutScaleBar;
 import ar.com.catgis.layout.LayoutTemplateManager;
+import ar.com.catgis.layout.GuideLine;
 import ar.com.catgis.layout.QgisQptImporter;
+import ar.com.catgis.layout.RulerRenderer;
 
 public class MapLayoutComposerDialog extends JFrame {
 
@@ -4283,6 +4285,9 @@ public class MapLayoutComposerDialog extends JFrame {
         private String activeResizeCustomItemId = null;
         private final List<Integer> activeGuideXs = new ArrayList<>();
         private final List<Integer> activeGuideYs = new ArrayList<>();
+        private final List<GuideLine> guides = new ArrayList<>();
+        private GuideLine draggingGuide = null;
+        private double draggingGuideStartMm = 0;
         private final JTextField inlineTitleEditor;
         private final JPanel inlineCartoucheEditor;
         private final JTextField inlineCartoucheStudyField;
@@ -4446,6 +4451,40 @@ public class MapLayoutComposerDialog extends JFrame {
                     }
                     if (!SwingUtilities.isLeftMouseButton(e)) return;
 
+                    // Guide interaction: drag from ruler or existing guide
+                    GuideLine.Orientation rulerHit = RulerRenderer.rulerHitTest(e.getX(), e.getY(), 0, 0, getWidth(), getHeight());
+                    if (rulerHit != null) {
+                        LayoutSettings settings = buildSettings();
+                        double pxPerMm = PREVIEW_RENDER_DPI / 25.4 * lastPreviewScale;
+                        double mm = rulerHit == GuideLine.Orientation.VERTICAL
+                                ? (e.getX() - lastPageBounds.x) / pxPerMm
+                                : (e.getY() - lastPageBounds.y) / pxPerMm;
+                        if (mm >= 0) {
+                            GuideLine newGuide = new GuideLine("guide-" + System.currentTimeMillis(), mm, rulerHit);
+                            guides.add(newGuide);
+                            draggingGuide = newGuide;
+                            draggingGuideStartMm = mm;
+                            repaint();
+                            return;
+                        }
+                    }
+                    // Check for existing guide hit
+                    {
+                        double pxPerMm = PREVIEW_RENDER_DPI / 25.4 * lastPreviewScale;
+                        for (GuideLine guide : guides) {
+                            if (guide.containsPx(e.getX(), e.getY(), lastPageBounds.x, lastPageBounds.y, lastPageBounds.width, lastPageBounds.height, PREVIEW_RENDER_DPI, lastPreviewScale, 6)) {
+                                if (SwingUtilities.isRightMouseButton(e)) {
+                                    guides.remove(guide);
+                                    repaint();
+                                    return;
+                                }
+                                draggingGuide = guide;
+                                draggingGuideStartMm = guide.mmPos;
+                                return;
+                            }
+                        }
+                    }
+
                     Point pagePoint = toPagePoint(e.getPoint());
                     RectMm pageRect = toPageRectMm();
                     if (pagePoint != null && pageRect != null) {
@@ -4596,6 +4635,12 @@ public class MapLayoutComposerDialog extends JFrame {
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
+                    if (draggingGuide != null) {
+                        draggingGuide = null;
+                        setCursor(Cursor.getDefaultCursor());
+                        repaint();
+                        return;
+                    }
                     if (draggingLayoutElement != null) {
                         draggingLayoutElement = null;
                         dragStartPagePoint = null;
@@ -4619,6 +4664,22 @@ public class MapLayoutComposerDialog extends JFrame {
 
                 @Override
                 public void mouseDragged(MouseEvent e) {
+                    if (draggingGuide != null) {
+                        LayoutSettings settings = buildSettings();
+                        double mmPerPx = 25.4 / PREVIEW_RENDER_DPI / lastPreviewScale;
+                        if (draggingGuide.orientation == GuideLine.Orientation.VERTICAL) {
+                            double delta = (e.getX() - lastPageBounds.x) - (e.getX() - lastPageBounds.x);
+                            double newMm = (e.getX() - lastPageBounds.x) * mmPerPx;
+                            newMm = Math.max(0, Math.min(newMm, settings.pageSize().widthMm));
+                            draggingGuide.mmPos = newMm;
+                        } else {
+                            double newMm = (e.getY() - lastPageBounds.y) * mmPerPx;
+                            newMm = Math.max(0, Math.min(newMm, settings.pageSize().heightMm));
+                            draggingGuide.mmPos = newMm;
+                        }
+                        repaint();
+                        return;
+                    }
                     if (draggingLayoutElement != null && dragStartPagePoint != null && dragStartBoundsMm != null) {
                         Point p = toPagePoint(e.getPoint());
                         if (p != null) {
@@ -5091,6 +5152,20 @@ public class MapLayoutComposerDialog extends JFrame {
             activeGuideYs.addAll(snapped.guideYs());
         }
 
+        private void drawPersistentGuides(Graphics2D g2, int pageX, int pageY, double scale, int drawWidth, int drawHeight, LayoutSettings settings) {
+            if (guides.isEmpty() || lastRenderResult == null) return;
+            Graphics2D copy = (Graphics2D) g2.create();
+            try {
+                copy.setColor(new Color(0x3388FF));
+                copy.setStroke(new BasicStroke(1.0f));
+                for (GuideLine guide : guides) {
+                    guide.render(copy, pageX, pageY, drawWidth, drawHeight, PREVIEW_RENDER_DPI, scale);
+                }
+            } finally {
+                copy.dispose();
+            }
+        }
+
         private void clearSnapGuides() {
             activeGuideXs.clear();
             activeGuideYs.clear();
@@ -5230,8 +5305,9 @@ public class MapLayoutComposerDialog extends JFrame {
                 scale = Math.max(0.08d, scale);
                 int drawWidth = (int) Math.round(page.getWidth() * scale);
                 int drawHeight = (int) Math.round(page.getHeight() * scale);
-                int x = Math.max(20, (getWidth() - drawWidth) / 2);
-                int y = Math.max(20, (getHeight() - drawHeight) / 2);
+                int rulerSz = RulerRenderer.getRulerSize();
+                int x = Math.max(rulerSz + 4, (getWidth() - drawWidth) / 2);
+                int y = Math.max(rulerSz + 4, (getHeight() - drawHeight) / 2);
 
                 lastPageBounds = new Rectangle(x, y, drawWidth, drawHeight);
                 lastPreviewScale = scale;
@@ -5241,6 +5317,8 @@ public class MapLayoutComposerDialog extends JFrame {
                 g2.drawImage(page, x, y, drawWidth, drawHeight, null);
                 drawLayoutModelOverlay(g2, settings, x, y, scale);
                 drawSnapGuides(g2, x, y, scale, drawWidth, drawHeight);
+                drawPersistentGuides(g2, x, y, scale, drawWidth, drawHeight, settings);
+                RulerRenderer.render(g2, 0, 0, getWidth(), getHeight(), settings.pageSize().widthMm, settings.pageSize().heightMm, PREVIEW_RENDER_DPI, scale);
                 SwingUtilities.invokeLater(() -> refreshElementList());
                 drawSelectionOverlay(g2, x, y, scale);
                 if (inlineTitleEditor.isVisible()) {
