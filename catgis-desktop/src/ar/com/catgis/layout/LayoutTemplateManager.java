@@ -99,7 +99,8 @@ public class LayoutTemplateManager {
             sb.append("\"hMm\": ").append(el.getBoundsMm().height).append(", ");
             sb.append("\"zOrder\": ").append(el.getZOrder()).append(", ");
             sb.append("\"visible\": ").append(el.isVisible()).append(", ");
-            sb.append("\"locked\": ").append(el.isLocked());
+            sb.append("\"locked\": ").append(el.isLocked()).append(", ");
+            sb.append("\"name\": \"").append(esc(el.getName() != null ? el.getName() : el.getId())).append("\"");
 
             if (el instanceof LayoutLegend) {
                 LayoutLegend leg = (LayoutLegend) el;
@@ -108,6 +109,8 @@ public class LayoutTemplateManager {
                 LayoutLabel lab = (LayoutLabel) el;
                 sb.append(", \"text\": \"").append(esc(lab.getText())).append("\"");
                 sb.append(", \"fontSize\": ").append(lab.getFont().getSize2D());
+                sb.append(", \"fontFamily\": \"").append(esc(lab.getFont().getFamily())).append("\"");
+                sb.append(", \"bold\": ").append(lab.getFont().isBold());
                 sb.append(", \"color\": ").append(colorHex(lab.getColor()));
             }
 
@@ -183,6 +186,19 @@ public class LayoutTemplateManager {
         if ("LayoutLabel".equals(type)) {
             String text = extractStr(json, "text");
             el = new LayoutLabel(id, text, x, y, w, h);
+            LayoutLabel lab = (LayoutLabel) el;
+            double fs = extractDouble(json, "fontSize");
+            String ff = extractStr(json, "fontFamily");
+            boolean bold = extractBool(json, "bold", false);
+            if (fs > 0 && !ff.isEmpty()) {
+                lab.setFont(new Font(ff, bold ? Font.BOLD : Font.PLAIN, (int) fs));
+            } else if (fs > 0) {
+                lab.setFont(new Font("SansSerif", bold ? Font.BOLD : Font.PLAIN, (int) fs));
+            }
+            String c = extractStr(json, "color");
+            if (!c.isEmpty()) lab.setColor(parseColor(c));
+            String nm = extractStr(json, "name");
+            if (!nm.isEmpty()) lab.setName(nm);
         } else if ("LayoutLegend".equals(type)) {
             el = new LayoutLegend(id, x, y, w, h);
             LayoutLegend leg = (LayoutLegend) el;
@@ -199,6 +215,8 @@ public class LayoutTemplateManager {
             el.setZOrder(z);
             el.setVisible(vis);
             el.setLocked(locked);
+            String nm = extractStr(json, "name");
+            if (!nm.isEmpty()) el.setName(nm);
             model.addElement(el);
         }
     }
@@ -238,5 +256,13 @@ public class LayoutTemplateManager {
     private static String colorHex(Color c) {
         if (c == null) return "0";
         return "\"#" + String.format("%06X", c.getRGB() & 0xFFFFFF) + "\"";
+    }
+
+    private static Color parseColor(String hex) {
+        if (hex == null || hex.isEmpty()) return Color.BLACK;
+        try {
+            if (hex.startsWith("#")) hex = hex.substring(1);
+            return new Color(Integer.parseInt(hex, 16));
+        } catch (Exception e) { return Color.BLACK; }
     }
 }
