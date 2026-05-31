@@ -2610,7 +2610,12 @@ public class MapLayoutComposerDialog extends JFrame {
         bindCatmapAction(previewPanel, "shift LEFT", "catmap-shift-left", () -> nudgeSelectedLayoutObject(-12, 0));
         bindCatmapAction(previewPanel, "shift RIGHT", "catmap-shift-right", () -> nudgeSelectedLayoutObject(12, 0));
         bindCatmapAction(previewPanel, "shift UP", "catmap-shift-up", () -> nudgeSelectedLayoutObject(0, -12));
-        bindCatmapAction(previewPanel, "shift DOWN", "catmap-shift-down", () -> nudgeSelectedLayoutObject(0, 12));
+        bindCatmapAction(previewPanel, "ESCAPE", "catmap-escape", () -> {
+            if (mapPanToolButton.isSelected()) {
+                selectionToolButton.doClick();
+                statusLabel.setText("Seleccionar activo. Saliste de la edicion del mapa.");
+            }
+        });
     }
 
     private void bindCatmapAction(javax.swing.JComponent component, String keyStroke, String actionKey, Runnable action) {
@@ -4479,6 +4484,21 @@ public class MapLayoutComposerDialog extends JFrame {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                        // Check if double-click on a LayoutMap -> activate map content editing
+                        Point pp = toPagePoint(e.getPoint());
+                        RectMm pr = toPageRectMm();
+                        if (pp != null && pr != null && layoutModel.size() > 0) {
+                            double xMm = pr.xMm + (pp.x / lastPreviewScale) * pr.pxToMmScale;
+                            double yMm = pr.yMm + (pp.y / lastPreviewScale) * pr.pxToMmScale;
+                            LayoutElement el = layoutModel.findTopmostElementAtMm(xMm, yMm);
+                            if (el instanceof LayoutMap) {
+                                layoutModel.clearSelection();
+                                el.setSelected(true);
+                                mapPanToolButton.doClick();
+                                statusLabel.setText("Editando contenido del mapa: \"" + el.getName() + "\". Esc para salir.");
+                                return;
+                            }
+                        }
                         Point pagePoint = toPagePoint(e.getPoint());
                         if (pagePoint != null && isInsideElement(LayoutElementType.HEADER, pagePoint)) {
                             beginInlineTitleEdit();
@@ -5289,12 +5309,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         private LayoutElement duplicateElement(LayoutElement src) {
-            if (src instanceof LayoutMap) { LayoutMap m = new LayoutMap("map-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); m.setZOrder(layoutModel.nextZ()); m.setName(src.getName() + " copia"); layoutModel.addElement(m); return m; }
-            if (src instanceof LayoutLegend) { LayoutLegend l = new LayoutLegend("legend-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); l.setAutoHeight(true); l.setItems(((LayoutLegend)src).getItems()); layoutModel.addElement(l); return l; }
-            if (src instanceof LayoutNorthArrow) { LayoutNorthArrow n = new LayoutNorthArrow("north-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); n.setZOrder(layoutModel.nextZ()); n.setName(src.getName() + " copia"); layoutModel.addElement(n); return n; }
-            if (src instanceof LayoutScaleBar) { LayoutScaleBar s = new LayoutScaleBar("scale-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); s.setZOrder(layoutModel.nextZ()); s.setName(src.getName() + " copia"); layoutModel.addElement(s); return s; }
-            if (src instanceof LayoutLabel) { LayoutLabel l = new LayoutLabel("lbl-" + System.currentTimeMillis(), ((LayoutLabel)src).getText(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); layoutModel.addElement(l); return l; }
-            if (src instanceof LayoutImage) { LayoutImage i = new LayoutImage("img-" + System.currentTimeMillis(), null, src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); i.setZOrder(layoutModel.nextZ()); i.setName(src.getName() + " copia"); layoutModel.addElement(i); return i; }
+            duplicateLayoutElement(src);
             return null;
         }
 
@@ -7391,7 +7406,7 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(4, 4));
         panel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         panel.setBackground(new Color(0xF7F8FA));
-        panel.setPreferredSize(new Dimension(165, 100));
+        panel.setPreferredSize(new Dimension(180, 100));
         JLabel hdr = new JLabel("Elementos del layout");
         hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, 11f));
         hdr.setForeground(new Color(0x333333));
@@ -7435,60 +7450,98 @@ public class MapLayoutComposerDialog extends JFrame {
             }
         });
 
-        JPanel btnBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 1));
-        btnBar.setOpaque(false);
-        btnBar.add(miniBtn("+ Mapa", "Agregar mapa", e -> addQuickElement("map")));
-        btnBar.add(miniBtn("+ Leyenda", "Agregar leyenda", e -> addQuickElement("legend")));
-        btnBar.add(miniBtn("+ Norte", "Agregar norte", e -> addQuickElement("north")));
-        btnBar.add(miniBtn("+ Escala", "Agregar escala grafica", e -> addQuickElement("scale")));
-        btnBar.add(miniBtn("+ Texto", "Agregar texto libre", e -> addQuickElement("text")));
-        btnBar.add(miniBtn("+ Logo", "Agregar imagen/logo", e -> addQuickElement("image")));
-        JButton delBtn = miniBtn("X", "Eliminar seleccionado", e -> {
+        // [+] Elemento dropdown
+        JPopupMenu addMenu = new JPopupMenu();
+        addMenu.add(menuItem("Mapa", "map"));
+        addMenu.add(menuItem("Leyenda", "legend"));
+        addMenu.add(menuItem("Escala grafica", "scale"));
+        addMenu.add(menuItem("Norte", "north"));
+        addMenu.add(menuItem("Texto", "text"));
+        addMenu.add(menuItem("Imagen / Logo", "image"));
+        addMenu.addSeparator();
+        addMenu.add(menuItem("Rectangulo", "rect"));
+        addMenu.add(menuItem("Tabla (CSV)", "table"));
+
+        JButton addBtn = new JButton("+ Elemento \u25BE");
+        addBtn.setFont(addBtn.getFont().deriveFont(Font.PLAIN, 10f));
+        addBtn.setMargin(new Insets(3, 8, 3, 8));
+        addBtn.addActionListener(e -> addMenu.show(addBtn, 0, addBtn.getHeight()));
+
+        // Action bar: [+ Elemento] [Duplicar] [Eliminar] [↩] [↪]
+        JPanel actionBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
+        actionBar.setOpaque(false);
+        actionBar.add(addBtn);
+        actionBar.add(miniBtn("Duplicar", "Duplicar seleccionado", e -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { duplicateLayoutElement(sel); refreshElementList(); previewPanel.repaint(); }
+        }));
+        JButton delBtn2 = miniBtn("Eliminar", "Eliminar seleccionado", e -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.removeElement(sel.getId()); refreshElementList(); previewPanel.repaint(); }
         });
-        delBtn.setForeground(new Color(0xCC3333));
-        btnBar.add(delBtn);
-        btnBar.add(Box.createHorizontalStrut(4));
-        btnBar.add(miniBtn("\u21A9", "Deshacer (Ctrl+Z)", e -> undo()));
-        btnBar.add(miniBtn("\u21AA", "Rehacer (Ctrl+Y)", e -> redo()));
+        delBtn2.setForeground(new Color(0xCC3333));
+        actionBar.add(delBtn2);
+        actionBar.add(Box.createHorizontalStrut(2));
+        actionBar.add(miniBtn("\u21A9", "Deshacer (Ctrl+Z)", e -> undo()));
+        actionBar.add(miniBtn("\u21AA", "Rehacer (Ctrl+Y)", e -> redo()));
 
-        JPanel btnBar2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 1, 0));
-        btnBar2.setOpaque(false);
+        // Align dropdown
+        JPopupMenu alignMenu = new JPopupMenu();
         int[] alignModes = {0, 1, 2, 3, 4, 5};
-        String[] alignLabels = {"Izq", "Cen", "Der", "Arr", "Med", "Aba"};
-        String[] alignTips = {"Alinear izquierda", "Centrar horizontal", "Alinear derecha", "Alinear arriba", "Centrar vertical", "Alinear abajo"};
+        String[] alignLabels = {"Izquierda", "Centro horizontal", "Derecha", "Arriba", "Medio vertical", "Abajo"};
         for (int i = 0; i < alignModes.length; i++) {
             final int mode = alignModes[i];
-            JButton ab = miniBtn(alignLabels[i], alignTips[i], e -> alignElements(mode));
-            ab.setFont(ab.getFont().deriveFont(8f));
-            btnBar2.add(ab);
+            alignMenu.add(menuItem(alignLabels[i], () -> alignElements(mode)));
         }
+        JButton alignBtn = new JButton("Alinear \u25BE");
+        alignBtn.setFont(alignBtn.getFont().deriveFont(Font.PLAIN, 10f));
+        alignBtn.setMargin(new Insets(3, 6, 3, 6));
+        alignBtn.addActionListener(e -> alignMenu.show(alignBtn, 0, alignBtn.getHeight()));
 
-        // Visibility + Lock toggles for selected element
-        JPanel toggleBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
-        toggleBar.setOpaque(false);
-        toggleBar.add(miniBtn("\u25C9", "Mostrar/Ocultar", e -> {
-            LayoutElement sel = layoutModel.getSelected();
-            if (sel != null) { sel.setVisible(!sel.isVisible()); refreshElementList(); previewPanel.repaint(); }
-        }));
-        toggleBar.add(miniBtn("\uD83D\uDD12", "Bloquear/Desbloquear", e -> {
-            LayoutElement sel = layoutModel.getSelected();
-            if (sel != null) { sel.setLocked(!sel.isLocked()); refreshElementList(); previewPanel.repaint(); }
-        }));
-        toggleBar.add(miniBtn("\u2191", "Traer al frente", e -> {
+        // Order dropdown
+        JPopupMenu orderMenu = new JPopupMenu();
+        orderMenu.add(menuItem("Traer al frente", () -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.moveToFront(sel); refreshElementList(); previewPanel.repaint(); }
         }));
-        toggleBar.add(miniBtn("\u2193", "Enviar atras", e -> {
+        orderMenu.add(menuItem("Enviar atras", () -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { layoutModel.moveToBack(sel); refreshElementList(); previewPanel.repaint(); }
         }));
+        orderMenu.add(menuItem("Subir", () -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { layoutModel.moveUp(sel); refreshElementList(); previewPanel.repaint(); }
+        }));
+        orderMenu.add(menuItem("Bajar", () -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { layoutModel.moveDown(sel); refreshElementList(); previewPanel.repaint(); }
+        }));
+        JButton orderBtn = new JButton("Orden \u25BE");
+        orderBtn.setFont(orderBtn.getFont().deriveFont(Font.PLAIN, 10f));
+        orderBtn.setMargin(new Insets(3, 6, 3, 6));
+        orderBtn.addActionListener(e -> orderMenu.show(orderBtn, 0, orderBtn.getHeight()));
 
-        JPanel topArea = new JPanel(new BorderLayout(0, 1));
+        JPanel secondRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
+        secondRow.setOpaque(false);
+        secondRow.add(alignBtn);
+        secondRow.add(orderBtn);
+
+        // Visibility + Lock toggles
+        JPanel toggleBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+        toggleBar.setOpaque(false);
+        toggleBar.add(miniBtn("Visible", "Mostrar/Ocultar", e -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { sel.setVisible(!sel.isVisible()); refreshElementList(); previewPanel.repaint(); }
+        }));
+        toggleBar.add(miniBtn("Bloquear", "Bloquear/Desbloquear", e -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { sel.setLocked(!sel.isLocked()); refreshElementList(); previewPanel.repaint(); }
+        }));
+
+        JPanel topArea = new JPanel(new BorderLayout(0, 2));
         topArea.setOpaque(false);
-        topArea.add(btnBar, BorderLayout.NORTH);
-        topArea.add(btnBar2, BorderLayout.CENTER);
+        topArea.add(actionBar, BorderLayout.NORTH);
+        topArea.add(secondRow, BorderLayout.CENTER);
         topArea.add(toggleBar, BorderLayout.SOUTH);
 
         JPanel northWrap = new JPanel(new BorderLayout(0, 2));
@@ -7501,6 +7554,18 @@ public class MapLayoutComposerDialog extends JFrame {
         sp.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(0xE0E0E0)));
         panel.add(sp, BorderLayout.CENTER);
         return panel;
+    }
+
+    private JMenuItem menuItem(String text, String type) {
+        JMenuItem mi = new JMenuItem(text);
+        mi.addActionListener(e -> addQuickElement(type));
+        return mi;
+    }
+
+    private JMenuItem menuItem(String text, Runnable action) {
+        JMenuItem mi = new JMenuItem(text);
+        mi.addActionListener(e -> action.run());
+        return mi;
     }
 
     private JButton miniBtn(String text, String tip, java.awt.event.ActionListener al) {
@@ -7517,6 +7582,16 @@ public class MapLayoutComposerDialog extends JFrame {
         String s = display.replaceAll("^\u25C9 |^\u25CB |\uD83D\uDD12 |\uD83D\uDD13 |^\\> |^  ", "");
         s = s.replaceAll("\\s*\\(oculto\\)|\\s*\\(bloq\\)", "");
         return s.trim();
+    }
+
+    private void duplicateLayoutElement(LayoutElement src) {
+        if (src instanceof LayoutMap) { LayoutMap m = new LayoutMap("map-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); m.setZOrder(layoutModel.nextZ()); m.setName(src.getName() + " copia"); layoutModel.addElement(m); return; }
+        if (src instanceof LayoutLegend) { LayoutLegend l = new LayoutLegend("legend-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); l.setAutoHeight(true); l.setItems(((LayoutLegend)src).getItems()); layoutModel.addElement(l); return; }
+        if (src instanceof LayoutNorthArrow) { LayoutNorthArrow n = new LayoutNorthArrow("north-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); n.setZOrder(layoutModel.nextZ()); n.setName(src.getName() + " copia"); layoutModel.addElement(n); return; }
+        if (src instanceof LayoutScaleBar) { LayoutScaleBar s = new LayoutScaleBar("scale-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); s.setZOrder(layoutModel.nextZ()); s.setName(src.getName() + " copia"); layoutModel.addElement(s); return; }
+        if (src instanceof LayoutLabel) { LayoutLabel l = new LayoutLabel("lbl-" + System.currentTimeMillis(), ((LayoutLabel)src).getText(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); layoutModel.addElement(l); return; }
+        if (src instanceof LayoutImage) { LayoutImage i = new LayoutImage("img-" + System.currentTimeMillis(), null, src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); i.setZOrder(layoutModel.nextZ()); i.setName(src.getName() + " copia"); layoutModel.addElement(i); return; }
+        if (src instanceof LayoutTable) { LayoutTable t = new LayoutTable("table-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); t.setZOrder(layoutModel.nextZ()); t.setName(src.getName() + " copia"); layoutModel.addElement(t); return; }
     }
 
     private void addQuickElement(String type) {
@@ -7563,6 +7638,24 @@ public class MapLayoutComposerDialog extends JFrame {
                             img.setZOrder(layoutModel.nextZ()); img.setName(fc.getSelectedFile().getName());
                             layoutModel.addElement(img); refreshElementList(); previewPanel.repaint();
                         }
+                    } catch (Exception ex) { ex.printStackTrace(); }
+                }
+                break;
+            }
+            case "rect": {
+                LayoutRectangle r = new LayoutRectangle("rect-" + System.currentTimeMillis(), 50, 50, 100, 60);
+                r.setZOrder(layoutModel.nextZ()); r.setName("Rectangulo " + countOfType("Rectangulo"));
+                layoutModel.addElement(r); break;
+            }
+            case "table": {
+                javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+                fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos CSV", "csv"));
+                if (fc.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                    try {
+                        LayoutTable t = new LayoutTable("table-" + System.currentTimeMillis(), 15, 100, 267, 80);
+                        t.loadCsv(fc.getSelectedFile());
+                        t.setZOrder(layoutModel.nextZ()); t.setName("Tabla " + countOfType("Tabla"));
+                        layoutModel.addElement(t); refreshElementList(); previewPanel.repaint();
                     } catch (Exception ex) { ex.printStackTrace(); }
                 }
                 break;
