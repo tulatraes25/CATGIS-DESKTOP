@@ -4857,8 +4857,8 @@ public class MapLayoutComposerDialog extends JFrame {
                     LayoutElement oldHover = hoveredElement;
                     hoveredElement = null;
                     if (pagePoint != null && pageRect != null && layoutModel.size() > 0) {
-                    double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
-                    double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
+                        double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
+                        double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
                         hoveredElement = layoutModel.findHoverAtMm(xMm, yMm);
                         if (hoveredElement != null) {
                             if (hoveredElement.isLocked()) {

@@ -32,6 +32,10 @@ public class LayoutModel {
         return findTopmostElementAtMm(xMm, yMm);
     }
 
+    public LayoutElement findHoverAtMm(double xMm, double yMm) {
+        return findTopmostElementAtMm(xMm, yMm);
+    }
+
     public LayoutElement findTopmostElementAtMm(double xMm, double yMm) {
         List<LayoutElement> sorted = getVisibleElementsSortedByZ();
         double toleranceMm = 5.0;
@@ -39,7 +43,6 @@ public class LayoutModel {
             LayoutElement e = sorted.get(i);
             if (e.containsMm(xMm, yMm)) return e;
         }
-        // Fallback: expand with tolerance for small elements
         for (int i = sorted.size() - 1; i >= 0; i--) {
             LayoutElement e = sorted.get(i);
             double ex = e.getBoundsMm().x, ey = e.getBoundsMm().y;
@@ -47,29 +50,52 @@ public class LayoutModel {
             double minW = Math.max(ew, toleranceMm), minH = Math.max(eh, toleranceMm);
             double extX = ex - (minW - ew) / 2;
             double extY = ey - (minH - eh) / 2;
-            if (xMm >= extX && xMm <= extX + minW && yMm >= extY && yMm <= extY + minH) {
-                return e;
-            }
+            if (xMm >= extX && xMm <= extX + minW && yMm >= extY && yMm <= extY + minH) return e;
         }
         return null;
     }
 
-    public LayoutElement findHoverAtMm(double xMm, double yMm) {
-        return findTopmostElementAtMm(xMm, yMm);
-    }
-
     public void moveToFront(LayoutElement e) {
-        int maxZ = elements.stream().mapToInt(LayoutElement::getZOrder).max().orElse(0);
-        e.setZOrder(maxZ + 1);
+        normalizeZOrder();
+        e.setZOrder(elements.stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1);
     }
 
     public void moveToBack(LayoutElement e) {
-        int minZ = elements.stream().mapToInt(LayoutElement::getZOrder).min().orElse(0);
-        e.setZOrder(minZ - 1);
+        normalizeZOrder();
+        e.setZOrder(0);
+        for (LayoutElement other : elements) if (other != e && other.getZOrder() > 0) other.setZOrder(other.getZOrder() + 1);
     }
 
-    public void moveUp(LayoutElement e) { e.setZOrder(e.getZOrder() + 1); }
-    public void moveDown(LayoutElement e) { e.setZOrder(e.getZOrder() - 1); }
+    public void moveUp(LayoutElement e) {
+        int current = e.getZOrder();
+        for (LayoutElement other : elements) {
+            if (other != e && other.getZOrder() == current + 1) {
+                other.setZOrder(current);
+                e.setZOrder(current + 1);
+                return;
+            }
+        }
+        e.setZOrder(current + 1);
+    }
+
+    public void moveDown(LayoutElement e) {
+        int current = e.getZOrder();
+        if (current <= 0) return;
+        for (LayoutElement other : elements) {
+            if (other != e && other.getZOrder() == current - 1) {
+                other.setZOrder(current);
+                e.setZOrder(current - 1);
+                return;
+            }
+        }
+        e.setZOrder(current - 1);
+    }
+
+    private void normalizeZOrder() {
+        List<LayoutElement> sorted = getVisibleElementsSortedByZ();
+        sorted.addAll(elements.stream().filter(el -> !el.isVisible()).collect(java.util.stream.Collectors.toList()));
+        for (int i = 0; i < sorted.size(); i++) sorted.get(i).setZOrder(i);
+    }
 
     public void clearSelection() {
         for (LayoutElement e : elements) e.setSelected(false);
