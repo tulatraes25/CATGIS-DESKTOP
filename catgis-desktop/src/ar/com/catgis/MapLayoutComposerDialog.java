@@ -102,7 +102,9 @@ import ar.com.catgis.layout.LayoutModel;
 import ar.com.catgis.layout.LayoutNorthArrow;
 import ar.com.catgis.layout.LayoutRenderContext;
 import ar.com.catgis.layout.LayoutScaleBar;
+import ar.com.catgis.layout.LayoutTable;
 import ar.com.catgis.layout.LayoutTemplateManager;
+import ar.com.catgis.layout.CanvasDropTarget;
 import ar.com.catgis.layout.GuideLine;
 import ar.com.catgis.layout.QgisQptImporter;
 import ar.com.catgis.layout.RulerRenderer;
@@ -361,6 +363,7 @@ public class MapLayoutComposerDialog extends JFrame {
             }
         });
         previewPanel = new LayoutPreviewPanel();
+        installDropTarget();
         currentMapLabel = new JLabel();
         scaleInfoLabel = new JLabel("Escala real actual: calculando...");
         statusLabel = new JLabel("CATMAP listo para maquetar, editar y exportar.");
@@ -399,6 +402,40 @@ public class MapLayoutComposerDialog extends JFrame {
         legend.setTitle("Leyenda");
         populateLegendFromProject(legend);
         layoutModel.addElement(legend);
+    }
+
+    private void installDropTarget() {
+        CanvasDropTarget.DropHandler handler = new CanvasDropTarget.DropHandler() {
+            public void onImageDropped(java.awt.image.BufferedImage img, double mmX, double mmY) {
+                double wMm = img.getWidth() / 200.0 * 25.4;
+                double hMm = img.getHeight() / 200.0 * 25.4;
+                LayoutImage li = new LayoutImage("img-" + System.currentTimeMillis(), img, mmX, mmY, wMm, hMm);
+                li.setZOrder(layoutModel.nextZ());
+                li.setName("Imagen " + countOfType("Imagen"));
+                layoutModel.addElement(li);
+                refreshElementList();
+                previewPanel.repaint();
+            }
+            public void onFileDropped(File file, double mmX, double mmY) {
+                String lname = file.getName().toLowerCase();
+                if (lname.endsWith(".shp") || lname.endsWith(".geojson") || lname.endsWith(".gpkg")) {
+                    int opt = javax.swing.JOptionPane.showConfirmDialog(MapLayoutComposerDialog.this,
+                        "Agregar " + file.getName() + " como capa al proyecto?",
+                        "Archivo vectorial", javax.swing.JOptionPane.YES_NO_OPTION);
+                    if (opt == javax.swing.JOptionPane.YES_OPTION) {
+                        javax.swing.JOptionPane.showMessageDialog(MapLayoutComposerDialog.this,
+                            "Importacion de capas via drag & drop pendiente.\nUse Proyecto > Agregar capa.");
+                    }
+                } else {
+                    javax.swing.JOptionPane.showMessageDialog(MapLayoutComposerDialog.this,
+                        "Archivo no soportado: " + file.getName(),
+                        "Formato", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        };
+        CanvasDropTarget.install(previewPanel, handler, PREVIEW_RENDER_DPI, 1.0,
+            () -> previewPanel.lastPageBounds != null ? previewPanel.lastPageBounds.x : 0,
+            () -> previewPanel.lastPageBounds != null ? previewPanel.lastPageBounds.y : 0);
     }
 
     private void populateLegendFromProject(LayoutLegend legend) {
@@ -5368,13 +5405,15 @@ public class MapLayoutComposerDialog extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
+            // Disable hardcoded legend when LayoutModel has LayoutLegend
+            boolean hasModelLegend = false;
+            for (LayoutElement el : layoutModel.getElements()) {
+                if (el instanceof LayoutLegend) { hasModelLegend = true; break; }
+            }
+            if (hasModelLegend) legendCheck.setSelected(false);
             LayoutSettings settings = buildSettings();
             LayoutSnapshot currentSnapshot = getSnapshot();
             if (settings == null || currentSnapshot == null) return;
-
-            for (LayoutElement el : layoutModel.getElements()) {
-                if (el instanceof LayoutLegend) { legendCheck.setSelected(false); break; }
-            }
 
             Dimension previewSize = settings.pageSize().pixelSize(settings.orientation(), PREVIEW_RENDER_DPI);
             lastRenderResult = LayoutRenderer.renderResult(
@@ -7503,9 +7542,23 @@ public class MapLayoutComposerDialog extends JFrame {
                 layoutModel.addElement(lbl); break;
             }
             case "image": {
-                LayoutImage img = new LayoutImage("img-" + System.currentTimeMillis(), null, 15, 200, 50, 30);
-                img.setZOrder(layoutModel.nextZ()); img.setName("Logo " + countOfType("Logo"));
-                layoutModel.addElement(img); break;
+                javax.swing.JFileChooser fc = new javax.swing.JFileChooser();
+                fc.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagenes", "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff"));
+                if (fc.showOpenDialog(this) == javax.swing.JFileChooser.APPROVE_OPTION) {
+                    try {
+                        java.awt.image.BufferedImage bi = javax.imageio.ImageIO.read(fc.getSelectedFile());
+                        if (bi != null) {
+                            double wMm = bi.getWidth() / 200.0 * 25.4;
+                            double hMm = bi.getHeight() / 200.0 * 25.4;
+                            double cx = 297 / 2.0 - wMm / 2;
+                            double cy = 210 / 2.0 - hMm / 2;
+                            LayoutImage img = new LayoutImage("img-" + System.currentTimeMillis(), bi, Math.max(10, cx), Math.max(10, cy), wMm, hMm);
+                            img.setZOrder(layoutModel.nextZ()); img.setName(fc.getSelectedFile().getName());
+                            layoutModel.addElement(img); refreshElementList(); previewPanel.repaint();
+                        }
+                    } catch (Exception ex) { ex.printStackTrace(); }
+                }
+                break;
             }
         }
         refreshElementList();
@@ -7581,6 +7634,7 @@ public class MapLayoutComposerDialog extends JFrame {
         if (el instanceof LayoutScaleBar) return "\uD83D\uDCCF";
         if (el instanceof LayoutImage) return "\uD83D\uDDBC";
         if (el instanceof LayoutRectangle) return "\u25AD";
+        if (el instanceof LayoutTable) return "\uD83D\uDCCA";
         if (el instanceof LayoutLabel) return "\uD83D\uDCDD";
         return "\u25A1";
     }
