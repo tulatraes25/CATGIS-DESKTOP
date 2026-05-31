@@ -109,6 +109,17 @@ public class LayoutTemplateManager {
             if (el instanceof LayoutLegend) {
                 LayoutLegend leg = (LayoutLegend) el;
                 sb.append(serializeLegend(leg));
+            } else if (el instanceof LayoutMap) {
+                LayoutMap map = (LayoutMap) el;
+                sb.append(", \"showGrid\": ").append(map.isShowGrid())
+                  .append(", \"gridCols\": ").append(map.getGridCols())
+                  .append(", \"gridRows\": ").append(map.getGridRows())
+                  .append(", \"gridByDistance\": ").append(map.isGridByDistance())
+                  .append(", \"gridIntervalX\": ").append(map.getGridIntervalX())
+                  .append(", \"gridIntervalY\": ").append(map.getGridIntervalY())
+                  .append(", \"gridUnit\": \"").append(esc(map.getGridUnit())).append("\"")
+                  .append(", \"gridColor\": ").append(colorHex(map.getGridColor()))
+                  .append(", \"targetScale\": ").append(map.getTargetScaleDenominator());
             } else if (el instanceof LayoutLabel) {
                 LayoutLabel lab = (LayoutLabel) el;
                 sb.append(", \"text\": \"").append(esc(lab.getText())).append("\"");
@@ -203,6 +214,20 @@ public class LayoutTemplateManager {
             if (!c.isEmpty()) lab.setColor(parseColor(c));
             String nm = extractStr(json, "name");
             if (!nm.isEmpty()) lab.setName(nm);
+        } else if ("LayoutMap".equals(type)) {
+            el = new LayoutMap(id, x, y, w, h);
+            LayoutMap map = (LayoutMap) el;
+            map.setShowGrid(extractBool(json, "showGrid", false));
+            map.setGridCols(extractInt(json, "gridCols", 3));
+            map.setGridRows(extractInt(json, "gridRows", 3));
+            map.setGridByDistance(extractBool(json, "gridByDistance", false));
+            map.setGridIntervalX(extractDouble(json, "gridIntervalX", 100));
+            map.setGridIntervalY(extractDouble(json, "gridIntervalY", 100));
+            String gu = extractStr(json, "gridUnit");
+            if (!gu.isEmpty()) map.setGridUnit(gu);
+            String gc = extractStr(json, "gridColor");
+            if (!gc.isEmpty()) map.setGridColor(parseColor(gc));
+            map.setTargetScaleDenominator(extractDouble(json, "targetScale", 0));
         } else if ("LayoutLegend".equals(type)) {
             el = new LayoutLegend(id, x, y, w, h);
             LayoutLegend leg = (LayoutLegend) el;
@@ -245,6 +270,14 @@ public class LayoutTemplateManager {
 
     private static int extractInt(String json, String key) {
         try { return Integer.parseInt(extractStr(json, key)); } catch (Exception e) { return 0; }
+    }
+
+    private static double extractDouble(String json, String key, double def) {
+        try { return Double.parseDouble(extractStr(json, key)); } catch (Exception e) { return def; }
+    }
+
+    private static int extractInt(String json, String key, int def) {
+        try { return Integer.parseInt(extractStr(json, key)); } catch (Exception e) { return def; }
     }
 
     private static boolean extractBool(String json, String key, boolean def) {

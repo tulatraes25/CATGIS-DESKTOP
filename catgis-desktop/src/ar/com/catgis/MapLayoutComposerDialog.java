@@ -11,6 +11,7 @@ import javax.imageio.ImageIO;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -27,6 +28,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JList;
@@ -7865,6 +7867,24 @@ public class MapLayoutComposerDialog extends JFrame {
         return "\u25A1";
     }
 
+    private void applyMapScale(double denominator) {
+        try {
+            ar.com.catgis.MapPanel mp = CatgisDesktopApp.mapPanel;
+            if (mp != null && denominator > 0) {
+                double currentZoom = mp.getZoomFactor();
+                double currentDenom = mp.getCurrentScaleDenominator();
+                if (currentDenom <= 0) return;
+                double newZoom = currentZoom * (currentDenom / denominator);
+                double cx = mp.getViewMinX() + (mp.getWidth() / 2.0) / Math.max(currentZoom, 0.000001);
+                double cy = mp.getViewMinY() + (mp.getHeight() / 2.0) / Math.max(currentZoom, 0.000001);
+                double hw = (mp.getWidth() / 2.0) / Math.max(newZoom, 0.000001);
+                double hh = (mp.getHeight() / 2.0) / Math.max(newZoom, 0.000001);
+                mp.restoreView(cx - hw, cy - hh, newZoom);
+                statusLabel.setText("Escala aplicada: 1:" + String.format("%,.0f", denominator));
+            }
+        } catch (Exception ignored) {}
+    }
+
     private int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
         double sc = pageRect.pxToMmScale;
         int px = (int)(el.getBoundsMm().x / sc);
@@ -8142,21 +8162,68 @@ public class MapLayoutComposerDialog extends JFrame {
         // Escala
         y++; sectionLabel(form, g, y, "Escala"); y++;
         double scaleDenom = estimateMapScale();
-        JLabel scaleLbl = new JLabel("1:" + String.format("%,.0f", scaleDenom));
+        JLabel scaleLbl = new JLabel("Actual: 1:" + String.format("%,.0f", scaleDenom));
         scaleLbl.setFont(scaleLbl.getFont().deriveFont(Font.PLAIN, 10f));
-        g.gridx = 0; g.gridy = y; g.gridwidth = 2;
-        form.add(scaleLbl, g);
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(scaleLbl, g); y++;
+
+        JTextField targetField = field(form, g, y, "Objetivo 1:", map.getTargetScaleDenominator() > 0
+                ? String.format("%,.0f", map.getTargetScaleDenominator()) : "");
+        targetField.setToolTipText("Escala deseada. Ej: 5000 para 1:5000");
         y++;
+        JPanel scaleBtnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
+        scaleBtnRow.setOpaque(false);
+        JButton applyBtn = new JButton("Aplicar");
+        applyBtn.setFont(applyBtn.getFont().deriveFont(Font.PLAIN, 9f));
+        applyBtn.setMargin(new Insets(2, 6, 2, 6));
+        applyBtn.addActionListener(e -> {
+            try {
+                double target = Double.parseDouble(targetField.getText().replace(",", ""));
+                if (target > 0) {
+                    map.setTargetScaleDenominator(target);
+                    applyMapScale(target);
+                    rebuildMapCard(map);
+                    previewPanel.repaint();
+                }
+            } catch (Exception ignored) {}
+        });
+        scaleBtnRow.add(applyBtn);
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(scaleBtnRow, g); y++;
 
         // Grilla
         y++; sectionLabel(form, g, y, "Grilla"); y++;
         y = addBoolRow(form, g, y, "Mostrar:", gridCheck.isSelected(), v -> { gridCheck.setSelected(v); previewPanel.repaint(); });
-        JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(gridColumnsSpinner.getValue()));
-        colsField.addActionListener(e -> { try { gridColumnsSpinner.setValue(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
-        y++;
-        JTextField rowsField = field(form, g, y, "Filas:", String.valueOf(gridRowsSpinner.getValue()));
-        rowsField.addActionListener(e -> { try { gridRowsSpinner.setValue(Integer.parseInt(rowsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
-        y++;
+
+        // Grid mode selector
+        JPanel modeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+        modeRow.setOpaque(false);
+        JRadioButton divBtn = new JRadioButton("Divisiones", !map.isGridByDistance());
+        JRadioButton distBtn = new JRadioButton("Distancia", map.isGridByDistance());
+        ButtonGroup bg = new ButtonGroup(); bg.add(divBtn); bg.add(distBtn);
+        divBtn.setFont(divBtn.getFont().deriveFont(Font.PLAIN, 9f)); divBtn.setOpaque(false);
+        distBtn.setFont(distBtn.getFont().deriveFont(Font.PLAIN, 9f)); distBtn.setOpaque(false);
+        divBtn.addActionListener(e -> { map.setGridByDistance(false); previewPanel.repaint(); });
+        distBtn.addActionListener(e -> { map.setGridByDistance(true); previewPanel.repaint(); });
+        modeRow.add(divBtn); modeRow.add(distBtn);
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(modeRow, g); y++;
+
+        if (map.isGridByDistance()) {
+            JTextField intXField = field(form, g, y, "Intervalo X:", String.format("%.1f", map.getGridIntervalX()));
+            intXField.addActionListener(e -> { try { map.setGridIntervalX(Double.parseDouble(intXField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            y++;
+            JTextField intYField = field(form, g, y, "Intervalo Y:", String.format("%.1f", map.getGridIntervalY()));
+            intYField.addActionListener(e -> { try { map.setGridIntervalY(Double.parseDouble(intYField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            y++;
+            JTextField unitField = field(form, g, y, "Unidad:", map.getGridUnit());
+            unitField.addActionListener(e -> { map.setGridUnit(unitField.getText().trim()); previewPanel.repaint(); });
+            y++;
+        } else {
+            JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(gridColumnsSpinner.getValue()));
+            colsField.addActionListener(e -> { try { gridColumnsSpinner.setValue(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            y++;
+            JTextField rowsField = field(form, g, y, "Filas:", String.valueOf(gridRowsSpinner.getValue()));
+            rowsField.addActionListener(e -> { try { gridRowsSpinner.setValue(Integer.parseInt(rowsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            y++;
+        }
         y = addBoolRow(form, g, y, "Etiquetas:", gridLabelsCheck.isSelected(), v -> { gridLabelsCheck.setSelected(v); previewPanel.repaint(); });
 
         // Acciones
