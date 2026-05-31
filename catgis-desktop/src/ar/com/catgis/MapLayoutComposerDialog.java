@@ -27,6 +27,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JList;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
@@ -191,6 +192,7 @@ public class MapLayoutComposerDialog extends JFrame {
     private int activeResizeHandleIndex = -1;
     private DefaultListModel<String> elementListModel;
     private JLabel propertiesInfoLabel;
+    private JPanel propertiesCardPanel;
     private final java.util.ArrayDeque<LayoutUndoEntry> undoStack = new java.util.ArrayDeque<>();
     private final java.util.ArrayDeque<LayoutUndoEntry> redoStack = new java.util.ArrayDeque<>();
 
@@ -7279,52 +7281,63 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel panel = new JPanel(new BorderLayout(4, 4));
         panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         panel.setBackground(new Color(0xF7F8FA));
-        panel.setPreferredSize(new Dimension(220, 100));
+        panel.setPreferredSize(new Dimension(230, 100));
         JLabel hdr = new JLabel("Propiedades");
         hdr.setFont(hdr.getFont().deriveFont(Font.BOLD, 11f));
         hdr.setForeground(new Color(0x333333));
         panel.add(hdr, BorderLayout.NORTH);
 
-        JPanel form = new JPanel(new java.awt.GridBagLayout());
-        form.setOpaque(false);
-        java.awt.GridBagConstraints gc = new java.awt.GridBagConstraints();
-        gc.insets = new Insets(2, 4, 2, 4);
-        gc.anchor = java.awt.GridBagConstraints.WEST;
-        gc.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        gc.weightx = 1;
-
-        gc.gridx = 0; gc.gridy = 0; gc.gridwidth = 2;
+        // Page section
+        JPanel pageSection = new JPanel(new BorderLayout(2, 2));
+        pageSection.setOpaque(false);
         JLabel pageLbl = new JLabel("Pagina");
         pageLbl.setFont(pageLbl.getFont().deriveFont(Font.BOLD, 10f));
-        form.add(pageLbl, gc);
-        gc.gridwidth = 1;
+        pageSection.add(pageLbl, BorderLayout.NORTH);
+        JPanel pageControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
+        pageControls.setOpaque(false);
+        pageControls.add(new JLabel("Tamano:"));
+        pageSizeCombo.setPreferredSize(new Dimension(120, 22));
+        pageControls.add(pageSizeCombo);
+        pageControls.add(orientationCombo);
+        pageSection.add(pageControls, BorderLayout.CENTER);
 
-        gc.gridx = 0; gc.gridy++;
-        form.add(new JLabel("Tamano:"), gc);
-        gc.gridx = 1;
-        form.add(pageSizeCombo, gc);
-        gc.gridx = 0; gc.gridy++;
-        gc.gridwidth = 2;
-        form.add(orientationCombo, gc);
-        gc.gridy++;
-        form.add(templateCombo, gc);
-        gc.gridy++;
-        gc.gridwidth = 1;
+        // Template section
+        JPanel tmplRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
+        tmplRow.setOpaque(false);
+        tmplRow.add(new JLabel("Plantilla:"));
+        templateCombo.setPreferredSize(new Dimension(150, 22));
+        tmplRow.add(templateCombo);
 
-        javax.swing.JSeparator sep = new javax.swing.JSeparator();
-        gc.gridx = 0; gc.gridy++; gc.gridwidth = 2;
-        gc.fill = java.awt.GridBagConstraints.HORIZONTAL;
-        form.add(sep, gc);
-        gc.fill = java.awt.GridBagConstraints.NONE;
-        gc.gridwidth = 1;
+        JPanel headerArea = new JPanel(new BorderLayout(0, 2));
+        headerArea.setOpaque(false);
+        headerArea.add(pageSection, BorderLayout.NORTH);
+        headerArea.add(tmplRow, BorderLayout.SOUTH);
+        panel.add(headerArea, BorderLayout.NORTH);
 
+        JSeparator sep = new JSeparator();
+        headerArea.add(sep, BorderLayout.SOUTH);
+
+        // Card panel for element properties
+        propertiesCardPanel = new JPanel(new java.awt.CardLayout());
+        propertiesCardPanel.setOpaque(false);
+
+        // Generic card
         propertiesInfoLabel = new JLabel("<html>Sin elemento<br>seleccionado</html>");
         propertiesInfoLabel.setFont(propertiesInfoLabel.getFont().deriveFont(Font.PLAIN, 10f));
         propertiesInfoLabel.setForeground(new Color(0x888888));
-        gc.gridx = 0; gc.gridy++; gc.gridwidth = 2;
-        form.add(propertiesInfoLabel, gc);
+        JPanel genericCard = new JPanel(new BorderLayout());
+        genericCard.setOpaque(false);
+        genericCard.add(propertiesInfoLabel, BorderLayout.NORTH);
+        propertiesCardPanel.add(genericCard, "generic");
 
-        panel.add(form, BorderLayout.CENTER);
+        // Legend card (built lazily)
+        propertiesCardPanel.add(new JLabel("."), "legend");
+
+        JScrollPane sp = new JScrollPane(propertiesCardPanel);
+        sp.setBorder(null);
+        sp.setOpaque(false);
+        sp.getViewport().setOpaque(false);
+        panel.add(sp, BorderLayout.CENTER);
         return panel;
     }
 
@@ -7722,23 +7735,22 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void refreshPropertiesPanel() {
-        if (propertiesInfoLabel == null) return;
+        if (propertiesInfoLabel == null || propertiesCardPanel == null) return;
         LayoutElement sel = layoutModel.getSelected();
-        if (sel == null) {
+        java.awt.CardLayout cl = (java.awt.CardLayout) propertiesCardPanel.getLayout();
+        if (sel instanceof LayoutLegend) {
+            rebuildLegendCard((LayoutLegend) sel);
+            cl.show(propertiesCardPanel, "legend");
+        } else if (sel == null) {
             propertiesInfoLabel.setText("<html>Sin elemento<br>seleccionado</html>");
+            cl.show(propertiesCardPanel, "generic");
         } else if (sel instanceof LayoutMap) {
             propertiesInfoLabel.setText("<html><b>Mapa</b><br>X:" + String.format("%.1f", sel.getBoundsMm().x)
                 + " Y:" + String.format("%.1f", sel.getBoundsMm().y)
                 + "<br>W:" + String.format("%.1f", sel.getBoundsMm().width)
                 + " H:" + String.format("%.1f", sel.getBoundsMm().height)
                 + "<br><i>Vista actual del mapa</i></html>");
-        } else if (sel instanceof LayoutLegend) {
-            LayoutLegend leg = (LayoutLegend) sel;
-            propertiesInfoLabel.setText("<html><b>Leyenda</b><br>Titulo: " + leg.getTitle()
-                + "<br>Items: " + leg.getIncludedItems().size()
-                + "<br>Auto alto: " + (leg.isAutoHeight() ? "Si" : "No")
-                + "<br>Fondo: " + (leg.isShowBackground() ? "Si" : "No")
-                + "</html>");
+            cl.show(propertiesCardPanel, "generic");
         } else if (sel instanceof LayoutLabel) {
             LayoutLabel lab = (LayoutLabel) sel;
             propertiesInfoLabel.setText("<html><b>Texto</b><br>\"" + lab.getText()
@@ -7746,10 +7758,152 @@ public class MapLayoutComposerDialog extends JFrame {
                 + " Y:" + String.format("%.1f", sel.getBoundsMm().y)
                 + "<br>W:" + String.format("%.1f", sel.getBoundsMm().width)
                 + " H:" + String.format("%.1f", sel.getBoundsMm().height) + "</html>");
+            cl.show(propertiesCardPanel, "generic");
         } else {
             propertiesInfoLabel.setText("<html><b>" + sel.getClass().getSimpleName() + "</b><br>"
                 + "X:" + String.format("%.1f", sel.getBoundsMm().x)
                 + " Y:" + String.format("%.1f", sel.getBoundsMm().y) + "</html>");
+            cl.show(propertiesCardPanel, "generic");
         }
+    }
+
+    private void rebuildLegendCard(LayoutLegend legend) {
+        if (propertiesCardPanel == null) return;
+        JPanel form = new JPanel(new java.awt.GridBagLayout());
+        form.setOpaque(false);
+        java.awt.GridBagConstraints g = new java.awt.GridBagConstraints();
+        g.insets = new Insets(1, 2, 1, 2);
+        g.anchor = java.awt.GridBagConstraints.WEST;
+        g.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        g.weightx = 1;
+        int y = 0;
+
+        // Seccion: Elemento
+        sectionLabel(form, g, y, "Elemento"); y++;
+        JTextField nameField = field(form, g, y, "Nombre:", legend.getName());
+        nameField.addActionListener(e -> { legend.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
+        y++;
+        JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", legend.getBoundsMm().x));
+        xField.addActionListener(e -> { try { legend.setBoundsMm(Double.parseDouble(xField.getText()), legend.getBoundsMm().y, legend.getBoundsMm().width, legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", legend.getBoundsMm().y));
+        yField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, Double.parseDouble(yField.getText()), legend.getBoundsMm().width, legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", legend.getBoundsMm().width));
+        wField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, legend.getBoundsMm().y, Double.parseDouble(wField.getText()), legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", legend.getBoundsMm().height));
+        hField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, legend.getBoundsMm().y, legend.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        y = addBoolRow(form, g, y, "Visible:", legend.isVisible(), v -> { legend.setVisible(v); refreshElementList(); previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Bloqueado:", legend.isLocked(), v -> { legend.setLocked(v); refreshElementList(); previewPanel.repaint(); });
+
+        // Seccion: Texto
+        y++; sectionLabel(form, g, y, "Texto"); y++;
+        JTextField titleField = field(form, g, y, "Titulo:", legend.getTitle() != null ? legend.getTitle() : "Leyenda");
+        titleField.addActionListener(e -> { legend.setTitle(titleField.getText().trim()); previewPanel.repaint(); });
+        y++;
+        JTextField titleSizeField = field(form, g, y, "Tamano titulo:", String.valueOf(legend.getTitleFont().getSize()));
+        titleSizeField.addActionListener(e -> { try { legend.setTitleFont(legend.getTitleFont().deriveFont((float)Integer.parseInt(titleSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField itemSizeField = field(form, g, y, "Tamano items:", String.valueOf(legend.getItemFont().getSize()));
+        itemSizeField.addActionListener(e -> { try { legend.setItemFont(legend.getItemFont().deriveFont((float)Integer.parseInt(itemSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) {} });
+
+        // Seccion: Contenido
+        y++; sectionLabel(form, g, y, "Contenido"); y++;
+        JPanel capasPanel = new JPanel(new java.awt.GridLayout(0, 1, 0, 1));
+        capasPanel.setOpaque(false);
+        for (LayoutLegend.LegendItem item : legend.getItems()) {
+            JCheckBox cb = new JCheckBox(item.displayName, item.included);
+            cb.setFont(cb.getFont().deriveFont(Font.PLAIN, 10f));
+            cb.setOpaque(false);
+            cb.addActionListener(e -> { item.included = cb.isSelected(); previewPanel.repaint(); });
+            capasPanel.add(cb);
+        }
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weightx = 1;
+        form.add(capasPanel, g);
+        y++;
+
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+        btnRow.setOpaque(false);
+        JButton updBtn = new JButton("Desde capas");
+        updBtn.setFont(updBtn.getFont().deriveFont(Font.PLAIN, 9f));
+        updBtn.setMargin(new Insets(2, 6, 2, 6));
+        updBtn.addActionListener(e -> { populateLegendFromProject(legend); rebuildLegendCard(legend); previewPanel.repaint(); });
+        JButton exclBtn = new JButton("Excluir WMTS");
+        exclBtn.setFont(exclBtn.getFont().deriveFont(Font.PLAIN, 9f));
+        exclBtn.setMargin(new Insets(2, 6, 2, 6));
+        exclBtn.addActionListener(e -> {
+            legend.getItems().removeIf(item -> LayoutLegend.isBasemapName(item.displayName));
+            rebuildLegendCard(legend); previewPanel.repaint();
+        });
+        btnRow.add(updBtn); btnRow.add(exclBtn);
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2;
+        form.add(btnRow, g);
+        y++;
+
+        // Seccion: Caja
+        y++; sectionLabel(form, g, y, "Caja"); y++;
+        y = addBoolRow(form, g, y, "Mostrar fondo:", legend.isShowBackground(), v -> { legend.setShowBackground(v); previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Mostrar borde:", legend.isShowBorder(), v -> { legend.setShowBorder(v); previewPanel.repaint(); });
+        JTextField paddingField = field(form, g, y, "Padding (mm):", String.format("%.1f", 2.5));
+        y++;
+        JTextField opacityField = field(form, g, y, "Opacidad:", String.format("%.0f%%", 85.0));
+        opacityField.addActionListener(e -> { try { legend.setBgOpacity(Float.parseFloat(opacityField.getText().replace("%","")) / 100f); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+
+        // Seccion: Ajuste
+        y++; sectionLabel(form, g, y, "Ajuste"); y++;
+        y = addBoolRow(form, g, y, "Alto automatico:", legend.isAutoHeight(), v -> { legend.setAutoHeight(v); previewPanel.repaint(); });
+        JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(1));
+        colsField.addActionListener(e -> { try { legend.setColumns(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField symSizeField = field(form, g, y, "Tamano simbolo:", String.format("%.1f", 3.0));
+        symSizeField.addActionListener(e -> { try { legend.setSymbolSizeMm(Double.parseDouble(symSizeField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+
+        // Spacer
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
+        form.add(Box.createVerticalGlue(), g);
+
+        propertiesCardPanel.remove(1); // remove old legend card
+        propertiesCardPanel.add(form, "legend", 1);
+        propertiesCardPanel.revalidate();
+        propertiesCardPanel.repaint();
+    }
+
+    private void sectionLabel(JPanel form, java.awt.GridBagConstraints g, int y, String text) {
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2;
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(lbl.getFont().deriveFont(Font.BOLD, 10f));
+        lbl.setForeground(new Color(0x1976D2));
+        form.add(lbl, g);
+        g.gridwidth = 1;
+    }
+
+    private JTextField field(JPanel form, java.awt.GridBagConstraints g, int y, String label, String value) {
+        g.gridx = 0; g.gridy = y; g.weightx = 0.3;
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 10f));
+        form.add(lbl, g);
+        g.gridx = 1; g.weightx = 0.7;
+        JTextField tf = new JTextField(value);
+        tf.setFont(tf.getFont().deriveFont(Font.PLAIN, 10f));
+        tf.setMargin(new Insets(1, 3, 1, 3));
+        form.add(tf, g);
+        return tf;
+    }
+
+    private int addBoolRow(JPanel form, java.awt.GridBagConstraints g, int y, String label, boolean initial, java.util.function.Consumer<Boolean> onChange) {
+        g.gridx = 0; g.gridy = y; g.weightx = 0.55;
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 10f));
+        form.add(lbl, g);
+        g.gridx = 1; g.weightx = 0.45;
+        JCheckBox cb = new JCheckBox("", initial);
+        cb.setOpaque(false);
+        cb.addActionListener(e -> onChange.accept(cb.isSelected()));
+        form.add(cb, g);
+        return y + 1;
     }
 }
