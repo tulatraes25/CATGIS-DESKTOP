@@ -3259,9 +3259,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void exportPdf() {
-        if (snapshot == null) {
-            refreshSnapshot();
-        }
+        if (snapshot == null) { refreshSnapshot(); }
         if (snapshot == null || snapshot.mapImage() == null) {
             showCompositionError("No se pudo exportar el PDF porque no hay mapa capturado.", null);
             return;
@@ -3269,20 +3267,28 @@ public class MapLayoutComposerDialog extends JFrame {
         JFileChooser chooser = FileChooserSupport.createChooser("layout-export", "Exportar composicion a PDF");
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.addChoosableFileFilter(new FileNameExtensionFilter("PDF (*.pdf)", "pdf"));
-
         int result = chooser.showSaveDialog(this);
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
+        if (result != JFileChooser.APPROVE_OPTION) return;
         File file = chooser.getSelectedFile();
-        if (!file.getName().toLowerCase().endsWith(".pdf")) {
-            file = new File(file.getAbsolutePath() + ".pdf");
-        }
+        if (!file.getName().toLowerCase().endsWith(".pdf")) file = new File(file.getAbsolutePath() + ".pdf");
         FileChooserSupport.rememberFile("layout-export", file);
-
         try {
-            LayoutRenderer.exportPdf(buildSettings(), snapshot, file, interactionState);
+            LayoutSettings settings = buildSettings();
+            Dimension size = settings.pageSize().pixelSize(settings.orientation(), settings.dpi());
+            BufferedImage composited = renderLayout(settings, size);
+            try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+                org.apache.pdfbox.pdmodel.common.PDRectangle rect = settings.pageSize().toPdfRectangle(settings.orientation());
+                org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(rect);
+                document.addPage(page);
+                BufferedImage rgb = new BufferedImage(composited.getWidth(), composited.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D rg = rgb.createGraphics();
+                try { rg.setColor(Color.WHITE); rg.fillRect(0, 0, rgb.getWidth(), rgb.getHeight()); rg.drawImage(composited, 0, 0, null); } finally { rg.dispose(); }
+                org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject pdfImg = org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(document, rgb);
+                try (org.apache.pdfbox.pdmodel.PDPageContentStream cs = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                    cs.drawImage(pdfImg, 0, 0, rect.getWidth(), rect.getHeight());
+                }
+                document.save(file);
+            }
             announceExport("Composicion PDF exportada", file);
         } catch (Exception ex) {
             AppErrorSupport.logFailure("No se pudo exportar la composicion a PDF", ex);
@@ -3491,7 +3497,24 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private BufferedImage renderLayout(LayoutSettings settings, Dimension size) {
-        return LayoutRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
+        BufferedImage base = LayoutRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
+        if (layoutModel.size() > 0) {
+            Graphics2D g2 = base.createGraphics();
+            try {
+                PageSizePreset ps = settings.pageSize();
+                double wMm = ps.widthMm, hMm = ps.heightMm;
+                if (settings.orientation() == PageOrientation.LANDSCAPE) { double tmp = wMm; wMm = hMm; hMm = tmp; }
+                LayoutRenderContext ctx = new LayoutRenderContext(LayoutRenderContext.Mode.EXPORT_IMAGE, settings.dpi(), wMm, hMm);
+                for (LayoutElement el : layoutModel.getVisibleElementsSortedByZ()) {
+                    if (el instanceof LayoutMap) continue;
+                    if (el instanceof LayoutScaleBar) {
+                        ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, estimateMapScale()));
+                    }
+                    el.render(g2, ctx);
+                }
+            } finally { g2.dispose(); }
+        }
+        return base;
     }
 
     private LayoutSnapshot captureSnapshot() {
