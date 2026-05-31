@@ -678,55 +678,61 @@ public class MapLayoutComposerDialog extends JFrame {
         ));
 
         toolbar.add(buildToolbarGroup("Trabajo",
-                selectionToolButton = createToolbarButton("Mover layout", AppIcons.moveFeatureIcon(), "Modo de maquetacion para mover titulos, leyenda, norte, cartucho y tambien el bloque completo del mapa.", this::activateSelectionTool),
-                mapPanToolButton = createToolbarButton("Pan mapa", AppIcons.panIcon(), "Desplaza el contenido interno del mapa sin mover el bloque del layout.", this::activateMapPanTool),
-                mapZoomToolButton = createToolbarButton("Lupa", AppIcons.zoomInIcon(), "Activa el zoom del mapa interno con la rueda del mouse.", this::activateMapFrameZoomTool)
+                selectionToolButton = createToolbarButton("Seleccionar", AppIcons.moveFeatureIcon(), "Selecciona y mueve elementos del layout. Modo por defecto.", this::activateSelectionTool),
+                mapPanToolButton = createToolbarButton("Pan mapa", AppIcons.panIcon(), "Desplaza el contenido del mapa sin mover el marco.", this::activateMapPanTool),
+                mapZoomToolButton = createToolbarButton("Zoom mapa", AppIcons.zoomInIcon(), "Zoom del contenido del mapa con la rueda del mouse.", this::activateMapFrameZoomTool)
         ));
 
-        toolbar.add(buildToolbarGroup("Elementos",
-                createToolbarButton("Texto", AppIcons.attrEditIcon(), "Inserta un texto libre dentro del layout.", () -> addCatmapItem(CatmapLayoutItem.Kind.TEXT)),
-                createToolbarButton("Imagen", AppIcons.imageryIcon(), "Inserta una imagen libre dentro del layout.", this::addCatmapImageItem),
-                createToolbarButton("Rect", AppIcons.rectangleIcon(), "Inserta un rectangulo de soporte grafico.", () -> addCatmapItem(CatmapLayoutItem.Kind.RECTANGLE)),
-                createToolbarButton("Elipse", AppIcons.circleIcon(), "Inserta una elipse de soporte grafico.", () -> addCatmapItem(CatmapLayoutItem.Kind.ELLIPSE)),
-                createToolbarButton("Linea", AppIcons.lineIcon(), "Inserta una linea grafica dentro del layout.", () -> addCatmapItem(CatmapLayoutItem.Kind.LINE)),
-                createToolbarButton("Editar", AppIcons.propertiesIcon(), "Edita el elemento CATMAP actualmente seleccionado.", this::editSelectedCatmapItem),
-                createToolbarButton("Duplicar", AppIcons.attrCopyIcon(), "Duplica el elemento CATMAP seleccionado.", this::duplicateSelectedCatmapItem),
-                createToolbarButton("Subir", AppIcons.upIcon(), "Sube el elemento seleccionado dentro del arbol CATMAP.", () -> moveSelectedCatmapItem(-1)),
-                createToolbarButton("Bajar", AppIcons.downIcon(), "Baja el elemento seleccionado dentro del arbol CATMAP.", () -> moveSelectedCatmapItem(1)),
-                createToolbarButton("Quitar", AppIcons.removeIcon(), "Quita el elemento CATMAP seleccionado.", this::removeSelectedCatmapItem)
+        toolbar.add(buildToolbarGroup("Insertar",
+                createToolbarButton("Texto", AppIcons.attrEditIcon(), "Inserta un texto libre en el layout.", () -> addCatmapItem(CatmapLayoutItem.Kind.TEXT)),
+                createToolbarButton("Imagen", AppIcons.imageryIcon(), "Inserta una imagen desde archivo.", this::addCatmapImageItem),
+                createToolbarButton("Rectangulo", AppIcons.rectangleIcon(), "Inserta un rectangulo.", () -> addCatmapItem(CatmapLayoutItem.Kind.RECTANGLE)),
+                createToolbarButton("Elipse", AppIcons.circleIcon(), "Inserta una elipse.", () -> addCatmapItem(CatmapLayoutItem.Kind.ELLIPSE)),
+                createToolbarButton("Linea", AppIcons.lineIcon(), "Inserta una linea.", () -> addCatmapItem(CatmapLayoutItem.Kind.LINE))
+        ));
+
+        toolbar.add(buildToolbarGroup("Editar",
+                createToolbarButton("Propiedades", AppIcons.propertiesIcon(), "Edita el elemento seleccionado.", this::editSelectedCatmapItem),
+                createToolbarButton("Duplicar", AppIcons.attrCopyIcon(), "Duplica el elemento seleccionado.", this::duplicateSelectedCatmapItem),
+                createToolbarButton("Subir", AppIcons.upIcon(), "Sube en el orden visual.", () -> moveSelectedCatmapItem(-1)),
+                createToolbarButton("Bajar", AppIcons.downIcon(), "Baja en el orden visual.", () -> moveSelectedCatmapItem(1)),
+                createToolbarButton("Quitar", AppIcons.removeIcon(), "Elimina el elemento seleccionado.", this::removeSelectedCatmapItem)
+        ));
+
+        toolbar.add(buildToolbarGroup("Alinear",
+                createToolbarButton("Izquierda", null, "Alinear a la izquierda.", () -> alignSelectedCatmapItems(AlignmentCommand.LEFT)),
+                createToolbarButton("Centro", null, "Centrar horizontalmente.", () -> alignSelectedCatmapItems(AlignmentCommand.CENTER_HORIZONTAL)),
+                createToolbarButton("Derecha", null, "Alinear a la derecha.", () -> alignSelectedCatmapItems(AlignmentCommand.RIGHT)),
+                createToolbarButton("Arriba", null, "Alinear arriba.", () -> alignSelectedCatmapItems(AlignmentCommand.TOP)),
+                createToolbarButton("Medio", null, "Centrar verticalmente.", () -> alignSelectedCatmapItems(AlignmentCommand.CENTER_VERTICAL)),
+                createToolbarButton("Abajo", null, "Alinear abajo.", () -> alignSelectedCatmapItems(AlignmentCommand.BOTTOM))
         ));
 
         toolbar.add(buildToolbarGroup("Organizar",
-                createToolbarButton("Visible", AppIcons.visibleIcon(), "Alterna visibilidad sobre la seleccion CATMAP actual.", this::toggleSelectedCatmapItemVisibility),
-                createToolbarButton("Bloq", null, "Bloquea o libera la seleccion CATMAP actual.", this::toggleSelectedCatmapItemLock),
-                createToolbarButton("Izq", null, "Alinea a la izquierda los elementos seleccionados.", () -> alignSelectedCatmapItems(AlignmentCommand.LEFT)),
-                createToolbarButton("Centro", null, "Alinea horizontalmente al centro la seleccion CATMAP.", () -> alignSelectedCatmapItems(AlignmentCommand.CENTER_HORIZONTAL)),
-                createToolbarButton("Der", null, "Alinea a la derecha los elementos seleccionados.", () -> alignSelectedCatmapItems(AlignmentCommand.RIGHT)),
-                createToolbarButton("Arr", null, "Alinea arriba los elementos seleccionados.", () -> alignSelectedCatmapItems(AlignmentCommand.TOP)),
-                createToolbarButton("Medio", null, "Alinea verticalmente al medio la seleccion CATMAP.", () -> alignSelectedCatmapItems(AlignmentCommand.CENTER_VERTICAL)),
-                createToolbarButton("Aba", null, "Alinea abajo los elementos seleccionados.", () -> alignSelectedCatmapItems(AlignmentCommand.BOTTOM)),
-                createToolbarButton("Dist H", null, "Distribuye horizontalmente la seleccion CATMAP.", () -> distributeSelectedCatmapItems(true)),
-                createToolbarButton("Dist V", null, "Distribuye verticalmente la seleccion CATMAP.", () -> distributeSelectedCatmapItems(false))
+                createToolbarButton("Visible", AppIcons.visibleIcon(), "Mostrar/ocultar elemento seleccionado.", this::toggleSelectedCatmapItemVisibility),
+                createToolbarButton("Bloquear", null, "Bloquear/desbloquear elemento.", this::toggleSelectedCatmapItemLock),
+                createToolbarButton("Distribuir H", null, "Distribuir horizontalmente.", () -> distributeSelectedCatmapItems(true)),
+                createToolbarButton("Distribuir V", null, "Distribuir verticalmente.", () -> distributeSelectedCatmapItems(false))
         ));
 
-        toolbar.add(buildToolbarGroup("Leyenda y Norte",
-                createToolbarButton("Leyenda", AppIcons.labelsIcon(), "Abre el editor de leyenda de CATMAP.", this::openLegendEditor),
-                createToolbarButton("Norte", AppIcons.crsIcon(), "Inserta o edita el simbolo de norte dentro del layout.", this::configureNorthFromToolbar)
+        toolbar.add(buildToolbarGroup("Leyenda",
+                createToolbarButton("Leyenda", AppIcons.labelsIcon(), "Abre el editor de leyenda.", this::openLegendEditor),
+                createToolbarButton("Norte", AppIcons.crsIcon(), "Configura el simbolo de norte.", this::configureNorthFromToolbar)
         ));
 
         toolbar.add(buildToolbarGroup("Mapa",
-                createToolbarButton("Mapa -", AppIcons.zoomOutIcon(), "Reduce el zoom del mapa dentro del frame cartografico.", () -> adjustMapZoom(1d / 1.12d)),
-                createToolbarButton("Mapa +", AppIcons.zoomInIcon(), "Amplia el zoom del mapa dentro del frame cartografico.", () -> adjustMapZoom(1.12d)),
-                createToolbarButton("Reencuadrar", AppIcons.zoomAllIcon(), "Vuelve el mapa del layout a su encuadre original.", this::resetMapFrameView),
-                createToolbarButton("Actualizar", AppIcons.attrRefreshIcon(), "Recaptura el contexto actual del mapa principal sin cerrar CATMAP.", this::refreshSnapshot)
+                createToolbarButton("Zoom -", AppIcons.zoomOutIcon(), "Alejar contenido del mapa.", () -> adjustMapZoom(1d / 1.12d)),
+                createToolbarButton("Zoom +", AppIcons.zoomInIcon(), "Acercar contenido del mapa.", () -> adjustMapZoom(1.12d)),
+                createToolbarButton("Reencuadrar", AppIcons.zoomAllIcon(), "Restaurar encuadre original del mapa.", this::resetMapFrameView),
+                createToolbarButton("Actualizar", AppIcons.attrRefreshIcon(), "Recapturar snapshot del mapa.", this::refreshSnapshot)
         ));
 
-        toolbar.add(buildToolbarGroup("Vista",
-                createToolbarButton("Pagina -", AppIcons.zoomOutIcon(), "Reduce el zoom de la pagina de CATMAP.", () -> adjustPageZoom(1d / 1.15d)),
-                createToolbarButton("Pagina +", AppIcons.zoomInIcon(), "Amplia el zoom de la pagina de CATMAP.", () -> adjustPageZoom(1.15d)),
-                createToolbarButton("Ajustar pagina", AppIcons.zoomAllIcon(), "Ajusta toda la pagina al panel de trabajo.", this::fitPageView),
-                createToolbarButton("Ajustar ancho", AppIcons.zoomLayerIcon(), "Ajusta el ancho del layout al panel de trabajo.", this::fitWidthView),
-                createToolbarButton("Reset layout", AppIcons.undoIcon(), "Restaura la plantilla y offsets del layout activo.", this::resetLayoutView)
+        toolbar.add(buildToolbarGroup("Pagina",
+                createToolbarButton("Zoom -", AppIcons.zoomOutIcon(), "Alejar vista de pagina.", () -> adjustPageZoom(1d / 1.15d)),
+                createToolbarButton("Zoom +", AppIcons.zoomInIcon(), "Acercar vista de pagina.", () -> adjustPageZoom(1.15d)),
+                createToolbarButton("Ajustar", AppIcons.zoomAllIcon(), "Ajustar pagina completa.", this::fitPageView),
+                createToolbarButton("Ajustar ancho", AppIcons.zoomLayerIcon(), "Ajustar al ancho del panel.", this::fitWidthView),
+                createToolbarButton("Reset", AppIcons.undoIcon(), "Restaurar vista por defecto.", this::resetLayoutView)
         ));
         updateActiveWorkToolButtons();
         return toolbar;
