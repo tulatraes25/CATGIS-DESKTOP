@@ -20,6 +20,15 @@ public class LayoutMap implements LayoutElement {
     private int gridCols = 3;
     private int gridRows = 3;
     private Color gridColor = new Color(0, 0, 0, 40);
+    // Grid distance mode
+    private boolean gridByDistance = false;
+    private double gridIntervalX = 100;   // meters or degrees
+    private double gridIntervalY = 100;
+    private String gridUnit = "m";
+    private double gridOffsetX = 0;
+    private double gridOffsetY = 0;
+    // Scale control
+    private double targetScaleDenominator = 0; // 0 = no target set
 
     public LayoutMap(String id, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -126,6 +135,20 @@ public class LayoutMap implements LayoutElement {
     public void setGridRows(int r) { this.gridRows = r; }
     public Color getGridColor() { return gridColor; }
     public void setGridColor(Color c) { if (c != null) this.gridColor = c; }
+    public boolean isGridByDistance() { return gridByDistance; }
+    public void setGridByDistance(boolean b) { this.gridByDistance = b; }
+    public double getGridIntervalX() { return gridIntervalX; }
+    public void setGridIntervalX(double v) { this.gridIntervalX = Math.max(0.001, v); }
+    public double getGridIntervalY() { return gridIntervalY; }
+    public void setGridIntervalY(double v) { this.gridIntervalY = Math.max(0.001, v); }
+    public String getGridUnit() { return gridUnit; }
+    public void setGridUnit(String u) { this.gridUnit = u; }
+    public double getGridOffsetX() { return gridOffsetX; }
+    public void setGridOffsetX(double v) { this.gridOffsetX = v; }
+    public double getGridOffsetY() { return gridOffsetY; }
+    public void setGridOffsetY(double v) { this.gridOffsetY = v; }
+    public double getTargetScaleDenominator() { return targetScaleDenominator; }
+    public void setTargetScaleDenominator(double d) { this.targetScaleDenominator = Math.max(0, d); }
 
     @Override
     public boolean containsMm(double xMm, double yMm) {
