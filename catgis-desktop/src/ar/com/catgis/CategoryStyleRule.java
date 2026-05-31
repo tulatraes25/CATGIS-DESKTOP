@@ -11,6 +11,7 @@ public class CategoryStyleRule {
     private Layer.PolygonFillStyle polygonFillStyle;
     private Layer.PointSymbolStyle pointSymbolStyle;
     private int pointSize;
+    private String catalogSymbolId = "circle";
 
     public CategoryStyleRule(String value) {
         this.value = value != null ? value : "(sin valor)";
@@ -96,4 +97,7 @@ public class CategoryStyleRule {
             this.pointSize = pointSize;
         }
     }
+
+    public String getCatalogSymbolId() { return catalogSymbolId; }
+    public void setCatalogSymbolId(String id) { this.catalogSymbolId = id != null ? id : "circle"; }
 }
