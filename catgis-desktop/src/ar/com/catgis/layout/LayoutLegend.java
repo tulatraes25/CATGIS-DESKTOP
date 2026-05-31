@@ -41,7 +41,7 @@ public class LayoutLegend implements LayoutElement {
     private Color bgColor = new Color(250, 252, 255);
     private Color borderColor = new Color(180, 190, 200);
 
-    private String title = "Referencias";
+    private String title = "Leyenda";
     private String subtitle = "";
     private Font titleFont = new Font("SansSerif", Font.BOLD, 12);
     private Font subtitleFont = new Font("SansSerif", Font.PLAIN, 9);
