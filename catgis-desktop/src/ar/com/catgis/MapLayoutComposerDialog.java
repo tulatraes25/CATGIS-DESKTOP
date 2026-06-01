@@ -470,14 +470,31 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void autoComposeLayout() {
-        // One-click: clear and create a full professional layout
         java.util.List<LayoutElement> toRemove = new java.util.ArrayList<>(layoutModel.getElements());
         for (LayoutElement e : toRemove) layoutModel.removeElement(e.getId());
 
         LayoutTemplateManager.applyTemplate("A4_REFERENCIA", layoutModel);
+
+        // Auto-fill cartouche from project metadata
+        for (LayoutElement el : layoutModel.getElements()) {
+            if (el instanceof LayoutCartouche) {
+                LayoutCartouche lc = (LayoutCartouche) el;
+                Project p = ctxProject();
+                if (p != null) {
+                    if (p.getCompanyName() != null) lc.setField("Estudio", p.getCompanyName());
+                    if (p.getCartographerName() != null) lc.setField("Cartografo", p.getCartographerName());
+                    lc.setField("Fuente", "Elaboracion propia");
+                    lc.setField("Coord.", p.getProjectCRS() != null ? p.getProjectCRS() : "WGS 84 / UTM");
+                }
+            }
+            if (el instanceof LayoutLegend && ctxProject() != null) {
+                populateLegendFromProject((LayoutLegend) el);
+            }
+        }
+
         refreshElementList();
         previewPanel.repaint();
-        statusLabel.setText("Layout profesional creado. Edita los textos y exporta en un clic.");
+        statusLabel.setText("Layout profesional creado. Datos del proyecto cargados automaticamente. ¡Exporta en un clic!");
     }
 
     private void installDropTarget() {
@@ -750,6 +767,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Abrir", AppIcons.openIcon(), "Abrir layout (.catmap)", this::loadCatmapLayout),
                 createToolbarButton("Exportar", AppIcons.exportIcon(), "Exportar a PDF (un clic)", this::exportPdf),
                 createToolbarButton("Exportar PNG", AppIcons.exportIcon(), "Exportar a imagen PNG", this::exportImage),
+                createToolbarButton("SVG", null, "Exportar a SVG vectorial", this::exportSvg),
                 createToolbarButton("Imprimir", AppIcons.projectIcon(), "Imprimir layout", this::printLayout),
                 createToolbarButton("Auto-componer", null, "Crear layout completo automaticamente (mapa+leyenda+escala+norte+titulo). Un solo clic.", this::autoComposeLayout)
         ));
@@ -3360,6 +3378,35 @@ public class MapLayoutComposerDialog extends JFrame {
                     previewPanel.repaint();
                 }
         );
+    }
+
+    private void exportSvg() {
+        JFileChooser fc = FileChooserSupport.createChooser("svg-export", "Exportar a SVG");
+        fc.setSelectedFile(new java.io.File("layout.svg"));
+        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+        File file = fc.getSelectedFile();
+        if (!file.getName().toLowerCase().endsWith(".svg")) file = new File(file.getAbsolutePath() + ".svg");
+        try {
+            LayoutSettings settings = buildSettings();
+            Dimension size = settings.pageSize().pixelSize(settings.orientation(), settings.dpi());
+            BufferedImage composited = renderLayout(settings, size);
+            // Embed rendered image as base64 PNG in SVG wrapper
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(composited, "PNG", baos);
+            String b64 = java.util.Base64.getEncoder().encodeToString(baos.toByteArray());
+            double wMm = settings.pageSize().widthMm, hMm = settings.pageSize().heightMm;
+            if (settings.orientation() == PageOrientation.LANDSCAPE) { double t = wMm; wMm = hMm; hMm = t; }
+            String svg = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                + "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n"
+                + "  width=\"" + wMm + "mm\" height=\"" + hMm + "mm\" viewBox=\"0 0 " + composited.getWidth() + " " + composited.getHeight() + "\">\n"
+                + "  <image x=\"0\" y=\"0\" width=\"" + composited.getWidth() + "\" height=\"" + composited.getHeight() + "\"\n"
+                + "    xlink:href=\"data:image/png;base64," + b64 + "\"/>\n"
+                + "</svg>";
+            java.nio.file.Files.write(file.toPath(), svg.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            announceExport("SVG exportado", file);
+        } catch (Exception ex) {
+            showCompositionError("Error al exportar SVG.", ex);
+        }
     }
 
     private void exportImage() {
