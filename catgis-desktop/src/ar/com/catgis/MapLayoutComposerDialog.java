@@ -806,8 +806,14 @@ public class MapLayoutComposerDialog extends JFrame {
         ));
 
         toolbar.add(buildToolbarGroup("Leyenda",
-                createToolbarButton("Leyenda", AppIcons.labelsIcon(), "Abre el editor de leyenda.", this::openLegendEditor),
-                createToolbarButton("Norte", AppIcons.crsIcon(), "Configura el simbolo de norte.", this::configureNorthFromToolbar)
+                createToolbarButton("Leyenda", AppIcons.labelsIcon(), "Selecciona y edita la leyenda.", () -> {
+                    LayoutElement leg = findElementByType(LayoutLegend.class);
+                    if (leg != null) { layoutModel.clearSelection(); leg.setSelected(true); previewPanel.openElementProperties(leg); refreshElementList(); previewPanel.repaint(); }
+                }),
+                createToolbarButton("Norte", AppIcons.crsIcon(), "Selecciona y edita el norte.", () -> {
+                    LayoutElement north = findElementByType(LayoutNorthArrow.class);
+                    if (north != null) { layoutModel.clearSelection(); north.setSelected(true); previewPanel.openElementProperties(north); refreshElementList(); previewPanel.repaint(); }
+                })
         ));
 
         toolbar.add(buildToolbarGroup("Mapa",
@@ -4502,7 +4508,7 @@ public class MapLayoutComposerDialog extends JFrame {
             setLayout(null);
             setOpaque(true);
             setFocusable(true);
-            setBackground(new Color(240, 243, 247));
+            setBackground(new Color(155, 160, 170)); // ArcMap-style dark canvas
             setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(220, 224, 230)),
                     BorderFactory.createEmptyBorder(12, 12, 12, 12)
@@ -5812,9 +5818,21 @@ public class MapLayoutComposerDialog extends JFrame {
                 lastPageBounds = new Rectangle(x, y, drawWidth, drawHeight);
                 lastPreviewScale = scale;
 
-                g2.setColor(new Color(0, 0, 0, 26));
+                g2.setColor(new Color(200, 205, 212));
                 g2.fillRoundRect(x + 10, y + 10, drawWidth, drawHeight, 18, 18);
+                // Stronger page shadow (ArcMap-style)
+                g2.setColor(new Color(140, 145, 155));
+                g2.fillRoundRect(x + 6, y + 6, drawWidth, drawHeight, 14, 14);
+                g2.setColor(new Color(170, 175, 185));
+                g2.fillRoundRect(x + 4, y + 4, drawWidth, drawHeight, 14, 14);
+                // White page
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(x, y, drawWidth, drawHeight, 4, 4);
                 g2.drawImage(page, x, y, drawWidth, drawHeight, null);
+                // Subtle page border on dark canvas
+                g2.setColor(new Color(200, 205, 212));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(x, y, drawWidth, drawHeight, 4, 4);
                 drawLayoutModelOverlay(g2, settings, x, y, scale);
                 drawSnapGuides(g2, x, y, scale, drawWidth, drawHeight);
                 drawPersistentGuides(g2, x, y, scale, drawWidth, drawHeight, settings);
@@ -7775,9 +7793,11 @@ public class MapLayoutComposerDialog extends JFrame {
 
         elementListModel = new DefaultListModel<>();
         JList<String> list = new JList<>(elementListModel);
-        list.setFont(list.getFont().deriveFont(Font.PLAIN, 10f));
-        list.setFixedCellHeight(24);
+        list.setFont(list.getFont().deriveFont(Font.PLAIN, 11f));
+        list.setFixedCellHeight(26);
         list.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        list.setSelectionBackground(new Color(0xDBEAFE));
+        list.setSelectionForeground(new Color(0x1E3A5F));
         list.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 String sel = list.getSelectedValue();
@@ -7970,10 +7990,11 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private JButton miniBtn(String text, String tip, java.awt.event.ActionListener al) {
         JButton b = new JButton(text);
-        b.setFont(b.getFont().deriveFont(Font.PLAIN, 9f));
-        b.setMargin(new java.awt.Insets(1, 4, 1, 4));
+        b.setFont(b.getFont().deriveFont(Font.PLAIN, 10f));
+        b.setMargin(new java.awt.Insets(2, 6, 2, 6));
         b.setToolTipText(tip);
         b.addActionListener(al);
+        b.setFocusPainted(false);
         return b;
     }
 
@@ -8155,6 +8176,11 @@ public class MapLayoutComposerDialog extends JFrame {
         if (el instanceof LayoutGraticule) return "\uD83D\uDCC8";
         if (el instanceof LayoutLabel) return "\uD83D\uDCDD";
         return "\u25A1";
+    }
+
+    private LayoutElement findElementByType(Class<?> type) {
+        for (LayoutElement el : layoutModel.getElements()) if (type.isInstance(el)) return el;
+        return null;
     }
 
     private void applyMapScale(double denominator) {
