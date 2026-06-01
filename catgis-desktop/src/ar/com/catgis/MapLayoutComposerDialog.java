@@ -125,6 +125,16 @@ import ar.com.catgis.layout.RulerRenderer;
 
 public class MapLayoutComposerDialog extends JFrame {
 
+    // Context helpers - prefer AppContext over static globals
+    private static Project ctxProject() {
+        Project p = AppContext.get().getProject();
+        return p != null ? p : ctxProject();
+    }
+    private static MapPanel ctxMapPanel() {
+        MapPanel m = AppContext.get().getMapPanel();
+        return m != null ? m : ctxMapPanel();
+    }
+
     private static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final int CATMAP_SPLASH_MILLIS = 1100;
     private static final int PREVIEW_RENDER_DPI = 200;
@@ -225,17 +235,17 @@ public class MapLayoutComposerDialog extends JFrame {
         titleField = new JTextField(defaultTitle(), 24);
         subtitleField = new JTextField(defaultSubtitle(), 24);
         footerField = new JTextField(defaultFooter(), 24);
-        studyField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getStudyName() : "", 24);
+        studyField = new JTextField(ctxProject() != null ? ctxProject().getStudyName() : "", 24);
         cartoucheProjectField = new JTextField(snapshot != null ? snapshot.projectName() : "", 24);
-        companyField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCompanyName() : "", 24);
-        cartographerField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCartographerName() : "", 24);
-        imageSourceField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getImageSource() : "", 24);
-        coordinateReferenceField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCoordinateReference() : "", 24);
-        legendTitleField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getLegendTitle() : "Leyenda", 24);
-        legendSubtitleField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getLegendSubtitle() : "Capas visibles del mapa", 24);
-        logoPathField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getLogoPath() : "", 24);
+        companyField = new JTextField(ctxProject() != null ? ctxProject().getCompanyName() : "", 24);
+        cartographerField = new JTextField(ctxProject() != null ? ctxProject().getCartographerName() : "", 24);
+        imageSourceField = new JTextField(ctxProject() != null ? ctxProject().getImageSource() : "", 24);
+        coordinateReferenceField = new JTextField(ctxProject() != null ? ctxProject().getCoordinateReference() : "", 24);
+        legendTitleField = new JTextField(ctxProject() != null ? ctxProject().getLegendTitle() : "Leyenda", 24);
+        legendSubtitleField = new JTextField(ctxProject() != null ? ctxProject().getLegendSubtitle() : "Capas visibles del mapa", 24);
+        logoPathField = new JTextField(ctxProject() != null ? ctxProject().getLogoPath() : "", 24);
         logoPathField.setEditable(false);
-        layoutImagePathField = new JTextField(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getLayoutImagePath() : "", 24);
+        layoutImagePathField = new JTextField(ctxProject() != null ? ctxProject().getLayoutImagePath() : "", 24);
         layoutImagePathField.setEditable(false);
         mapScaleField = new JTextField("1:10000", 24);
         templateCombo = new JComboBox<>(LayoutTemplate.values());
@@ -439,7 +449,7 @@ public class MapLayoutComposerDialog extends JFrame {
         layoutModel.addElement(subEl);
 
         // Footer / cartouche data as LayoutLabels
-        String company = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCompanyName() : null;
+        String company = ctxProject() != null ? ctxProject().getCompanyName() : null;
         if (company != null && !company.isBlank()) {
             LayoutLabel coEl = new LayoutLabel("footer-company", company, 12, 192, 130, 10);
             coEl.setZOrder(layoutModel.nextZ());
@@ -448,7 +458,7 @@ public class MapLayoutComposerDialog extends JFrame {
             coEl.setColor(new Color(0x6B7280));
             layoutModel.addElement(coEl);
         }
-        String cartographer = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCartographerName() : null;
+        String cartographer = ctxProject() != null ? ctxProject().getCartographerName() : null;
         if (cartographer != null && !cartographer.isBlank()) {
             LayoutLabel caEl = new LayoutLabel("footer-cartographer", cartographer, 148, 192, 130, 10);
             caEl.setZOrder(layoutModel.nextZ());
@@ -495,8 +505,8 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void populateLegendFromProject(LayoutLegend legend) {
         legend.getItems().clear();
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.getLayers() == null) return;
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        if (ctxProject() == null || ctxProject().getLayers() == null) return;
+        for (Layer layer : ctxProject().getLayers()) {
             if (layer == null || !layer.isVisible()) continue;
             String name = layer.getName();
             if (name == null) continue;
@@ -516,7 +526,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private String resolveGeometryType(Layer layer) {
-        ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
         if (data == null) return "VECTOR";
         String family = VectorLayerUtils.resolveGeometryFamily(data);
         return family != null ? family : "VECTOR";
@@ -1561,10 +1571,10 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void loadCatmapItemsFromProject() {
         layoutItemsModel.clear();
-        if (CatgisDesktopApp.currentProject == null) {
+        if (ctxProject() == null) {
             return;
         }
-        for (CatmapLayoutItem item : CatgisDesktopApp.currentProject.getCatmapItems()) {
+        for (CatmapLayoutItem item : ctxProject().getCatmapItems()) {
             if (item != null) {
                 layoutItemsModel.addElement(new CatmapLayoutItem(item));
             }
@@ -1575,8 +1585,8 @@ public class MapLayoutComposerDialog extends JFrame {
     private void loadProjectLayersFromProject() {
         Layer selected = projectLayersList != null ? projectLayersList.getSelectedValue() : null;
         projectLayersModel.clear();
-        if (CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getLayers() != null) {
-            for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        if (ctxProject() != null && ctxProject().getLayers() != null) {
+            for (Layer layer : ctxProject().getLayers()) {
                 if (layer != null) {
                     projectLayersModel.addElement(layer);
                 }
@@ -1630,7 +1640,7 @@ public class MapLayoutComposerDialog extends JFrame {
         if (layer instanceof RasterLayer) {
             return AppIcons.imageryIcon();
         }
-        ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
         String geometryFamily = VectorLayerUtils.resolveGeometryFamily(data);
         if ("POINT".equalsIgnoreCase(geometryFamily) || "MULTIPOINT".equalsIgnoreCase(geometryFamily)) {
             return AppIcons.pointIcon();
@@ -1652,9 +1662,9 @@ public class MapLayoutComposerDialog extends JFrame {
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.refreshLayerList();
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.refreshLayerVisibility();
-            CatgisDesktopApp.mapPanel.repaint();
+        if (ctxMapPanel() != null) {
+            ctxMapPanel().refreshLayerVisibility();
+            ctxMapPanel().repaint();
         }
         CatgisDesktopApp.markProjectDirty();
         loadProjectLayersFromProject();
@@ -1703,9 +1713,9 @@ public class MapLayoutComposerDialog extends JFrame {
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.refreshLayerList();
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.refreshLayerVisibility();
-            CatgisDesktopApp.mapPanel.repaint();
+        if (ctxMapPanel() != null) {
+            ctxMapPanel().refreshLayerVisibility();
+            ctxMapPanel().repaint();
         }
         loadProjectLayersFromProject();
         projectLayersList.setSelectedValue(layer, true);
@@ -1715,19 +1725,19 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void moveSelectedProjectLayer(int delta) {
         Layer layer = projectLayersList.getSelectedValue();
-        if (layer == null || CatgisDesktopApp.currentProject == null) {
+        if (layer == null || ctxProject() == null) {
             JOptionPane.showMessageDialog(this, "Selecciona una capa del panel derecho para reordenarla.");
             return;
         }
-        List<Layer> orderedLayers = CatgisDesktopApp.currentProject.getLayers();
+        List<Layer> orderedLayers = ctxProject().getLayers();
         int index = orderedLayers.indexOf(layer);
         int target = index + delta;
         if (index < 0 || target < 0 || target >= orderedLayers.size()) {
             return;
         }
         Collections.swap(orderedLayers, index, target);
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.reorderLayers(new ArrayList<>(orderedLayers));
+        if (ctxMapPanel() != null) {
+            ctxMapPanel().reorderLayers(new ArrayList<>(orderedLayers));
         }
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.refreshLayerList();
@@ -1751,10 +1761,10 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void persistCatmapItems() {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (ctxProject() == null) {
             return;
         }
-        CatgisDesktopApp.currentProject.setCatmapItems(copyCatmapItems());
+        ctxProject().setCatmapItems(copyCatmapItems());
         CatgisDesktopApp.markProjectDirty();
     }
 
@@ -3241,10 +3251,10 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void pushProjectMetadataFromControls() {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (ctxProject() == null) {
             return;
         }
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = ctxProject();
         boolean changed = false;
         changed |= updateString(project.getStudyName(), studyField.getText(), project::setStudyName);
         changed |= updateString(project.getCompanyName(), companyField.getText(), project::setCompanyName);
@@ -3261,10 +3271,10 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void pushCatmapNorthSettingsToProject() {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (ctxProject() == null) {
             return;
         }
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = ctxProject();
         boolean changed = false;
         String northStyle = currentNorthStyle().name();
         if (!safeTrim(project.getCatmapNorthStyle()).equals(northStyle)) {
@@ -3281,18 +3291,18 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private NorthStyle currentProjectNorthStyle() {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (ctxProject() == null) {
             return NorthStyle.CLASSIC;
         }
         try {
-            return NorthStyle.valueOf(safeTrim(CatgisDesktopApp.currentProject.getCatmapNorthStyle()));
+            return NorthStyle.valueOf(safeTrim(ctxProject().getCatmapNorthStyle()));
         } catch (Exception ignored) {
             return NorthStyle.CLASSIC;
         }
     }
 
     private boolean currentProjectShowNorth() {
-        return CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.isCatmapShowNorth();
+        return ctxProject() == null || ctxProject().isCatmapShowNorth();
     }
 
     private NorthStyle currentNorthStyle() {
@@ -3328,12 +3338,12 @@ public class MapLayoutComposerDialog extends JFrame {
     private void openLegendEditor() {
         CatmapLegendEditorDialog.open(
                 this,
-                CatgisDesktopApp.currentProject,
+                ctxProject(),
                 snapshot != null ? snapshot.visibleLayers() : visibleLayers(),
                 () -> {
-                    if (CatgisDesktopApp.currentProject != null) {
-                        legendTitleField.setText(CatgisDesktopApp.currentProject.getLegendTitle());
-                        legendSubtitleField.setText(CatgisDesktopApp.currentProject.getLegendSubtitle());
+                    if (ctxProject() != null) {
+                        legendTitleField.setText(ctxProject().getLegendTitle());
+                        legendSubtitleField.setText(ctxProject().getLegendSubtitle());
                     }
                     statusLabel.setText("Leyenda CATMAP actualizada.");
                     previewPanel.repaint();
@@ -3640,7 +3650,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private LayoutSnapshot captureSnapshot() {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (ctxMapPanel() == null) {
             return new LayoutSnapshot(
                     new BufferedImage(1200, 800, BufferedImage.TYPE_INT_ARGB),
                     visibleLayers(),
@@ -3657,14 +3667,14 @@ public class MapLayoutComposerDialog extends JFrame {
             );
         }
 
-        int mapWidth = Math.max(CatgisDesktopApp.mapPanel.getWidth(), 1200);
-        int mapHeight = Math.max(CatgisDesktopApp.mapPanel.getHeight(), 800);
+        int mapWidth = Math.max(ctxMapPanel().getWidth(), 1200);
+        int mapHeight = Math.max(ctxMapPanel().getHeight(), 800);
         BufferedImage mapImage = new BufferedImage(mapWidth, mapHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = mapImage.createGraphics();
         try {
             g2.setColor(Color.WHITE);
             g2.fillRect(0, 0, mapWidth, mapHeight);
-            CatgisDesktopApp.mapPanel.paint(g2);
+            ctxMapPanel().paint(g2);
         } finally {
             g2.dispose();
         }
@@ -3679,11 +3689,11 @@ public class MapLayoutComposerDialog extends JFrame {
                 currentProjectCrsCode(),
                 formatDistance(scaleMeters),
                 scaleMeters,
-                CatgisDesktopApp.mapPanel.getViewMinX(),
-                CatgisDesktopApp.mapPanel.getViewMinY(),
-                Math.max(CatgisDesktopApp.mapPanel.getZoomFactor(), 0.000001d),
-                Math.max(1, CatgisDesktopApp.mapPanel.getWidth()),
-                Math.max(1, CatgisDesktopApp.mapPanel.getHeight())
+                ctxMapPanel().getViewMinX(),
+                ctxMapPanel().getViewMinY(),
+                Math.max(ctxMapPanel().getZoomFactor(), 0.000001d),
+                Math.max(1, ctxMapPanel().getWidth()),
+                Math.max(1, ctxMapPanel().getHeight())
         );
     }
 
@@ -3765,10 +3775,10 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private List<Layer> visibleLayers() {
         List<Layer> visible = new ArrayList<>();
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.getLayers() == null) {
+        if (ctxProject() == null || ctxProject().getLayers() == null) {
             return visible;
         }
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : ctxProject().getLayers()) {
             if (layer != null && isProjectLayerEffectivelyVisible(layer)) {
                 visible.add(layer);
             }
@@ -3780,17 +3790,17 @@ public class MapLayoutComposerDialog extends JFrame {
         if (layer == null) {
             return false;
         }
-        if (CatgisDesktopApp.currentProject != null) {
-            return CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer);
+        if (ctxProject() != null) {
+            return ctxProject().isLayerEffectivelyVisible(layer);
         }
         return layer.isVisible();
     }
 
     private String currentProjectName() {
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.getName() == null || CatgisDesktopApp.currentProject.getName().isBlank()) {
+        if (ctxProject() == null || ctxProject().getName() == null || ctxProject().getName().isBlank()) {
             return "Proyecto actual";
         }
-        return CatgisDesktopApp.currentProject.getName();
+        return ctxProject().getName();
     }
 
     private String currentProjectCrs() {
@@ -3798,7 +3808,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private String currentProjectCrsCode() {
-        String code = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String code = ctxProject() != null ? ctxProject().getProjectCRS() : "";
         return CRSDefinitions.normalizeCode(code != null ? code : "");
     }
 
@@ -3815,21 +3825,21 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private double estimateRepresentativeScaleMeters(int mapPixelWidth) {
-        if (CatgisDesktopApp.mapPanel == null || mapPixelWidth <= 0) {
+        if (ctxMapPanel() == null || mapPixelWidth <= 0) {
             return 0;
         }
 
-        double zoomFactor = Math.max(CatgisDesktopApp.mapPanel.getZoomFactor(), 0.000001d);
+        double zoomFactor = Math.max(ctxMapPanel().getZoomFactor(), 0.000001d);
         double projectWidth = Math.max(1d, mapPixelWidth / zoomFactor);
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCrs = ctxProject() != null ? ctxProject().getProjectCRS() : "";
         if (projectCrs == null) {
             projectCrs = "";
         }
         projectCrs = CRSDefinitions.normalizeCode(projectCrs);
 
         if (isGeographic(projectCrs)) {
-            double centerLat = CatgisDesktopApp.mapPanel.getViewMinY()
-                    + (Math.max(1, CatgisDesktopApp.mapPanel.getHeight()) / 2d) / zoomFactor;
+            double centerLat = ctxMapPanel().getViewMinY()
+                    + (Math.max(1, ctxMapPanel().getHeight()) / 2d) / zoomFactor;
             double metersPerDegreeLon = 111320d * Math.cos(Math.toRadians(centerLat));
             metersPerDegreeLon = Math.max(1d, Math.abs(metersPerDegreeLon));
             return projectWidth * metersPerDegreeLon;
@@ -6294,7 +6304,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
             BufferedImage mapImage = snapshot != null ? snapshot.mapImage() : null;
             double shownGroundMeters = snapshot != null ? snapshot.representativeMeters() : 0d;
-            if (snapshot != null && CatgisDesktopApp.mapPanel != null && snapshot.basePixelWidth() > 0 && snapshot.basePixelHeight() > 0) {
+            if (snapshot != null && ctxMapPanel() != null && snapshot.basePixelWidth() > 0 && snapshot.basePixelHeight() > 0) {
                 double zoomMultiplier = interactionState != null ? Math.max(0.02d, interactionState.getMapZoom()) : 1d;
                 double targetZoom = Math.max(0.000001d, snapshot.baseZoomFactor() * zoomMultiplier);
                 double baseWorldWidth = snapshot.basePixelWidth() / Math.max(snapshot.baseZoomFactor(), 0.000001d);
@@ -6312,7 +6322,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 double viewCenterY = baseCenterY + offsetWorldY;
                 double viewMinX = viewCenterX - (currentWorldWidth / 2d);
                 double viewMinY = viewCenterY - (currentWorldHeight / 2d);
-                BufferedImage rendered = CatgisDesktopApp.mapPanel.renderMapViewImage(viewMinX, viewMinY, targetZoom);
+                BufferedImage rendered = ctxMapPanel().renderMapViewImage(viewMinX, viewMinY, targetZoom);
                 if (rendered != null) {
                     mapImage = rendered;
                 }
@@ -6662,7 +6672,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
         private static void drawLegendItemScaled(Graphics2D g2, LegendItem item, int x, int y, int availableWidth, int fontSize, boolean scaled) {
             Layer layer = item.layer();
-            ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+            ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
             String geometryFamily = VectorLayerUtils.resolveGeometryFamily(data);
 
             int symSize = scaled ? Math.max(12, fontSize + 4) : 20;
@@ -6724,7 +6734,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
             List<CatmapLegendItem> configuredEntries = CatmapLegendSupport.mergeEntries(
                     automaticEntries,
-                    CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCatmapLegendItems() : null
+                    ctxProject() != null ? ctxProject().getCatmapLegendItems() : null
             );
 
             List<LegendItem> mergedItems = new ArrayList<>();
@@ -6811,7 +6821,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
         private static void drawLegendItem(Graphics2D g2, LegendItem item, int x, int y, int availableWidth) {
             Layer layer = item.layer();
-            ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+            ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
             String geometryFamily = VectorLayerUtils.resolveGeometryFamily(data);
             if (layer instanceof RasterLayer || layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) {
                 g2.setPaint(new GradientPaint(x, y, new Color(96, 165, 250), x + 18, y + 18, new Color(59, 130, 246)));
@@ -7565,7 +7575,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 return "GPX " + gpxLayer.getContentKind().getLabel();
             }
             String geometryFamily = VectorLayerUtils.resolveGeometryFamily(
-                    CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null
+                    ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null
             );
             if ("POINT".equalsIgnoreCase(geometryFamily)) {
                 return "Punto";
@@ -7979,7 +7989,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private double estimateMapScale() {
         try {
-            ar.com.catgis.MapPanel mp = CatgisDesktopApp.mapPanel;
+            ar.com.catgis.MapPanel mp = ctxMapPanel();
             if (mp != null) {
                 double denom = mp.getCurrentScaleDenominator();
                 if (denom > 0) return denom;
@@ -8084,7 +8094,7 @@ public class MapLayoutComposerDialog extends JFrame {
             case "cartouche": {
                 LayoutCartouche c = new LayoutCartouche("cartouche-" + System.currentTimeMillis(), 12, 175, 270, 55);
                 c.setZOrder(layoutModel.nextZ()); c.setName("Cartucho " + countOfType("Cartucho"));
-                String proj = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCompanyName() : "";
+                String proj = ctxProject() != null ? ctxProject().getCompanyName() : "";
                 if (proj != null) c.setField("Estudio", proj);
                 layoutModel.addElement(c); refreshElementList(); previewPanel.repaint();
                 break;
@@ -8185,7 +8195,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void applyMapScale(double denominator) {
         try {
-            ar.com.catgis.MapPanel mp = CatgisDesktopApp.mapPanel;
+            ar.com.catgis.MapPanel mp = ctxMapPanel();
             if (mp != null && denominator > 0) {
                 double currentZoom = mp.getZoomFactor();
                 double currentDenom = mp.getCurrentScaleDenominator();
