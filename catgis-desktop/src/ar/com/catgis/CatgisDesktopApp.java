@@ -58,6 +58,9 @@ public class CatgisDesktopApp extends JFrame {
         ModuleRegistry.initializeDefaults();
         mapPanel = new MapPanel();
         layersPanel = new LayersPanel();
+        AppContext.get().setMapPanel(mapPanel);
+        AppContext.get().setLayersPanel(layersPanel);
+        AppContext.get().setMainFrame(this);
         statusBar = new StatusBar();
         statusBar.setScaleApplyListener(value -> {
             if (mapPanel != null) {
@@ -393,6 +396,7 @@ public class CatgisDesktopApp extends JFrame {
         if (currentProject == null) {
             currentProject = new Project(I18n.t("Proyecto actual"));
         }
+        AppContext.get().setProject(currentProject);
         String currentCode = currentProject.getProjectCRS();
         if (currentCode == null || currentCode.isBlank()) {
             currentProject.setProjectCRS("EPSG:4326");
