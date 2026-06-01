@@ -20,6 +20,10 @@ public class LayoutTemplateManager {
         list.put("A4_MUESTREO", "A4 horizontal - Muestreo");
         list.put("A4_SATELITAL", "A4 horizontal - Imagen satelital");
         list.put("A4_VERTICAL", "A4 vertical - Informe");
+        list.put("A4_REFERENCIA", "A4 - Referencia / Accesibilidad");
+        list.put("A4_ACCESIBILIDAD", "A4 - Accesibilidad");
+        list.put("A4_EMPLAZAMIENTO", "A4 - Emplazamiento");
+        list.put("A4_PERFIL", "A4 - Perfil / Altimetria");
         return list;
     }
 
@@ -34,6 +38,10 @@ public class LayoutTemplateManager {
             case "A4_MUESTREO": buildMuestreo(model); break;
             case "A4_SATELITAL": buildSatelital(model); break;
             case "A4_VERTICAL": buildVertical(model); break;
+            case "A4_REFERENCIA": buildReferencia(model); break;
+            case "A4_ACCESIBILIDAD": buildAccesibilidad(model); break;
+            case "A4_EMPLAZAMIENTO": buildEmplazamiento(model); break;
+            case "A4_PERFIL": buildPerfil(model); break;
         }
     }
 
@@ -381,5 +389,63 @@ public class LayoutTemplateManager {
             if (hex.startsWith("#")) hex = hex.substring(1);
             return new Color(Integer.parseInt(hex, 16));
         } catch (Exception e) { return Color.BLACK; }
+    }
+
+    // ---- New professional templates ----
+
+    private static void buildReferencia(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Referencia de Accesibilidad", 12, 8, 273, 14,
+            new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Mapa de ubicacion general - Plano de conjunto", 12, 24, 273, 10,
+            new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
+        addMap(m, "Mapa principal", 12, 36, 273, 130, z);
+        addLegend(m, "Leyenda", 12, 172, 130, 40, z, false);
+        addScale(m, "Escala grafica", 12, 208, 100, 10, z);
+        addNorth(m, "Norte", 265, 155, 16, 16, z);
+        LayoutCartouche cc = new LayoutCartouche("Datos cartograficos", 148, 172, 137, 48);
+        cc.setZOrder(z[0]++); cc.setName("Datos cartograficos"); m.addElement(cc);
+    }
+
+    private static void buildAccesibilidad(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Accesibilidad al Proyecto", 12, 8, 273, 14,
+            new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Rutas de acceso y caminos principales", 12, 24, 273, 10,
+            new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
+        addMap(m, "Mapa principal", 12, 36, 200, 135, z);
+        addLegend(m, "Leyenda", 218, 36, 67, 40, z, true);
+        addScale(m, "Escala grafica", 12, 175, 130, 10, z);
+        addNorth(m, "Norte", 270, 160, 16, 16, z);
+        LayoutCartouche ac = new LayoutCartouche("Datos cartograficos", 12, 190, 273, 22);
+        ac.setZOrder(z[0]++); ac.setName("Datos cartograficos"); m.addElement(ac);
+    }
+
+    private static void buildEmplazamiento(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Emplazamiento del Proyecto", 12, 8, 273, 14,
+            new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Area de proyecto - Planta general", 12, 24, 273, 10,
+            new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
+        addMap(m, "Mapa principal", 12, 36, 273, 140, z);
+        addLegend(m, "Leyenda", 12, 180, 160, 30, z, false);
+        addScale(m, "Escala grafica", 175, 180, 110, 10, z);
+        addNorth(m, "Norte", 265, 175, 16, 16, z);
+        LayoutCartouche ec = new LayoutCartouche("Datos cartograficos", 12, 193, 273, 19);
+        ec.setZOrder(z[0]++); ec.setName("Datos cartograficos"); m.addElement(ec);
+    }
+
+    private static void buildPerfil(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Perfil de Altimetria", 12, 8, 273, 14,
+            new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Trazado longitudinal - Progresivas y cotas", 12, 24, 273, 10,
+            new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
+        addMap(m, "Mapa de traza", 12, 36, 273, 95, z);
+        LayoutTable t = new LayoutTable("Tabla progresivas", 12, 134, 273, 55);
+        t.setZOrder(z[0]++); t.setName("Progresivas / Altimetria");
+        t.setShowBorders(true); t.setAlternateRows(true);
+        t.setFirstRowIsHeader(true); t.setMaxVisibleRows(8);
+        m.addElement(t);
+        addScale(m, "Escala grafica", 12, 192, 130, 10, z);
+        addNorth(m, "Norte", 268, 120, 14, 14, z);
+        LayoutCartouche pc = new LayoutCartouche("Datos cartograficos", 148, 192, 137, 20);
+        pc.setZOrder(z[0]++); pc.setName("Datos cartograficos"); m.addElement(pc);
     }
 }

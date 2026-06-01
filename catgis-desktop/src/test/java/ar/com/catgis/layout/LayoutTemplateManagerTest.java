@@ -71,10 +71,14 @@ public class LayoutTemplateManagerTest {
     @Test
     public void testTemplateList() {
         var templates = LayoutTemplateManager.getTemplateList();
-        assertTrue(templates.size() >= 6);
+        assertTrue(templates.size() >= 10);
         assertTrue(templates.containsKey("A4_AMBIENTAL"));
         assertTrue(templates.containsKey("A4_TECNICO"));
         assertTrue(templates.containsKey("A3_TECNICO"));
+        assertTrue(templates.containsKey("A4_REFERENCIA"));
+        assertTrue(templates.containsKey("A4_ACCESIBILIDAD"));
+        assertTrue(templates.containsKey("A4_EMPLAZAMIENTO"));
+        assertTrue(templates.containsKey("A4_PERFIL"));
     }
 
     @Test
@@ -89,5 +93,43 @@ public class LayoutTemplateManagerTest {
             if (el instanceof LayoutLabel) hasTitle = true;
         }
         assertTrue(hasMap && hasLegend && hasTitle);
+    }
+
+    @Test
+    public void testReferenciaTemplate() {
+        LayoutModel model = new LayoutModel();
+        LayoutTemplateManager.applyTemplate("A4_REFERENCIA", model);
+        assertTrue(model.size() >= 6);
+        boolean hasCartouche = false;
+        for (LayoutElement el : model.getElements()) {
+            if (el instanceof LayoutCartouche) hasCartouche = true;
+        }
+        assertTrue(hasCartouche);
+    }
+
+    @Test
+    public void testAccesibilidadTemplate() {
+        LayoutModel model = new LayoutModel();
+        LayoutTemplateManager.applyTemplate("A4_ACCESIBILIDAD", model);
+        assertTrue(model.size() >= 6);
+    }
+
+    @Test
+    public void testEmplazamientoTemplate() {
+        LayoutModel model = new LayoutModel();
+        LayoutTemplateManager.applyTemplate("A4_EMPLAZAMIENTO", model);
+        assertTrue(model.size() >= 6);
+    }
+
+    @Test
+    public void testPerfilTemplate() {
+        LayoutModel model = new LayoutModel();
+        LayoutTemplateManager.applyTemplate("A4_PERFIL", model);
+        assertTrue(model.size() >= 6);
+        boolean hasTable = false;
+        for (LayoutElement el : model.getElements()) {
+            if (el instanceof LayoutTable) hasTable = true;
+        }
+        assertTrue(hasTable);
     }
 }
