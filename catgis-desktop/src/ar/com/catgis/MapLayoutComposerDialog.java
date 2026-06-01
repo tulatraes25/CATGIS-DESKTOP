@@ -3629,6 +3629,13 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private BufferedImage renderLayout(LayoutSettings settings, Dimension size) {
+        // Auto-disable hardcoded elements that exist in LayoutModel
+        for (LayoutElement el : layoutModel.getElements()) {
+            if (el instanceof LayoutLegend) legendCheck.setSelected(false);
+            if (el instanceof LayoutNorthArrow) interactionState.setElementVisible(LayoutElementType.NORTH, false);
+            if (el instanceof LayoutScaleBar) interactionState.setElementVisible(LayoutElementType.SCALE, false);
+            if (el instanceof LayoutCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
+        }
         BufferedImage base = LayoutRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
         if (layoutModel.size() > 0) {
             Graphics2D g2 = base.createGraphics();
@@ -5777,10 +5784,14 @@ public class MapLayoutComposerDialog extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            // Disable hardcoded legend/header/cartouche when LayoutModel has equivalents
+            // Disable hardcoded elements when LayoutModel has equivalents (WYSIWYG)
             boolean hasModelLegend = false, hasModelHeader = false, hasModelCartouche = false;
+            boolean hasModelNorth = false, hasModelScale = false;
             for (LayoutElement el : layoutModel.getElements()) {
                 if (el instanceof LayoutLegend) hasModelLegend = true;
+                if (el instanceof LayoutNorthArrow) hasModelNorth = true;
+                if (el instanceof LayoutScaleBar) hasModelScale = true;
+                if (el instanceof LayoutCartouche) hasModelCartouche = true;
                 if (el instanceof LayoutLabel) {
                     String n = el.getName();
                     if (n != null && (n.equals("Titulo") || n.startsWith("Titulo ") || n.equals("Subtitulo")))
@@ -5791,6 +5802,8 @@ public class MapLayoutComposerDialog extends JFrame {
             }
             if (hasModelLegend) legendCheck.setSelected(false);
             if (hasModelHeader) interactionState.setElementVisible(LayoutElementType.HEADER, false);
+            if (hasModelNorth) interactionState.setElementVisible(LayoutElementType.NORTH, false);
+            if (hasModelScale) interactionState.setElementVisible(LayoutElementType.SCALE, false);
             if (hasModelCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
             LayoutSettings settings = buildSettings();
             LayoutSnapshot currentSnapshot = getSnapshot();
