@@ -18,6 +18,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.ImageIcon;
@@ -38,6 +39,8 @@ import javax.swing.JTextArea;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.WindowConstants;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.JToggleButton;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -63,11 +66,15 @@ import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Paint;
+import java.awt.MouseInfo;
 import java.awt.Point;
+import java.awt.PointerInfo;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.TexturePaint;
@@ -729,9 +736,9 @@ public class MapLayoutComposerDialog extends JFrame {
         toolbar.add(buildToolbarGroup("Insertar",
                 createToolbarButton("Texto", AppIcons.attrEditIcon(), "Inserta un texto libre en el layout.", () -> addCatmapItem(CatmapLayoutItem.Kind.TEXT)),
                 createToolbarButton("Imagen", AppIcons.imageryIcon(), "Inserta una imagen desde archivo.", this::addCatmapImageItem),
-                createToolbarButton("Rectangulo", AppIcons.rectangleIcon(), "Inserta un rectangulo.", () -> addCatmapItem(CatmapLayoutItem.Kind.RECTANGLE)),
-                createToolbarButton("Elipse", AppIcons.circleIcon(), "Inserta una elipse.", () -> addCatmapItem(CatmapLayoutItem.Kind.ELLIPSE)),
-                createToolbarButton("Linea", AppIcons.lineIcon(), "Inserta una linea.", () -> addCatmapItem(CatmapLayoutItem.Kind.LINE))
+                createToolbarButton("Rectangulo", AppIcons.rectangleIcon(), "Dibujar rectangulo. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("rect")),
+                createToolbarButton("Elipse", AppIcons.circleIcon(), "Dibujar elipse. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("ellipse")),
+                createToolbarButton("Linea", AppIcons.lineIcon(), "Dibujar linea. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("line"))
         ));
 
         toolbar.add(buildToolbarGroup("Editar",
@@ -1741,9 +1748,9 @@ public class MapLayoutComposerDialog extends JFrame {
         String value = selected.toString();
         switch (value) {
             case "Imagen" -> addCatmapImageItem();
-            case "Rectangulo" -> addCatmapItem(CatmapLayoutItem.Kind.RECTANGLE);
-            case "Elipse" -> addCatmapItem(CatmapLayoutItem.Kind.ELLIPSE);
-            case "Linea" -> addCatmapItem(CatmapLayoutItem.Kind.LINE);
+            case "Rectangulo" -> previewPanel.startDrawing("rect");
+            case "Elipse" -> previewPanel.startDrawing("ellipse");
+            case "Linea" -> previewPanel.startDrawing("line");
             default -> addCatmapItem(CatmapLayoutItem.Kind.TEXT);
         }
     }
@@ -4412,6 +4419,8 @@ public class MapLayoutComposerDialog extends JFrame {
         private GuideLine draggingGuide = null;
         private double draggingGuideStartMm = 0;
         private LayoutElement hoveredElement = null;
+        private String drawingShape = null;        // "rect", "ellipse", "line" when drawing mode active
+        private Point drawingStart = null;          // page-pixel start of the shape
         private final JTextField inlineTitleEditor;
         private final JPanel inlineCartoucheEditor;
         private final JTextField inlineCartoucheStudyField;
@@ -4583,11 +4592,14 @@ public class MapLayoutComposerDialog extends JFrame {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     requestFocusInWindow();
-                    if (e.isPopupTrigger() || SwingUtilities.isRightMouseButton(e)) {
-                        handleRightClick(e);
+                    if (SwingUtilities.isRightMouseButton(e)) { handleRightClick(e); return; }
+                    if (!SwingUtilities.isLeftMouseButton(e)) return;
+
+                    // Drawing mode: start drawing
+                    if (drawingShape != null) {
+                        drawingStart = toPagePoint(e.getPoint());
                         return;
                     }
-                    if (!SwingUtilities.isLeftMouseButton(e)) return;
 
                     // Guide interaction: drag from ruler or existing guide
                     GuideLine.Orientation rulerHit = RulerRenderer.rulerHitTest(e.getX(), e.getY(), 0, 0, getWidth(), getHeight());
@@ -4780,6 +4792,16 @@ public class MapLayoutComposerDialog extends JFrame {
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
+                    if (drawingShape != null) {
+                        if (drawingStart != null) {
+                            Point end = toPagePoint(e.getPoint());
+                            if (end != null) finishDrawing(end);
+                            else cancelDrawing();
+                        } else {
+                            cancelDrawing();
+                        }
+                        return;
+                    }
                     if (draggingGuide != null) {
                         draggingGuide = null;
                         setCursor(Cursor.getDefaultCursor());
@@ -4808,6 +4830,10 @@ public class MapLayoutComposerDialog extends JFrame {
 
                 @Override
                 public void mouseDragged(MouseEvent e) {
+                    if (drawingShape != null && drawingStart != null) {
+                        repaint(); // will draw preview rectangle in paintComponent
+                        return;
+                    }
                     if (draggingGuide != null) {
                         LayoutSettings settings = buildSettings();
                         double mmPerPx = 25.4 / PREVIEW_RENDER_DPI / lastPreviewScale;
@@ -5374,10 +5400,109 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         private void openElementProperties(LayoutElement el) {
+            if (el instanceof LayoutLabel) { showTextPopup((LayoutLabel) el); return; }
+            if (el instanceof LayoutLegend) { showLegendPopup((LayoutLegend) el); return; }
             refreshPropertiesPanel();
-            JOptionPane.showMessageDialog(LayoutPreviewPanel.this,
-                "Elemento: " + el.getName() + "\nTipo: " + el.getClass().getSimpleName() + "\nPosicion: " + (int)el.getBoundsMm().x + ", " + (int)el.getBoundsMm().y + " mm\nTamano: " + (int)el.getBoundsMm().width + " x " + (int)el.getBoundsMm().height + " mm\nZ: " + el.getZOrder() + "\nVisible: " + el.isVisible() + "\nBloqueado: " + el.isLocked(),
-                "Propiedades", JOptionPane.INFORMATION_MESSAGE);
+        }
+
+        private void showTextPopup(LayoutLabel label) {
+            JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
+            popup.setUndecorated(true);
+            JPanel panel = new JPanel(new GridLayout(0, 2, 4, 4));
+            panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0x1976D2), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+            panel.setBackground(Color.WHITE);
+
+            Font f = label.getFont();
+            JComboBox<String> fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+            fontCombo.setSelectedItem(f.getFamily());
+            fontCombo.addActionListener(e -> { label.setFont(new Font((String)fontCombo.getSelectedItem(), f.getStyle(), f.getSize())); panel.repaint(); previewPanel.repaint(); });
+            panel.add(new JLabel("Fuente:")); panel.add(fontCombo);
+
+            JSpinner sizeSpin = new JSpinner(new SpinnerNumberModel(f.getSize(), 6, 72, 1));
+            sizeSpin.addChangeListener(e -> { label.setFont(label.getFont().deriveFont((float)(Integer)sizeSpin.getValue())); previewPanel.repaint(); });
+            panel.add(new JLabel("Tamano:")); panel.add(sizeSpin);
+
+            JToggleButton boldBtn = new JToggleButton("B", f.isBold());
+            boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD));
+            boldBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(boldBtn.isSelected() ? label.getFont().getStyle() | Font.BOLD : label.getFont().getStyle() & ~Font.BOLD)); previewPanel.repaint(); });
+            JToggleButton italicBtn = new JToggleButton("I", f.isItalic());
+            italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC));
+            italicBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(italicBtn.isSelected() ? label.getFont().getStyle() | Font.ITALIC : label.getFont().getStyle() & ~Font.ITALIC)); previewPanel.repaint(); });
+            JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0)); styleRow.setOpaque(false);
+            styleRow.add(boldBtn); styleRow.add(italicBtn);
+            panel.add(new JLabel("Estilo:")); panel.add(styleRow);
+
+            JButton colorBtn = new JButton("...");
+            colorBtn.setBackground(label.getColor()); colorBtn.setOpaque(true);
+            colorBtn.addActionListener(e -> {
+                Color c = JColorChooser.showDialog(popup, "Color", label.getColor());
+                if (c != null) { label.setColor(c); colorBtn.setBackground(c); previewPanel.repaint(); }
+            });
+            panel.add(new JLabel("Color:")); panel.add(colorBtn);
+
+            JButton closeBtn = new JButton("Cerrar");
+            closeBtn.addActionListener(e -> popup.dispose());
+            panel.add(new JLabel()); panel.add(closeBtn);
+
+            popup.add(panel); popup.pack();
+            Point p = LayoutPreviewPanel.this.getLocationOnScreen();
+            java.awt.Rectangle pb = lastPageBounds;
+            double px = pb.x + label.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
+            double py = pb.y + label.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
+            popup.setLocation(p.x + (int)px, p.y + (int)py + 20);
+            popup.setVisible(true);
+        }
+
+        private void showLegendPopup(LayoutLegend legend) {
+            JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
+            popup.setUndecorated(true);
+            JPanel panel = new JPanel(new GridLayout(0, 2, 4, 4));
+            panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0x1976D2), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+            panel.setBackground(Color.WHITE);
+
+            JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 15);
+            titleField.addActionListener(e -> { legend.setTitle(titleField.getText().trim()); previewPanel.repaint(); });
+            panel.add(new JLabel("Titulo:")); panel.add(titleField);
+
+            JSpinner titleSize = new JSpinner(new SpinnerNumberModel((int)legend.getTitleFont().getSize(), 8, 36, 1));
+            titleSize.addChangeListener(e -> { legend.setTitleFont(legend.getTitleFont().deriveFont((float)(Integer)titleSize.getValue())); previewPanel.repaint(); });
+            panel.add(new JLabel("Tam. titulo:")); panel.add(titleSize);
+
+            JSpinner itemSize = new JSpinner(new SpinnerNumberModel((int)legend.getItemFont().getSize(), 6, 24, 1));
+            itemSize.addChangeListener(e -> { legend.setItemFont(legend.getItemFont().deriveFont((float)(Integer)itemSize.getValue())); previewPanel.repaint(); });
+            panel.add(new JLabel("Tam. items:")); panel.add(itemSize);
+
+            JCheckBox bgCheck = new JCheckBox("", legend.isShowBackground());
+            bgCheck.addActionListener(e -> { legend.setShowBackground(bgCheck.isSelected()); previewPanel.repaint(); });
+            panel.add(new JLabel("Fondo:")); panel.add(bgCheck);
+
+            JCheckBox brdCheck = new JCheckBox("", legend.isShowBorder());
+            brdCheck.addActionListener(e -> { legend.setShowBorder(brdCheck.isSelected()); previewPanel.repaint(); });
+            panel.add(new JLabel("Borde:")); panel.add(brdCheck);
+
+            JCheckBox autoCheck = new JCheckBox("", legend.isAutoHeight());
+            autoCheck.addActionListener(e -> { legend.setAutoHeight(autoCheck.isSelected()); previewPanel.repaint(); });
+            panel.add(new JLabel("Auto alto:")); panel.add(autoCheck);
+
+            JButton updBtn = new JButton("Actualizar capas");
+            updBtn.addActionListener(e -> { populateLegendFromProject(legend); previewPanel.repaint(); });
+            panel.add(new JLabel()); panel.add(updBtn);
+
+            JButton closeBtn = new JButton("Cerrar");
+            closeBtn.addActionListener(e -> popup.dispose());
+            panel.add(new JLabel()); panel.add(closeBtn);
+
+            popup.add(panel); popup.pack();
+            Point p = LayoutPreviewPanel.this.getLocationOnScreen();
+            java.awt.Rectangle pb = lastPageBounds;
+            double px = pb.x + legend.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
+            double py = pb.y + legend.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
+            popup.setLocation(p.x + (int)px, p.y + (int)py + 20);
+            popup.setVisible(true);
         }
 
         private LayoutElement duplicateElement(LayoutElement src) {
@@ -5387,10 +5512,69 @@ public class MapLayoutComposerDialog extends JFrame {
 
         private void refresh(Boolean unused) { refreshElementList(); previewPanel.repaint(); }
 
+        private void startDrawing(String shape) {
+            drawingShape = shape;
+            drawingStart = null;
+            setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+            layoutModel.clearSelection();
+            refreshElementList();
+            repaint();
+            statusLabel.setText("Dibujando " + shape + ". Click y arrastra en el canvas. Esc para cancelar.");
+        }
+
+        private void cancelDrawing() {
+            drawingShape = null;
+            drawingStart = null;
+            setCursor(Cursor.getDefaultCursor());
+            repaint();
+            statusLabel.setText("Dibujo cancelado.");
+        }
+
+        private void finishDrawing(Point pageEnd) {
+            if (drawingStart == null || drawingShape == null) return;
+            RectMm pr = toPageRectMm();
+            if (pr == null) return;
+            double sc = pr.pxToMmScale;
+            double x1 = Math.min(drawingStart.x, pageEnd.x) * sc;
+            double y1 = Math.min(drawingStart.y, pageEnd.y) * sc;
+            double x2 = Math.max(drawingStart.x, pageEnd.x) * sc;
+            double y2 = Math.max(drawingStart.y, pageEnd.y) * sc;
+            double w = x2 - x1, h = y2 - y1;
+            if (w < 2 && h < 2) { w = 20; h = 15; }
+
+            if ("rect".equals(drawingShape) || "ellipse".equals(drawingShape) || "line".equals(drawingShape)) {
+                LayoutRectangle r = new LayoutRectangle(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
+                r.setZOrder(layoutModel.nextZ()); r.setName(drawingShape.substring(0,1).toUpperCase() + drawingShape.substring(1) + " " + ((int)(Math.random()*100)));
+                layoutModel.addElement(r);
+            }
+            drawingShape = null; drawingStart = null;
+            setCursor(Cursor.getDefaultCursor());
+            refreshElementList();
+            repaint();
+            statusLabel.setText("Forma creada.");
+        }
+
         private JMenuItem item(String text, Runnable action) {
             JMenuItem mi = new JMenuItem(text);
             mi.addActionListener(e -> action.run());
             return mi;
+        }
+
+        private void drawDrawingPreview(Graphics2D g2, int pageX, int pageY, double scale) {
+            if (drawingShape == null || drawingStart == null) return;
+            PointerInfo pi = MouseInfo.getPointerInfo();
+            if (pi == null) return;
+            Point screenPt = pi.getLocation();
+            SwingUtilities.convertPointFromScreen(screenPt, LayoutPreviewPanel.this);
+            Point pageEnd = toPagePoint(screenPt);
+            if (pageEnd == null) return;
+            int x1 = pageX + (int)(Math.min(drawingStart.x, pageEnd.x) * scale);
+            int y1 = pageY + (int)(Math.min(drawingStart.y, pageEnd.y) * scale);
+            int w = (int)(Math.abs(pageEnd.x - drawingStart.x) * scale);
+            int h = (int)(Math.abs(pageEnd.y - drawingStart.y) * scale);
+            g2.setColor(new Color(25, 118, 210, 100));
+            g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{6f, 4f}, 0f));
+            g2.drawRect(x1, y1, Math.max(1, w), Math.max(1, h));
         }
 
         private void clearSnapGuides() {
@@ -5556,6 +5740,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 drawLayoutModelOverlay(g2, settings, x, y, scale);
                 drawSnapGuides(g2, x, y, scale, drawWidth, drawHeight);
                 drawPersistentGuides(g2, x, y, scale, drawWidth, drawHeight, settings);
+                drawDrawingPreview(g2, x, y, scale);
                 RulerRenderer.render(g2, 0, 0, getWidth(), getHeight(), settings.pageSize().widthMm, settings.pageSize().heightMm, PREVIEW_RENDER_DPI, scale);
                 SwingUtilities.invokeLater(() -> refreshElementList());
                 drawSelectionOverlay(g2, x, y, scale);
