@@ -103,8 +103,10 @@ import java.util.EnumMap;
 import java.util.List;
 
 import ar.com.catgis.layout.LayoutElement;
+import ar.com.catgis.layout.LayoutEllipse;
 import ar.com.catgis.layout.LayoutLabel;
 import ar.com.catgis.layout.LayoutLegend;
+import ar.com.catgis.layout.LayoutLine;
 import ar.com.catgis.layout.LayoutImage;
 import ar.com.catgis.layout.LayoutRectangle;
 import ar.com.catgis.layout.LayoutMap;
@@ -5576,10 +5578,18 @@ public class MapLayoutComposerDialog extends JFrame {
             double w = x2 - x1, h = y2 - y1;
             if (w < 2 && h < 2) { w = 20; h = 15; }
 
-            if ("rect".equals(drawingShape) || "ellipse".equals(drawingShape) || "line".equals(drawingShape)) {
+            if ("rect".equals(drawingShape)) {
                 LayoutRectangle r = new LayoutRectangle(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
-                r.setZOrder(layoutModel.nextZ()); r.setName(drawingShape.substring(0,1).toUpperCase() + drawingShape.substring(1) + " " + ((int)(Math.random()*100)));
+                r.setZOrder(layoutModel.nextZ()); r.setName("Rectangulo " + countOfType("Rectangulo"));
                 layoutModel.addElement(r);
+            } else if ("ellipse".equals(drawingShape)) {
+                LayoutEllipse e = new LayoutEllipse(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
+                e.setZOrder(layoutModel.nextZ()); e.setName("Elipse " + countOfType("Elipse"));
+                layoutModel.addElement(e);
+            } else if ("line".equals(drawingShape)) {
+                LayoutLine l = new LayoutLine(drawingShape + "-" + System.currentTimeMillis(), x1, y1, x2, y2);
+                l.setZOrder(layoutModel.nextZ()); l.setName("Linea " + countOfType("Linea"));
+                layoutModel.addElement(l);
             }
             drawingShape = null; drawingStart = null;
             setCursor(Cursor.getDefaultCursor());
@@ -8085,6 +8095,8 @@ public class MapLayoutComposerDialog extends JFrame {
         if (el instanceof LayoutNorthArrow) return "\uD83E\uDDED";
         if (el instanceof LayoutScaleBar) return "\uD83D\uDCCF";
         if (el instanceof LayoutImage) return "\uD83D\uDDBC";
+        if (el instanceof LayoutEllipse) return "\u2B55";
+        if (el instanceof LayoutLine) return "\u2795";
         if (el instanceof LayoutRectangle) return "\u25AD";
         if (el instanceof LayoutTable) return "\uD83D\uDCCA";
         if (el instanceof LayoutLabel) return "\uD83D\uDCDD";
