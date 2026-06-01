@@ -2702,6 +2702,19 @@ public class MapLayoutComposerDialog extends JFrame {
                 selectionToolButton.doClick();
                 statusLabel.setText("Seleccionar activo. Saliste de la edicion del mapa.");
             }
+            if (previewPanel.drawingShape != null) {
+                previewPanel.cancelDrawing();
+            }
+        });
+        bindCatmapAction(previewPanel, "DELETE", "catmap-delete-element", () -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) {
+                pushUndo(sel, true);
+                layoutModel.removeElement(sel.getId());
+                refreshElementList();
+                previewPanel.repaint();
+                statusLabel.setText("Elemento eliminado. Ctrl+Z para deshacer.");
+            }
         });
     }
 
@@ -4684,6 +4697,7 @@ public class MapLayoutComposerDialog extends JFrame {
                             if (clicked.isSelected() && !clicked.isLocked()) {
                                 int handleIdx = hitTestHandle(clicked, pagePoint, pageRect);
                                 if (handleIdx >= 0) {
+                                    pushUndo(clicked, false);
                                     activeResizeHandleIndex = handleIdx;
                                     draggingLayoutElement = clicked;
                                     dragStartPagePoint = pagePoint;
@@ -4694,6 +4708,7 @@ public class MapLayoutComposerDialog extends JFrame {
                                 }
                             }
                             if (!clicked.isLocked()) {
+                                pushUndo(clicked, false);
                                 layoutModel.clearSelection();
                                 clicked.setSelected(true);
                                 draggingLayoutElement = clicked;
