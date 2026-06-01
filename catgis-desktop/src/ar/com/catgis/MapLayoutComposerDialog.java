@@ -4969,6 +4969,10 @@ public class MapLayoutComposerDialog extends JFrame {
                         if (Math.abs(ey + eh - oy - oh) < snapTol) newY = oy + oh - eh;
                         if (Math.abs(ey + eh/2 - oy - oh/2) < snapTol) newY = oy + oh/2 - eh/2;
                     }
+                    // Snap to grid (5mm grid)
+                    double gridSize = 5.0;
+                    newX = Math.round(newX / gridSize) * gridSize;
+                    newY = Math.round(newY / gridSize) * gridSize;
                     draggingLayoutElement.setBoundsMm(newX, newY, dragStartBoundsMm.width, dragStartBoundsMm.height);
                                 }
                             }
@@ -5871,6 +5875,18 @@ public class MapLayoutComposerDialog extends JFrame {
                 // White page
                 g2.setColor(Color.WHITE);
                 g2.fillRoundRect(x, y, drawWidth, drawHeight, 4, 4);
+                // Page grid dots (5mm spacing)
+                g2.setColor(new Color(210, 215, 225));
+                double gridMm = 5;
+                double pxPerMmGrid = PREVIEW_RENDER_DPI / 25.4 * scale;
+                for (double gx = 0; gx <= settings.pageSize().widthMm; gx += gridMm) {
+                    int px = x + (int)(gx * pxPerMmGrid);
+                    for (double gy = 0; gy <= settings.pageSize().heightMm; gy += gridMm) {
+                        int py = y + (int)(gy * pxPerMmGrid);
+                        if (px >= x && py >= y && px <= x + drawWidth && py <= y + drawHeight)
+                            g2.fillRect(px, py, 2, 2);
+                    }
+                }
                 g2.drawImage(page, x, y, drawWidth, drawHeight, null);
                 // Subtle page border on dark canvas
                 g2.setColor(new Color(200, 205, 212));
