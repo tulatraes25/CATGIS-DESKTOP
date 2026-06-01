@@ -8443,6 +8443,38 @@ public class MapLayoutComposerDialog extends JFrame {
             infoLabel.setFont(infoLabel.getFont().deriveFont(Font.PLAIN, 9f));
             g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(infoLabel, g); y++;
         }
+        if (el instanceof LayoutCartouche) {
+            LayoutCartouche lc = (LayoutCartouche) el;
+            y++; sectionLabel(form, g, y, "Datos"); y++;
+            for (java.util.Map.Entry<String, String> e : new java.util.ArrayList<>(lc.getFields().entrySet())) {
+                JTextField tf = field(form, g, y, e.getKey() + ":", e.getValue() != null ? e.getValue() : "");
+                final String key = e.getKey();
+                tf.addActionListener(ev -> { lc.setField(key, tf.getText()); previewPanel.repaint(); });
+                y++;
+            }
+        }
+        if (el instanceof LayoutGraticule) {
+            LayoutGraticule lg = (LayoutGraticule) el;
+            y++; sectionLabel(form, g, y, "Grilla"); y++;
+            JTextField intXField = field(form, g, y, "Intervalo X:", String.format("%.2f", lg.getIntervalX()));
+            intXField.addActionListener(ev -> { try { lg.setIntervalX(Double.parseDouble(intXField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            JTextField intYField = field(form, g, y, "Intervalo Y:", String.format("%.2f", lg.getIntervalY()));
+            intYField.addActionListener(ev -> { try { lg.setIntervalY(Double.parseDouble(intYField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            y = addBoolRow(form, g, y, "Geografico:", lg.isGeographic(), v -> { lg.setGeographic(v); previewPanel.repaint(); });
+            y = addBoolRow(form, g, y, "Etiquetas:", lg.isShowLabels(), v -> { lg.setShowLabels(v); previewPanel.repaint(); });
+        }
+        if (el instanceof LayoutLine) {
+            LayoutLine ll = (LayoutLine) el;
+            y++; sectionLabel(form, g, y, "Linea"); y++;
+            JTextField lwField = field(form, g, y, "Grosor:", String.format("%.1f", ll.getLineWidth()));
+            lwField.addActionListener(ev -> { try { ll.setLineWidth(Float.parseFloat(lwField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            y = addBoolRow(form, g, y, "Punteada:", ll.isDashed(), v -> { ll.setDashed(v); previewPanel.repaint(); });
+        }
+        if (el instanceof LayoutEllipse || el instanceof LayoutRectangle) {
+            y++; sectionLabel(form, g, y, "Estilo"); y++;
+            JTextField bwField = field(form, g, y, "Borde:", String.format("%.1f", el instanceof LayoutEllipse ? ((LayoutEllipse)el).getBorderWidth() : 1.5f));
+            bwField.addActionListener(ev -> { try { float v = Float.parseFloat(bwField.getText()); if (el instanceof LayoutEllipse) ((LayoutEllipse)el).setBorderWidth(v); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+        }
 
         g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
         form.add(Box.createVerticalGlue(), g);
