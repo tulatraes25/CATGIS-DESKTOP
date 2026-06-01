@@ -28,7 +28,10 @@ public class LayoutMap implements LayoutElement {
     private double gridOffsetX = 0;
     private double gridOffsetY = 0;
     // Scale control
-    private double targetScaleDenominator = 0; // 0 = no target set
+    private double targetScaleDenominator = 0;
+    // Independent extent
+    private boolean ownExtent = false;
+    private double ownViewMinX, ownViewMinY, ownZoomFactor = 1;
 
     public LayoutMap(String id, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -91,11 +94,17 @@ public class LayoutMap implements LayoutElement {
 
     private long computeCacheKey() {
         long key = 31;
-        ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
-        if (map != null) {
-            key = key * 31 + Double.doubleToLongBits(map.getViewMinX());
-            key = key * 31 + Double.doubleToLongBits(map.getViewMinY());
-            key = key * 31 + Double.doubleToLongBits(map.getZoomFactor());
+        if (ownExtent) {
+            key = key * 31 + Double.doubleToLongBits(ownViewMinX);
+            key = key * 31 + Double.doubleToLongBits(ownViewMinY);
+            key = key * 31 + Double.doubleToLongBits(ownZoomFactor);
+        } else {
+            ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+            if (map != null) {
+                key = key * 31 + Double.doubleToLongBits(map.getViewMinX());
+                key = key * 31 + Double.doubleToLongBits(map.getViewMinY());
+                key = key * 31 + Double.doubleToLongBits(map.getZoomFactor());
+            }
         }
         ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
         if (proj != null && proj.getLayers() != null) {
@@ -112,8 +121,14 @@ public class LayoutMap implements LayoutElement {
         ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
         if (map == null) return null;
         try {
-            BufferedImage img = map.renderMapViewImage(
-                map.getViewMinX(), map.getViewMinY(), map.getZoomFactor());
+            double vx, vy, zf;
+            if (ownExtent) {
+                vx = ownViewMinX; vy = ownViewMinY; zf = ownZoomFactor;
+            } else {
+                vx = map.getViewMinX(); vy = map.getViewMinY(); zf = map.getZoomFactor();
+            }
+            if (zf <= 0) zf = 1;
+            BufferedImage img = map.renderMapViewImage(vx, vy, zf);
             if (img == null) return null;
             if (img.getWidth() == w && img.getHeight() == h) return img;
             BufferedImage scaled = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -149,6 +164,18 @@ public class LayoutMap implements LayoutElement {
     public void setGridOffsetY(double v) { this.gridOffsetY = v; }
     public double getTargetScaleDenominator() { return targetScaleDenominator; }
     public void setTargetScaleDenominator(double d) { this.targetScaleDenominator = Math.max(0, d); }
+    public boolean isOwnExtent() { return ownExtent; }
+    public void setOwnExtent(boolean b) { this.ownExtent = b; }
+    public double getOwnViewMinX() { return ownViewMinX; }
+    public void setOwnViewMinX(double v) { ownViewMinX = v; }
+    public double getOwnViewMinY() { return ownViewMinY; }
+    public void setOwnViewMinY(double v) { ownViewMinY = v; }
+    public double getOwnZoomFactor() { return ownZoomFactor; }
+    public void setOwnZoomFactor(double v) { ownZoomFactor = v; }
+    public void captureFromMainMap() {
+        ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+        if (map != null) { ownViewMinX = map.getViewMinX(); ownViewMinY = map.getViewMinY(); ownZoomFactor = map.getZoomFactor(); ownExtent = true; }
+    }
 
     @Override
     public boolean containsMm(double xMm, double yMm) {
