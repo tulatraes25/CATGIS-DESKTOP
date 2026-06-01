@@ -7719,6 +7719,8 @@ public class MapLayoutComposerDialog extends JFrame {
         propertiesCardPanel.add(new JLabel("."), "map");
         // Label card (built lazily)
         propertiesCardPanel.add(new JLabel("."), "label");
+        // Shape card (built lazily - for Image, Rectangle, Ellipse, Line, North, Scale, Table)
+        propertiesCardPanel.add(new JLabel("."), "shape");
 
         JScrollPane sp = new JScrollPane(propertiesCardPanel);
         sp.setBorder(null);
@@ -8283,6 +8285,27 @@ public class MapLayoutComposerDialog extends JFrame {
         } else if (sel instanceof LayoutLabel) {
             rebuildLabelCard((LayoutLabel) sel);
             cl.show(propertiesCardPanel, "label");
+        } else if (sel instanceof LayoutImage) {
+            rebuildShapeCard(sel, "Imagen");
+            cl.show(propertiesCardPanel, "shape");
+        } else if (sel instanceof LayoutRectangle) {
+            rebuildShapeCard(sel, "Rectangulo");
+            cl.show(propertiesCardPanel, "shape");
+        } else if (sel instanceof LayoutEllipse) {
+            rebuildShapeCard(sel, "Elipse");
+            cl.show(propertiesCardPanel, "shape");
+        } else if (sel instanceof LayoutLine) {
+            rebuildShapeCard(sel, "Linea");
+            cl.show(propertiesCardPanel, "shape");
+        } else if (sel instanceof LayoutNorthArrow) {
+            rebuildShapeCard(sel, "Norte");
+            cl.show(propertiesCardPanel, "shape");
+        } else if (sel instanceof LayoutScaleBar) {
+            rebuildShapeCard(sel, "Escala");
+            cl.show(propertiesCardPanel, "shape");
+        } else if (sel instanceof LayoutTable) {
+            rebuildShapeCard(sel, "Tabla");
+            cl.show(propertiesCardPanel, "shape");
         } else if (sel == null) {
             propertiesInfoLabel.setText("<html>Sin elemento<br>seleccionado</html>");
             cl.show(propertiesCardPanel, "generic");
@@ -8360,6 +8383,52 @@ public class MapLayoutComposerDialog extends JFrame {
 
         propertiesCardPanel.remove(3);
         propertiesCardPanel.add(form, "label", 3);
+        propertiesCardPanel.revalidate();
+        propertiesCardPanel.repaint();
+    }
+
+    private void rebuildShapeCard(LayoutElement el, String typeLabel) {
+        if (propertiesCardPanel == null) return;
+        JPanel form = new JPanel(new java.awt.GridBagLayout());
+        form.setOpaque(false);
+        java.awt.GridBagConstraints g = new java.awt.GridBagConstraints();
+        g.insets = new Insets(1, 2, 1, 2);
+        g.anchor = java.awt.GridBagConstraints.WEST;
+        g.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        g.weightx = 1;
+        int y = 0;
+
+        sectionLabel(form, g, y, "Elemento: " + typeLabel); y++;
+        JTextField nameField = field(form, g, y, "Nombre:", el.getName());
+        nameField.addActionListener(e -> { el.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
+        y++;
+        JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", el.getBoundsMm().x));
+        xField.addActionListener(e -> { try { el.setBoundsMm(Double.parseDouble(xField.getText()), el.getBoundsMm().y, el.getBoundsMm().width, el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", el.getBoundsMm().y));
+        yField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, Double.parseDouble(yField.getText()), el.getBoundsMm().width, el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", el.getBoundsMm().width));
+        wField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, el.getBoundsMm().y, Double.parseDouble(wField.getText()), el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", el.getBoundsMm().height));
+        hField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, el.getBoundsMm().y, el.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        y++;
+        y = addBoolRow(form, g, y, "Visible:", el.isVisible(), v -> { el.setVisible(v); refreshElementList(); previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Bloqueado:", el.isLocked(), v -> { el.setLocked(v); refreshElementList(); previewPanel.repaint(); });
+
+        if (el instanceof LayoutImage) {
+            y++; sectionLabel(form, g, y, "Imagen"); y++;
+            JLabel infoLabel = new JLabel("<html>Imagen cargada en memoria.<br>Arrastra una nueva para reemplazar.</html>");
+            infoLabel.setFont(infoLabel.getFont().deriveFont(Font.PLAIN, 9f));
+            g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(infoLabel, g); y++;
+        }
+
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
+        form.add(Box.createVerticalGlue(), g);
+
+        propertiesCardPanel.remove(4);
+        propertiesCardPanel.add(form, "shape", 4);
         propertiesCardPanel.revalidate();
         propertiesCardPanel.repaint();
     }
