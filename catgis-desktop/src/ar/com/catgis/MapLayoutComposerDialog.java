@@ -734,35 +734,69 @@ public class MapLayoutComposerDialog extends JFrame {
         ));
 
         toolbar.add(buildToolbarGroup("Insertar",
-                createToolbarButton("Texto", AppIcons.attrEditIcon(), "Inserta un texto libre en el layout.", () -> addCatmapItem(CatmapLayoutItem.Kind.TEXT)),
-                createToolbarButton("Imagen", AppIcons.imageryIcon(), "Inserta una imagen desde archivo.", this::addCatmapImageItem),
+                createToolbarButton("Texto", AppIcons.attrEditIcon(), "Inserta un texto libre en el layout.", () -> {
+                    LayoutLabel lbl = new LayoutLabel("lbl-" + System.currentTimeMillis(), "Texto libre", 60, 60, 160, 24);
+                    lbl.setZOrder(layoutModel.nextZ()); lbl.setName("Texto " + (layoutModel.size() + 1));
+                    layoutModel.addElement(lbl); refreshElementList(); previewPanel.repaint();
+                }),
+                createToolbarButton("Imagen", AppIcons.imageryIcon(), "Inserta una imagen desde archivo.", () -> {
+                    JFileChooser fc = new JFileChooser();
+                    fc.setFileFilter(new FileNameExtensionFilter("Imagenes", "png", "jpg", "jpeg", "gif", "bmp"));
+                    if (fc.showOpenDialog(MapLayoutComposerDialog.this) == JFileChooser.APPROVE_OPTION) {
+                        try { java.awt.image.BufferedImage bi = ImageIO.read(fc.getSelectedFile());
+                        if (bi != null) { double w = bi.getWidth()/200.0*25.4, h = bi.getHeight()/200.0*25.4;
+                        LayoutImage img = new LayoutImage("img-" + System.currentTimeMillis(), bi, 50, 50, w, h);
+                        img.setZOrder(layoutModel.nextZ()); img.setName(fc.getSelectedFile().getName());
+                        layoutModel.addElement(img); refreshElementList(); previewPanel.repaint(); }
+                        } catch (Exception ex) { ex.printStackTrace(); }
+                    }
+                }),
                 createToolbarButton("Rectangulo", AppIcons.rectangleIcon(), "Dibujar rectangulo. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("rect")),
                 createToolbarButton("Elipse", AppIcons.circleIcon(), "Dibujar elipse. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("ellipse")),
                 createToolbarButton("Linea", AppIcons.lineIcon(), "Dibujar linea. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("line"))
         ));
 
         toolbar.add(buildToolbarGroup("Editar",
-                createToolbarButton("Propiedades", AppIcons.propertiesIcon(), "Edita el elemento seleccionado.", this::editSelectedCatmapItem),
-                createToolbarButton("Duplicar", AppIcons.attrCopyIcon(), "Duplica el elemento seleccionado.", this::duplicateSelectedCatmapItem),
-                createToolbarButton("Subir", AppIcons.upIcon(), "Sube en el orden visual.", () -> moveSelectedCatmapItem(-1)),
-                createToolbarButton("Bajar", AppIcons.downIcon(), "Baja en el orden visual.", () -> moveSelectedCatmapItem(1)),
-                createToolbarButton("Quitar", AppIcons.removeIcon(), "Elimina el elemento seleccionado.", this::removeSelectedCatmapItem)
+                createToolbarButton("Editar", AppIcons.propertiesIcon(), "Editar elemento seleccionado.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) previewPanel.openElementProperties(sel);
+                }),
+                createToolbarButton("Duplicar", AppIcons.attrCopyIcon(), "Duplicar seleccionado.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) { duplicateLayoutElement(sel); refreshElementList(); previewPanel.repaint(); }
+                }),
+                createToolbarButton("Subir", AppIcons.upIcon(), "Subir en orden visual.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) { layoutModel.moveUp(sel); refreshElementList(); previewPanel.repaint(); }
+                }),
+                createToolbarButton("Bajar", AppIcons.downIcon(), "Bajar en orden visual.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) { layoutModel.moveDown(sel); refreshElementList(); previewPanel.repaint(); }
+                }),
+                createToolbarButton("Quitar", AppIcons.removeIcon(), "Eliminar seleccionado.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) { layoutModel.removeElement(sel.getId()); refreshElementList(); previewPanel.repaint(); }
+                })
         ));
 
         toolbar.add(buildToolbarGroup("Alinear",
-                createToolbarButton("Izquierda", null, "Alinear a la izquierda.", () -> alignSelectedCatmapItems(AlignmentCommand.LEFT)),
-                createToolbarButton("Centro", null, "Centrar horizontalmente.", () -> alignSelectedCatmapItems(AlignmentCommand.CENTER_HORIZONTAL)),
-                createToolbarButton("Derecha", null, "Alinear a la derecha.", () -> alignSelectedCatmapItems(AlignmentCommand.RIGHT)),
-                createToolbarButton("Arriba", null, "Alinear arriba.", () -> alignSelectedCatmapItems(AlignmentCommand.TOP)),
-                createToolbarButton("Medio", null, "Centrar verticalmente.", () -> alignSelectedCatmapItems(AlignmentCommand.CENTER_VERTICAL)),
-                createToolbarButton("Abajo", null, "Alinear abajo.", () -> alignSelectedCatmapItems(AlignmentCommand.BOTTOM))
+                createToolbarButton("Izquierda", null, "Alinear izquierda.", () -> alignElements(0)),
+                createToolbarButton("Centro", null, "Centrar horizontal.", () -> alignElements(1)),
+                createToolbarButton("Derecha", null, "Alinear derecha.", () -> alignElements(2)),
+                createToolbarButton("Arriba", null, "Alinear arriba.", () -> alignElements(3)),
+                createToolbarButton("Medio", null, "Centrar vertical.", () -> alignElements(4)),
+                createToolbarButton("Abajo", null, "Alinear abajo.", () -> alignElements(5))
         ));
 
         toolbar.add(buildToolbarGroup("Organizar",
-                createToolbarButton("Visible", AppIcons.visibleIcon(), "Mostrar/ocultar elemento seleccionado.", this::toggleSelectedCatmapItemVisibility),
-                createToolbarButton("Bloquear", null, "Bloquear/desbloquear elemento.", this::toggleSelectedCatmapItemLock),
-                createToolbarButton("Distribuir H", null, "Distribuir horizontalmente.", () -> distributeSelectedCatmapItems(true)),
-                createToolbarButton("Distribuir V", null, "Distribuir verticalmente.", () -> distributeSelectedCatmapItems(false))
+                createToolbarButton("Visible", AppIcons.visibleIcon(), "Mostrar/ocultar seleccionado.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) { sel.setVisible(!sel.isVisible()); refreshElementList(); previewPanel.repaint(); }
+                }),
+                createToolbarButton("Bloquear", null, "Bloquear/desbloquear seleccionado.", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null) { sel.setLocked(!sel.isLocked()); refreshElementList(); previewPanel.repaint(); }
+                })
         ));
 
         toolbar.add(buildToolbarGroup("Leyenda",
