@@ -295,6 +295,86 @@ public class LayoutTemplateManager {
         return "\"#" + String.format("%06X", c.getRGB() & 0xFFFFFF) + "\"";
     }
 
+    /** Serialize a single element to a compact JSON fragment for copy/paste */
+    public static String elementToJson(LayoutElement el) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"type\":\"").append(esc(el.getClass().getSimpleName())).append("\",");
+        sb.append("\"id\":\"").append(esc(el.getId())).append("\",");
+        sb.append("\"name\":\"").append(esc(el.getName() != null ? el.getName() : "")).append("\",");
+        sb.append("\"xMm\":").append(el.getBoundsMm().x).append(",");
+        sb.append("\"yMm\":").append(el.getBoundsMm().y).append(",");
+        sb.append("\"wMm\":").append(el.getBoundsMm().width).append(",");
+        sb.append("\"hMm\":").append(el.getBoundsMm().height);
+        if (el instanceof LayoutLabel) {
+            LayoutLabel lab = (LayoutLabel) el;
+            sb.append(",\"text\":\"").append(esc(lab.getText())).append("\"");
+            sb.append(",\"fontSize\":").append(lab.getFont().getSize2D());
+            sb.append(",\"fontFamily\":\"").append(esc(lab.getFont().getFamily())).append("\"");
+            sb.append(",\"bold\":").append(lab.getFont().isBold());
+            sb.append(",\"color\":").append(colorHex(lab.getColor()));
+        }
+        if (el instanceof LayoutCartouche) {
+            LayoutCartouche lc = (LayoutCartouche) el;
+            sb.append(",\"fields\":{");
+            boolean first = true;
+            for (java.util.Map.Entry<String, String> e : lc.getFields().entrySet()) {
+                if (!first) sb.append(","); first = false;
+                sb.append("\"").append(esc(e.getKey())).append("\":\"").append(esc(e.getValue())).append("\"");
+            }
+            sb.append("}");
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    /** Deserialize from elementToJson output, with optional position offset */
+    public static LayoutElement jsonToElement(String type, String json, double offsetX, double offsetY) {
+        double x = extractDouble(json, "xMm") + offsetX;
+        double y = extractDouble(json, "yMm") + offsetY;
+        double w = extractDouble(json, "wMm");
+        double h = extractDouble(json, "hMm");
+        String id = extractStr(json, "id") + "-copy";
+        String nm = extractStr(json, "name");
+        LayoutElement el = null;
+        if ("LayoutLabel".equals(type)) {
+            String text = extractStr(json, "text");
+            el = new LayoutLabel(id, text, x, y, w, h);
+            LayoutLabel lab = (LayoutLabel) el;
+            double fs = extractDouble(json, "fontSize");
+            String ff = extractStr(json, "fontFamily");
+            boolean bold = extractBool(json, "bold", false);
+            if (fs > 0 && !ff.isEmpty()) lab.setFont(new Font(ff, bold ? Font.BOLD : Font.PLAIN, (int)fs));
+            String c = extractStr(json, "color");
+            if (!c.isEmpty()) lab.setColor(parseColor(c));
+        } else if ("LayoutCartouche".equals(type)) {
+            el = new LayoutCartouche(id, x, y, w, h);
+            LayoutCartouche lc = (LayoutCartouche) el;
+            // parse fields manually
+            int fi = json.indexOf("\"fields\"");
+            if (fi >= 0) {
+                int objStart = json.indexOf('{', fi);
+                int objEnd = json.indexOf('}', objStart);
+                if (objStart >= 0 && objEnd > objStart) {
+                    String fieldsStr = json.substring(objStart + 1, objEnd);
+                    String[] pairs = fieldsStr.split(",");
+                    for (String pair : pairs) {
+                        String[] kv = pair.split(":");
+                        if (kv.length == 2) {
+                            String key = kv[0].trim().replace("\"", "");
+                            String val = kv[1].trim().replace("\"", "");
+                            lc.setField(key, val);
+                        }
+                    }
+                }
+            }
+        } else {
+            // Generic: create a LayoutRectangle as fallback
+            el = new LayoutRectangle(id, x, y, w, h);
+        }
+        if (el != null && !nm.isEmpty()) el.setName(nm);
+        return el;
+    }
+
     private static Color parseColor(String hex) {
         if (hex == null || hex.isEmpty()) return Color.BLACK;
         try {
