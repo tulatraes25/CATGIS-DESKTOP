@@ -203,6 +203,8 @@ public class MapLayoutComposerDialog extends JFrame {
     private final List<CatmapLayoutItem> catmapClipboard = new ArrayList<>();
     private final LayoutModel layoutModel = new LayoutModel();
     private LayoutElement draggingLayoutElement;
+    private String copiedElementType = null;
+    private String copiedElementJson = null;
     private Point dragStartPagePoint;
     private java.awt.geom.Rectangle2D.Double dragStartBoundsMm;
     private int activeResizeHandleIndex = -1;
@@ -2694,6 +2696,21 @@ public class MapLayoutComposerDialog extends JFrame {
         bindCatmapAction(previewPanel, "RIGHT", "catmap-right", () -> nudgeSelectedLayoutObject(2, 0));
         bindCatmapAction(previewPanel, "UP", "catmap-up", () -> nudgeSelectedLayoutObject(0, -2));
         bindCatmapAction(previewPanel, "DOWN", "catmap-down", () -> nudgeSelectedLayoutObject(0, 2));
+        // Override Ctrl+C/V for LayoutElements
+        bindCatmapAction(previewPanel, "control C", "catmap-copy-element", () -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { copiedElementType = sel.getClass().getSimpleName(); copiedElementJson = LayoutTemplateManager.elementToJson(sel); statusLabel.setText("Copiado: " + sel.getName()); }
+        });
+        bindCatmapAction(previewPanel, "control V", "catmap-paste-element", () -> {
+            if (copiedElementJson != null && copiedElementType != null) {
+                LayoutElement pasted = LayoutTemplateManager.jsonToElement(copiedElementType, copiedElementJson, 5, 5);
+                if (pasted != null) { pasted.setZOrder(layoutModel.nextZ()); pasted.setName(pasted.getName() + " copia"); layoutModel.addElement(pasted); refreshElementList(); previewPanel.repaint(); statusLabel.setText("Pegado: " + pasted.getName()); }
+            }
+        });
+        bindCatmapAction(previewPanel, "control D", "catmap-duplicate-element", () -> {
+            LayoutElement sel = layoutModel.getSelected();
+            if (sel != null) { duplicateLayoutElement(sel); refreshElementList(); previewPanel.repaint(); }
+        });
         bindCatmapAction(previewPanel, "shift LEFT", "catmap-shift-left", () -> nudgeSelectedLayoutObject(-12, 0));
         bindCatmapAction(previewPanel, "shift RIGHT", "catmap-shift-right", () -> nudgeSelectedLayoutObject(12, 0));
         bindCatmapAction(previewPanel, "shift UP", "catmap-shift-up", () -> nudgeSelectedLayoutObject(0, -12));
