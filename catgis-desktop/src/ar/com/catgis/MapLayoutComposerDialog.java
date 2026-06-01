@@ -119,6 +119,7 @@ import ar.com.catgis.layout.LayoutTemplateManager;
 import ar.com.catgis.layout.CanvasDropTarget;
 import ar.com.catgis.layout.GuideLine;
 import ar.com.catgis.layout.LayoutCartouche;
+import ar.com.catgis.layout.LayoutGraticule;
 import ar.com.catgis.layout.QgisQptImporter;
 import ar.com.catgis.layout.RulerRenderer;
 
@@ -7792,6 +7793,7 @@ public class MapLayoutComposerDialog extends JFrame {
         addMenu.add(menuItem("Texto", "text"));
         addMenu.add(menuItem("Imagen / Logo", "image"));
         addMenu.add(menuItem("Cartucho", "cartouche"));
+        addMenu.add(menuItem("Grilla coord.", "graticule"));
         addMenu.addSeparator();
         addMenu.add(menuItem("Rectangulo", "rect"));
         addMenu.add(menuItem("Tabla (CSV)", "table"));
@@ -8034,6 +8036,12 @@ public class MapLayoutComposerDialog extends JFrame {
                 layoutModel.addElement(c); refreshElementList(); previewPanel.repaint();
                 break;
             }
+            case "graticule": {
+                LayoutGraticule gr = new LayoutGraticule("graticule-" + System.currentTimeMillis(), 15, 25, 267, 160);
+                gr.setZOrder(layoutModel.nextZ()); gr.setName("Grilla coord. " + countOfType("Grilla"));
+                layoutModel.addElement(gr); refreshElementList(); previewPanel.repaint();
+                break;
+            }
         }
         refreshElementList();
         previewPanel.repaint();
@@ -8112,6 +8120,7 @@ public class MapLayoutComposerDialog extends JFrame {
         if (el instanceof LayoutRectangle) return "\u25AD";
         if (el instanceof LayoutTable) return "\uD83D\uDCCA";
         if (el instanceof LayoutCartouche) return "\uD83D\uDCC4";
+        if (el instanceof LayoutGraticule) return "\uD83D\uDCC8";
         if (el instanceof LayoutLabel) return "\uD83D\uDCDD";
         return "\u25A1";
     }
@@ -8551,9 +8560,23 @@ public class MapLayoutComposerDialog extends JFrame {
         refBtn.setMargin(new Insets(2, 6, 2, 6));
         refBtn.addActionListener(e -> { previewPanel.repaint(); });
         btnRow.add(refBtn);
+        JButton capBtn = new JButton("Capturar extent");
+        capBtn.setFont(capBtn.getFont().deriveFont(Font.PLAIN, 9f));
+        capBtn.setMargin(new Insets(2, 6, 2, 6));
+        capBtn.setToolTipText("Fija la vista actual del mapa principal como extent independiente de este marco.");
+        capBtn.addActionListener(e -> { map.captureFromMainMap(); rebuildMapCard(map); previewPanel.repaint(); });
+        btnRow.add(capBtn);
         g.gridx = 0; g.gridy = y; g.gridwidth = 2;
         form.add(btnRow, g);
         y++;
+
+        // Extent info
+        if (map.isOwnExtent()) {
+            y++; sectionLabel(form, g, y, "Extent independiente"); y++;
+            JLabel extLabel = new JLabel(String.format("X:%.1f Y:%.1f Z:%.2f", map.getOwnViewMinX(), map.getOwnViewMinY(), map.getOwnZoomFactor()));
+            extLabel.setFont(extLabel.getFont().deriveFont(Font.PLAIN, 9f));
+            g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(extLabel, g); y++;
+        }
 
         // Spacer
         g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
