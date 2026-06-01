@@ -169,6 +169,7 @@ public class LoadProjectAction extends AbstractAction {
             }
 
             CatgisDesktopApp.currentProject = loadedProject;
+            AppContext.get().setProject(loadedProject);
 
             for (Layer layer : loadedProject.getLayers()) {
                 CatgisDesktopApp.layersPanel.addLayer(layer);
