@@ -3635,6 +3635,7 @@ public class MapLayoutComposerDialog extends JFrame {
             if (el instanceof LayoutNorthArrow) interactionState.setElementVisible(LayoutElementType.NORTH, false);
             if (el instanceof LayoutScaleBar) interactionState.setElementVisible(LayoutElementType.SCALE, false);
             if (el instanceof LayoutCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
+            if (el instanceof LayoutMap) interactionState.setElementVisible(LayoutElementType.MAP_CONTENT, false);
         }
         BufferedImage base = LayoutRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
         if (layoutModel.size() > 0) {
@@ -5805,6 +5806,12 @@ public class MapLayoutComposerDialog extends JFrame {
             if (hasModelNorth) interactionState.setElementVisible(LayoutElementType.NORTH, false);
             if (hasModelScale) interactionState.setElementVisible(LayoutElementType.SCALE, false);
             if (hasModelCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
+            // Auto-disable template MAP_CONTENT when model has LayoutMap elements
+            boolean hasModelMap = false;
+            for (LayoutElement el : layoutModel.getElements()) {
+                if (el instanceof LayoutMap) { hasModelMap = true; break; }
+            }
+            if (hasModelMap) interactionState.setElementVisible(LayoutElementType.MAP_CONTENT, false);
             LayoutSettings settings = buildSettings();
             LayoutSnapshot currentSnapshot = getSnapshot();
             if (settings == null || currentSnapshot == null) return;
@@ -7657,16 +7664,14 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void drawLayoutModelOverlay(Graphics2D g2, LayoutSettings settings, int pageX, int pageY, double scale) {
         if (layoutModel.size() == 0) return;
-        double dpi = PREVIEW_RENDER_DPI;
+        double dpi = settings.dpi();
         PageSizePreset ps = settings.pageSize();
         double wMm = ps.widthMm;
         double hMm = ps.heightMm;
         if (settings.orientation() == PageOrientation.LANDSCAPE) { double tmp = wMm; wMm = hMm; hMm = tmp; }
         LayoutRenderContext ctx = new LayoutRenderContext(LayoutRenderContext.Mode.PREVIEW, dpi, wMm, hMm);
-        // The page template already renders the map at MAP_CONTENT; skip LayoutMap in overlay
-        boolean templateHasMap = true; // standard templates always include MAP_CONTENT
+        // Render ALL LayoutElements including LayoutMap (supports multiple maps)
         for (LayoutElement el : layoutModel.getVisibleElementsSortedByZ()) {
-            if (el instanceof LayoutMap && templateHasMap) continue;
             if (el instanceof LayoutScaleBar) {
                 double mapScale = estimateMapScale();
                 ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, mapScale));
