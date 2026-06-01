@@ -4952,11 +4952,24 @@ public class MapLayoutComposerDialog extends JFrame {
                                 double sc = r.pxToMmScale;
                                 if (activeResizeHandleIndex >= 0) {
                                     resizeElement(activeResizeHandleIndex, p.x - dragStartPagePoint.x, p.y - dragStartPagePoint.y);
-                                } else {
-                                    draggingLayoutElement.setBoundsMm(
-                                        dragStartBoundsMm.x + (p.x - dragStartPagePoint.x) * sc,
-                                        dragStartBoundsMm.y + (p.y - dragStartPagePoint.y) * sc,
-                                        dragStartBoundsMm.width, dragStartBoundsMm.height);
+                } else {
+                    double newX = dragStartBoundsMm.x + (p.x - dragStartPagePoint.x) * sc;
+                    double newY = dragStartBoundsMm.y + (p.y - dragStartPagePoint.y) * sc;
+                    // Smart snap to other element edges
+                    double snapTol = 2.0; // mm
+                    for (LayoutElement other : layoutModel.getElements()) {
+                        if (other == draggingLayoutElement || !other.isVisible()) continue;
+                        double ox = other.getBoundsMm().x, oy = other.getBoundsMm().y;
+                        double ow = other.getBoundsMm().width, oh = other.getBoundsMm().height;
+                        double ex = newX, ey = newY, ew = dragStartBoundsMm.width, eh = dragStartBoundsMm.height;
+                        if (Math.abs(ex - ox) < snapTol) newX = ox;
+                        if (Math.abs(ex + ew - ox - ow) < snapTol) newX = ox + ow - ew;
+                        if (Math.abs(ex + ew/2 - ox - ow/2) < snapTol) newX = ox + ow/2 - ew/2;
+                        if (Math.abs(ey - oy) < snapTol) newY = oy;
+                        if (Math.abs(ey + eh - oy - oh) < snapTol) newY = oy + oh - eh;
+                        if (Math.abs(ey + eh/2 - oy - oh/2) < snapTol) newY = oy + oh/2 - eh/2;
+                    }
+                    draggingLayoutElement.setBoundsMm(newX, newY, dragStartBoundsMm.width, dragStartBoundsMm.height);
                                 }
                             }
                         }
