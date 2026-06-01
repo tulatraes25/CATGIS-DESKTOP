@@ -118,6 +118,7 @@ import ar.com.catgis.layout.LayoutTable;
 import ar.com.catgis.layout.LayoutTemplateManager;
 import ar.com.catgis.layout.CanvasDropTarget;
 import ar.com.catgis.layout.GuideLine;
+import ar.com.catgis.layout.LayoutCartouche;
 import ar.com.catgis.layout.QgisQptImporter;
 import ar.com.catgis.layout.RulerRenderer;
 
@@ -7790,6 +7791,7 @@ public class MapLayoutComposerDialog extends JFrame {
         addMenu.add(menuItem("Norte", "north"));
         addMenu.add(menuItem("Texto", "text"));
         addMenu.add(menuItem("Imagen / Logo", "image"));
+        addMenu.add(menuItem("Cartucho", "cartouche"));
         addMenu.addSeparator();
         addMenu.add(menuItem("Rectangulo", "rect"));
         addMenu.add(menuItem("Tabla (CSV)", "table"));
@@ -8024,6 +8026,14 @@ public class MapLayoutComposerDialog extends JFrame {
                 }
                 break;
             }
+            case "cartouche": {
+                LayoutCartouche c = new LayoutCartouche("cartouche-" + System.currentTimeMillis(), 12, 175, 270, 55);
+                c.setZOrder(layoutModel.nextZ()); c.setName("Cartucho " + countOfType("Cartucho"));
+                String proj = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getCompanyName() : "";
+                if (proj != null) c.setField("Estudio", proj);
+                layoutModel.addElement(c); refreshElementList(); previewPanel.repaint();
+                break;
+            }
         }
         refreshElementList();
         previewPanel.repaint();
@@ -8101,6 +8111,7 @@ public class MapLayoutComposerDialog extends JFrame {
         if (el instanceof LayoutLine) return "\u2795";
         if (el instanceof LayoutRectangle) return "\u25AD";
         if (el instanceof LayoutTable) return "\uD83D\uDCCA";
+        if (el instanceof LayoutCartouche) return "\uD83D\uDCC4";
         if (el instanceof LayoutLabel) return "\uD83D\uDCDD";
         return "\u25A1";
     }
