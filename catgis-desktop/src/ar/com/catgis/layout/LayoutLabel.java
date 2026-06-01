@@ -17,6 +17,10 @@ public class LayoutLabel implements LayoutElement {
     private String text;
     private Font font = new Font("SansSerif", Font.PLAIN, 14);
     private Color color = Color.BLACK;
+    private Color bgColor = new Color(0, 0, 0, 0); // transparent by default
+    private Color borderColor = new Color(0, 0, 0, 0);
+    private float borderWidth = 0f;
+    private int paddingPx = 0;
 
     public LayoutLabel(String id, String text, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -31,6 +35,14 @@ public class LayoutLabel implements LayoutElement {
     public void setFont(Font f) { this.font = f; }
     public Color getColor() { return color; }
     public void setColor(Color c) { this.color = c; }
+    public Color getBgColor() { return bgColor; }
+    public void setBgColor(Color c) { if (c != null) bgColor = c; }
+    public Color getBorderColor() { return borderColor; }
+    public void setBorderColor(Color c) { if (c != null) borderColor = c; }
+    public float getBorderWidth() { return borderWidth; }
+    public void setBorderWidth(float w) { borderWidth = Math.max(0, w); }
+    public int getPaddingPx() { return paddingPx; }
+    public void setPaddingPx(int p) { paddingPx = Math.max(0, p); }
 
     @Override public String getId() { return id; }
     @Override public String getName() { return name; }
@@ -51,9 +63,24 @@ public class LayoutLabel implements LayoutElement {
         if (text == null || text.isEmpty()) return;
         int x = ctx.mmToPxInt(boundsMm.x);
         int y = ctx.mmToPxInt(boundsMm.y);
+        int w = ctx.mmToPxInt(boundsMm.width);
+        int h = ctx.mmToPxInt(boundsMm.height);
+
+        if (bgColor.getAlpha() > 0) {
+            g2.setColor(bgColor);
+            g2.fillRect(x, y, w, h);
+        }
+        if (borderWidth > 0 && borderColor.getAlpha() > 0) {
+            g2.setColor(borderColor);
+            g2.setStroke(new java.awt.BasicStroke(borderWidth));
+            g2.drawRect(x, y, w, h);
+        }
+
         g2.setFont(font);
         g2.setColor(color);
-        g2.drawString(text, x, y + g2.getFontMetrics().getAscent());
+        int tx = x + paddingPx;
+        int ty = y + g2.getFontMetrics().getAscent() + paddingPx;
+        g2.drawString(text, tx, ty);
     }
 
     @Override
