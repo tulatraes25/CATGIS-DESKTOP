@@ -7687,6 +7687,14 @@ public class MapLayoutComposerDialog extends JFrame {
         for (LayoutElement el : layoutModel.getVisibleElementsSortedByZ()) {
             if (el instanceof LayoutScaleBar) {
                 double mapScale = estimateMapScale();
+                // If a LayoutMap exists, use its scale for better accuracy
+                for (LayoutElement m : layoutModel.getElements()) {
+                    if (m instanceof LayoutMap && ((LayoutMap)m).isOwnExtent()) {
+                        // approximate scale from own extent
+                        double zoom = ((LayoutMap)m).getOwnZoomFactor();
+                        if (zoom > 0) mapScale = Math.max(100, estimateMapScale() * zoom / Math.max(((LayoutMap)m).getOwnZoomFactor(), 1));
+                    }
+                }
                 ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, mapScale));
             }
             Graphics2D g2el = (Graphics2D) g2.create();
@@ -8682,6 +8690,36 @@ public class MapLayoutComposerDialog extends JFrame {
         }
         y = addBoolRow(form, g, y, "Etiquetas:", gridLabelsCheck.isSelected(), v -> { gridLabelsCheck.setSelected(v); previewPanel.repaint(); });
 
+        // Extent
+        y++; sectionLabel(form, g, y, "Extent del mapa"); y++;
+        y = addBoolRow(form, g, y, "Independiente:", map.isOwnExtent(), v -> {
+            map.setOwnExtent(v);
+            if (v) { map.captureFromMainMap(); }
+            rebuildMapCard(map); previewPanel.repaint();
+        });
+
+        if (map.isOwnExtent()) {
+            JPanel btnRow2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
+            btnRow2.setOpaque(false);
+            JButton capBtn = new JButton("Capturar vista actual");
+            capBtn.setFont(capBtn.getFont().deriveFont(Font.PLAIN, 9f));
+            capBtn.setMargin(new Insets(2, 6, 2, 6));
+            capBtn.addActionListener(e -> { map.captureFromMainMap(); rebuildMapCard(map); previewPanel.repaint(); });
+            btnRow2.add(capBtn);
+
+            JButton syncBtn = new JButton("Sincronizar");
+            syncBtn.setFont(syncBtn.getFont().deriveFont(Font.PLAIN, 9f));
+            syncBtn.setMargin(new Insets(2, 6, 2, 6));
+            syncBtn.addActionListener(e -> { map.setOwnExtent(false); rebuildMapCard(map); previewPanel.repaint(); });
+            btnRow2.add(syncBtn);
+            g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(btnRow2, g); y++;
+
+            JLabel extLbl = new JLabel(String.format("X:%.1f Y:%.1f Zoom:%.2f", map.getOwnViewMinX(), map.getOwnViewMinY(), map.getOwnZoomFactor()));
+            extLbl.setFont(extLbl.getFont().deriveFont(Font.PLAIN, 9f));
+            extLbl.setForeground(new Color(0x1976D2));
+            g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(extLbl, g); y++;
+        }
+
         // Acciones
         y++; sectionLabel(form, g, y, "Acciones"); y++;
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 2));
@@ -8691,23 +8729,9 @@ public class MapLayoutComposerDialog extends JFrame {
         refBtn.setMargin(new Insets(2, 6, 2, 6));
         refBtn.addActionListener(e -> { previewPanel.repaint(); });
         btnRow.add(refBtn);
-        JButton capBtn = new JButton("Capturar extent");
-        capBtn.setFont(capBtn.getFont().deriveFont(Font.PLAIN, 9f));
-        capBtn.setMargin(new Insets(2, 6, 2, 6));
-        capBtn.setToolTipText("Fija la vista actual del mapa principal como extent independiente de este marco.");
-        capBtn.addActionListener(e -> { map.captureFromMainMap(); rebuildMapCard(map); previewPanel.repaint(); });
-        btnRow.add(capBtn);
         g.gridx = 0; g.gridy = y; g.gridwidth = 2;
         form.add(btnRow, g);
         y++;
-
-        // Extent info
-        if (map.isOwnExtent()) {
-            y++; sectionLabel(form, g, y, "Extent independiente"); y++;
-            JLabel extLabel = new JLabel(String.format("X:%.1f Y:%.1f Z:%.2f", map.getOwnViewMinX(), map.getOwnViewMinY(), map.getOwnZoomFactor()));
-            extLabel.setFont(extLabel.getFont().deriveFont(Font.PLAIN, 9f));
-            g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(extLabel, g); y++;
-        }
 
         // Spacer
         g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
