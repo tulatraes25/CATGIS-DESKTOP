@@ -469,6 +469,17 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
+    private void autoComposeLayout() {
+        // One-click: clear and create a full professional layout
+        java.util.List<LayoutElement> toRemove = new java.util.ArrayList<>(layoutModel.getElements());
+        for (LayoutElement e : toRemove) layoutModel.removeElement(e.getId());
+
+        LayoutTemplateManager.applyTemplate("A4_REFERENCIA", layoutModel);
+        refreshElementList();
+        previewPanel.repaint();
+        statusLabel.setText("Layout profesional creado. Edita los textos y exporta en un clic.");
+    }
+
     private void installDropTarget() {
         CanvasDropTarget.DropHandler handler = new CanvasDropTarget.DropHandler() {
             public void onImageDropped(java.awt.image.BufferedImage img, double mmX, double mmY) {
@@ -735,12 +746,12 @@ public class MapLayoutComposerDialog extends JFrame {
         toolbar.setOpaque(false);
 
         toolbar.add(buildToolbarGroup("Documento",
-                createToolbarButton("Guardar", AppIcons.saveIcon(), "Guardar layout como .catmap.", this::saveCatmapLayout),
-                createToolbarButton("Abrir", AppIcons.openIcon(), "Abrir layout .catmap.", this::loadCatmapLayout),
-                createToolbarButton("Imagen", AppIcons.exportIcon(), "Exporta la composicion actual como imagen.", this::exportImage),
-                createToolbarButton("PDF", AppIcons.saveIcon(), "Exporta la composicion actual a PDF.", this::exportPdf),
-                createToolbarButton("Imprimir", AppIcons.projectIcon(), "Envia la composicion actual a impresion.", this::printLayout),
-                createToolbarButton("QGIS", null, "Importar plantilla QGIS .qpt.", this::importQpt)
+                createToolbarButton("Guardar", AppIcons.saveIcon(), "Guardar layout (.catmap)", this::saveCatmapLayout),
+                createToolbarButton("Abrir", AppIcons.openIcon(), "Abrir layout (.catmap)", this::loadCatmapLayout),
+                createToolbarButton("Exportar", AppIcons.exportIcon(), "Exportar a PDF (un clic)", this::exportPdf),
+                createToolbarButton("Exportar PNG", AppIcons.exportIcon(), "Exportar a imagen PNG", this::exportImage),
+                createToolbarButton("Imprimir", AppIcons.projectIcon(), "Imprimir layout", this::printLayout),
+                createToolbarButton("Auto-componer", null, "Crear layout completo automaticamente (mapa+leyenda+escala+norte+titulo). Un solo clic.", this::autoComposeLayout)
         ));
 
         toolbar.add(buildToolbarGroup("Trabajo",
