@@ -519,7 +519,7 @@ public class MapLayoutComposerDialog extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(14,16,12,16));
         panel.setBackground(Color.WHITE);
 
-        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,8));
+        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,10));
         form.setBackground(Color.WHITE);
 
         JLabel segLbl = new JLabel("Segmentos"); form.add(segLbl);
@@ -533,9 +533,24 @@ public class MapLayoutComposerDialog extends JFrame {
         JLabel uniLbl = new JLabel("Unidad"); form.add(uniLbl);
         JTextField unitField = new JTextField(scale.getUnitLabel(), 10); form.add(unitField);
 
+        JLabel sclLbl = new JLabel("Escala 1:"); form.add(sclLbl);
+        JTextField scaleField = new JTextField(String.valueOf((long)scale.getMapScaleDenominator()), 10);
+        scaleField.setToolTipText("Escala real del mapa. Ej: 5000 = 1:5000"); form.add(scaleField);
+
         JButton acceptBtn = new JButton("Aceptar"); JButton cancelBtn = new JButton("Cancelar");
-        acceptBtn.addActionListener(e -> { scale.setSegments((Integer)segCombo.getSelectedItem()); scale.setUnitLabel(unitField.getText().trim()); previewPanel.repaint(); popup.dispose(); });
+        acceptBtn.addActionListener(e -> {
+            scale.setSegments((Integer)segCombo.getSelectedItem());
+            scale.setUnitLabel(unitField.getText().trim());
+            try { double s = Double.parseDouble(scaleField.getText()); if(s>0) scale.setMapScaleDenominator(s); } catch(Exception ignored){}
+            previewPanel.repaint(); popup.dispose();
+        });
         cancelBtn.addActionListener(e -> popup.dispose());
+
+        javax.swing.AbstractAction doAccept = new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { acceptBtn.doClick(); } };
+        panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "accept");
+        panel.getActionMap().put("accept", doAccept);
+        panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "cancel");
+        panel.getActionMap().put("cancel", new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } });
 
         JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0)); btns.setBackground(Color.WHITE); btns.add(acceptBtn); btns.add(cancelBtn);
         panel.add(form, BorderLayout.CENTER); panel.add(btns, BorderLayout.SOUTH);

@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.geom.Rectangle2D;
 
 public class LayoutScaleBar implements LayoutElement {
@@ -59,44 +60,51 @@ public class LayoutScaleBar implements LayoutElement {
         int x = ctx.mmToPxInt(boundsMm.x);
         int y = ctx.mmToPxInt(boundsMm.y);
         int w = ctx.mmToPxInt(boundsMm.width);
-        if (w < 5 || boundsMm.width <= 0 || mapScaleDenominator <= 0) return;
-        int barH = Math.max(ctx.mmToPxInt(2.5), 8);
-        double dpiScale = ctx.getDpi() / 72.0;
+        if (w < 20 || boundsMm.width <= 0 || mapScaleDenominator <= 0) return;
+        int barH = Math.max(ctx.mmToPxInt(3.0), 10);
 
-        // Real map meters for the scale bar width in mm
-        double mmToMetersOnGround = mapScaleDenominator / 1000.0;
         double maxMeters = (boundsMm.width / 1000.0) * mapScaleDenominator;
         double[] steps = {1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000};
         double idealSegMeters = maxMeters / segments;
         double segMeters = steps[0];
-        for (double step : steps) {
-            if (step <= idealSegMeters * 1.2) segMeters = step;
-        }
+        for (double step : steps) if (step <= idealSegMeters * 1.2) segMeters = step;
         double totalMeters = segMeters * segments;
         double totalPx = (totalMeters / maxMeters) * w;
-        totalPx = Math.max(w * 0.3, Math.min(w * 1.05, totalPx));
+        totalPx = Math.max(w * 0.4, Math.min(w * 1.02, totalPx));
 
-        Font sFont = font.deriveFont((float) Math.max(6, Math.min(font.getSize2D(), barH * 0.55)));
+        Font sFont = font.deriveFont((float) Math.max(7, Math.min(font.getSize2D(), barH * 0.6)));
+        g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setFont(sFont);
-        g2.setColor(color);
         FontMetrics fm = g2.getFontMetrics();
         double segPx = totalPx / segments;
-        int barY = y + fm.getHeight() + 2;
+        int barY = y + fm.getHeight() + 4;
 
+        // Professional alternating segments
         for (int i = 0; i < segments; i++) {
             int sx = (int)(x + i * segPx);
+            int sw = (int) Math.ceil((i == segments - 1 ? totalPx - i * segPx : segPx));
             g2.setColor(i % 2 == 0 ? color : Color.WHITE);
-            g2.fillRect(sx, barY, (int) Math.ceil(segPx), barH);
-            g2.setColor(new Color(180, 185, 190));
-            g2.setStroke(new BasicStroke(0.5f));
-            g2.drawRect(sx, barY, (int) Math.ceil(segPx), barH);
-            g2.setColor(color);
+            g2.fillRect(sx, barY, sw, barH);
+            g2.setColor(new Color(0xCCCED4));
+            g2.setStroke(new BasicStroke(0.6f));
+            g2.drawRect(sx, barY, sw, barH);
+            // Segment label centered below
             String label = formatScaleLabel(i * segMeters);
             int lw = fm.stringWidth(label);
-            g2.drawString(label, Math.max(x + 1, sx + (int)(segPx - lw) / 2), y + fm.getAscent());
+            g2.setColor(color);
+            g2.drawString(label, sx + (sw - lw) / 2, y + fm.getAscent());
         }
+        // Total label at right end
         String totalLabel = formatScaleLabel(totalMeters);
-        g2.drawString(totalLabel, x + (int) totalPx + 3, barY + barH / 2 + fm.getAscent() / 2 - 1);
+        g2.setColor(color);
+        g2.drawString(totalLabel, x + (int)totalPx + 5, barY + barH/2 + fm.getAscent()/2 - 1);
+
+        // Draw scale ratio below: "1:25,000"
+        g2.setFont(sFont.deriveFont((float)(sFont.getSize2D() * 0.85)));
+        String ratio = "1:" + String.format("%,.0f", mapScaleDenominator);
+        int rw = g2.getFontMetrics().stringWidth(ratio);
+        g2.setColor(new Color(0x8B95A5));
+        g2.drawString(ratio, x + (w - rw) / 2, barY + barH + fm.getHeight() + 4);
     }
 
     private String formatScaleLabel(double meters) {
