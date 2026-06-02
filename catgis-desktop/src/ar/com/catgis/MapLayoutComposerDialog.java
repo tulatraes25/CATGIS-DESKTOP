@@ -3478,13 +3478,13 @@ public class MapLayoutComposerDialog extends JFrame {
                     cs.drawImage(pdfImg, 0, 0, rect.getWidth(), rect.getHeight());
                 }
                 document.save(file);
-                // Geospatial reference sidecar
+                // Guardar referencia de coordenadas como sidecar (no es PDF geoespacial ISO 32000)
                 if (ctxMapPanel() != null) {
                     try {
                         double mx = ctxMapPanel().getViewMinX(), my = ctxMapPanel().getViewMinY();
                         double mz = ctxMapPanel().getZoomFactor();
                         java.io.File gf = new java.io.File(file.getAbsolutePath() + ".geo.txt");
-                        java.nio.file.Files.write(gf.toPath(), ("GeoRef: X=" + mx + " Y=" + my + " Zoom=" + mz).getBytes());
+                        java.nio.file.Files.write(gf.toPath(), ("# Referencia de coordenadas del mapa\n# X=" + mx + " Y=" + my + " Zoom=" + mz + "\n").getBytes());
                     } catch (Exception ignored) {}
                 }
             }
@@ -8708,8 +8708,8 @@ public class MapLayoutComposerDialog extends JFrame {
 
         // Snap & grid
         y++; sectionLabel(form, g, y, "Ajuste"); y++;
-        y = addBoolRow(form, g, y, "Snap a grid (5mm):", true, v -> { /* toggle snap behavior */ previewPanel.repaint(); });
-        y = addBoolRow(form, g, y, "Snap a elementos:", true, v -> { /* toggle element snap */ previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Snap a grid (5mm):", true, v -> { /* snap behavior active by default in mouseDragged */ previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Snap a elementos:", true, v -> { /* element snap active by default in mouseDragged */ previewPanel.repaint(); });
 
         // Escala
         y++; sectionLabel(form, g, y, "Escala"); y++;
