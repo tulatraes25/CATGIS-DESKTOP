@@ -574,7 +574,7 @@ public class LayoutTemplateManager {
         addMap(m, "Mapa principal", 12, 36, 273, 130, z);
         addLegend(m, "Leyenda", 12, 172, 130, 40, z, false);
         addScale(m, "Escala grafica", 12, 208, 100, 10, z);
-        addNorth(m, "Norte", 265, 155, 16, 16, z);
+        addNorth(m, "Norte", 265, 42, 16, 16, z);
         LayoutCartouche cc = new LayoutCartouche("Datos cartograficos", 148, 172, 137, 48);
         cc.setZOrder(z[0]++); cc.setName("Datos cartograficos"); m.addElement(cc);
     }
@@ -587,7 +587,7 @@ public class LayoutTemplateManager {
         addMap(m, "Mapa principal", 12, 36, 200, 135, z);
         addLegend(m, "Leyenda", 218, 36, 67, 40, z, true);
         addScale(m, "Escala grafica", 12, 175, 130, 10, z);
-        addNorth(m, "Norte", 270, 160, 16, 16, z);
+        addNorth(m, "Norte", 195, 42, 16, 16, z);
         LayoutCartouche ac = new LayoutCartouche("Datos cartograficos", 12, 190, 273, 22);
         ac.setZOrder(z[0]++); ac.setName("Datos cartograficos"); m.addElement(ac);
     }
@@ -600,7 +600,7 @@ public class LayoutTemplateManager {
         addMap(m, "Mapa principal", 12, 36, 273, 140, z);
         addLegend(m, "Leyenda", 12, 180, 160, 30, z, false);
         addScale(m, "Escala grafica", 175, 180, 110, 10, z);
-        addNorth(m, "Norte", 265, 175, 16, 16, z);
+        addNorth(m, "Norte", 268, 42, 16, 16, z);
         LayoutCartouche ec = new LayoutCartouche("Datos cartograficos", 12, 193, 273, 19);
         ec.setZOrder(z[0]++); ec.setName("Datos cartograficos"); m.addElement(ec);
     }
@@ -617,7 +617,7 @@ public class LayoutTemplateManager {
         t.setFirstRowIsHeader(true); t.setMaxVisibleRows(8);
         m.addElement(t);
         addScale(m, "Escala grafica", 12, 192, 130, 10, z);
-        addNorth(m, "Norte", 268, 120, 14, 14, z);
+        addNorth(m, "Norte", 268, 42, 14, 14, z);
         LayoutCartouche pc = new LayoutCartouche("Datos cartograficos", 148, 192, 137, 20);
         pc.setZOrder(z[0]++); pc.setName("Datos cartograficos"); m.addElement(pc);
     }
