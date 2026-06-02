@@ -210,10 +210,10 @@ public class LayoutTemplateManager {
             boolean topografia, boolean institucional, boolean catastral, boolean referencia,
             boolean inset) {
         int[] z = {0};
-        Font titleFont = institucional ? new Font("SansSerif", Font.BOLD, 24) : new Font("SansSerif", Font.BOLD, 18);
+        Font titleFont = institucional ? new Font("SansSerif", Font.BOLD, 22) : new Font("SansSerif", Font.BOLD, 16);
         Color titleColor = hidrologia ? new Color(0x0D47A1) : (satelital ? Color.WHITE : new Color(0x1A2434));
-        int margin = 12, titleH = institucional ? 22 : 16, subH = subtitle ? 10 : 0;
-        int titleY = satelital ? (int)h - 30 : 8;
+        int margin = 14, titleH = institucional ? 20 : 14, subH = subtitle ? 11 : 0;
+        int titleY = satelital ? (int)h - 32 : 10;
         if (satelital) margin = 8;
 
         addLabel(m, "Titulo", titleText, margin, titleY, (int)w - margin*2, titleH, titleFont, titleColor, z);

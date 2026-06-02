@@ -15,8 +15,8 @@ public final class TemplateCatalog {
         reg("A4_TECNICO", "Tecnica · A4 · Leyenda derecha", Category.TECNICAS);
         reg("A4_TECNICO_INFERIOR", "Tecnica · A4 · Leyenda inferior", Category.TECNICAS);
         reg("A4_TECNICO_CARTUCHO", "Tecnica · A4 · Cartucho inferior", Category.TECNICAS);
-        reg("A4_TECNICO_LIMPIA", "Tecnica · A4 · Limpia (sin cartucho)", Category.TECNICAS);
-        reg("A4_TECNICO_MAPA_UBICACION", "Tecnica · A4 · Mapa de ubicacion", Category.TECNICAS);
+        reg("A4_TECNICO_LIMPIA", "Tecnica · A4 · Mapa limpio", Category.TECNICAS);
+        reg("A4_TECNICO_MAPA_UBICACION", "Tecnica · A4 · Con mapa de ubicacion", Category.TECNICAS);
         reg("A4_TECNICO_DOBLE_MAPA", "Tecnica · A4 · Doble mapa", Category.TECNICAS);
         reg("A4_TECNICO_VERTICAL", "Tecnica · A4 · Vertical", Category.TECNICAS);
         reg("A4_VERTICAL", "Tecnica · A4 · Vertical institucional", Category.TECNICAS);
@@ -74,9 +74,9 @@ public final class TemplateCatalog {
         reg("A3_HIDRO_TECNICA", "Hidrologia · A3 · Tecnica", Category.HIDROLOGIA);
 
         // === INFRAESTRUCTURA (A4) ===
-        reg("A4_REFERENCIA", "Infraestructura · A4 · Referencia", Category.INFRAESTRUCTURA);
-        reg("A4_ACCESIBILIDAD", "Infraestructura · A4 · Accesibilidad", Category.INFRAESTRUCTURA);
-        reg("A4_EMPLAZAMIENTO", "Infraestructura · A4 · Emplazamiento", Category.INFRAESTRUCTURA);
+        reg("A4_REFERENCIA", "Infraestructura · A4 · Ubicacion general", Category.INFRAESTRUCTURA);
+        reg("A4_ACCESIBILIDAD", "Infraestructura · A4 · Acceso operativo", Category.INFRAESTRUCTURA);
+        reg("A4_EMPLAZAMIENTO", "Infraestructura · A4 · Emplazamiento tecnico", Category.INFRAESTRUCTURA);
         reg("A4_INFRAESTRUCTURA", "Infraestructura · A4 · General", Category.INFRAESTRUCTURA);
         reg("A4_CAMINOS", "Infraestructura · A4 · Caminos", Category.INFRAESTRUCTURA);
         reg("A4_DUCTOS", "Infraestructura · A4 · Ductos", Category.INFRAESTRUCTURA);
