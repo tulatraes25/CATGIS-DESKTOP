@@ -131,11 +131,11 @@ public class MapLayoutComposerDialog extends JFrame {
     // Context helpers - prefer AppContext over static globals
     private static Project ctxProject() {
         Project p = AppContext.get().getProject();
-        return p != null ? p : ctxProject();
+        return p != null ? p : CatgisDesktopApp.currentProject;
     }
     private static MapPanel ctxMapPanel() {
         MapPanel m = AppContext.get().getMapPanel();
-        return m != null ? m : ctxMapPanel();
+        return m != null ? m : CatgisDesktopApp.mapPanel;
     }
 
     private static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -508,19 +508,191 @@ public class MapLayoutComposerDialog extends JFrame {
 
         panel.add(form, BorderLayout.CENTER); panel.add(btns, BorderLayout.SOUTH);
         popup.add(panel); popup.pack(); popup.setResizable(false);
+        popup.getRootPane().setDefaultButton(acceptBtn);
         popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
     private void showTemplatePicker() {
-        JPopupMenu menu = new JPopupMenu();
-        java.util.Map<String, String> all = LayoutTemplateManager.getTemplateList();
-        for (java.util.Map.Entry<String, String> e : all.entrySet()) {
-            final String k = e.getKey(), v = e.getValue();
-            JMenuItem mi = new JMenuItem(v);
-            mi.addActionListener(ev -> { LayoutTemplateManager.applyTemplate(k, layoutModel); refreshElementList(); previewPanel.repaint(); statusLabel.setText("Plantilla: " + v); });
-            menu.add(mi);
+        JDialog dialog = new JDialog(this, "Elegir plantilla CATMAP", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        DefaultListModel<TemplateChoice> model = new DefaultListModel<>();
+        for (TemplateChoice choice : curatedTemplateChoices()) {
+            model.addElement(choice);
         }
-        menu.show(previewPanel, 50, 50);
+        JList<TemplateChoice> list = new JList<>(model);
+        list.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        list.setVisibleRowCount(14);
+        list.setCellRenderer((jl, value, index, isSelected, cellHasFocus) -> {
+            JPanel row = new JPanel(new BorderLayout());
+            row.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+            row.setOpaque(true);
+            row.setBackground(isSelected ? new Color(232, 242, 255) : Color.WHITE);
+            JLabel title = new JLabel(value != null ? value.displayName() : "");
+            title.setFont(title.getFont().deriveFont(isSelected ? Font.BOLD : Font.PLAIN, 12f));
+            row.add(title, BorderLayout.CENTER);
+            return row;
+        });
+
+        JLabel previewTitle = new JLabel("Vista previa de plantilla");
+        previewTitle.setFont(previewTitle.getFont().deriveFont(Font.BOLD, 13f));
+        JLabel previewLabel = new JLabel("", JLabel.CENTER);
+        previewLabel.setPreferredSize(new Dimension(420, 300));
+        previewLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(205, 212, 222)),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        JTextArea help = new JTextArea("Elegí una plantilla curada. La vista previa muestra el encuadre general, la ubicación de leyenda, cartucho, escala y norte antes de aplicarla.");
+        help.setLineWrap(true);
+        help.setWrapStyleWord(true);
+        help.setEditable(false);
+        help.setOpaque(false);
+        help.setFont(help.getFont().deriveFont(Font.PLAIN, 11f));
+
+        list.addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) {
+                return;
+            }
+            TemplateChoice selected = list.getSelectedValue();
+            if (selected != null) {
+                previewLabel.setIcon(new ImageIcon(renderTemplatePreview(selected.key(), 400, 280)));
+                help.setText(selected.description());
+            }
+        });
+
+        list.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    applySelectedTemplateFromDialog(list.getSelectedValue(), dialog);
+                }
+            }
+        });
+
+        JPanel right = new JPanel(new BorderLayout(8, 8));
+        right.setBorder(BorderFactory.createEmptyBorder(10, 6, 10, 10));
+        right.add(previewTitle, BorderLayout.NORTH);
+        right.add(previewLabel, BorderLayout.CENTER);
+        right.add(help, BorderLayout.SOUTH);
+
+        JPanel left = new JPanel(new BorderLayout(6, 6));
+        left.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 6));
+        JLabel leftTitle = new JLabel("Plantillas recomendadas");
+        leftTitle.setFont(leftTitle.getFont().deriveFont(Font.BOLD, 13f));
+        left.add(leftTitle, BorderLayout.NORTH);
+        left.add(new JScrollPane(list), BorderLayout.CENTER);
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JButton apply = new JButton("Aplicar");
+        JButton cancel = new JButton("Cancelar");
+        apply.addActionListener(e -> applySelectedTemplateFromDialog(list.getSelectedValue(), dialog));
+        cancel.addActionListener(e -> dialog.dispose());
+        buttons.add(apply);
+        buttons.add(cancel);
+
+        dialog.add(left, BorderLayout.WEST);
+        dialog.add(right, BorderLayout.CENTER);
+        dialog.add(buttons, BorderLayout.SOUTH);
+        dialog.setSize(760, 470);
+        dialog.setLocationRelativeTo(this);
+        dialog.getRootPane().setDefaultButton(apply);
+        if (!model.isEmpty()) {
+            list.setSelectedIndex(0);
+        }
+        dialog.setVisible(true);
+    }
+
+    private record TemplateChoice(String key, String displayName, String description) {
+        @Override public String toString() { return displayName; }
+    }
+
+    private List<TemplateChoice> curatedTemplateChoices() {
+        List<TemplateChoice> items = new ArrayList<>();
+        java.util.Map<String, String[]> preferred = new java.util.LinkedHashMap<>();
+        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Referencia", "Mapa de ubicación general con leyenda lateral y cartucho técnico."});
+        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Accesibilidad", "Prioriza rutas, caminos y accesos con cartucho breve y lectura clara."});
+        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento", "Planta general del área de proyecto con leyenda y escala equilibradas."});
+        preferred.put("A4_TECNICO", new String[]{"Técnica · A4 · Leyenda derecha", "Composición técnica limpia con mapa dominante y leyenda lateral."});
+        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Técnica · A4 · Leyenda inferior", "Diseño técnico horizontal con leyenda inferior y buena área útil."});
+        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estándar", "Plantilla sobria para mapas ambientales y de monitoreo."});
+        preferred.put("A4_CATASTRAL", new String[]{"Catastral · A4 · Estándar", "Plano parcelario sobrio con foco en el mapa principal."});
+        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrología · A4 · General", "Pensada para drenaje, cuencas y escorrentía sin recargar el layout."});
+        preferred.put("A4_TOPOGRAFIA", new String[]{"Topografía · A4 · Curvas de nivel", "Mapa técnico para relieve y curvas con balance visual profesional."});
+        preferred.put("A4_PERFIL", new String[]{"Perfil · A4 · Altimetría", "Mapa de traza con tabla/progresivas y cartucho compacto."});
+        preferred.put("A4_MUESTREO", new String[]{"Ambiental · A4 · Muestreo", "Ubicación de puntos de muestreo y leyenda clara."});
+        preferred.put("A3_TECNICO", new String[]{"Técnica · A3 · General", "Formato grande para planos técnicos con mapa principal amplio."});
+        preferred.put("A3_AMBIENTAL", new String[]{"Ambiental · A3 · Estándar", "Salida de informe ambiental con mejor superficie útil y lectura."});
+        preferred.put("A3_CATASTRAL", new String[]{"Catastral · A3 · Estándar", "Plano parcelario A3 con más aire visual y mejor escala de lectura."});
+        java.util.Map<String, String> all = LayoutTemplateManager.getTemplateList();
+        for (java.util.Map.Entry<String, String[]> entry : preferred.entrySet()) {
+            String key = entry.getKey();
+            if (all.containsKey(key)) {
+                String[] data = entry.getValue();
+                items.add(new TemplateChoice(key, data[0], data[1]));
+            }
+        }
+        return items;
+    }
+
+    private void applySelectedTemplateFromDialog(TemplateChoice selected, JDialog dialog) {
+        if (selected == null) {
+            return;
+        }
+        LayoutTemplateManager.applyTemplate(selected.key(), layoutModel);
+        refreshAll();
+        statusLabel.setText("Plantilla aplicada: " + selected.displayName());
+        dialog.dispose();
+    }
+
+    private BufferedImage renderTemplatePreview(String key, int width, int height) {
+        LayoutModel previewModel = new LayoutModel();
+        LayoutTemplateManager.applyTemplate(key, previewModel);
+        double pageW = key.startsWith("A3_") ? 420d : 297d;
+        double pageH = key.startsWith("A3_") ? 297d : 210d;
+        if (key.contains("VERTICAL")) {
+            double tmp = pageW;
+            pageW = pageH;
+            pageH = tmp;
+        }
+        int dpi = 96;
+        int renderW = Math.max(640, (int) Math.round(pageW / 25.4d * dpi));
+        int renderH = Math.max(480, (int) Math.round(pageH / 25.4d * dpi));
+        BufferedImage canvas = new BufferedImage(renderW, renderH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = canvas.createGraphics();
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2.setColor(Color.WHITE);
+            g2.fillRect(0, 0, renderW, renderH);
+            g2.setColor(new Color(210, 216, 224));
+            g2.drawRect(0, 0, renderW - 1, renderH - 1);
+            LayoutRenderContext ctx = new LayoutRenderContext(LayoutRenderContext.Mode.EXPORT_IMAGE, dpi, pageW, pageH);
+            for (LayoutElement el : previewModel.getVisibleElementsSortedByZ()) {
+                if (el instanceof LayoutScaleBar) {
+                    ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, estimateMapScale()));
+                }
+                el.render(g2, ctx);
+            }
+        } finally {
+            g2.dispose();
+        }
+
+        BufferedImage thumb = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D tg = thumb.createGraphics();
+        try {
+            tg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            tg.setColor(new Color(248, 250, 252));
+            tg.fillRect(0, 0, width, height);
+            double fit = Math.min(width / (double) canvas.getWidth(), height / (double) canvas.getHeight());
+            int drawW = Math.max(1, (int) Math.round(canvas.getWidth() * fit));
+            int drawH = Math.max(1, (int) Math.round(canvas.getHeight() * fit));
+            int dx = (width - drawW) / 2;
+            int dy = (height - drawH) / 2;
+            tg.drawImage(canvas, dx, dy, drawW, drawH, null);
+        } finally {
+            tg.dispose();
+        }
+        return thumb;
     }
 
     private void autoComposeLayout() {
@@ -596,7 +768,13 @@ public class MapLayoutComposerDialog extends JFrame {
             if (layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) continue;
             Color c = resolveLayerColor(layer);
             String gtype = resolveGeometryType(layer);
-            legend.getItems().add(new LayoutLegend.LegendItem(name, c, gtype));
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(name, c, gtype);
+            item.catalogSymbolId = layer.getCatalogSymbolId();
+            item.pointSymbolStyle = layer.getPointSymbolStyle();
+            item.lineSymbolStyle = layer.getLineSymbolStyle();
+            item.polygonFillStyle = layer.getPolygonFillStyle();
+            item.strokeColor = layer.getBorderColor() != null ? layer.getBorderColor() : layer.getLineColor();
+            legend.getItems().add(item);
         }
     }
 
@@ -823,7 +1001,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Exportar PNG", AppIcons.exportIcon(), "Exportar a imagen PNG", this::exportImage),
                 createToolbarButton("SVG", null, "Exportar a SVG vectorial", this::exportSvg),
                 createToolbarButton("Imprimir", AppIcons.projectIcon(), "Imprimir layout", this::printLayout),
-                createToolbarButton("Plantillas \u25BE", null, "Elegir plantilla profesional (70+ opciones por tematica).", this::showTemplatePicker),
+                createToolbarButton("Plantillas...", null, "Abrir galería de plantillas con vista previa.", this::showTemplatePicker),
                 createToolbarButton("Auto-componer", null, "Crear layout completo automaticamente (mapa+leyenda+escala+norte+titulo). Un solo clic.", this::autoComposeLayout)
         ));
 
@@ -2704,17 +2882,44 @@ public class MapLayoutComposerDialog extends JFrame {
             }
             case ELEMENT -> {
                 if (data.elementType() == LayoutElementType.LEGEND) {
-                    openLegendEditor();
+                    LayoutElement legend = findElementByType(LayoutLegend.class);
+                    if (legend != null) {
+                        layoutModel.clearSelection();
+                        legend.setSelected(true);
+                        previewPanel.openElementProperties(legend);
+                        refreshElementList();
+                        previewPanel.repaint();
+                    } else {
+                        openLegendEditor();
+                    }
                 } else if (data.elementType() == LayoutElementType.NORTH) {
                     configureNorthFromToolbar();
                 } else if (data.elementType() == LayoutElementType.PROFILE_IMAGE) {
                     chooseLayoutImageFile();
                 } else if (data.elementType() == LayoutElementType.MAP_CONTENT) {
                     activateMapFrameTool();
+                } else if (data.elementType() == LayoutElementType.CARTOUCHE) {
+                    LayoutElement cartouche = findElementByType(LayoutCartouche.class);
+                    if (cartouche != null) {
+                        layoutModel.clearSelection();
+                        cartouche.setSelected(true);
+                        previewPanel.openElementProperties(cartouche);
+                        refreshElementList();
+                        previewPanel.repaint();
+                    }
                 } else if (data.elementType() == LayoutElementType.HEADER) {
-                    titleField.requestFocusInWindow();
-                    titleField.selectAll();
-                    statusLabel.setText("Encabezado listo para editar desde el panel izquierdo.");
+                    LayoutLabel title = findLayoutLabelByName("Titulo");
+                    if (title != null) {
+                        layoutModel.clearSelection();
+                        title.setSelected(true);
+                        previewPanel.openElementProperties(title);
+                        refreshElementList();
+                        previewPanel.repaint();
+                    } else {
+                        titleField.requestFocusInWindow();
+                        titleField.selectAll();
+                        statusLabel.setText("Encabezado listo para editar desde el panel izquierdo.");
+                    }
                 }
             }
             default -> {
@@ -3727,6 +3932,7 @@ public class MapLayoutComposerDialog extends JFrame {
         if (settings == null || snapshot == null) {
             return 0d;
         }
+        syncHardcodedLayoutFlagsFromModel();
         Dimension previewSize = settings.pageSize().pixelSize(settings.orientation(), PREVIEW_RENDER_DPI);
         LayoutRenderResult result = LayoutRenderer.renderResult(
                 settings,
@@ -3750,15 +3956,54 @@ public class MapLayoutComposerDialog extends JFrame {
         return snapshot;
     }
 
-    private BufferedImage renderLayout(LayoutSettings settings, Dimension size) {
-        // Auto-disable hardcoded elements that exist in LayoutModel
+    private boolean hasLayoutElement(Class<? extends LayoutElement> type) {
         for (LayoutElement el : layoutModel.getElements()) {
-            if (el instanceof LayoutLegend) legendCheck.setSelected(false);
-            if (el instanceof LayoutNorthArrow) interactionState.setElementVisible(LayoutElementType.NORTH, false);
-            if (el instanceof LayoutScaleBar) interactionState.setElementVisible(LayoutElementType.SCALE, false);
-            if (el instanceof LayoutCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
-            if (el instanceof LayoutMap) interactionState.setElementVisible(LayoutElementType.MAP_CONTENT, false);
+            if (type.isInstance(el)) {
+                return true;
+            }
         }
+        return false;
+    }
+
+    private void syncHardcodedLayoutFlagsFromModel() {
+        boolean hasHeaderLabels = false;
+        boolean hasCartoucheLabels = false;
+        for (LayoutElement el : layoutModel.getElements()) {
+            if (el instanceof LayoutLabel) {
+                String n = el.getName();
+                if (n != null && (n.equals("Titulo") || n.startsWith("Titulo ") || n.equals("Subtitulo"))) {
+                    hasHeaderLabels = true;
+                }
+                if (n != null && (n.equals("Empresa") || n.equals("Cartografo") || n.equals("Estudio") || n.startsWith("Datos"))) {
+                    hasCartoucheLabels = true;
+                }
+            }
+        }
+        if (hasHeaderLabels) {
+            interactionState.setElementVisible(LayoutElementType.HEADER, false);
+        }
+        if (hasLayoutElement(LayoutLegend.class)) {
+            legendCheck.setSelected(false);
+        }
+        if (hasLayoutElement(LayoutNorthArrow.class)) {
+            interactionState.setElementVisible(LayoutElementType.NORTH, false);
+        }
+        if (hasLayoutElement(LayoutScaleBar.class)) {
+            interactionState.setElementVisible(LayoutElementType.SCALE, false);
+        }
+        if (hasLayoutElement(LayoutCartouche.class)) {
+            interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
+        }
+        if (hasCartoucheLabels) {
+            interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
+        }
+        if (hasLayoutElement(LayoutMap.class)) {
+            interactionState.setElementVisible(LayoutElementType.MAP_CONTENT, false);
+        }
+    }
+
+    private BufferedImage renderLayout(LayoutSettings settings, Dimension size) {
+        syncHardcodedLayoutFlagsFromModel();
         BufferedImage base = LayoutRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
         if (layoutModel.size() > 0) {
             Graphics2D g2 = base.createGraphics();
@@ -3768,7 +4013,6 @@ public class MapLayoutComposerDialog extends JFrame {
                 if (settings.orientation() == PageOrientation.LANDSCAPE) { double tmp = wMm; wMm = hMm; hMm = tmp; }
                 LayoutRenderContext ctx = new LayoutRenderContext(LayoutRenderContext.Mode.EXPORT_IMAGE, settings.dpi(), wMm, hMm);
                 for (LayoutElement el : layoutModel.getVisibleElementsSortedByZ()) {
-                    if (el instanceof LayoutMap) continue;
                     if (el instanceof LayoutScaleBar) {
                         ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, estimateMapScale()));
                     }
@@ -5667,221 +5911,325 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         void showTextPopup(LayoutLabel label) {
-            JDialog popup = new JDialog((Frame)SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Formato de texto", true);
+            JDialog popup = new JDialog((Frame) SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Formato de texto", true);
             popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-            JPanel panel = new JPanel(null);
-            panel.setPreferredSize(new Dimension(300, 220));
-            panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0x1976D2), 2),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+
+            Font originalFont = label.getFont();
+            Color originalColor = label.getColor();
+            float originalHaloWidth = label.getHaloWidth();
+            Color originalHaloColor = label.getHaloColor();
+            boolean originalUnderline = label.isUnderlined();
+            String originalText = label.getText();
+
+            JPanel panel = new JPanel(new BorderLayout(10, 10));
+            panel.setBorder(BorderFactory.createEmptyBorder(14, 16, 12, 16));
             panel.setBackground(Color.WHITE);
 
-            Font f = label.getFont();
-            int y = 0;
+            JPanel form = new JPanel(new GridBagLayout());
+            form.setOpaque(false);
+            GridBagConstraints g = new GridBagConstraints();
+            g.insets = new Insets(3, 3, 3, 3);
+            g.anchor = GridBagConstraints.WEST;
+            g.fill = GridBagConstraints.HORIZONTAL;
+            g.weightx = 1;
+            int row = 0;
 
-            // Titulo
-            JLabel titleLbl = new JLabel("Formato de texto");
-            titleLbl.setFont(titleLbl.getFont().deriveFont(Font.BOLD, 13f));
-            titleLbl.setForeground(new Color(0x1976D2));
-            titleLbl.setBounds(0, y, 220, 20); panel.add(titleLbl); y += 24;
+            JTextField contentField = new JTextField(label.getText() != null ? label.getText() : "", 24);
+            addPopupRow(form, g, row++, "Contenido", contentField);
 
-            // Fuente (combobox con todas las del sistema)
-            JLabel fuLbl = new JLabel("Fuente");
-            fuLbl.setFont(fuLbl.getFont().deriveFont(Font.PLAIN, 10f));
-            fuLbl.setBounds(0, y, 60, 22); panel.add(fuLbl);
             JComboBox<String> fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
-            fontCombo.setSelectedItem(f.getFamily());
-            fontCombo.setFont(fontCombo.getFont().deriveFont(Font.PLAIN, 10f));
-            fontCombo.setBounds(65, y, 200, 22);
-            fontCombo.addActionListener(e -> { label.setFont(new Font((String)fontCombo.getSelectedItem(), label.getFont().getStyle(), label.getFont().getSize())); previewPanel.repaint(); });
-            panel.add(fontCombo); y += 28;
+            fontCombo.setSelectedItem(originalFont.getFamily());
+            addPopupRow(form, g, row++, "Fuente", fontCombo);
 
-            // Tamano (combobox con valores predefinidos)
-            JLabel szLbl = new JLabel("Tamano");
-            szLbl.setFont(szLbl.getFont().deriveFont(Font.PLAIN, 10f));
-            szLbl.setBounds(0, y, 60, 22); panel.add(szLbl);
             Integer[] sizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 42, 48, 56, 64, 72};
             JComboBox<Integer> sizeCombo = new JComboBox<>(sizes);
-            sizeCombo.setSelectedItem(f.getSize());
-            sizeCombo.setFont(sizeCombo.getFont().deriveFont(Font.PLAIN, 10f));
-            sizeCombo.setBounds(65, y, 80, 22);
-            sizeCombo.addActionListener(e -> { label.setFont(label.getFont().deriveFont((float)(Integer)sizeCombo.getSelectedItem())); previewPanel.repaint(); });
-            panel.add(sizeCombo); y += 28;
+            sizeCombo.setEditable(true);
+            sizeCombo.setSelectedItem(originalFont.getSize());
+            addPopupRow(form, g, row++, "Tamaño", sizeCombo);
 
-            // Estilo: B I U toggles
-            JLabel stLbl = new JLabel("Estilo");
-            stLbl.setFont(stLbl.getFont().deriveFont(Font.PLAIN, 10f));
-            stLbl.setBounds(0, y, 60, 22); panel.add(stLbl);
+            JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            styleRow.setOpaque(false);
+            JToggleButton boldBtn = new JToggleButton("N", originalFont.isBold());
+            boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD));
+            JToggleButton italicBtn = new JToggleButton("K", originalFont.isItalic());
+            italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC));
+            JToggleButton underlineBtn = new JToggleButton("S", originalUnderline);
+            styleRow.add(boldBtn);
+            styleRow.add(italicBtn);
+            styleRow.add(underlineBtn);
+            addPopupRow(form, g, row++, "Estilo", styleRow);
 
-            boolean isBold = f.isBold(), isItalic = f.isItalic();
-            JToggleButton boldBtn = new JToggleButton("B");
-            boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD, 12f));
-            boldBtn.setSelected(isBold); boldBtn.setBounds(65, y, 40, 24); boldBtn.setMargin(new Insets(0,0,0,0));
-            boldBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(boldBtn.isSelected() ? label.getFont().getStyle() | Font.BOLD : label.getFont().getStyle() & ~Font.BOLD)); previewPanel.repaint(); });
-            panel.add(boldBtn);
+            JButton colorBtn = colorSwatchButton(label.getColor(), null);
+            addPopupRow(form, g, row++, "Color", colorBtn);
 
-            JToggleButton italicBtn = new JToggleButton("I");
-            italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC, 12f));
-            italicBtn.setSelected(isItalic); italicBtn.setBounds(110, y, 40, 24); italicBtn.setMargin(new Insets(0,0,0,0));
-            italicBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(italicBtn.isSelected() ? label.getFont().getStyle() | Font.ITALIC : label.getFont().getStyle() & ~Font.ITALIC)); previewPanel.repaint(); });
-            panel.add(italicBtn);
+            JCheckBox haloCheck = new JCheckBox("Activar halo", originalHaloWidth > 0);
+            haloCheck.setOpaque(false);
+            Integer[] haloVals = {1, 2, 3, 4, 5};
+            JComboBox<Integer> haloWidthCombo = new JComboBox<>(haloVals);
+            haloWidthCombo.setSelectedItem(Math.max(1, (int) originalHaloWidth));
+            JButton haloColorBtn = colorSwatchButton(originalHaloColor, null);
+            JPanel haloRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            haloRow.setOpaque(false);
+            haloRow.add(haloCheck);
+            haloRow.add(new JLabel("Ancho"));
+            haloRow.add(haloWidthCombo);
+            haloRow.add(new JLabel("Color"));
+            haloRow.add(haloColorBtn);
+            addPopupRow(form, g, row++, "Halo", haloRow);
 
-            JToggleButton underlineBtn = new JToggleButton("U");
-            underlineBtn.setBounds(155, y, 40, 24); underlineBtn.setMargin(new Insets(0,0,0,0));
-            underlineBtn.addActionListener(e -> { label.setUnderlined(underlineBtn.isSelected()); previewPanel.repaint(); });
-            panel.add(underlineBtn);
-            y += 28;
+            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            buttons.setOpaque(false);
+            JButton acceptBtn = new JButton("Aceptar");
+            JButton cancelBtn = new JButton("Cancelar");
+            buttons.add(acceptBtn);
+            buttons.add(cancelBtn);
 
-            // Color
-            JLabel clLbl = new JLabel("Color");
-            clLbl.setFont(clLbl.getFont().deriveFont(Font.PLAIN, 10f));
-            clLbl.setBounds(0, y, 60, 22); panel.add(clLbl);
-            JButton colorBtn = new JButton();
-            colorBtn.setBackground(label.getColor()); colorBtn.setOpaque(true); colorBtn.setBorderPainted(true);
-            colorBtn.setBounds(65, y, 30, 22);
-            colorBtn.addActionListener(e -> {
-                Color c = JColorChooser.showDialog(popup, "Color de texto", label.getColor());
-                if (c != null) { label.setColor(c); colorBtn.setBackground(c); previewPanel.repaint(); }
+            Runnable applyChanges = () -> {
+                label.setText(contentField.getText());
+                int style = Font.PLAIN;
+                if (boldBtn.isSelected()) style |= Font.BOLD;
+                if (italicBtn.isSelected()) style |= Font.ITALIC;
+                int size = parsePopupInt(sizeCombo.getSelectedItem(), originalFont.getSize());
+                label.setFont(new Font((String) fontCombo.getSelectedItem(), style, size));
+                label.setColor(colorBtn.getBackground());
+                label.setUnderlined(underlineBtn.isSelected());
+                if (haloCheck.isSelected()) {
+                    label.setHaloWidth(parsePopupInt(haloWidthCombo.getSelectedItem(), 2));
+                    label.setHaloColor(haloColorBtn.getBackground());
+                } else {
+                    label.setHaloWidth(0f);
+                }
+                previewPanel.repaint();
+                refreshElementList();
+            };
+
+            acceptBtn.addActionListener(e -> {
+                applyChanges.run();
+                popup.dispose();
             });
-            panel.add(colorBtn); y += 28;
+            cancelBtn.addActionListener(e -> {
+                label.setFont(originalFont);
+                label.setColor(originalColor);
+                label.setHaloWidth(originalHaloWidth);
+                label.setHaloColor(originalHaloColor);
+                label.setUnderlined(originalUnderline);
+                label.setText(originalText);
+                popup.dispose();
+            });
 
-            // Halo
-            JLabel hlLbl = new JLabel("Halo"); hlLbl.setFont(hlLbl.getFont().deriveFont(Font.PLAIN,10f)); hlLbl.setBounds(0,y,60,22); panel.add(hlLbl);
-            JCheckBox haloCheck = new JCheckBox("", label.getHaloWidth() > 0); haloCheck.setOpaque(false); haloCheck.setBounds(65,y,22,22);
-            haloCheck.addActionListener(e -> { label.setHaloWidth(haloCheck.isSelected() ? 2f : 0f); previewPanel.repaint(); });
-            panel.add(haloCheck);
-            Integer[] haloVals = {1,2,3,4,5};
-            JComboBox<Integer> haloCombo = new JComboBox<>(haloVals); haloCombo.setBounds(90,y,50,22); haloCombo.setSelectedItem(Math.max(1,(int)label.getHaloWidth()));
-            haloCombo.addActionListener(e -> { label.setHaloWidth((Integer)haloCombo.getSelectedItem()); previewPanel.repaint(); });
-            panel.add(haloCombo); y += 26;
-
-            // Aceptar / Cancelar
-            y += 8;
-            JButton acceptBtn = new JButton("Aceptar"); acceptBtn.setBounds(0, y, 90, 26); acceptBtn.setFont(acceptBtn.getFont().deriveFont(10f));
-            acceptBtn.addActionListener(e -> { popup.dispose(); });
-            panel.add(acceptBtn);
-            JButton cancelBtn = new JButton("Cancelar"); cancelBtn.setBounds(100, y, 90, 26); cancelBtn.setFont(cancelBtn.getFont().deriveFont(10f));
-            cancelBtn.addActionListener(e -> { popup.dispose(); });
-            panel.add(cancelBtn);
-            y += 30;
-
-            // Enter = Aceptar, Esc = Cancelar
-            javax.swing.AbstractAction doAccept = new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } };
-            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "accept");
-            panel.getActionMap().put("accept", doAccept);
-            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "cancel");
-            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } });
-            popup.add(panel);
-            popup.setSize(300, y + 20);
+            panel.add(form, BorderLayout.CENTER);
+            panel.add(buttons, BorderLayout.SOUTH);
+            popup.setContentPane(panel);
+            popup.pack();
+            popup.setResizable(false);
+            popup.getRootPane().setDefaultButton(acceptBtn);
+            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "cancel");
+            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() {
+                @Override public void actionPerformed(java.awt.event.ActionEvent e) { cancelBtn.doClick(); }
+            });
             popup.setLocationRelativeTo(LayoutPreviewPanel.this);
             popup.setVisible(true);
         }
 
         void showLegendPopup(LayoutLegend legend) {
-            JDialog popup = new JDialog((Frame)SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Propiedades de leyenda", true);
+            JDialog popup = new JDialog((Frame) SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Propiedades de leyenda", true);
             popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-            JPanel panel = new JPanel(null);
-            panel.setPreferredSize(new Dimension(300, 280));
-            panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0x1976D2), 2),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+
+            String originalTitle = legend.getTitle();
+            Font originalTitleFont = legend.getTitleFont();
+            Font originalItemFont = legend.getItemFont();
+            Color originalTitleColor = legend.getTitleColor();
+            Color originalItemColor = legend.getItemColor();
+            boolean originalBg = legend.isShowBackground();
+            Color originalBgColor = legend.getBgColor();
+            float originalBgOpacity = legend.getBgOpacity();
+            boolean originalBorder = legend.isShowBorder();
+            Color originalBorderColor = legend.getBorderColor();
+            int originalColumns = legend.getColumns();
+            boolean originalAutoHeight = legend.isAutoHeight();
+
+            JPanel panel = new JPanel(new BorderLayout(10, 10));
+            panel.setBorder(BorderFactory.createEmptyBorder(14, 16, 12, 16));
             panel.setBackground(Color.WHITE);
-            int y = 0;
 
-            JLabel titleLbl = new JLabel("Propiedades de leyenda");
-            titleLbl.setFont(titleLbl.getFont().deriveFont(Font.BOLD, 13f));
-            titleLbl.setForeground(new Color(0x1976D2));
-            titleLbl.setBounds(0, y, 250, 20); panel.add(titleLbl); y += 24;
+            JPanel form = new JPanel(new GridBagLayout());
+            form.setOpaque(false);
+            GridBagConstraints g = new GridBagConstraints();
+            g.insets = new Insets(3, 3, 3, 3);
+            g.anchor = GridBagConstraints.WEST;
+            g.fill = GridBagConstraints.HORIZONTAL;
+            g.weightx = 1;
+            int row = 0;
 
-            // Titulo
-            JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 20);
-            titleField.setBounds(75, y, 190, 22); titleField.setFont(titleField.getFont().deriveFont(Font.PLAIN, 10f));
-            JLabel tfLbl = new JLabel("Titulo"); tfLbl.setFont(tfLbl.getFont().deriveFont(Font.PLAIN, 10f)); tfLbl.setBounds(0, y, 70, 22);
-            panel.add(tfLbl); panel.add(titleField);
-            titleField.addActionListener(e -> { legend.setTitle(titleField.getText().trim()); previewPanel.repaint(); });
-            y += 28;
+            JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 22);
+            addPopupRow(form, g, row++, "Título", titleField);
 
-            // Tamano titulo
-            Integer[] titleSizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36};
-            JComboBox<Integer> titleSize = new JComboBox<>(titleSizes);
-            titleSize.setSelectedItem(legend.getTitleFont().getSize());
-            titleSize.setBounds(75, y, 70, 22); titleSize.setFont(titleSize.getFont().deriveFont(Font.PLAIN, 10f));
-            JLabel tsLbl = new JLabel("Tam. titulo"); tsLbl.setFont(tsLbl.getFont().deriveFont(Font.PLAIN, 10f)); tsLbl.setBounds(0, y, 70, 22);
-            panel.add(tsLbl); panel.add(titleSize);
-            titleSize.addActionListener(e -> { legend.setTitleFont(legend.getTitleFont().deriveFont((float)(Integer)titleSize.getSelectedItem())); previewPanel.repaint(); });
-            y += 28;
-
-            // Tamano items
-            Integer[] itemSizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20};
-            JComboBox<Integer> itemSize = new JComboBox<>(itemSizes);
-            itemSize.setSelectedItem(legend.getItemFont().getSize());
-            itemSize.setBounds(75, y, 70, 22); itemSize.setFont(itemSize.getFont().deriveFont(Font.PLAIN, 10f));
-            JLabel isLbl = new JLabel("Tam. items"); isLbl.setFont(isLbl.getFont().deriveFont(Font.PLAIN, 10f)); isLbl.setBounds(0, y, 70, 22);
-            panel.add(isLbl); panel.add(itemSize);
-            itemSize.addActionListener(e -> { legend.setItemFont(legend.getItemFont().deriveFont((float)(Integer)itemSize.getSelectedItem())); previewPanel.repaint(); });
-            y += 28;
-
-            // Fondo + Borde en una fila
-            JCheckBox bgCheck = new JCheckBox("Fondo", legend.isShowBackground());
-            bgCheck.setFont(bgCheck.getFont().deriveFont(Font.PLAIN, 10f)); bgCheck.setOpaque(false); bgCheck.setBounds(75, y, 70, 22);
-            bgCheck.addActionListener(e -> { legend.setShowBackground(bgCheck.isSelected()); previewPanel.repaint(); });
-            panel.add(bgCheck);
-
-            JCheckBox brdCheck = new JCheckBox("Borde", legend.isShowBorder());
-            brdCheck.setFont(brdCheck.getFont().deriveFont(Font.PLAIN, 10f)); brdCheck.setOpaque(false); brdCheck.setBounds(155, y, 70, 22);
-            brdCheck.addActionListener(e -> { legend.setShowBorder(brdCheck.isSelected()); previewPanel.repaint(); });
-            panel.add(brdCheck);
-
-            JCheckBox autoCheck = new JCheckBox("Auto alto", legend.isAutoHeight());
-            autoCheck.setFont(autoCheck.getFont().deriveFont(Font.PLAIN, 10f)); autoCheck.setOpaque(false); autoCheck.setBounds(230, y, 80, 22);
-            autoCheck.addActionListener(e -> { legend.setAutoHeight(autoCheck.isSelected()); previewPanel.repaint(); });
-            panel.add(autoCheck);
-            y += 30;
-
-            // Columnas
-            JLabel colLbl = new JLabel("Columnas"); colLbl.setFont(colLbl.getFont().deriveFont(Font.PLAIN, 10f)); colLbl.setBounds(0, y, 70, 22); panel.add(colLbl);
-            Integer[] colVals = {1, 2, 3, 4};
-            JComboBox<Integer> colCombo = new JComboBox<>(colVals);
-            colCombo.setSelectedItem(legend.getColumns());
-            colCombo.setBounds(75, y, 60, 22); colCombo.setFont(colCombo.getFont().deriveFont(Font.PLAIN, 10f));
-            colCombo.addActionListener(e -> { legend.setColumns((Integer)colCombo.getSelectedItem()); previewPanel.repaint(); });
-            panel.add(colCombo); y += 28;
-
-            // Botones
-            // Fuente del titulo
-            panel.add(new JLabel("Fuente titulo:")); 
             JComboBox<String> titleFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
             titleFontCombo.setSelectedItem(legend.getTitleFont().getFamily());
-            titleFontCombo.addActionListener(e -> { legend.setTitleFont(new Font((String)titleFontCombo.getSelectedItem(), Font.BOLD, legend.getTitleFont().getSize())); previewPanel.repaint(); });
-            panel.add(titleFontCombo);
+            addPopupRow(form, g, row++, "Fuente título", titleFontCombo);
 
-            JButton updBtn = new JButton("Actualizar capas");
-            updBtn.setFont(updBtn.getFont().deriveFont(Font.PLAIN, 9f)); updBtn.setBounds(0, y, 120, 22); updBtn.setMargin(new Insets(1,6,1,6));
-            updBtn.addActionListener(e -> { populateLegendFromProject(legend); previewPanel.repaint(); });
-            panel.add(updBtn);
+            Integer[] titleSizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36};
+            JComboBox<Integer> titleSize = new JComboBox<>(titleSizes);
+            titleSize.setEditable(true);
+            titleSize.setSelectedItem(legend.getTitleFont().getSize());
+            addPopupRow(form, g, row++, "Tam. título", titleSize);
 
+            JComboBox<String> itemFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+            itemFontCombo.setSelectedItem(legend.getItemFont().getFamily());
+            addPopupRow(form, g, row++, "Fuente ítems", itemFontCombo);
+
+            Integer[] itemSizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20};
+            JComboBox<Integer> itemSize = new JComboBox<>(itemSizes);
+            itemSize.setEditable(true);
+            itemSize.setSelectedItem(legend.getItemFont().getSize());
+            addPopupRow(form, g, row++, "Tam. ítems", itemSize);
+
+            JButton titleColorBtn = colorSwatchButton(legend.getTitleColor(), null);
+            addPopupRow(form, g, row++, "Color título", titleColorBtn);
+
+            JButton itemColorBtn = colorSwatchButton(legend.getItemColor(), null);
+            addPopupRow(form, g, row++, "Color ítems", itemColorBtn);
+
+            JCheckBox bgCheck = new JCheckBox("Mostrar fondo", legend.isShowBackground());
+            bgCheck.setOpaque(false);
+            JButton bgColorBtn = colorSwatchButton(legend.getBgColor(), null);
+            JSpinner opacitySpinner = new JSpinner(new SpinnerNumberModel((int) Math.round(legend.getBgOpacity() * 100d), 0, 100, 5));
+            JPanel bgRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            bgRow.setOpaque(false);
+            bgRow.add(bgCheck);
+            bgRow.add(new JLabel("Color"));
+            bgRow.add(bgColorBtn);
+            bgRow.add(new JLabel("Opacidad"));
+            bgRow.add(opacitySpinner);
+            addPopupRow(form, g, row++, "Fondo", bgRow);
+
+            JCheckBox borderCheck = new JCheckBox("Mostrar borde", legend.isShowBorder());
+            borderCheck.setOpaque(false);
+            JButton borderColorBtn = colorSwatchButton(legend.getBorderColor(), null);
+            JPanel borderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            borderRow.setOpaque(false);
+            borderRow.add(borderCheck);
+            borderRow.add(new JLabel("Color"));
+            borderRow.add(borderColorBtn);
+            addPopupRow(form, g, row++, "Borde", borderRow);
+
+            JComboBox<Integer> colCombo = new JComboBox<>(new Integer[]{1, 2, 3, 4});
+            colCombo.setSelectedItem(legend.getColumns());
+            addPopupRow(form, g, row++, "Columnas", colCombo);
+
+            JCheckBox autoHeightCheck = new JCheckBox("Auto alto", legend.isAutoHeight());
+            autoHeightCheck.setOpaque(false);
+            addPopupRow(form, g, row++, "Ajuste", autoHeightCheck);
+
+            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            buttons.setOpaque(false);
+            JButton refreshBtn = new JButton("Actualizar capas");
             JButton acceptBtn = new JButton("Aceptar");
-            acceptBtn.setFont(acceptBtn.getFont().deriveFont(Font.PLAIN, 9f)); acceptBtn.setBounds(130, y, 75, 22); acceptBtn.setMargin(new Insets(1,6,1,6));
-            acceptBtn.addActionListener(e -> popup.dispose());
-            panel.add(acceptBtn);
-
             JButton cancelBtn = new JButton("Cancelar");
-            cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.PLAIN, 9f)); cancelBtn.setBounds(210, y, 80, 22); cancelBtn.setMargin(new Insets(1,6,1,6));
-            cancelBtn.addActionListener(e -> popup.dispose());
-            panel.add(cancelBtn);
-            y += 30;
+            buttons.add(refreshBtn);
+            buttons.add(acceptBtn);
+            buttons.add(cancelBtn);
 
-            // Enter = Aceptar, Esc = Cancelar
-            javax.swing.AbstractAction doAccept = new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } };
-            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "accept");
-            panel.getActionMap().put("accept", doAccept);
-            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "cancel");
-            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } });
+            refreshBtn.addActionListener(e -> {
+                populateLegendFromProject(legend);
+                previewPanel.repaint();
+            });
 
-            popup.add(panel);
-            popup.setSize(300, y + 20);
+            Runnable applyChanges = () -> {
+                legend.setTitle(titleField.getText().trim());
+                legend.setTitleFont(new Font((String) titleFontCombo.getSelectedItem(), Font.BOLD, parsePopupInt(titleSize.getSelectedItem(), originalTitleFont.getSize())));
+                legend.setItemFont(new Font((String) itemFontCombo.getSelectedItem(), Font.PLAIN, parsePopupInt(itemSize.getSelectedItem(), originalItemFont.getSize())));
+                legend.setTitleColor(titleColorBtn.getBackground());
+                legend.setItemColor(itemColorBtn.getBackground());
+                legend.setShowBackground(bgCheck.isSelected());
+                legend.setBgColor(bgColorBtn.getBackground());
+                legend.setBgOpacity(((Integer) opacitySpinner.getValue()) / 100f);
+                legend.setShowBorder(borderCheck.isSelected());
+                legend.setBorderColor(borderColorBtn.getBackground());
+                legend.setColumns((Integer) colCombo.getSelectedItem());
+                legend.setAutoHeight(autoHeightCheck.isSelected());
+                previewPanel.repaint();
+                refreshElementList();
+            };
+
+            acceptBtn.addActionListener(e -> {
+                applyChanges.run();
+                popup.dispose();
+            });
+            cancelBtn.addActionListener(e -> {
+                legend.setTitle(originalTitle);
+                legend.setTitleFont(originalTitleFont);
+                legend.setItemFont(originalItemFont);
+                legend.setTitleColor(originalTitleColor);
+                legend.setItemColor(originalItemColor);
+                legend.setShowBackground(originalBg);
+                legend.setBgColor(originalBgColor);
+                legend.setBgOpacity(originalBgOpacity);
+                legend.setShowBorder(originalBorder);
+                legend.setBorderColor(originalBorderColor);
+                legend.setColumns(originalColumns);
+                legend.setAutoHeight(originalAutoHeight);
+                popup.dispose();
+            });
+
+            panel.add(form, BorderLayout.CENTER);
+            panel.add(buttons, BorderLayout.SOUTH);
+            popup.setContentPane(panel);
+            popup.pack();
+            popup.setResizable(false);
+            popup.getRootPane().setDefaultButton(acceptBtn);
+            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "cancel");
+            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() {
+                @Override public void actionPerformed(java.awt.event.ActionEvent e) { cancelBtn.doClick(); }
+            });
             popup.setLocationRelativeTo(LayoutPreviewPanel.this);
             popup.setVisible(true);
+        }
+
+        private void addPopupRow(JPanel form, GridBagConstraints g, int row, String label, Component field) {
+            JLabel lbl = new JLabel(label);
+            lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 11f));
+            g.gridx = 0;
+            g.gridy = row;
+            g.gridwidth = 1;
+            g.weightx = 0;
+            form.add(lbl, g);
+            g.gridx = 1;
+            g.weightx = 1;
+            form.add(field, g);
+        }
+
+        private JButton colorSwatchButton(Color initial, java.util.function.Consumer<Color> onColor) {
+            JButton btn = new JButton();
+            btn.setPreferredSize(new Dimension(34, 22));
+            colorBtnSet(btn, initial != null ? initial : Color.BLACK);
+            btn.addActionListener(e -> {
+                Color chosen = JColorChooser.showDialog(LayoutPreviewPanel.this, "Elegir color", btn.getBackground());
+                if (chosen != null) {
+                    colorBtnSet(btn, chosen);
+                    if (onColor != null) {
+                        onColor.accept(chosen);
+                    }
+                }
+            });
+            return btn;
+        }
+
+        private void colorBtnSet(JButton button, Color color) {
+            button.setBackground(color);
+            button.setOpaque(true);
+            button.setBorderPainted(true);
+        }
+
+        private int parsePopupInt(Object value, int fallback) {
+            if (value instanceof Number number) {
+                return number.intValue();
+            }
+            try {
+                return Integer.parseInt(String.valueOf(value).trim());
+            } catch (Exception ex) {
+                return fallback;
+            }
         }
 
         private LayoutElement duplicateElement(LayoutElement src) {
@@ -6070,33 +6418,7 @@ public class MapLayoutComposerDialog extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            // Disable hardcoded elements when LayoutModel has equivalents (WYSIWYG)
-            boolean hasModelLegend = false, hasModelHeader = false, hasModelCartouche = false;
-            boolean hasModelNorth = false, hasModelScale = false;
-            for (LayoutElement el : layoutModel.getElements()) {
-                if (el instanceof LayoutLegend) hasModelLegend = true;
-                if (el instanceof LayoutNorthArrow) hasModelNorth = true;
-                if (el instanceof LayoutScaleBar) hasModelScale = true;
-                if (el instanceof LayoutCartouche) hasModelCartouche = true;
-                if (el instanceof LayoutLabel) {
-                    String n = el.getName();
-                    if (n != null && (n.equals("Titulo") || n.startsWith("Titulo ") || n.equals("Subtitulo")))
-                        hasModelHeader = true;
-                    if (n != null && (n.equals("Empresa") || n.equals("Cartografo") || n.equals("Estudio") || n.startsWith("Datos")))
-                        hasModelCartouche = true;
-                }
-            }
-            if (hasModelLegend) legendCheck.setSelected(false);
-            if (hasModelHeader) interactionState.setElementVisible(LayoutElementType.HEADER, false);
-            if (hasModelNorth) interactionState.setElementVisible(LayoutElementType.NORTH, false);
-            if (hasModelScale) interactionState.setElementVisible(LayoutElementType.SCALE, false);
-            if (hasModelCartouche) interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
-            // Auto-disable template MAP_CONTENT when model has LayoutMap elements
-            boolean hasModelMap = false;
-            for (LayoutElement el : layoutModel.getElements()) {
-                if (el instanceof LayoutMap) { hasModelMap = true; break; }
-            }
-            if (hasModelMap) interactionState.setElementVisible(LayoutElementType.MAP_CONTENT, false);
+            syncHardcodedLayoutFlagsFromModel();
             LayoutSettings settings = buildSettings();
             LayoutSnapshot currentSnapshot = getSnapshot();
             if (settings == null || currentSnapshot == null) return;
@@ -6628,18 +6950,15 @@ public class MapLayoutComposerDialog extends JFrame {
                 double baseWorldHeight = snapshot.basePixelHeight() / Math.max(snapshot.baseZoomFactor(), 0.000001d);
                 double baseCenterX = snapshot.baseViewMinX() + (baseWorldWidth / 2d);
                 double baseCenterY = snapshot.baseViewMinY() + (baseWorldHeight / 2d);
-                double fitToFrameScale = Math.min(contentW / (double) Math.max(1, snapshot.basePixelWidth()),
-                        contentH / (double) Math.max(1, snapshot.basePixelHeight()));
-                fitToFrameScale = Math.max(0.000001d, fitToFrameScale);
-                double offsetWorldX = (interactionState != null ? interactionState.getMapOffsetX() : 0d) / (fitToFrameScale * targetZoom);
-                double offsetWorldY = (interactionState != null ? interactionState.getMapOffsetY() : 0d) / (fitToFrameScale * targetZoom);
-                double currentWorldWidth = snapshot.basePixelWidth() / targetZoom;
-                double currentWorldHeight = snapshot.basePixelHeight() / targetZoom;
+                double offsetWorldX = (interactionState != null ? interactionState.getMapOffsetX() : 0d) / targetZoom;
+                double offsetWorldY = (interactionState != null ? interactionState.getMapOffsetY() : 0d) / targetZoom;
+                double currentWorldWidth = Math.max(1d, contentW) / targetZoom;
+                double currentWorldHeight = Math.max(1d, contentH) / targetZoom;
                 double viewCenterX = baseCenterX - offsetWorldX;
                 double viewCenterY = baseCenterY + offsetWorldY;
                 double viewMinX = viewCenterX - (currentWorldWidth / 2d);
                 double viewMinY = viewCenterY - (currentWorldHeight / 2d);
-                BufferedImage rendered = ctxMapPanel().renderMapViewImage(viewMinX, viewMinY, targetZoom);
+                BufferedImage rendered = ctxMapPanel().renderMapViewImage(viewMinX, viewMinY, targetZoom, contentW, contentH);
                 if (rendered != null) {
                     mapImage = rendered;
                 }
@@ -6648,19 +6967,11 @@ public class MapLayoutComposerDialog extends JFrame {
             if (mapImage == null) {
                 mapImage = new BufferedImage(Math.max(1, contentW), Math.max(1, contentH), BufferedImage.TYPE_INT_ARGB);
             }
-            double scale = Math.max(contentW / (double) Math.max(1, mapImage.getWidth()), contentH / (double) Math.max(1, mapImage.getHeight()));
-            int drawW = (int) Math.round(mapImage.getWidth() * scale);
-            int drawH = (int) Math.round(mapImage.getHeight() * scale);
-            int drawX = contentX + (contentW - drawW) / 2;
-            int drawY = contentY + (contentH - drawH) / 2;
             double visibleGroundMeters = shownGroundMeters;
-            if (drawW > 0 && contentW > 0 && shownGroundMeters > 0) {
-                visibleGroundMeters = shownGroundMeters * (contentW / (double) drawW);
-            }
             Graphics2D imageGraphics = (Graphics2D) g2.create();
             try {
                 imageGraphics.setClip(contentX, contentY, contentW, contentH);
-                imageGraphics.drawImage(mapImage, drawX, drawY, drawW, drawH, null);
+                imageGraphics.drawImage(mapImage, contentX, contentY, contentW, contentH, null);
             } finally {
                 imageGraphics.dispose();
             }
@@ -7677,101 +7988,7 @@ public class MapLayoutComposerDialog extends JFrame {
             if (style == null) {
                 style = Layer.PointSymbolStyle.CIRCLE;
             }
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(color);
-                switch (style) {
-                    case SQUARE -> copy.fillRect(left, top, size, size);
-                    case DIAMOND -> {
-                        Path2D diamond = new Path2D.Double();
-                        diamond.moveTo(left + (size / 2d), top);
-                        diamond.lineTo(left + size, top + (size / 2d));
-                        diamond.lineTo(left + (size / 2d), top + size);
-                        diamond.lineTo(left, top + (size / 2d));
-                        diamond.closePath();
-                        copy.fill(diamond);
-                        copy.setColor(new Color(33, 33, 33));
-                        copy.draw(diamond);
-                        return;
-                    }
-                    case TRIANGLE -> {
-                        Path2D triangle = new Path2D.Double();
-                        triangle.moveTo(left + (size / 2d), top);
-                        triangle.lineTo(left + size, top + size);
-                        triangle.lineTo(left, top + size);
-                        triangle.closePath();
-                        copy.fill(triangle);
-                        copy.setColor(new Color(33, 33, 33));
-                        copy.draw(triangle);
-                        return;
-                    }
-                    case TARGET -> {
-                        copy.fillOval(left, top, size, size);
-                        copy.setColor(Color.WHITE);
-                        copy.fillOval(left + 3, top + 3, 6, 6);
-                        copy.setColor(new Color(33, 33, 33));
-                        copy.drawOval(left, top, size, size);
-                        copy.drawLine(left - 1, top + (size / 2), left + size + 1, top + (size / 2));
-                        copy.drawLine(left + (size / 2), top - 1, left + (size / 2), top + size + 1);
-                        return;
-                    }
-                    case PIN -> {
-                        Path2D pin = new Path2D.Double();
-                        pin.moveTo(left + size / 2d, top + size + 2);
-                        pin.lineTo(left + size, top + 4);
-                        pin.quadTo(left + size + 1, top - 2, left + size / 2d, top);
-                        pin.quadTo(left - 1, top - 2, left, top + 4);
-                        pin.closePath();
-                        copy.fill(pin);
-                        copy.setColor(Color.WHITE);
-                        copy.fillOval(left + 3, top + 3, 5, 5);
-                        copy.setColor(new Color(33, 33, 33));
-                        copy.draw(pin);
-                        return;
-                    }
-                    case FLAG -> {
-                        copy.setStroke(new BasicStroke(1.5f));
-                        copy.drawLine(left + 2, top + 12, left + 2, top);
-                        Path2D flag = new Path2D.Double();
-                        flag.moveTo(left + 2, top + 1);
-                        flag.lineTo(left + 10, top + 3);
-                        flag.lineTo(left + 2, top + 6);
-                        flag.closePath();
-                        copy.fill(flag);
-                        return;
-                    }
-                    case STAR -> {
-                        Path2D star = buildStar(left + 6, top + 6, 6, 3);
-                        copy.fill(star);
-                        copy.setColor(new Color(33, 33, 33));
-                        copy.draw(star);
-                        return;
-                    }
-                    case WELL -> {
-                        copy.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                        Path2D derrick = new Path2D.Double();
-                        derrick.moveTo(left + (size / 2d), top);
-                        derrick.lineTo(left + size - 1, top + size);
-                        derrick.lineTo(left + 1, top + size);
-                        derrick.closePath();
-                        copy.draw(derrick);
-                        copy.drawLine(left + 2, top + size, left + size - 2, top + size);
-                        copy.drawLine(left + 3, top + 6, left + size - 3, top + 6);
-                        copy.drawLine(left + 3, top + size - 1, left + size / 2, top + 6);
-                        copy.drawLine(left + size - 3, top + size - 1, left + size / 2, top + 6);
-                        return;
-                    }
-                    default -> copy.fillOval(left, top, size, size);
-                }
-                copy.setColor(new Color(33, 33, 33));
-                if (style == Layer.PointSymbolStyle.SQUARE) {
-                    copy.drawRect(left, top, size, size);
-                } else {
-                    copy.drawOval(left, top, size, size);
-                }
-            } finally {
-                copy.dispose();
-            }
+            PointSymbolRenderer.paint(g2, style, left + (size / 2), top + (size / 2), size, color, new Color(33, 33, 33));
         }
 
         private static void drawLineSymbolPreview(Graphics2D g2, Layer layer, int x, int y, CategoryStyleRule categoryRule) {
@@ -8191,21 +8408,11 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel actionBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
         actionBar.setOpaque(false);
         actionBar.add(addBtn);
-        // Plantillas dropdown
-        JPopupMenu tmplMenu = new JPopupMenu();
-        java.util.Map<String, String> allTmpl = LayoutTemplateManager.getTemplateList();
-        for (java.util.Map.Entry<String, String> e : allTmpl.entrySet()) {
-            String key = e.getKey(), label = e.getValue();
-            tmplMenu.add(menuItem(label, () -> {
-                LayoutTemplateManager.applyTemplate(key, layoutModel);
-                refreshElementList(); previewPanel.repaint();
-                statusLabel.setText("Plantilla: " + label);
-            }));
-        }
-        JButton tmplBtn = new JButton("Plantillas \u25BE");
+        JButton tmplBtn = new JButton("Plantillas...");
         tmplBtn.setFont(tmplBtn.getFont().deriveFont(Font.PLAIN, 10f));
         tmplBtn.setMargin(new Insets(3, 6, 3, 6));
-        tmplBtn.addActionListener(e -> tmplMenu.show(tmplBtn, 0, tmplBtn.getHeight()));
+        tmplBtn.setToolTipText("Abrir galería de plantillas con vista preliminar.");
+        tmplBtn.addActionListener(e -> showTemplatePicker());
         actionBar.add(tmplBtn);
         actionBar.add(miniBtn("Duplicar", "Duplicar seleccionado (Ctrl+D)", e -> {
             LayoutElement sel = layoutModel.getSelected();
@@ -8486,11 +8693,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void showTemplateDialog() {
-        java.util.Map<String, String> tmpl = LayoutTemplateManager.getTemplateList();
-        String[] ks = tmpl.keySet().toArray(new String[0]), ns = tmpl.values().toArray(new String[0]);
-        String ch = (String) javax.swing.JOptionPane.showInputDialog(this, "Plantilla:", "CATMAP", javax.swing.JOptionPane.QUESTION_MESSAGE, null, ns, ns[0]);
-        if (ch == null) return;
-        for (int i = 0; i < ns.length; i++) if (ns[i].equals(ch)) { LayoutTemplateManager.applyTemplate(ks[i], layoutModel); refreshAll(); statusLabel.setText("Plantilla: " + ch); return; }
+        showTemplatePicker();
     }
 
     private LayoutElement findEl(String id) { for (LayoutElement e : layoutModel.getElements()) if (e.getId().equals(id)) return e; return null; }
@@ -8529,6 +8732,18 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private LayoutElement findElementByType(Class<?> type) {
         for (LayoutElement el : layoutModel.getElements()) if (type.isInstance(el)) return el;
+        return null;
+    }
+
+    private LayoutLabel findLayoutLabelByName(String expected) {
+        for (LayoutElement el : layoutModel.getElements()) {
+            if (el instanceof LayoutLabel label) {
+                String name = label.getName();
+                if (name != null && name.equalsIgnoreCase(expected)) {
+                    return label;
+                }
+            }
+        }
         return null;
     }
 

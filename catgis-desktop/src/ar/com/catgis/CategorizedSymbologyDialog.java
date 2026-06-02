@@ -402,34 +402,18 @@ public class CategorizedSymbologyDialog extends JDialog {
     }
 
     private void drawPointSample(Graphics2D g2, CategoryStyleRule rule) {
-        g2.setColor(rule.getPrimaryColor());
         int x = 32;
         int y = 20;
         int size = Math.max(8, Math.min(18, rule.getPointSize()));
-        int half = size / 2;
-        switch (rule.getPointSymbolStyle()) {
-            case SQUARE -> g2.fillRect(x - half, y - half, size, size);
-            case DIAMOND -> {
-                Path2D diamond = new Path2D.Double();
-                diamond.moveTo(x, y - half);
-                diamond.lineTo(x + half, y);
-                diamond.lineTo(x, y + half);
-                diamond.lineTo(x - half, y);
-                diamond.closePath();
-                g2.fill(diamond);
-            }
-            case TRIANGLE -> {
-                Path2D triangle = new Path2D.Double();
-                triangle.moveTo(x, y - half);
-                triangle.lineTo(x + half, y + half);
-                triangle.lineTo(x - half, y + half);
-                triangle.closePath();
-                g2.fill(triangle);
-            }
-            default -> g2.fillOval(x - half, y - half, size, size);
-        }
-        g2.setColor(Color.BLACK);
-        g2.drawOval(x - 2, y - 2, 4, 4);
+        PointSymbolRenderer.paint(
+                g2,
+                rule.getPointSymbolStyle(),
+                x,
+                y,
+                size,
+                rule.getPrimaryColor(),
+                Color.BLACK
+        );
     }
 
     private void drawLineSample(Graphics2D g2, CategoryStyleRule rule) {

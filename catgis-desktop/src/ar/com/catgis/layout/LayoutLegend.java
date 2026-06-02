@@ -1,5 +1,8 @@
 package ar.com.catgis.layout;
 
+import ar.com.catgis.Layer;
+import ar.com.catgis.PointSymbolCatalog;
+
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -7,6 +10,7 @@ import java.awt.Composite;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Paint;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -20,6 +24,11 @@ public class LayoutLegend implements LayoutElement {
         public String geometryType;
         public boolean included = true;
         public String displayName;
+        public String catalogSymbolId;
+        public Layer.PointSymbolStyle pointSymbolStyle;
+        public Layer.LineSymbolStyle lineSymbolStyle;
+        public Layer.PolygonFillStyle polygonFillStyle;
+        public Color strokeColor;
 
         public LegendItem(String label, Color color, String type) {
             this.label = label; this.displayName = label; this.color = color; this.geometryType = type;
@@ -92,13 +101,17 @@ public class LayoutLegend implements LayoutElement {
     public void setTitle(String t) { this.title = t; }
     public String getTitle() { return title; }
     public void setSubtitle(String s) { this.subtitle = s; }
+    public String getSubtitle() { return subtitle; }
     public void setTitleFont(Font f) { this.titleFont = f; }
     public Font getTitleFont() { return titleFont; }
     public void setSubtitleFont(Font f) { this.subtitleFont = f; }
+    public Font getSubtitleFont() { return subtitleFont; }
     public void setItemFont(Font f) { this.itemFont = f; }
     public Font getItemFont() { return itemFont; }
     public void setTitleColor(Color c) { this.titleColor = c; }
+    public Color getTitleColor() { return titleColor; }
     public void setItemColor(Color c) { this.itemColor = c; }
+    public Color getItemColor() { return itemColor; }
     public void setAutoHeight(boolean b) { this.autoHeight = b; }
     public boolean isAutoHeight() { return autoHeight; }
     public void setShowBackground(boolean b) { this.showBackground = b; }
@@ -106,9 +119,13 @@ public class LayoutLegend implements LayoutElement {
     public void setShowBorder(boolean b) { this.showBorder = b; }
     public boolean isShowBorder() { return showBorder; }
     public void setBgColor(Color c) { this.bgColor = c; }
+    public Color getBgColor() { return bgColor; }
     public void setBgOpacity(float o) { this.bgOpacity = Math.max(0, Math.min(1, o)); }
+    public float getBgOpacity() { return bgOpacity; }
     public void setBorderColor(Color c) { this.borderColor = c; }
+    public Color getBorderColor() { return borderColor; }
     public void setBorderThickness(float t) { this.borderThickness = t; }
+    public float getBorderThickness() { return borderThickness; }
     public void setCornerRadius(int r) { this.cornerRadius = r; }
     public double getPaddingMm() { return paddingMm; }
     public void setPaddingMm(double p) { this.paddingMm = p; }
@@ -116,7 +133,6 @@ public class LayoutLegend implements LayoutElement {
     public void setSymbolSizeMm(double s) { this.symbolSizeMm = s; }
     public int getColumns() { return columns; }
     public void setColumns(int c) { this.columns = Math.max(1, c); }
-    public float getBgOpacity() { return bgOpacity; }
     public void setFitTextToFrame(boolean b) { this.fitTextToFrame = b; }
 
     public static boolean isBasemapName(String name) {
@@ -265,31 +281,175 @@ public class LayoutLegend implements LayoutElement {
 
     private void renderSymbol(Graphics2D g, int sx, int sy, int size, LegendItem item) {
         Color c = item.color != null ? item.color : Color.GRAY;
+        Color stroke = item.strokeColor != null ? item.strokeColor : c.darker();
         String type = item.geometryType != null ? item.geometryType.toUpperCase() : "";
         g.setColor(c);
         g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         if (type.contains("POINT")) {
-            int r = size / 2;
-            g.fillOval(sx + r/3, sy, r, r);
-            g.setColor(c.darker());
-            g.drawOval(sx + r/3, sy, r, r);
+            int cx = sx + (size / 2);
+            int cy = sy + (size / 2);
+            if (item.catalogSymbolId != null && !item.catalogSymbolId.isBlank() && !"circle".equalsIgnoreCase(item.catalogSymbolId)) {
+                PointSymbolCatalog.render(g, item.catalogSymbolId, cx, cy, Math.max(10, size), c, stroke, 1.2f);
+                return;
+            }
+            Layer.PointSymbolStyle pointStyle = item.pointSymbolStyle != null ? item.pointSymbolStyle : Layer.PointSymbolStyle.CIRCLE;
+            switch (pointStyle) {
+                case SQUARE -> {
+                    g.fillRect(sx + 1, sy + 1, size - 2, size - 2);
+                    g.setColor(stroke);
+                    g.drawRect(sx + 1, sy + 1, size - 2, size - 2);
+                }
+                case DIAMOND -> {
+                    java.awt.geom.Path2D diamond = new java.awt.geom.Path2D.Double();
+                    diamond.moveTo(cx, sy);
+                    diamond.lineTo(sx + size, cy);
+                    diamond.lineTo(cx, sy + size);
+                    diamond.lineTo(sx, cy);
+                    diamond.closePath();
+                    g.fill(diamond);
+                    g.setColor(stroke);
+                    g.draw(diamond);
+                }
+                case TRIANGLE, TRIANGLE_INVERTED -> {
+                    java.awt.geom.Path2D triangle = new java.awt.geom.Path2D.Double();
+                    if (pointStyle == Layer.PointSymbolStyle.TRIANGLE_INVERTED) {
+                        triangle.moveTo(sx, sy);
+                        triangle.lineTo(sx + size, sy);
+                        triangle.lineTo(cx, sy + size);
+                    } else {
+                        triangle.moveTo(cx, sy);
+                        triangle.lineTo(sx + size, sy + size);
+                        triangle.lineTo(sx, sy + size);
+                    }
+                    triangle.closePath();
+                    g.fill(triangle);
+                    g.setColor(stroke);
+                    g.draw(triangle);
+                }
+                case TARGET, RING, DOUBLE_CIRCLE -> {
+                    g.setColor(stroke);
+                    g.drawOval(sx + 1, sy + 1, size - 2, size - 2);
+                    if (pointStyle == Layer.PointSymbolStyle.DOUBLE_CIRCLE) {
+                        g.drawOval(sx + 4, sy + 4, size - 8, size - 8);
+                    } else if (pointStyle == Layer.PointSymbolStyle.TARGET) {
+                        g.drawLine(cx, sy, cx, sy + size);
+                        g.drawLine(sx, cy, sx + size, cy);
+                        g.setColor(c);
+                        g.fillOval(sx + (size / 3), sy + (size / 3), size / 3, size / 3);
+                    }
+                }
+                case CROSS, CROSS_DIAGONAL -> {
+                    g.setColor(stroke);
+                    if (pointStyle == Layer.PointSymbolStyle.CROSS_DIAGONAL) {
+                        g.drawLine(sx + 1, sy + 1, sx + size - 1, sy + size - 1);
+                        g.drawLine(sx + size - 1, sy + 1, sx + 1, sy + size - 1);
+                    } else {
+                        g.drawLine(cx, sy + 1, cx, sy + size - 1);
+                        g.drawLine(sx + 1, cy, sx + size - 1, cy);
+                    }
+                }
+                default -> {
+                    g.fillOval(sx + 1, sy + 1, size - 2, size - 2);
+                    g.setColor(stroke);
+                    g.drawOval(sx + 1, sy + 1, size - 2, size - 2);
+                }
+            }
         } else if (type.contains("LINE")) {
             int ly = sy + size / 2;
-            g.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g.drawLine(sx + 1, ly, sx + size - 1, ly);
-            g.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g.setColor(c.darker());
-            g.drawLine(sx, ly + 3, sx + size/2, ly + 1);
-            g.drawLine(sx + size/2, ly - 1, sx + size, ly + 2);
+            Layer.LineSymbolStyle lineStyle = item.lineSymbolStyle != null ? item.lineSymbolStyle : Layer.LineSymbolStyle.SOLID;
+            if (lineStyle == Layer.LineSymbolStyle.DOUBLE_LINE) {
+                g.setColor(c);
+                g.setStroke(new BasicStroke(1.8f));
+                g.drawLine(sx + 1, ly - 2, sx + size - 1, ly - 2);
+                g.drawLine(sx + 1, ly + 2, sx + size - 1, ly + 2);
+            } else {
+                g.setColor(c);
+                g.setStroke(buildLineStroke(2.2f, lineStyle));
+                g.drawLine(sx + 1, ly, sx + size - 1, ly);
+            }
         } else if (type.contains("POLYGON")) {
-            g.fillRect(sx + 1, sy + 2, size - 2, size - 3);
-            g.setColor(c.darker());
-            g.drawRect(sx, sy + 1, size, size - 3);
+            Layer.PolygonFillStyle fillStyle = item.polygonFillStyle != null ? item.polygonFillStyle : Layer.PolygonFillStyle.SOLID;
+            Paint oldPaint = g.getPaint();
+            if (fillStyle != Layer.PolygonFillStyle.OUTLINE_ONLY && fillStyle != Layer.PolygonFillStyle.TRANSPARENT) {
+                g.setPaint(buildPolygonPaint(c, stroke, fillStyle));
+                g.fillRect(sx + 1, sy + 1, size - 2, size - 2);
+                g.setPaint(oldPaint);
+            }
+            g.setColor(stroke);
+            g.drawRect(sx + 1, sy + 1, size - 2, size - 2);
         } else {
             g.fillRect(sx, sy, size, size);
-            g.setColor(c.darker());
+            g.setColor(stroke);
             g.drawRect(sx, sy, size, size);
         }
+    }
+
+    private BasicStroke buildLineStroke(float width, Layer.LineSymbolStyle style) {
+        if (style == null) {
+            return new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        }
+        return switch (style) {
+            case DASHED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{7f, 5f}, 0f);
+            case DOTTED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{1f, 4f}, 0f);
+            case DASH_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 4f, 1.5f, 4f}, 0f);
+            case DASH_DOT_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 4f, 1.5f, 3f, 1.5f, 4f}, 0f);
+            case BOLD -> new BasicStroke(Math.max(width, 3.2f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case THIN -> new BasicStroke(Math.max(1.1f, width * 0.7f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case FENCE -> new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 3f, 2f, 3f}, 0f);
+            case PATH_SECONDARY -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{5f, 5f}, 0f);
+            case WATERCOURSE -> new BasicStroke(Math.max(width, 2.6f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case DUCT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 4f}, 0f);
+            case PROFILE, AXIS, EASEMENT, BOUNDARY, BORDERED, PATH_PRIMARY, SOLID -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case DOUBLE_LINE -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        };
+    }
+
+    private java.awt.Paint buildPolygonPaint(Color fill, Color stroke, Layer.PolygonFillStyle style) {
+        if (style == null || style == Layer.PolygonFillStyle.SOLID) {
+            return fill;
+        }
+        BufferedImage img = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        try {
+            g.setColor(new Color(fill.getRed(), fill.getGreen(), fill.getBlue(), 90));
+            g.fillRect(0, 0, 10, 10);
+            g.setColor(stroke);
+            switch (style) {
+                case DIAGONAL_HATCH, ENVIRONMENTAL, BUFFER_SOFT -> {
+                    g.drawLine(-2, 9, 9, -2);
+                    g.drawLine(2, 11, 11, 2);
+                }
+                case CROSS_HATCH, INFRASTRUCTURE, PARCEL -> {
+                    g.drawLine(0, 5, 10, 5);
+                    g.drawLine(5, 0, 5, 10);
+                }
+                case DOTS, VEGETATION -> {
+                    g.fillOval(2, 2, 2, 2);
+                    g.fillOval(6, 6, 2, 2);
+                }
+                case HORIZONTAL_LINES, WATER -> {
+                    g.drawLine(0, 3, 10, 3);
+                    g.drawLine(0, 7, 10, 7);
+                }
+                case VERTICAL_LINES, RESTRICTION -> {
+                    g.drawLine(3, 0, 3, 10);
+                    g.drawLine(7, 0, 7, 10);
+                }
+                case DIAGONAL_REVERSE, SATELLITE_OVERLAY -> {
+                    g.drawLine(0, 0, 10, 10);
+                    g.drawLine(0, 4, 6, 10);
+                }
+                case SOFT_SHADOW -> {
+                    g.setColor(new Color(fill.getRed(), fill.getGreen(), fill.getBlue(), 140));
+                    g.fillRect(0, 0, 10, 10);
+                }
+                default -> {
+                }
+            }
+        } finally {
+            g.dispose();
+        }
+        return new java.awt.TexturePaint(img, new java.awt.Rectangle(0, 0, 10, 10));
     }
 
     private List<String> wrapLines(String text, FontMetrics fm, int maxW) {

@@ -16,6 +16,8 @@ public class LayoutMap implements LayoutElement {
 
     private transient BufferedImage cachedImage;
     private transient long cacheKey;
+    private transient int cachedWidthPx = -1;
+    private transient int cachedHeightPx = -1;
     private boolean showGrid = false;
     private int gridCols = 3;
     private int gridRows = 3;
@@ -67,9 +69,11 @@ public class LayoutMap implements LayoutElement {
         if (pw < 10 || ph < 10) return;
 
         long key = computeCacheKey();
-        if (cachedImage == null || key != cacheKey) {
+        if (cachedImage == null || key != cacheKey || cachedWidthPx != pw || cachedHeightPx != ph) {
             cachedImage = captureMapImage(pw, ph);
             cacheKey = key;
+            cachedWidthPx = pw;
+            cachedHeightPx = ph;
         }
 
         if (cachedImage != null) {
@@ -77,12 +81,8 @@ public class LayoutMap implements LayoutElement {
             try {
                 mg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
                 mg.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                // Maintain aspect ratio: fit image within frame centered
-                double imgW = cachedImage.getWidth(), imgH = cachedImage.getHeight();
-                double scale = Math.min((double)pw / imgW, (double)ph / imgH);
-                int drawW = (int)(imgW * scale), drawH = (int)(imgH * scale);
-                int dx = px + (pw - drawW) / 2, dy = py + (ph - drawH) / 2;
-                mg.drawImage(cachedImage, dx, dy, drawW, drawH, null);
+                mg.setClip(px, py, pw, ph);
+                mg.drawImage(cachedImage, px, py, null);
             } finally {
                 mg.dispose();
             }
@@ -147,15 +147,7 @@ public class LayoutMap implements LayoutElement {
                 vx = map.getViewMinX(); vy = map.getViewMinY(); zf = map.getZoomFactor();
             }
             if (zf <= 0) zf = 1;
-            BufferedImage img = map.renderMapViewImage(vx, vy, zf);
-            if (img == null) return null;
-            if (img.getWidth() == w && img.getHeight() == h) return img;
-            BufferedImage scaled = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = scaled.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.drawImage(img, 0, 0, w, h, null);
-            g.dispose();
-            return scaled;
+            return map.renderMapViewImage(vx, vy, zf, w, h);
         } catch (Exception ex) {
             return null;
         }

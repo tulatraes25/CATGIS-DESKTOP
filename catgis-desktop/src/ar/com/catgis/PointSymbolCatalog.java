@@ -216,8 +216,32 @@ public final class PointSymbolCatalog {
         if (symbolId == null || symbolId.isEmpty()) return;
         Entry e = findByReference(symbolId);
         if (e == null) e = findByReference(CATALOG_PREFIX + symbolId);
-        if (e == null && !ENTRIES.isEmpty()) e = ENTRIES.get(0);
-        if (e == null) return;
+        if (e == null) {
+            Layer.PointSymbolStyle fallbackStyle = switch (symbolId.trim().toLowerCase()) {
+                case "circle" -> Layer.PointSymbolStyle.CIRCLE;
+                case "square" -> Layer.PointSymbolStyle.SQUARE;
+                case "diamond", "rombo" -> Layer.PointSymbolStyle.DIAMOND;
+                case "triangle", "triangulo" -> Layer.PointSymbolStyle.TRIANGLE;
+                case "triangle-inverted", "triangulo-invertido" -> Layer.PointSymbolStyle.TRIANGLE_INVERTED;
+                case "target", "objetivo" -> Layer.PointSymbolStyle.TARGET;
+                case "pin" -> Layer.PointSymbolStyle.PIN;
+                case "flag", "bandera" -> Layer.PointSymbolStyle.FLAG;
+                case "star", "estrella" -> Layer.PointSymbolStyle.STAR;
+                case "star-6", "estrella-6" -> Layer.PointSymbolStyle.STAR_6;
+                case "well", "pozo", "sampling", "muestreo" -> Layer.PointSymbolStyle.SAMPLING;
+                case "cross", "cruz" -> Layer.PointSymbolStyle.CROSS;
+                case "cross-diagonal", "cruz-diagonal" -> Layer.PointSymbolStyle.CROSS_DIAGONAL;
+                case "camera", "camara" -> Layer.PointSymbolStyle.CAMERA;
+                case "tower", "torre" -> Layer.PointSymbolStyle.TOWER;
+                case "alert", "alerta" -> Layer.PointSymbolStyle.ALERT;
+                case "location", "ubicacion" -> Layer.PointSymbolStyle.LOCATION;
+                case "control" -> Layer.PointSymbolStyle.CONTROL;
+                case "access", "acceso" -> Layer.PointSymbolStyle.ACCESS;
+                default -> Layer.PointSymbolStyle.CIRCLE;
+            };
+            PointSymbolRenderer.paint(g, fallbackStyle, cx, cy, size, fill, stroke);
+            return;
+        }
         String id = e.getId();
         int h = size / 2;
         Color f = fill != null ? fill : Color.BLUE;

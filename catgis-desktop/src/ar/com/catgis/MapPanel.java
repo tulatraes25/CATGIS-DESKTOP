@@ -3759,16 +3759,22 @@ public class MapPanel extends JPanel {
     }
 
     public BufferedImage renderMapViewImage(double renderViewMinX, double renderViewMinY, double renderZoomFactor) {
-        if (renderZoomFactor <= 0) {
-            return null;
-        }
-
         int renderWidth = Math.max(1, getWidth());
         int renderHeight = Math.max(1, getHeight());
         if (renderWidth <= 1 || renderHeight <= 1) {
             renderWidth = 1200;
             renderHeight = 800;
         }
+        return renderMapViewImage(renderViewMinX, renderViewMinY, renderZoomFactor, renderWidth, renderHeight);
+    }
+
+    public BufferedImage renderMapViewImage(double renderViewMinX, double renderViewMinY, double renderZoomFactor, int renderWidth, int renderHeight) {
+        if (renderZoomFactor <= 0) {
+            return null;
+        }
+
+        renderWidth = Math.max(1, renderWidth);
+        renderHeight = Math.max(1, renderHeight);
 
         double oldViewMinX = viewMinX;
         double oldViewMinY = viewMinY;
@@ -7504,13 +7510,12 @@ public class MapPanel extends JPanel {
         int y = worldToScreenY(point.getY());
         CategoryStyleRule categoryRule = resolveCategoryRule(layer.getPointCategorizedSymbology(), feature);
         int size = Math.max(4, categoryRule != null ? categoryRule.getPointSize() : layer.getPointSize());
-        int half = size / 2;
+        Color color = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor();
 
         // Use catalog symbol if available
         String catId = categoryRule != null ? categoryRule.getCatalogSymbolId() : layer.getCatalogSymbolId();
         if (catId != null && !catId.isEmpty() && !"circle".equals(catId)) {
-            Color c = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor();
-            PointSymbolCatalog.render(g2, catId, x, y, size + 4, c, c.darker(), 1.2f);
+            PointSymbolCatalog.render(g2, catId, x, y, size + 4, color, color.darker(), 1.2f);
             return;
         }
 
@@ -7521,115 +7526,7 @@ public class MapPanel extends JPanel {
         if (style == null) {
             style = Layer.PointSymbolStyle.CIRCLE;
         }
-
-        // Fallback: use PointSymbolCatalog for all modern styles
-        if (style != Layer.PointSymbolStyle.CIRCLE && style != Layer.PointSymbolStyle.SQUARE
-            && style != Layer.PointSymbolStyle.DIAMOND && style != Layer.PointSymbolStyle.TRIANGLE
-            && style != Layer.PointSymbolStyle.TARGET && style != Layer.PointSymbolStyle.PIN
-            && style != Layer.PointSymbolStyle.FLAG && style != Layer.PointSymbolStyle.STAR
-            && style != Layer.PointSymbolStyle.WELL) {
-            Color c = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor();
-            String mapId = style.name().toLowerCase().replace('_', '-');
-            PointSymbolCatalog.render(g2, mapId, x, y, size + 4, c, c.darker(), 1.2f);
-            return;
-        }
-        switch (style) {
-            case SQUARE -> g2.fillRect(x - half, y - half, size, size);
-            case DIAMOND -> {
-                Path2D diamond = new Path2D.Double();
-                diamond.moveTo(x, y - half);
-                diamond.lineTo(x + half, y);
-                diamond.lineTo(x, y + half);
-                diamond.lineTo(x - half, y);
-                diamond.closePath();
-                g2.fill(diamond);
-                g2.setColor(Color.BLACK);
-                g2.draw(diamond);
-                return;
-            }
-            case TRIANGLE -> {
-                Path2D triangle = new Path2D.Double();
-                triangle.moveTo(x, y - half);
-                triangle.lineTo(x + half, y + half);
-                triangle.lineTo(x - half, y + half);
-                triangle.closePath();
-                g2.fill(triangle);
-                g2.setColor(Color.BLACK);
-                g2.draw(triangle);
-                return;
-            }
-            case TARGET -> {
-                g2.fillOval(x - half, y - half, size, size);
-                g2.setColor(Color.WHITE);
-                int inner = Math.max(3, size / 2);
-                g2.fillOval(x - inner / 2, y - inner / 2, inner, inner);
-                g2.setColor(Color.BLACK);
-                g2.drawOval(x - half, y - half, size, size);
-                g2.drawLine(x - half - 2, y, x + half + 2, y);
-                g2.drawLine(x, y - half - 2, x, y + half + 2);
-                return;
-            }
-            case PIN -> {
-                Path2D pin = new Path2D.Double();
-                pin.moveTo(x, y + half + 3);
-                pin.lineTo(x + half, y - half / 2d);
-                pin.quadTo(x + half + 1, y - half - 2, x, y - half);
-                pin.quadTo(x - half - 1, y - half - 2, x - half, y - half / 2d);
-                pin.closePath();
-                g2.fill(pin);
-                g2.setColor(Color.WHITE);
-                g2.fillOval(x - Math.max(2, size / 5), y - half + Math.max(1, size / 6), Math.max(4, size / 3), Math.max(4, size / 3));
-                g2.setColor(Color.BLACK);
-                g2.draw(pin);
-                return;
-            }
-            case FLAG -> {
-                g2.setStroke(new BasicStroke(Math.max(1.4f, size / 7f)));
-                g2.drawLine(x - half / 2, y + half, x - half / 2, y - half);
-                Path2D flag = new Path2D.Double();
-                flag.moveTo(x - half / 2d, y - half + 1);
-                flag.lineTo(x + half, y - half / 2d);
-                flag.lineTo(x - half / 2d, y);
-                flag.closePath();
-                g2.fill(flag);
-                return;
-            }
-            case STAR -> {
-                Path2D star = buildStarPath(x, y, half, Math.max(2, half / 2));
-                g2.fill(star);
-                g2.setColor(Color.BLACK);
-                g2.draw(star);
-                return;
-            }
-            case WELL -> {
-                Graphics2D copy = (Graphics2D) g2.create();
-                try {
-                    copy.setStroke(new BasicStroke(Math.max(1.4f, size / 7f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    Path2D derrick = new Path2D.Double();
-                    derrick.moveTo(x, y - half);
-                    derrick.lineTo(x + half - 1, y + half);
-                    derrick.lineTo(x - half + 1, y + half);
-                    derrick.closePath();
-                    copy.draw(derrick);
-                    copy.drawLine(x - half + 2, y + half, x + half - 2, y + half);
-                    copy.drawLine(x - half / 2, y, x + half / 2, y);
-                    copy.drawLine(x - half / 4, y - half / 2 + 1, x + half / 4, y - half / 2 + 1);
-                    copy.drawLine(x - half / 2, y, x, y + half);
-                    copy.drawLine(x + half / 2, y, x, y + half);
-                } finally {
-                    copy.dispose();
-                }
-                return;
-            }
-            default -> g2.fillOval(x - half, y - half, size, size);
-        }
-
-        g2.setColor(Color.BLACK);
-        if (style == Layer.PointSymbolStyle.SQUARE) {
-            g2.drawRect(x - half, y - half, size, size);
-        } else {
-            g2.drawOval(x - half, y - half, size, size);
-        }
+        PointSymbolRenderer.paint(g2, style, x, y, size, color, Color.BLACK);
     }
 
     private void drawStyledLineString(Graphics2D g2, LineString line, Layer layer, SimpleFeature feature) {
@@ -7696,10 +7593,24 @@ public class MapPanel extends JPanel {
     private BasicStroke buildLineStroke(float width, Layer.LineSymbolStyle style) {
         Layer.LineSymbolStyle resolved = style != null ? style : Layer.LineSymbolStyle.SOLID;
         return switch (resolved) {
+            case SOLID -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
             case DASHED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 7f}, 0f);
             case DOTTED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{2f, 6f}, 0f);
             case DASH_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 5f, 2f, 5f}, 0f);
-            default -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case DASH_DOT_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{12f, 4f, 2f, 4f, 2f, 4f}, 0f);
+            case DOUBLE_LINE -> new BasicStroke(width * 2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case BOLD -> new BasicStroke(width * 2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case THIN -> new BasicStroke(Math.max(0.5f, width * 0.4f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case PATH_PRIMARY -> new BasicStroke(width * 1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+            case PATH_SECONDARY -> new BasicStroke(width * 1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 5f}, 0f);
+            case BOUNDARY -> new BasicStroke(width * 1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{15f, 4f, 3f, 4f}, 0f);
+            case FENCE -> new BasicStroke(width * 1.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 3f, 1.5f, 3f}, 0f);
+            case WATERCOURSE -> new BasicStroke(width * 1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{6f, 4f, 2f, 4f}, 0f);
+            case DUCT -> new BasicStroke(width * 1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{20f, 5f}, 0f);
+            case AXIS -> new BasicStroke(width * 1.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{25f, 5f, 4f, 5f}, 0f);
+            case PROFILE -> new BasicStroke(width * 0.9f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{14f, 3f, 3f, 3f}, 0f);
+            case EASEMENT -> new BasicStroke(width * 1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{4f, 8f}, 0f);
+            case BORDERED -> new BasicStroke(width * 1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
         };
     }
 
@@ -7735,6 +7646,69 @@ public class MapPanel extends JPanel {
                 case DOTS -> {
                     pattern.fillOval(2, 2, 2, 2);
                     pattern.fillOval(6, 6, 2, 2);
+                }
+                case DIAGONAL_REVERSE -> {
+                    pattern.drawLine(size + 2, -2, -2, size + 2);
+                    pattern.drawLine(size + 6, -2, 2, size + 2);
+                }
+                case HORIZONTAL_LINES -> {
+                    pattern.drawLine(0, 2, size, 2);
+                    pattern.drawLine(0, 6, size, 6);
+                }
+                case VERTICAL_LINES -> {
+                    pattern.drawLine(2, 0, 2, size);
+                    pattern.drawLine(6, 0, 6, size);
+                }
+                case SOFT_SHADOW -> {
+                    pattern.setColor(new Color(borderColor.getRed(), borderColor.getGreen(), borderColor.getBlue(), 30));
+                    pattern.fillRect(2, 2, size - 4, size - 4);
+                }
+                case TRANSPARENT -> {
+                    pattern.setColor(new Color(0, 0, 0, 0));
+                    pattern.fillRect(0, 0, size, size);
+                }
+                case ENVIRONMENTAL -> {
+                    pattern.setColor(new Color(34, 139, 34, 40));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.setColor(new Color(34, 139, 34, 120));
+                    pattern.drawLine(0, 2, size, 2);
+                    pattern.drawLine(0, 7, size, 7);
+                }
+                case WATER -> {
+                    pattern.setColor(new Color(30, 144, 255, 50));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.drawLine(0, 3, size, 3);
+                    pattern.drawLine(0, 7, size, 7);
+                }
+                case VEGETATION -> {
+                    pattern.setColor(new Color(60, 179, 113, 45));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.fillOval(3, 3, 4, 4);
+                }
+                case INFRASTRUCTURE -> {
+                    pattern.setColor(new Color(128, 128, 128, 40));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.drawRect(1, 1, size - 2, size - 2);
+                }
+                case PARCEL -> {
+                    pattern.setColor(new Color(210, 180, 140, 50));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.drawLine(0, size/2, size, size/2);
+                    pattern.drawLine(size/2, 0, size/2, size);
+                }
+                case RESTRICTION -> {
+                    pattern.setColor(new Color(255, 69, 0, 35));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.drawLine(0, size, size, 0);
+                }
+                case BUFFER_SOFT -> {
+                    pattern.setColor(new Color(100, 149, 237, 30));
+                    pattern.fillOval(1, 1, size - 2, size - 2);
+                }
+                case SATELLITE_OVERLAY -> {
+                    pattern.setColor(new Color(255, 255, 255, 25));
+                    pattern.fillRect(0, 0, size, size);
+                    pattern.drawRect(0, 0, size - 1, size - 1);
                 }
                 default -> {
                 }
