@@ -823,31 +823,30 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void autoComposeLayout() {
-        java.util.List<LayoutElement> toRemove = new java.util.ArrayList<>(layoutModel.getElements());
-        for (LayoutElement e : toRemove) layoutModel.removeElement(e.getId());
-
-        LayoutTemplateManager.applyTemplate("A4_REFERENCIA", layoutModel);
-
-        // Auto-fill cartouche from project metadata
-        for (LayoutElement el : layoutModel.getElements()) {
-            if (el instanceof LayoutCartouche) {
-                LayoutCartouche lc = (LayoutCartouche) el;
-                Project p = ctxProject();
-                if (p != null) {
-                    if (p.getCompanyName() != null) lc.setField("Estudio", p.getCompanyName());
-                    if (p.getCartographerName() != null) lc.setField("Cartografo", p.getCartographerName());
-                    lc.setField("Fuente", "Elaboracion propia");
-                    lc.setField("Coord.", p.getProjectCRS() != null ? p.getProjectCRS() : "WGS 84 / UTM");
-                }
-            }
-            if (el instanceof LayoutLegend && ctxProject() != null) {
-                populateLegendFromProject((LayoutLegend) el);
-            }
+        // Show quick-pick menu with variants
+        JPopupMenu menu = new JPopupMenu("Auto-componer");
+        String[][] opts = {
+            {"A4_REFERENCIA", "Infraestructura · Ubicacion general", "Mapa + leyenda lateral + cartucho"},
+            {"A4_EMPLAZAMIENTO", "Infraestructura · Emplazamiento", "Mapa dominante + cartucho inferior"},
+            {"A4_TECNICO", "Tecnica · Leyenda derecha", "Mapa + leyenda lateral compacta"},
+            {"A4_AMBIENTAL", "Ambiental · Estandar", "Mapa + leyenda inferior"},
+            {"A4_PERFIL", "Perfil · Altimetria", "Mapa de traza + tabla progresivas"},
+        };
+        for (String[] opt : opts) {
+            JMenuItem mi = new JMenuItem(opt[1]);
+            mi.setToolTipText(opt[2]);
+            mi.addActionListener(e -> {
+                LayoutTemplateManager.applyTemplate(opt[0], layoutModel);
+                refreshElementList(); previewPanel.repaint();
+                statusLabel.setText("Auto-composicion: " + opt[1]);
+            });
+            menu.add(mi);
         }
-
-        refreshElementList();
-        previewPanel.repaint();
-        statusLabel.setText("Layout profesional creado. Datos del proyecto cargados automaticamente. ¡Exporta en un clic!");
+        menu.addSeparator();
+        JMenuItem more = new JMenuItem("Mas plantillas...");
+        more.addActionListener(e -> showTemplatePicker());
+        menu.add(more);
+        menu.show(previewPanel, 200, 100);
     }
 
     private void installDropTarget() {

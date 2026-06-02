@@ -86,6 +86,18 @@ public class LayoutMap implements LayoutElement {
             } finally {
                 mg.dispose();
             }
+        } else {
+            // Placeholder when no map content available (preview without project)
+            g2.setColor(new Color(0xE8EBF0));
+            g2.fillRect(px, py, pw, ph);
+            g2.setColor(new Color(0xB0B8C4));
+            g2.setStroke(new java.awt.BasicStroke(1f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 10f, new float[]{4f, 4f}, 0f));
+            g2.drawRect(px + 2, py + 2, pw - 4, ph - 4);
+            g2.setColor(new Color(0x8B95A5));
+            g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, Math.min(14, pw / 10)));
+            String msg = "Mapa";
+            int tw = g2.getFontMetrics().stringWidth(msg);
+            g2.drawString(msg, px + (pw - tw) / 2, py + ph / 2);
         }
         // Frame border (ArcMap-style)
         if (frameColor.getAlpha() > 0 && frameWidth > 0) {
