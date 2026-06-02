@@ -29,6 +29,10 @@ public class LayoutMap implements LayoutElement {
     private double gridOffsetY = 0;
     // Scale control
     private double targetScaleDenominator = 0;
+    // Frame style (ArcMap-like)
+    private Color frameColor = new Color(0, 0, 0, 0); // transparent = no frame
+    private float frameWidth = 1f;
+    private int frameCornerRadius = 0;
     // Independent extent
     private boolean ownExtent = false;
     private double ownViewMinX, ownViewMinY, ownZoomFactor = 1;
@@ -76,6 +80,16 @@ public class LayoutMap implements LayoutElement {
                 mg.drawImage(cachedImage, px, py, pw, ph, null);
             } finally {
                 mg.dispose();
+            }
+        }
+        // Frame border (ArcMap-style)
+        if (frameColor.getAlpha() > 0 && frameWidth > 0) {
+            g2.setColor(frameColor);
+            g2.setStroke(new java.awt.BasicStroke(frameWidth));
+            if (frameCornerRadius > 0) {
+                g2.drawRoundRect(px, py, pw, ph, frameCornerRadius, frameCornerRadius);
+            } else {
+                g2.drawRect(px, py, pw, ph);
             }
         }
         if (showGrid && gridCols > 0 && gridRows > 0) {
@@ -164,6 +178,12 @@ public class LayoutMap implements LayoutElement {
     public void setGridOffsetY(double v) { this.gridOffsetY = v; }
     public double getTargetScaleDenominator() { return targetScaleDenominator; }
     public void setTargetScaleDenominator(double d) { this.targetScaleDenominator = Math.max(0, d); }
+    public Color getFrameColor() { return frameColor; }
+    public void setFrameColor(Color c) { if (c != null) frameColor = c; }
+    public float getFrameWidth() { return frameWidth; }
+    public void setFrameWidth(float w) { frameWidth = Math.max(0, w); }
+    public int getFrameCornerRadius() { return frameCornerRadius; }
+    public void setFrameCornerRadius(int r) { frameCornerRadius = Math.max(0, r); }
     public boolean isOwnExtent() { return ownExtent; }
     public void setOwnExtent(boolean b) { this.ownExtent = b; }
     public double getOwnViewMinX() { return ownViewMinX; }

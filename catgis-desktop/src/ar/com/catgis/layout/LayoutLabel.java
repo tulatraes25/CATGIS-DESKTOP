@@ -21,6 +21,8 @@ public class LayoutLabel implements LayoutElement {
     private Color borderColor = new Color(0, 0, 0, 0);
     private float borderWidth = 0f;
     private int paddingPx = 0;
+    // Dynamic text: if set, text is evaluated as an expression
+    private String dynamicExpression = null;
 
     public LayoutLabel(String id, String text, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -43,6 +45,8 @@ public class LayoutLabel implements LayoutElement {
     public void setBorderWidth(float w) { borderWidth = Math.max(0, w); }
     public int getPaddingPx() { return paddingPx; }
     public void setPaddingPx(int p) { paddingPx = Math.max(0, p); }
+    public String getDynamicExpression() { return dynamicExpression; }
+    public void setDynamicExpression(String expr) { this.dynamicExpression = expr; }
 
     @Override public String getId() { return id; }
     @Override public String getName() { return name; }
