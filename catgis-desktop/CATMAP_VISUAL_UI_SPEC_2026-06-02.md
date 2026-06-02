@@ -366,6 +366,33 @@ No debe mezclarse de forma improvisada con CATMAP, pero sí debe documentarse co
 - control de etiquetas;
 - mejores previews.
 
+### Requisitos mínimos esperados
+
+Aunque no se resuelva toda la simbología profesional en esta misma ronda, OpenCode debe tratarla como un frente prioritario y no como una nota secundaria.
+
+Como mínimo debe quedar documentado y encaminado:
+
+- catálogo más amplio para puntos;
+- estilos más útiles para líneas;
+- rellenos y bordes más presentables para polígonos;
+- previews más legibles;
+- mejor integración entre simbología de capa y leyenda en CATMAP;
+- posibilidad de que la salida cartográfica no se vea genérica o pobre.
+
+### Qué se espera a futuro
+
+La simbología objetivo de CATGIS debe acercarse al menos a un nivel GIS de trabajo serio:
+
+- puntos con más variedad visual útil, no solo figuras básicas;
+- líneas con patrones más expresivos;
+- polígonos con mejores rellenos, transparencia y borde;
+- mejor lectura en leyenda;
+- etiquetado más presentable;
+- control de tamaño, color, borde y halo cuando aplique.
+
+No hace falta decir que ya compite con ArcGIS.
+Sí hace falta que OpenCode entienda que, si la simbología no mejora, CATMAP nunca se va a ver realmente profesional.
+
 ---
 
 ## 4. Qué comportamiento mínimo debe cumplir cada popup
@@ -483,6 +510,10 @@ No es solución válida:
 
 - simbología profesional de puntos/líneas/polígonos.
 
+## Prioridad crítica de percepción visual
+
+- mejora de la simbología visible en mapa y leyenda.
+
 ---
 
 ## 9. Instrucción operativa para OpenCode/DeepSeek
@@ -503,4 +534,3 @@ Debe responder con:
 - comportamiento verificable;
 - aceptación visual razonable;
 - documentación honesta de lo que queda pendiente.
-

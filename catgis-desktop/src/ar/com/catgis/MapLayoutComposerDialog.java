@@ -472,6 +472,18 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
+    private void showTemplatePicker() {
+        JPopupMenu menu = new JPopupMenu();
+        java.util.Map<String, String> all = LayoutTemplateManager.getTemplateList();
+        for (java.util.Map.Entry<String, String> e : all.entrySet()) {
+            final String k = e.getKey(), v = e.getValue();
+            JMenuItem mi = new JMenuItem(v);
+            mi.addActionListener(ev -> { LayoutTemplateManager.applyTemplate(k, layoutModel); refreshElementList(); previewPanel.repaint(); statusLabel.setText("Plantilla: " + v); });
+            menu.add(mi);
+        }
+        menu.show(previewPanel, 50, 50);
+    }
+
     private void autoComposeLayout() {
         java.util.List<LayoutElement> toRemove = new java.util.ArrayList<>(layoutModel.getElements());
         for (LayoutElement e : toRemove) layoutModel.removeElement(e.getId());
@@ -772,6 +784,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Exportar PNG", AppIcons.exportIcon(), "Exportar a imagen PNG", this::exportImage),
                 createToolbarButton("SVG", null, "Exportar a SVG vectorial", this::exportSvg),
                 createToolbarButton("Imprimir", AppIcons.projectIcon(), "Imprimir layout", this::printLayout),
+                createToolbarButton("Plantillas \u25BE", null, "Elegir plantilla profesional (70+ opciones por tematica).", this::showTemplatePicker),
                 createToolbarButton("Auto-componer", null, "Crear layout completo automaticamente (mapa+leyenda+escala+norte+titulo). Un solo clic.", this::autoComposeLayout)
         ));
 
