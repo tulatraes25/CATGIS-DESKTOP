@@ -73,6 +73,22 @@ public class LayoutLegend implements LayoutElement {
         return result;
     }
 
+    public void moveItemUp(int index) {
+        if (index > 0 && index < items.size()) {
+            LegendItem temp = items.get(index);
+            items.set(index, items.get(index - 1));
+            items.set(index - 1, temp);
+        }
+    }
+
+    public void moveItemDown(int index) {
+        if (index >= 0 && index < items.size() - 1) {
+            LegendItem temp = items.get(index);
+            items.set(index, items.get(index + 1));
+            items.set(index + 1, temp);
+        }
+    }
+
     public void setTitle(String t) { this.title = t; }
     public String getTitle() { return title; }
     public void setSubtitle(String s) { this.subtitle = s; }
