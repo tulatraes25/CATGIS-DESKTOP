@@ -23,6 +23,10 @@ public class LayoutLabel implements LayoutElement {
     private int paddingPx = 0;
     // Dynamic text: if set, text is evaluated as an expression
     private String dynamicExpression = null;
+    // Halo (text outline)
+    private Color haloColor = new Color(255, 255, 255, 200);
+    private float haloWidth = 0f; // 0 = no halo
+    private boolean underlined = false;
 
     public LayoutLabel(String id, String text, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -47,6 +51,12 @@ public class LayoutLabel implements LayoutElement {
     public void setPaddingPx(int p) { paddingPx = Math.max(0, p); }
     public String getDynamicExpression() { return dynamicExpression; }
     public void setDynamicExpression(String expr) { this.dynamicExpression = expr; }
+    public Color getHaloColor() { return haloColor; }
+    public void setHaloColor(Color c) { if (c != null) haloColor = c; }
+    public float getHaloWidth() { return haloWidth; }
+    public void setHaloWidth(float w) { haloWidth = Math.max(0, w); }
+    public boolean isUnderlined() { return underlined; }
+    public void setUnderlined(boolean u) { underlined = u; }
 
     @Override public String getId() { return id; }
     @Override public String getName() { return name; }
@@ -81,10 +91,31 @@ public class LayoutLabel implements LayoutElement {
         }
 
         g2.setFont(font);
-        g2.setColor(color);
         int tx = x + paddingPx;
         int ty = y + g2.getFontMetrics().getAscent() + paddingPx;
+
+        // Halo (text outline)
+        if (haloWidth > 0 && haloColor.getAlpha() > 0) {
+            g2.setColor(haloColor);
+            java.awt.Font haloFont = font.deriveFont(font.getSize2D() + haloWidth * 0.5f);
+            g2.setFont(haloFont);
+            // Draw text in 4 directions for simple outline effect
+            g2.drawString(text, tx - (int)haloWidth, ty);
+            g2.drawString(text, tx + (int)haloWidth, ty);
+            g2.drawString(text, tx, ty - (int)haloWidth);
+            g2.drawString(text, tx, ty + (int)haloWidth);
+            g2.setFont(font);
+        }
+
+        g2.setColor(color);
         g2.drawString(text, tx, ty);
+
+        // Underline
+        if (underlined) {
+            int textW = g2.getFontMetrics().stringWidth(text);
+            g2.setStroke(new java.awt.BasicStroke(Math.max(1, font.getSize2D() / 12f)));
+            g2.drawLine(tx, ty + 2, tx + textW, ty + 2);
+        }
     }
 
     @Override
