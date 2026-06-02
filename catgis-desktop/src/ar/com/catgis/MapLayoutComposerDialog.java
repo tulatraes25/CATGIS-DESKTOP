@@ -5667,9 +5667,8 @@ public class MapLayoutComposerDialog extends JFrame {
             panel.add(italicBtn);
 
             JToggleButton underlineBtn = new JToggleButton("U");
-            underlineBtn.setFont(underlineBtn.getFont().deriveFont(Font.PLAIN, 12f));
             underlineBtn.setBounds(155, y, 40, 24); underlineBtn.setMargin(new Insets(0,0,0,0));
-            underlineBtn.addActionListener(e -> { /* underline visual only - Swing fonts don't have native underline */ previewPanel.repaint(); });
+            underlineBtn.addActionListener(e -> { label.setUnderlined(underlineBtn.isSelected()); previewPanel.repaint(); });
             panel.add(underlineBtn);
             y += 28;
 
@@ -5685,6 +5684,16 @@ public class MapLayoutComposerDialog extends JFrame {
                 if (c != null) { label.setColor(c); colorBtn.setBackground(c); previewPanel.repaint(); }
             });
             panel.add(colorBtn); y += 28;
+
+            // Halo
+            JLabel hlLbl = new JLabel("Halo"); hlLbl.setFont(hlLbl.getFont().deriveFont(Font.PLAIN,10f)); hlLbl.setBounds(0,y,60,22); panel.add(hlLbl);
+            JCheckBox haloCheck = new JCheckBox("", label.getHaloWidth() > 0); haloCheck.setOpaque(false); haloCheck.setBounds(65,y,22,22);
+            haloCheck.addActionListener(e -> { label.setHaloWidth(haloCheck.isSelected() ? 2f : 0f); previewPanel.repaint(); });
+            panel.add(haloCheck);
+            Integer[] haloVals = {1,2,3,4,5};
+            JComboBox<Integer> haloCombo = new JComboBox<>(haloVals); haloCombo.setBounds(90,y,50,22); haloCombo.setSelectedItem(Math.max(1,(int)label.getHaloWidth()));
+            haloCombo.addActionListener(e -> { label.setHaloWidth((Integer)haloCombo.getSelectedItem()); previewPanel.repaint(); });
+            panel.add(haloCombo); y += 26;
 
             // Aceptar / Cancelar
             y += 8;
