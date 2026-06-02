@@ -41,6 +41,8 @@ import javax.swing.JTree;
 import javax.swing.WindowConstants;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.JToggleButton;
+import javax.swing.KeyStroke;
+import java.awt.Frame;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
@@ -5605,8 +5607,8 @@ public class MapLayoutComposerDialog extends JFrame {
         }
 
         void showTextPopup(LayoutLabel label) {
-            JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
-            popup.setUndecorated(true);
+            JDialog popup = new JDialog((Frame)SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Formato de texto", true);
+            popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
             JPanel panel = new JPanel(null);
             panel.setPreferredSize(new Dimension(300, 220));
             panel.setBorder(BorderFactory.createCompoundBorder(
@@ -5684,27 +5686,31 @@ public class MapLayoutComposerDialog extends JFrame {
             });
             panel.add(colorBtn); y += 28;
 
-            // Cerrar
-            JButton closeBtn = new JButton("Cerrar");
-            closeBtn.setFont(closeBtn.getFont().deriveFont(Font.PLAIN, 10f));
-            closeBtn.setBounds(190, y, 75, 24); closeBtn.setMargin(new Insets(2,8,2,8));
-            closeBtn.addActionListener(e -> popup.dispose());
-            panel.add(closeBtn);
+            // Aceptar / Cancelar
+            y += 8;
+            JButton acceptBtn = new JButton("Aceptar"); acceptBtn.setBounds(0, y, 90, 26); acceptBtn.setFont(acceptBtn.getFont().deriveFont(10f));
+            acceptBtn.addActionListener(e -> { popup.dispose(); });
+            panel.add(acceptBtn);
+            JButton cancelBtn = new JButton("Cancelar"); cancelBtn.setBounds(100, y, 90, 26); cancelBtn.setFont(cancelBtn.getFont().deriveFont(10f));
+            cancelBtn.addActionListener(e -> { popup.dispose(); });
+            panel.add(cancelBtn);
+            y += 30;
 
+            // Enter = Aceptar, Esc = Cancelar
+            javax.swing.AbstractAction doAccept = new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } };
+            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "accept");
+            panel.getActionMap().put("accept", doAccept);
+            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "cancel");
+            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } });
             popup.add(panel);
-            popup.setSize(300, y + 50);
-            Point p = LayoutPreviewPanel.this.getLocationOnScreen();
-            java.awt.Rectangle pb = lastPageBounds;
-            double px = Math.max(0, pb.x + label.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
-            double py = Math.max(0, pb.y + label.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
-            popup.setLocation(Math.min(p.x + (int)px, Toolkit.getDefaultToolkit().getScreenSize().width - 320),
-                              Math.min(p.y + (int)py + 20, Toolkit.getDefaultToolkit().getScreenSize().height - 280));
+            popup.setSize(300, y + 20);
+            popup.setLocationRelativeTo(LayoutPreviewPanel.this);
             popup.setVisible(true);
         }
 
         void showLegendPopup(LayoutLegend legend) {
-            JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
-            popup.setUndecorated(true);
+            JDialog popup = new JDialog((Frame)SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Propiedades de leyenda", true);
+            popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
             JPanel panel = new JPanel(null);
             panel.setPreferredSize(new Dimension(300, 280));
             panel.setBorder(BorderFactory.createCompoundBorder(
@@ -5773,25 +5779,39 @@ public class MapLayoutComposerDialog extends JFrame {
             panel.add(colCombo); y += 28;
 
             // Botones
+            // Fuente del titulo
+            panel.add(new JLabel("Fuente titulo:")); 
+            JComboBox<String> titleFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+            titleFontCombo.setSelectedItem(legend.getTitleFont().getFamily());
+            titleFontCombo.addActionListener(e -> { legend.setTitleFont(new Font((String)titleFontCombo.getSelectedItem(), Font.BOLD, legend.getTitleFont().getSize())); previewPanel.repaint(); });
+            panel.add(titleFontCombo);
+
             JButton updBtn = new JButton("Actualizar capas");
-            updBtn.setFont(updBtn.getFont().deriveFont(Font.PLAIN, 9f)); updBtn.setBounds(0, y, 130, 22); updBtn.setMargin(new Insets(1,6,1,6));
+            updBtn.setFont(updBtn.getFont().deriveFont(Font.PLAIN, 9f)); updBtn.setBounds(0, y, 120, 22); updBtn.setMargin(new Insets(1,6,1,6));
             updBtn.addActionListener(e -> { populateLegendFromProject(legend); previewPanel.repaint(); });
             panel.add(updBtn);
 
-            JButton closeBtn = new JButton("Cerrar");
-            closeBtn.setFont(closeBtn.getFont().deriveFont(Font.PLAIN, 9f)); closeBtn.setBounds(150, y, 80, 22); closeBtn.setMargin(new Insets(1,6,1,6));
-            closeBtn.addActionListener(e -> popup.dispose());
-            panel.add(closeBtn);
+            JButton acceptBtn = new JButton("Aceptar");
+            acceptBtn.setFont(acceptBtn.getFont().deriveFont(Font.PLAIN, 9f)); acceptBtn.setBounds(130, y, 75, 22); acceptBtn.setMargin(new Insets(1,6,1,6));
+            acceptBtn.addActionListener(e -> popup.dispose());
+            panel.add(acceptBtn);
+
+            JButton cancelBtn = new JButton("Cancelar");
+            cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.PLAIN, 9f)); cancelBtn.setBounds(210, y, 80, 22); cancelBtn.setMargin(new Insets(1,6,1,6));
+            cancelBtn.addActionListener(e -> popup.dispose());
+            panel.add(cancelBtn);
             y += 30;
+
+            // Enter = Aceptar, Esc = Cancelar
+            javax.swing.AbstractAction doAccept = new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } };
+            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "accept");
+            panel.getActionMap().put("accept", doAccept);
+            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "cancel");
+            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } });
 
             popup.add(panel);
             popup.setSize(300, y + 20);
-            Point p = LayoutPreviewPanel.this.getLocationOnScreen();
-            java.awt.Rectangle pb = lastPageBounds;
-            double px = Math.max(0, pb.x + legend.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
-            double py = Math.max(0, pb.y + legend.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
-            popup.setLocation(Math.min(p.x + (int)px, Toolkit.getDefaultToolkit().getScreenSize().width - 320),
-                              Math.min(p.y + (int)py + 20, Toolkit.getDefaultToolkit().getScreenSize().height - 320));
+            popup.setLocationRelativeTo(LayoutPreviewPanel.this);
             popup.setVisible(true);
         }
 
@@ -8701,19 +8721,15 @@ public class MapLayoutComposerDialog extends JFrame {
         y = addBoolRow(form, g, y, "Visible:", label.isVisible(), v -> { label.setVisible(v); refreshElementList(); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Bloqueado:", label.isLocked(), v -> { label.setLocked(v); refreshElementList(); previewPanel.repaint(); });
 
-        // Texto
+        // Texto (minimo - doble clic abre popup completo)
         y++; sectionLabel(form, g, y, "Texto"); y++;
         JTextField textField = field(form, g, y, "Contenido:", label.getText() != null ? label.getText() : "");
         textField.addActionListener(e -> { label.setText(textField.getText()); previewPanel.repaint(); });
         y++;
-        Font f = label.getFont();
-        JTextField fontField = field(form, g, y, "Fuente:", f.getFamily());
-        y++;
-        JTextField sizeField = field(form, g, y, "Tamano:", String.valueOf(f.getSize()));
-        sizeField.addActionListener(e -> { try { label.setFont(label.getFont().deriveFont((float)Integer.parseInt(sizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) {} });
-        y++;
-        java.awt.Font currentFont = label.getFont();
-        y = addBoolRow(form, g, y, "Negrita:", currentFont.isBold(), v -> { label.setFont(label.getFont().deriveFont(v ? Font.BOLD : Font.PLAIN)); previewPanel.repaint(); });
+        JLabel hintLbl = new JLabel("<html><i>Doble clic en el elemento para<br>editar fuente, tamano y color.</i></html>");
+        hintLbl.setFont(hintLbl.getFont().deriveFont(Font.ITALIC, 9f));
+        hintLbl.setForeground(new Color(0x888888));
+        g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(hintLbl, g); y++;
 
         // Spacer
         g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
