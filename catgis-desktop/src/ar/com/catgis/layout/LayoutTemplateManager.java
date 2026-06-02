@@ -14,37 +14,9 @@ public class LayoutTemplateManager {
 
     public static Map<String, String> getTemplateList() {
         Map<String, String> list = new LinkedHashMap<>();
-        // Tecnicas A4
-        list.put("A4_TECNICO", "A4 - Tecnico (leyenda derecha)");
-        list.put("A4_TECNICO_INFERIOR", "A4 - Tecnico (leyenda inferior)");
-        list.put("A4_TOPOGRAFIA", "A4 - Topografia");
-        list.put("A4_VERTICAL", "A4 vertical - Tecnico");
-        // Ambientales A4
-        list.put("A4_AMBIENTAL", "A4 - Ambiental");
-        list.put("A4_HIDROLOGIA", "A4 - Hidrologia");
-        list.put("A4_MUESTREO", "A4 - Muestreo");
-        // Catastrales A4
-        list.put("A4_CATASTRAL", "A4 - Catastral");
-        list.put("A4_PARCELARIO", "A4 - Parcelario");
-        list.put("A4_URBANO", "A4 - Urbano");
-        // Satelitales A4
-        list.put("A4_SATELITAL", "A4 - Satelital");
-        // Proyecto A4
-        list.put("A4_REFERENCIA", "A4 - Referencia / Ubicacion");
-        list.put("A4_ACCESIBILIDAD", "A4 - Accesibilidad");
-        list.put("A4_EMPLAZAMIENTO", "A4 - Emplazamiento");
-        list.put("A4_INFRAESTRUCTURA", "A4 - Infraestructura");
-        // Perfil A4
-        list.put("A4_PERFIL", "A4 - Perfil / Altimetria");
-        // A3 templates
-        list.put("A3_TECNICO", "A3 - Tecnico");
-        list.put("A3_AMBIENTAL", "A3 - Ambiental");
-        list.put("A3_CATASTRAL", "A3 - Catastral");
-        list.put("A3_SATELITAL", "A3 - Satelital");
-        list.put("A3_PARCELARIO", "A3 - Parcelario");
-        list.put("A3_HIDROLOGIA", "A3 - Hidrologia");
-        list.put("A3_TOPOGRAFIA", "A3 - Topografia");
-        list.put("A3_PRESENTACION", "A3 - Presentacion");
+        for (TemplateRegistry.Entry e : TemplateRegistry.getAll()) {
+            list.put(e.key, e.displayName);
+        }
         return list;
     }
 
@@ -52,32 +24,61 @@ public class LayoutTemplateManager {
         model.clearSelection();
         java.util.List<LayoutElement> rm = new java.util.ArrayList<>(model.getElements());
         for (LayoutElement e : rm) model.removeElement(e.getId());
+
+        // Existing templates
         switch (key) {
-            case "A4_AMBIENTAL": buildAmbiental(model); break;
-            case "A4_TECNICO": buildTecnico(model); break;
-            case "A4_TECNICO_INFERIOR": buildTecnicoInferior(model); break;
-            case "A4_CATASTRAL": buildCatastralA4(model); break;
-            case "A4_HIDROLOGIA": buildHidrologiaA4(model); break;
-            case "A4_TOPOGRAFIA": buildTopografiaA4(model); break;
-            case "A4_URBANO": buildUrbanoA4(model); break;
-            case "A4_PARCELARIO": buildParcelarioA4(model); break;
-            case "A4_INFRAESTRUCTURA": buildInfraestructuraA4(model); break;
-            case "A4_VERTICAL": buildVertical(model); break;
-            case "A4_MUESTREO": buildMuestreo(model); break;
-            case "A4_SATELITAL": buildSatelital(model); break;
-            case "A4_REFERENCIA": buildReferencia(model); break;
-            case "A4_ACCESIBILIDAD": buildAccesibilidad(model); break;
-            case "A4_EMPLAZAMIENTO": buildEmplazamiento(model); break;
-            case "A4_PERFIL": buildPerfil(model); break;
-            case "A3_TECNICO": buildA3Tecnico(model); break;
-            case "A3_AMBIENTAL": buildA3Ambiental(model); break;
-            case "A3_CATASTRAL": buildA3Catastral(model); break;
-            case "A3_SATELITAL": buildA3Satelital(model); break;
-            case "A3_PARCELARIO": buildA3Parcelario(model); break;
-            case "A3_HIDROLOGIA": buildA3Hidrologia(model); break;
-            case "A3_TOPOGRAFIA": buildA3Topografia(model); break;
-            case "A3_PRESENTACION": buildA3Presentacion(model); break;
+            case "A4_AMBIENTAL": buildAmbiental(model); return;
+            case "A4_TECNICO": buildTecnico(model); return;
+            case "A4_TECNICO_INFERIOR": buildTecnicoInferior(model); return;
+            case "A4_CATASTRAL": buildCatastralA4(model); return;
+            case "A4_HIDROLOGIA": buildHidrologiaA4(model); return;
+            case "A4_TOPOGRAFIA": buildTopografiaA4(model); return;
+            case "A4_URBANO": buildUrbanoA4(model); return;
+            case "A4_PARCELARIO": buildParcelarioA4(model); return;
+            case "A4_INFRAESTRUCTURA": buildInfraestructuraA4(model); return;
+            case "A4_VERTICAL": buildVertical(model); return;
+            case "A4_MUESTREO": buildMuestreo(model); return;
+            case "A4_SATELITAL": buildSatelital(model); return;
+            case "A4_REFERENCIA": buildReferencia(model); return;
+            case "A4_ACCESIBILIDAD": buildAccesibilidad(model); return;
+            case "A4_EMPLAZAMIENTO": buildEmplazamiento(model); return;
+            case "A4_PERFIL": buildPerfil(model); return;
+            case "A3_TECNICO": buildA3Tecnico(model); return;
+            case "A3_AMBIENTAL": buildA3Ambiental(model); return;
+            case "A3_CATASTRAL": buildA3Catastral(model); return;
+            case "A3_SATELITAL": buildA3Satelital(model); return;
+            case "A3_PARCELARIO": buildA3Parcelario(model); return;
+            case "A3_HIDROLOGIA": buildA3Hidrologia(model); return;
+            case "A3_TOPOGRAFIA": buildA3Topografia(model); return;
+            case "A3_PRESENTACION": buildA3Presentacion(model); return;
         }
+
+        // Parametric templates - auto-build from key pattern
+        TemplateRegistry.Entry entry = TemplateRegistry.get(key);
+        if (entry == null) { buildDefault(model, 297, 210); return; }
+
+        String cat = entry.category.name();
+        boolean isA3 = key.startsWith("A3_");
+        double w = isA3 ? 420 : 297, h = isA3 ? 297 : 210; // A3 landscape
+        if (key.contains("VERTICAL")) { double t = w; w = h; h = t; }
+
+        // Determine layout style from key
+        boolean showSubtitle = !key.contains("LIMPIA") && !key.contains("MINIMO");
+        boolean legendRight = key.contains("DERECHA") || key.contains("LEYENDA_LATERAL");
+        boolean legendBelow = key.contains("INFERIOR");
+        boolean hasCartouche = !key.contains("LIMPIA") && !key.contains("MINIMO");
+        boolean hasTable = key.contains("TABLA") || key.contains("PARCELARIO") || key.contains("PROGRESIVAS") || key.contains("PUNTOS");
+        boolean isSatelital = cat.equals("SATELITALES");
+        boolean isHidrologia = cat.equals("HIDROLOGIA");
+        boolean isTopografia = cat.equals("TOPOGRAFIA");
+        boolean isInstitucional = cat.equals("INSTITUCIONAL");
+        boolean isCatastral = cat.equals("CATASTRALES");
+        boolean isReferencia = cat.equals("REFERENCIA");
+        boolean hasInset = key.contains("INSET") || key.contains("MAPA_UBICACION") || key.contains("DOBLE_MAPA");
+
+        buildParametric(model, w, h, entry.displayName, showSubtitle, legendRight, legendBelow,
+            hasCartouche, hasTable, isSatelital, isHidrologia, isTopografia, isInstitucional, isCatastral,
+            isReferencia, hasInset);
     }
 
     private static void addLabel(LayoutModel m, String id, String txt, int x, int y, int w, int h, Font f, Color c, int[] z) { LayoutLabel l = new LayoutLabel(id, txt, x, y, w, h); l.setFont(f); l.setColor(c); l.setZOrder(z[0]++); l.setName(id); m.addElement(l); }
@@ -125,6 +126,74 @@ public class LayoutTemplateManager {
         addLegend(m, "Leyenda", 12, 238, 100, 40, z, false);
         addScale(m, "Escala", 115, 238, 80, 10, z);
         addNorth(m, "Norte", 180, 220, 14, 14, z); }
+
+    private static void buildDefault(LayoutModel m, double w, double h) {
+        int[] z = {0};
+        addLabel(m, "Titulo", "Mapa", 12, 8, (int)w - 24, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addMap(m, "Mapa principal", 12, 24, (int)w - 24, (int)h - 50, z);
+        addScale(m, "Escala", 12, (int)h - 22, 100, 10, z);
+        addNorth(m, "Norte", (int)w - 30, (int)h - 50, 16, 16, z);
+    }
+
+    private static void buildParametric(LayoutModel m, double w, double h, String titleText,
+            boolean subtitle, boolean legendRight, boolean legendBelow,
+            boolean cartouche, boolean table, boolean satelital, boolean hidrologia,
+            boolean topografia, boolean institucional, boolean catastral, boolean referencia,
+            boolean inset) {
+        int[] z = {0};
+        Font titleFont = institucional ? new Font("SansSerif", Font.BOLD, 24) : new Font("SansSerif", Font.BOLD, 18);
+        Color titleColor = hidrologia ? new Color(0x0D47A1) : (satelital ? Color.WHITE : new Color(0x1A2434));
+        int margin = 12, titleH = institucional ? 22 : 16, subH = subtitle ? 10 : 0;
+        int titleY = satelital ? (int)h - 30 : 8;
+        if (satelital) margin = 8;
+
+        addLabel(m, "Titulo", titleText, margin, titleY, (int)w - margin*2, titleH, titleFont, titleColor, z);
+        if (subtitle) {
+            addLabel(m, "Subtitulo", "Salida cartografica profesional", margin, titleY + titleH + 2,
+                (int)w - margin*2, subH, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
+        }
+        int contentTop = satelital ? margin : (titleY + titleH + subH + 4);
+
+        int mapW = (int)w - margin*2, mapH;
+        int legendW = 0, legendX = 0;
+
+        if (legendRight) { legendW = Math.min(100, (int)w/3); mapW = (int)w - margin*2 - legendW - 4; legendX = margin + mapW + 4; }
+        if (inset) { mapW = (int)(mapW * 0.7); }
+
+        int footerH = 50;
+        if (cartouche) footerH += 24;
+        if (table) footerH += 40;
+        mapH = (int)h - contentTop - footerH - 4;
+
+        addMap(m, "Mapa principal", margin, contentTop, mapW, Math.max(20, mapH), z);
+        if (legendRight && legendW > 0) {
+            addLegend(m, "Leyenda", legendX, contentTop, legendW, Math.max(20, mapH), z, !satelital);
+        } else if (legendBelow) {
+            addLegend(m, "Leyenda", margin, contentTop + mapH + 2, (int)w - margin*2, 20, z, false);
+        }
+
+        if (inset) {
+            int insetW = (int)w - margin*2 - mapW - 4;
+            addMap(m, "Mapa ubicacion", margin + mapW + 4, contentTop, insetW, mapH/2, z);
+        }
+
+        int footY = contentTop + mapH + 4;
+        if (legendBelow) footY += 24;
+
+        addScale(m, "Escala grafica", margin, footY, 120, 10, z);
+        addNorth(m, "Norte", (int)w - 30, contentTop + 4, 16, 16, z);
+
+        if (cartouche) {
+            LayoutCartouche c = new LayoutCartouche("Datos", margin, footY + 12, (int)w - margin*2, 28);
+            c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
+            footY += 32;
+        }
+        if (table) {
+            LayoutTable t = new LayoutTable("Tabla", margin, footY, (int)w - margin*2, 30);
+            t.setZOrder(z[0]++); t.setShowBorders(true); t.setAlternateRows(true);
+            t.setMaxVisibleRows(5); t.setName("Datos"); m.addElement(t);
+        }
+    }
 
     public static void saveTemplate(File file, LayoutModel model, double pageW, double pageH, String orientation) throws IOException {
         StringBuilder sb = new StringBuilder();

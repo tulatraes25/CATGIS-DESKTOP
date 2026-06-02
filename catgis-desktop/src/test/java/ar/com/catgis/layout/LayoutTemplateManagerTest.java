@@ -71,7 +71,7 @@ public class LayoutTemplateManagerTest {
     @Test
     public void testTemplateList() {
         var templates = LayoutTemplateManager.getTemplateList();
-        assertTrue(templates.size() >= 24);
+        assertTrue(templates.size() >= 70);
         assertTrue(templates.containsKey("A4_AMBIENTAL"));
         assertTrue(templates.containsKey("A4_TECNICO"));
         assertTrue(templates.containsKey("A3_TECNICO"));
