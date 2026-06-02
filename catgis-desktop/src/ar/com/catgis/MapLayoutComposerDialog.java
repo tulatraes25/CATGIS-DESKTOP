@@ -77,6 +77,7 @@ import java.awt.Point;
 import java.awt.PointerInfo;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
+import java.awt.Toolkit;
 import java.awt.TexturePaint;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
@@ -5606,100 +5607,191 @@ public class MapLayoutComposerDialog extends JFrame {
         void showTextPopup(LayoutLabel label) {
             JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
             popup.setUndecorated(true);
-            JPanel panel = new JPanel(new GridLayout(0, 2, 4, 4));
+            JPanel panel = new JPanel(null);
+            panel.setPreferredSize(new Dimension(300, 220));
             panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0x1976D2), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+                BorderFactory.createLineBorder(new Color(0x1976D2), 2),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
             panel.setBackground(Color.WHITE);
 
             Font f = label.getFont();
+            int y = 0;
+
+            // Titulo
+            JLabel titleLbl = new JLabel("Formato de texto");
+            titleLbl.setFont(titleLbl.getFont().deriveFont(Font.BOLD, 13f));
+            titleLbl.setForeground(new Color(0x1976D2));
+            titleLbl.setBounds(0, y, 220, 20); panel.add(titleLbl); y += 24;
+
+            // Fuente (combobox con todas las del sistema)
+            JLabel fuLbl = new JLabel("Fuente");
+            fuLbl.setFont(fuLbl.getFont().deriveFont(Font.PLAIN, 10f));
+            fuLbl.setBounds(0, y, 60, 22); panel.add(fuLbl);
             JComboBox<String> fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
             fontCombo.setSelectedItem(f.getFamily());
-            fontCombo.addActionListener(e -> { label.setFont(new Font((String)fontCombo.getSelectedItem(), f.getStyle(), f.getSize())); panel.repaint(); previewPanel.repaint(); });
-            panel.add(new JLabel("Fuente:")); panel.add(fontCombo);
+            fontCombo.setFont(fontCombo.getFont().deriveFont(Font.PLAIN, 10f));
+            fontCombo.setBounds(65, y, 200, 22);
+            fontCombo.addActionListener(e -> { label.setFont(new Font((String)fontCombo.getSelectedItem(), label.getFont().getStyle(), label.getFont().getSize())); previewPanel.repaint(); });
+            panel.add(fontCombo); y += 28;
 
-            JSpinner sizeSpin = new JSpinner(new SpinnerNumberModel(f.getSize(), 6, 72, 1));
-            sizeSpin.addChangeListener(e -> { label.setFont(label.getFont().deriveFont((float)(Integer)sizeSpin.getValue())); previewPanel.repaint(); });
-            panel.add(new JLabel("Tamano:")); panel.add(sizeSpin);
+            // Tamano (combobox con valores predefinidos)
+            JLabel szLbl = new JLabel("Tamano");
+            szLbl.setFont(szLbl.getFont().deriveFont(Font.PLAIN, 10f));
+            szLbl.setBounds(0, y, 60, 22); panel.add(szLbl);
+            Integer[] sizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 42, 48, 56, 64, 72};
+            JComboBox<Integer> sizeCombo = new JComboBox<>(sizes);
+            sizeCombo.setSelectedItem(f.getSize());
+            sizeCombo.setFont(sizeCombo.getFont().deriveFont(Font.PLAIN, 10f));
+            sizeCombo.setBounds(65, y, 80, 22);
+            sizeCombo.addActionListener(e -> { label.setFont(label.getFont().deriveFont((float)(Integer)sizeCombo.getSelectedItem())); previewPanel.repaint(); });
+            panel.add(sizeCombo); y += 28;
 
-            JToggleButton boldBtn = new JToggleButton("B", f.isBold());
-            boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD));
+            // Estilo: B I U toggles
+            JLabel stLbl = new JLabel("Estilo");
+            stLbl.setFont(stLbl.getFont().deriveFont(Font.PLAIN, 10f));
+            stLbl.setBounds(0, y, 60, 22); panel.add(stLbl);
+
+            boolean isBold = f.isBold(), isItalic = f.isItalic();
+            JToggleButton boldBtn = new JToggleButton("B");
+            boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD, 12f));
+            boldBtn.setSelected(isBold); boldBtn.setBounds(65, y, 40, 24); boldBtn.setMargin(new Insets(0,0,0,0));
             boldBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(boldBtn.isSelected() ? label.getFont().getStyle() | Font.BOLD : label.getFont().getStyle() & ~Font.BOLD)); previewPanel.repaint(); });
-            JToggleButton italicBtn = new JToggleButton("I", f.isItalic());
-            italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC));
-            italicBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(italicBtn.isSelected() ? label.getFont().getStyle() | Font.ITALIC : label.getFont().getStyle() & ~Font.ITALIC)); previewPanel.repaint(); });
-            JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0)); styleRow.setOpaque(false);
-            styleRow.add(boldBtn); styleRow.add(italicBtn);
-            panel.add(new JLabel("Estilo:")); panel.add(styleRow);
+            panel.add(boldBtn);
 
-            JButton colorBtn = new JButton("...");
-            colorBtn.setBackground(label.getColor()); colorBtn.setOpaque(true);
+            JToggleButton italicBtn = new JToggleButton("I");
+            italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC, 12f));
+            italicBtn.setSelected(isItalic); italicBtn.setBounds(110, y, 40, 24); italicBtn.setMargin(new Insets(0,0,0,0));
+            italicBtn.addActionListener(e -> { label.setFont(label.getFont().deriveFont(italicBtn.isSelected() ? label.getFont().getStyle() | Font.ITALIC : label.getFont().getStyle() & ~Font.ITALIC)); previewPanel.repaint(); });
+            panel.add(italicBtn);
+
+            JToggleButton underlineBtn = new JToggleButton("U");
+            underlineBtn.setFont(underlineBtn.getFont().deriveFont(Font.PLAIN, 12f));
+            underlineBtn.setBounds(155, y, 40, 24); underlineBtn.setMargin(new Insets(0,0,0,0));
+            underlineBtn.addActionListener(e -> { /* underline visual only - Swing fonts don't have native underline */ previewPanel.repaint(); });
+            panel.add(underlineBtn);
+            y += 28;
+
+            // Color
+            JLabel clLbl = new JLabel("Color");
+            clLbl.setFont(clLbl.getFont().deriveFont(Font.PLAIN, 10f));
+            clLbl.setBounds(0, y, 60, 22); panel.add(clLbl);
+            JButton colorBtn = new JButton();
+            colorBtn.setBackground(label.getColor()); colorBtn.setOpaque(true); colorBtn.setBorderPainted(true);
+            colorBtn.setBounds(65, y, 30, 22);
             colorBtn.addActionListener(e -> {
-                Color c = JColorChooser.showDialog(popup, "Color", label.getColor());
+                Color c = JColorChooser.showDialog(popup, "Color de texto", label.getColor());
                 if (c != null) { label.setColor(c); colorBtn.setBackground(c); previewPanel.repaint(); }
             });
-            panel.add(new JLabel("Color:")); panel.add(colorBtn);
+            panel.add(colorBtn); y += 28;
 
+            // Cerrar
             JButton closeBtn = new JButton("Cerrar");
+            closeBtn.setFont(closeBtn.getFont().deriveFont(Font.PLAIN, 10f));
+            closeBtn.setBounds(190, y, 75, 24); closeBtn.setMargin(new Insets(2,8,2,8));
             closeBtn.addActionListener(e -> popup.dispose());
-            panel.add(new JLabel()); panel.add(closeBtn);
+            panel.add(closeBtn);
 
-            popup.add(panel); popup.pack();
+            popup.add(panel);
+            popup.setSize(300, y + 50);
             Point p = LayoutPreviewPanel.this.getLocationOnScreen();
             java.awt.Rectangle pb = lastPageBounds;
-            double px = pb.x + label.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
-            double py = pb.y + label.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
-            popup.setLocation(p.x + (int)px, p.y + (int)py + 20);
+            double px = Math.max(0, pb.x + label.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
+            double py = Math.max(0, pb.y + label.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
+            popup.setLocation(Math.min(p.x + (int)px, Toolkit.getDefaultToolkit().getScreenSize().width - 320),
+                              Math.min(p.y + (int)py + 20, Toolkit.getDefaultToolkit().getScreenSize().height - 280));
             popup.setVisible(true);
         }
 
         void showLegendPopup(LayoutLegend legend) {
             JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
             popup.setUndecorated(true);
-            JPanel panel = new JPanel(new GridLayout(0, 2, 4, 4));
+            JPanel panel = new JPanel(null);
+            panel.setPreferredSize(new Dimension(300, 280));
             panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0x1976D2), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+                BorderFactory.createLineBorder(new Color(0x1976D2), 2),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
             panel.setBackground(Color.WHITE);
+            int y = 0;
 
-            JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 15);
+            JLabel titleLbl = new JLabel("Propiedades de leyenda");
+            titleLbl.setFont(titleLbl.getFont().deriveFont(Font.BOLD, 13f));
+            titleLbl.setForeground(new Color(0x1976D2));
+            titleLbl.setBounds(0, y, 250, 20); panel.add(titleLbl); y += 24;
+
+            // Titulo
+            JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 20);
+            titleField.setBounds(75, y, 190, 22); titleField.setFont(titleField.getFont().deriveFont(Font.PLAIN, 10f));
+            JLabel tfLbl = new JLabel("Titulo"); tfLbl.setFont(tfLbl.getFont().deriveFont(Font.PLAIN, 10f)); tfLbl.setBounds(0, y, 70, 22);
+            panel.add(tfLbl); panel.add(titleField);
             titleField.addActionListener(e -> { legend.setTitle(titleField.getText().trim()); previewPanel.repaint(); });
-            panel.add(new JLabel("Titulo:")); panel.add(titleField);
+            y += 28;
 
-            JSpinner titleSize = new JSpinner(new SpinnerNumberModel((int)legend.getTitleFont().getSize(), 8, 36, 1));
-            titleSize.addChangeListener(e -> { legend.setTitleFont(legend.getTitleFont().deriveFont((float)(Integer)titleSize.getValue())); previewPanel.repaint(); });
-            panel.add(new JLabel("Tam. titulo:")); panel.add(titleSize);
+            // Tamano titulo
+            Integer[] titleSizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36};
+            JComboBox<Integer> titleSize = new JComboBox<>(titleSizes);
+            titleSize.setSelectedItem(legend.getTitleFont().getSize());
+            titleSize.setBounds(75, y, 70, 22); titleSize.setFont(titleSize.getFont().deriveFont(Font.PLAIN, 10f));
+            JLabel tsLbl = new JLabel("Tam. titulo"); tsLbl.setFont(tsLbl.getFont().deriveFont(Font.PLAIN, 10f)); tsLbl.setBounds(0, y, 70, 22);
+            panel.add(tsLbl); panel.add(titleSize);
+            titleSize.addActionListener(e -> { legend.setTitleFont(legend.getTitleFont().deriveFont((float)(Integer)titleSize.getSelectedItem())); previewPanel.repaint(); });
+            y += 28;
 
-            JSpinner itemSize = new JSpinner(new SpinnerNumberModel((int)legend.getItemFont().getSize(), 6, 24, 1));
-            itemSize.addChangeListener(e -> { legend.setItemFont(legend.getItemFont().deriveFont((float)(Integer)itemSize.getValue())); previewPanel.repaint(); });
-            panel.add(new JLabel("Tam. items:")); panel.add(itemSize);
+            // Tamano items
+            Integer[] itemSizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20};
+            JComboBox<Integer> itemSize = new JComboBox<>(itemSizes);
+            itemSize.setSelectedItem(legend.getItemFont().getSize());
+            itemSize.setBounds(75, y, 70, 22); itemSize.setFont(itemSize.getFont().deriveFont(Font.PLAIN, 10f));
+            JLabel isLbl = new JLabel("Tam. items"); isLbl.setFont(isLbl.getFont().deriveFont(Font.PLAIN, 10f)); isLbl.setBounds(0, y, 70, 22);
+            panel.add(isLbl); panel.add(itemSize);
+            itemSize.addActionListener(e -> { legend.setItemFont(legend.getItemFont().deriveFont((float)(Integer)itemSize.getSelectedItem())); previewPanel.repaint(); });
+            y += 28;
 
-            JCheckBox bgCheck = new JCheckBox("", legend.isShowBackground());
+            // Fondo + Borde en una fila
+            JCheckBox bgCheck = new JCheckBox("Fondo", legend.isShowBackground());
+            bgCheck.setFont(bgCheck.getFont().deriveFont(Font.PLAIN, 10f)); bgCheck.setOpaque(false); bgCheck.setBounds(75, y, 70, 22);
             bgCheck.addActionListener(e -> { legend.setShowBackground(bgCheck.isSelected()); previewPanel.repaint(); });
-            panel.add(new JLabel("Fondo:")); panel.add(bgCheck);
+            panel.add(bgCheck);
 
-            JCheckBox brdCheck = new JCheckBox("", legend.isShowBorder());
+            JCheckBox brdCheck = new JCheckBox("Borde", legend.isShowBorder());
+            brdCheck.setFont(brdCheck.getFont().deriveFont(Font.PLAIN, 10f)); brdCheck.setOpaque(false); brdCheck.setBounds(155, y, 70, 22);
             brdCheck.addActionListener(e -> { legend.setShowBorder(brdCheck.isSelected()); previewPanel.repaint(); });
-            panel.add(new JLabel("Borde:")); panel.add(brdCheck);
+            panel.add(brdCheck);
 
-            JCheckBox autoCheck = new JCheckBox("", legend.isAutoHeight());
+            JCheckBox autoCheck = new JCheckBox("Auto alto", legend.isAutoHeight());
+            autoCheck.setFont(autoCheck.getFont().deriveFont(Font.PLAIN, 10f)); autoCheck.setOpaque(false); autoCheck.setBounds(230, y, 80, 22);
             autoCheck.addActionListener(e -> { legend.setAutoHeight(autoCheck.isSelected()); previewPanel.repaint(); });
-            panel.add(new JLabel("Auto alto:")); panel.add(autoCheck);
+            panel.add(autoCheck);
+            y += 30;
 
+            // Columnas
+            JLabel colLbl = new JLabel("Columnas"); colLbl.setFont(colLbl.getFont().deriveFont(Font.PLAIN, 10f)); colLbl.setBounds(0, y, 70, 22); panel.add(colLbl);
+            Integer[] colVals = {1, 2, 3, 4};
+            JComboBox<Integer> colCombo = new JComboBox<>(colVals);
+            colCombo.setSelectedItem(legend.getColumns());
+            colCombo.setBounds(75, y, 60, 22); colCombo.setFont(colCombo.getFont().deriveFont(Font.PLAIN, 10f));
+            colCombo.addActionListener(e -> { legend.setColumns((Integer)colCombo.getSelectedItem()); previewPanel.repaint(); });
+            panel.add(colCombo); y += 28;
+
+            // Botones
             JButton updBtn = new JButton("Actualizar capas");
+            updBtn.setFont(updBtn.getFont().deriveFont(Font.PLAIN, 9f)); updBtn.setBounds(0, y, 130, 22); updBtn.setMargin(new Insets(1,6,1,6));
             updBtn.addActionListener(e -> { populateLegendFromProject(legend); previewPanel.repaint(); });
-            panel.add(new JLabel()); panel.add(updBtn);
+            panel.add(updBtn);
 
             JButton closeBtn = new JButton("Cerrar");
+            closeBtn.setFont(closeBtn.getFont().deriveFont(Font.PLAIN, 9f)); closeBtn.setBounds(150, y, 80, 22); closeBtn.setMargin(new Insets(1,6,1,6));
             closeBtn.addActionListener(e -> popup.dispose());
-            panel.add(new JLabel()); panel.add(closeBtn);
+            panel.add(closeBtn);
+            y += 30;
 
-            popup.add(panel); popup.pack();
+            popup.add(panel);
+            popup.setSize(300, y + 20);
             Point p = LayoutPreviewPanel.this.getLocationOnScreen();
             java.awt.Rectangle pb = lastPageBounds;
-            double px = pb.x + legend.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
-            double py = pb.y + legend.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4;
-            popup.setLocation(p.x + (int)px, p.y + (int)py + 20);
+            double px = Math.max(0, pb.x + legend.getBoundsMm().x * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
+            double py = Math.max(0, pb.y + legend.getBoundsMm().y * lastPreviewScale * PREVIEW_RENDER_DPI / 25.4);
+            popup.setLocation(Math.min(p.x + (int)px, Toolkit.getDefaultToolkit().getScreenSize().width - 320),
+                              Math.min(p.y + (int)py + 20, Toolkit.getDefaultToolkit().getScreenSize().height - 320));
             popup.setVisible(true);
         }
 
