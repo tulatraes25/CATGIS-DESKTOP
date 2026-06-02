@@ -618,10 +618,19 @@ public class MapLayoutComposerDialog extends JFrame {
             JPanel row = new JPanel(new BorderLayout());
             row.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
             row.setOpaque(true);
-            row.setBackground(isSelected ? new Color(232, 242, 255) : Color.WHITE);
-            JLabel title = new JLabel(value != null ? value.displayName() : "");
-            title.setFont(title.getFont().deriveFont(isSelected ? Font.BOLD : Font.PLAIN, 12f));
-            row.add(title, BorderLayout.CENTER);
+            boolean isHeader = value != null && value.key().isEmpty();
+            if (isHeader) {
+                row.setBackground(new Color(0xF0F2F5));
+                JLabel title = new JLabel(value.displayName());
+                title.setFont(title.getFont().deriveFont(Font.BOLD, 11f));
+                title.setForeground(new Color(0x6B7280));
+                row.add(title, BorderLayout.CENTER);
+            } else {
+                row.setBackground(isSelected ? new Color(232, 242, 255) : Color.WHITE);
+                JLabel title = new JLabel(value.displayName());
+                title.setFont(title.getFont().deriveFont(isSelected ? Font.BOLD : Font.PLAIN, 12f));
+                row.add(title, BorderLayout.CENTER);
+            }
             return row;
         });
 
@@ -655,7 +664,10 @@ public class MapLayoutComposerDialog extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    applySelectedTemplateFromDialog(list.getSelectedValue(), dialog);
+                    TemplateChoice sel = list.getSelectedValue();
+                    if (sel != null && !sel.key().isEmpty()) {
+                        applySelectedTemplateFromDialog(sel, dialog);
+                    }
                 }
             }
         });
@@ -676,7 +688,10 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         JButton apply = new JButton("Aplicar");
         JButton cancel = new JButton("Cancelar");
-        apply.addActionListener(e -> applySelectedTemplateFromDialog(list.getSelectedValue(), dialog));
+        apply.addActionListener(e -> {
+            TemplateChoice sel = list.getSelectedValue();
+            if (sel != null && !sel.key().isEmpty()) applySelectedTemplateFromDialog(sel, dialog);
+        });
         cancel.addActionListener(e -> dialog.dispose());
         buttons.add(apply);
         buttons.add(cancel);
@@ -700,6 +715,8 @@ public class MapLayoutComposerDialog extends JFrame {
     private List<TemplateChoice> curatedTemplateChoices() {
         List<TemplateChoice> items = new ArrayList<>();
         java.util.Map<String, String[]> preferred = new java.util.LinkedHashMap<>();
+        // A4 section header
+        items.add(new TemplateChoice("", "— A4 (297×210 mm) —", ""));
         // A4 templates
         preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Ubicacion general", "Mapa de ubicacion, leyenda lateral, cartucho."});
         preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Acceso operativo", "Rutas y caminos con cartucho compacto."});
@@ -716,6 +733,8 @@ public class MapLayoutComposerDialog extends JFrame {
         preferred.put("A4_MUESTREO", new String[]{"Ambiental · A4 · Muestreo", "Puntos de muestreo y leyenda clara."});
         preferred.put("A4_SATELITAL", new String[]{"Satelital · A4 · Estandar", "Imagen satelital con titulo y escala."});
         preferred.put("A4_PERFIL", new String[]{"Perfil · A4 · Altimetria tecnica", "Traza, progresivas y tabla altimetrica."});
+        // A3 section header
+        items.add(new TemplateChoice("", "— A3 (420×297 mm) —", ""));
         // A3 templates
         preferred.put("A3_TECNICO", new String[]{"Tecnica · A3 · General", "Formato grande, mapa amplio con leyenda lateral."});
         preferred.put("A3_AMBIENTAL", new String[]{"Ambiental · A3 · Estandar", "Informe ambiental con buena superficie de lectura."});
