@@ -14,11 +14,30 @@ public class Layer {
         SQUARE("Cuadrado"),
         DIAMOND("Rombo"),
         TRIANGLE("Triangulo"),
-        TARGET("Objetivo"),
-        PIN("Pin"),
+        TARGET("Objetivo / Diana"),
+        PIN("Pin / Marcador"),
         FLAG("Bandera"),
-        STAR("Estrella"),
-        WELL("Pozo");
+        STAR("Estrella 5 puntas"),
+        STAR_6("Estrella 6 puntas"),
+        WELL("Pozo / Sondeo"),
+        CROSS("Cruz"),
+        CROSS_DIAGONAL("Cruz diagonal (X)"),
+        HEXAGON("Hexagono"),
+        PENTAGON("Pentagono"),
+        ARROW_UP("Flecha arriba"),
+        ARROW_DOWN("Flecha abajo"),
+        CAMERA("Camara"),
+        TOWER("Torre / Antena"),
+        TRIANGLE_INVERTED("Triangulo invertido"),
+        RING("Anillo / Aro"),
+        DOUBLE_CIRCLE("Doble circulo"),
+        RECTANGLE_H("Rectangulo horizontal"),
+        RECTANGLE_V("Rectangulo vertical"),
+        ALERT("Alerta / Advertencia"),
+        LOCATION("Ubicacion destacada"),
+        SAMPLING("Muestreo ambiental"),
+        CONTROL("Punto de control"),
+        ACCESS("Acceso / Entrada");
 
         private final String label;
 
@@ -45,9 +64,23 @@ public class Layer {
 
     public enum LineSymbolStyle {
         SOLID("Solida"),
-        DASHED("Discontinua"),
+        DASHED("Discontinua / Guion"),
         DOTTED("Punteada"),
-        DASH_DOT("Trazo y punto");
+        DASH_DOT("Trazo y punto"),
+        DASH_DOT_DOT("Trazo doble punto"),
+        DOUBLE_LINE("Doble linea"),
+        BOLD("Linea gruesa / Resaltada"),
+        THIN("Linea fina / Tenue"),
+        PATH_PRIMARY("Camino principal"),
+        PATH_SECONDARY("Camino secundario / Sendero"),
+        BOUNDARY("Limite / Lindero"),
+        FENCE("Alambrado / Cerco"),
+        WATERCOURSE("Cauce / Hidrografia"),
+        DUCT("Ducto / Conducto"),
+        AXIS("Eje / Directriz"),
+        PROFILE("Perfil / Traza"),
+        EASEMENT("Servidumbre"),
+        BORDERED("Linea con borde");
 
         private final String label;
 
@@ -73,11 +106,24 @@ public class Layer {
     }
 
     public enum PolygonFillStyle {
-        SOLID("Solido"),
-        DIAGONAL_HATCH("Trama diagonal"),
-        CROSS_HATCH("Trama cruzada"),
+        SOLID("Solido / Relleno pleno"),
+        DIAGONAL_HATCH("Trama diagonal (/)"),
+        CROSS_HATCH("Trama cruzada (X)"),
         DOTS("Punteado"),
-        OUTLINE_ONLY("Solo contorno");
+        OUTLINE_ONLY("Solo contorno"),
+        TRANSPARENT("Transparente / Sin relleno"),
+        SOFT_SHADOW("Sombreado suave"),
+        HORIZONTAL_LINES("Lineas horizontales"),
+        VERTICAL_LINES("Lineas verticales"),
+        DIAGONAL_REVERSE("Trama diagonal invertida (\\)"),
+        ENVIRONMENTAL("Zona ambiental"),
+        WATER("Agua / Hidrografia"),
+        VEGETATION("Vegetacion"),
+        INFRASTRUCTURE("Infraestructura"),
+        PARCEL("Parcela / Catastro"),
+        RESTRICTION("Restriccion / Riesgo"),
+        BUFFER_SOFT("Buffer / Area de influencia"),
+        SATELLITE_OVERLAY("Overlay satelital semitransparente");
 
         private final String label;
 

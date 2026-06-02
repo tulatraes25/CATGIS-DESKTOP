@@ -7522,7 +7522,17 @@ public class MapPanel extends JPanel {
             style = Layer.PointSymbolStyle.CIRCLE;
         }
 
-        g2.setColor(categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor());
+        // Fallback: use PointSymbolCatalog for all modern styles
+        if (style != Layer.PointSymbolStyle.CIRCLE && style != Layer.PointSymbolStyle.SQUARE
+            && style != Layer.PointSymbolStyle.DIAMOND && style != Layer.PointSymbolStyle.TRIANGLE
+            && style != Layer.PointSymbolStyle.TARGET && style != Layer.PointSymbolStyle.PIN
+            && style != Layer.PointSymbolStyle.FLAG && style != Layer.PointSymbolStyle.STAR
+            && style != Layer.PointSymbolStyle.WELL) {
+            Color c = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor();
+            String mapId = style.name().toLowerCase().replace('_', '-');
+            PointSymbolCatalog.render(g2, mapId, x, y, size + 4, c, c.darker(), 1.2f);
+            return;
+        }
         switch (style) {
             case SQUARE -> g2.fillRect(x - half, y - half, size, size);
             case DIAMOND -> {

@@ -110,8 +110,28 @@ Si una conducta o expectativa está ahí escrita, debe tratarse como requisito f
 7. Simbología
 - No resolver toda la simbología ArcGIS en esta ronda
 - Sí auditar su estado y dejarla documentada como deuda visible si sigue siendo pobre
+- No ignorarla ni dejarla como comentario marginal
+- Auditar al menos:
+  - puntos
+  - líneas
+  - polígonos
+  - preview
+  - leyenda
 - Si hay una mejora pequeña y segura, hacerla
-- Si no, documentar backlog honesto
+- Si no entra una mejora fuerte en esta ronda, dejar backlog técnico explícito y priorizado
+- Documentar claramente que la calidad visual final de CATMAP depende también de una simbología más profesional
+
+8. Backlog específico de simbología
+Crear además:
+C:\CATGIS\catgis-desktop\CATGIS_SYMBOLOGY_GAP_REPORT.md
+
+Debe incluir:
+1. estado actual de simbología de puntos, líneas y polígonos
+2. comparación cualitativa contra un GIS serio de escritorio
+3. carencias más visibles en mapa y leyenda
+4. qué conviene mejorar primero
+5. qué puede esperar CATMAP de la simbología actual y qué no
+6. backlog priorizado para profesionalizar la simbología
 
 ARCHIVOS A REVISAR
 - src/ar/com/catgis/MapLayoutComposerDialog.java
@@ -135,6 +155,9 @@ Debe decir:
 5. cómo quedó Plantillas
 6. cómo quedó Auto-componer
 7. qué sigue pendiente en simbología
+
+Y crear además:
+- C:\CATGIS\catgis-desktop\CATGIS_SYMBOLOGY_GAP_REPORT.md
 
 VALIDACIÓN OBLIGATORIA
 Ejecutar:
@@ -177,4 +200,3 @@ La prioridad para DeepSeek/OpenCode debe ser:
 2. no volver a sobreprometer;
 3. dejar CATMAP más intuitivo y novato-friendly;
 4. documentar con honestidad lo pendiente.
-
