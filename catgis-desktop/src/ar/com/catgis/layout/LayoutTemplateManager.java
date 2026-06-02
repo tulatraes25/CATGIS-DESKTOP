@@ -25,20 +25,45 @@ public class LayoutTemplateManager {
         java.util.List<LayoutElement> rm = new java.util.ArrayList<>(model.getElements());
         for (LayoutElement e : rm) model.removeElement(e.getId());
         internalApply(key, model);
+        ar.com.catgis.Project p = ar.com.catgis.AppContext.get().getProject();
+        if (p == null) p = ar.com.catgis.CatgisDesktopApp.currentProject;
         // Auto-populate legend from project layers
         for (LayoutElement el : model.getElements()) {
+            if (el instanceof LayoutMap) {
+                ((LayoutMap) el).setOwnExtent(false);
+            }
             if (el instanceof LayoutLegend && ((LayoutLegend)el).getItems().isEmpty()) {
-                ar.com.catgis.Project p = ar.com.catgis.AppContext.get().getProject();
-                if (p == null) p = ar.com.catgis.CatgisDesktopApp.currentProject;
                 if (p != null && p.getLayers() != null) {
                     for (ar.com.catgis.Layer l : p.getLayers()) {
                         if (l == null || !l.isVisible() || LayoutLegend.isBasemapName(l.getName())) continue;
                         java.awt.Color c = resolveColor(l);
-                        ((LayoutLegend)el).getItems().add(new LayoutLegend.LegendItem(l.getName(), c, resolveType(l)));
+                        LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(l.getName(), c, resolveType(l));
+                        item.catalogSymbolId = l.getCatalogSymbolId();
+                        item.pointSymbolStyle = l.getPointSymbolStyle();
+                        item.lineSymbolStyle = l.getLineSymbolStyle();
+                        item.polygonFillStyle = l.getPolygonFillStyle();
+                        item.strokeColor = l.getBorderColor() != null ? l.getBorderColor() : l.getLineColor();
+                        ((LayoutLegend)el).getItems().add(item);
                     }
                 }
             }
+            if (el instanceof LayoutCartouche cartouche && p != null) {
+                cartouche.setField("Estudio", safeValue(p.getStudyName()));
+                cartouche.setField("Proyecto", safeValue(p.getName()));
+                cartouche.setField("Empresa", safeValue(p.getCompanyName()));
+                cartouche.setField("Cartografo", safeValue(p.getCartographerName()));
+                cartouche.setField("Fuente", safeValue(p.getImageSource(), "Vista actual del proyecto"));
+                cartouche.setField("Coord.", safeValue(p.getCoordinateReference(), p.getProjectCRS()));
+            }
         }
+    }
+
+    private static String safeValue(String value) {
+        return safeValue(value, "");
+    }
+
+    private static String safeValue(String value, String fallback) {
+        return value != null && !value.isBlank() ? value : fallback;
     }
 
     private static java.awt.Color resolveColor(ar.com.catgis.Layer l) {
@@ -125,31 +150,39 @@ public class LayoutTemplateManager {
 
     private static void buildAmbiental(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Ambiental", 15, 8, 267, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
-        addMap(m, "Mapa principal", 15, 25, 267, 150, z);
-        addLegend(m, "Leyenda", 15, 178, 130, 40, z, false);
-        addScale(m, "Escala", 15, 215, 100, 10, z);
-        addNorth(m, "Norte", 260, 165, 18, 18, z); }
+        addMap(m, "Mapa principal", 15, 25, 267, 140, z);
+        addLegend(m, "Leyenda", 15, 170, 120, 22, z, false);
+        addScale(m, "Escala", 145, 170, 95, 10, z);
+        addNorth(m, "Norte", 262, 160, 16, 16, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 15, 184, 267, 24);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c); }
     private static void buildTecnico(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Tecnico", 15, 8, 267, 14, new Font("SansSerif", Font.BOLD, 18), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Salida cartografica del proyecto", 15, 23, 267, 10, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
-        addMap(m, "Mapa principal", 15, 25, 175, 165, z);
-        addLegend(m, "Leyenda", 195, 25, 85, 40, z, true);
-        addScale(m, "Escala", 15, 193, 120, 10, z);
-        addNorth(m, "Norte", 175, 180, 16, 16, z); }
+        addMap(m, "Mapa principal", 15, 25, 175, 145, z);
+        addLegend(m, "Leyenda", 195, 25, 85, 50, z, true);
+        addScale(m, "Escala", 15, 173, 120, 10, z);
+        addNorth(m, "Norte", 173, 160, 16, 16, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 15, 186, 265, 22);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c); }
     private static void buildA3Tecnico(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Tecnico A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Salida cartografica del proyecto", 20, 29, 380, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
-        addMap(m, "Mapa principal", 20, 32, 380, 244, z);
-        addLegend(m, "Leyenda", 20, 280, 250, 40, z, false);
-        addScale(m, "Escala", 280, 280, 120, 10, z);
-        addNorth(m, "Norte", 370, 270, 22, 22, z); }
+        addMap(m, "Mapa principal", 20, 32, 380, 220, z);
+        addLegend(m, "Leyenda", 20, 258, 200, 28, z, false);
+        addScale(m, "Escala", 230, 258, 120, 10, z);
+        addNorth(m, "Norte", 370, 242, 20, 20, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 20, 292, 380, 22);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c); }
     private static void buildMuestreo(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa de Muestreo", 15, 8, 267, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Planilla de puntos de muestreo", 15, 23, 267, 10, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
-        addMap(m, "Mapa principal", 15, 25, 267, 155, z);
-        addLegend(m, "Leyenda", 15, 183, 140, 40, z, false);
-        addScale(m, "Escala", 155, 183, 120, 10, z);
-        addNorth(m, "Norte", 268, 168, 16, 16, z); }
+        addMap(m, "Mapa principal", 15, 25, 267, 140, z);
+        addLegend(m, "Leyenda", 15, 170, 120, 22, z, false);
+        addScale(m, "Escala", 145, 170, 120, 10, z);
+        addNorth(m, "Norte", 268, 155, 16, 16, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 15, 184, 267, 24);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c); }
     private static void buildSatelital(LayoutModel m) { int[] z = {0};
         addMap(m, "Mapa principal", 15, 8, 267, 178, z);
         addLabel(m, "Titulo", "Imagen Satelital", 15, 190, 200, 10, new Font("SansSerif", Font.BOLD, 12), Color.WHITE, z);
@@ -592,39 +625,47 @@ public class LayoutTemplateManager {
     // ---- A4: Tecnico Inferior ----
     private static void buildTecnicoInferior(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Tecnico", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 18), new Color(0x1A2434), z);
-        addMap(m, "Mapa principal", 12, 24, 273, 148, z);
-        addLegend(m, "Leyenda", 12, 176, 273, 20, z, false);
-        addScale(m, "Escala", 12, 198, 130, 10, z);
-        addNorth(m, "Norte", 270, 190, 14, 14, z);
+        addMap(m, "Mapa principal", 12, 24, 273, 136, z);
+        addLegend(m, "Leyenda", 12, 164, 180, 22, z, false);
+        addScale(m, "Escala", 198, 164, 85, 10, z);
+        addNorth(m, "Norte", 268, 150, 14, 14, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 12, 188, 273, 20);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
     }
 
     // ---- A4: Catastral ----
     private static void buildCatastralA4(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Plano Catastral", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
-        addMap(m, "Plano catastral", 12, 24, 210, 155, z);
-        addLegend(m, "Leyenda", 228, 24, 57, 40, z, true);
-        addScale(m, "Escala", 12, 184, 130, 10, z);
-        addNorth(m, "Norte", 270, 168, 14, 14, z);
+        addMap(m, "Plano catastral", 12, 24, 210, 145, z);
+        addLegend(m, "Leyenda", 228, 24, 57, 46, z, true);
+        addScale(m, "Escala", 12, 172, 120, 10, z);
+        addNorth(m, "Norte", 270, 158, 14, 14, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 12, 184, 273, 24);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
     }
 
     // ---- A4: Hidrologia ----
     private static void buildHidrologiaA4(LayoutModel m) { int[] z = {0};
         Color wb = new Color(0x0D47A1);
         addLabel(m, "Titulo", "Mapa Hidrologico", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), wb, z);
-        addMap(m, "Mapa de cuencas", 12, 24, 273, 148, z);
-        addLegend(m, "Leyenda", 12, 176, 160, 30, z, false);
-        addScale(m, "Escala", 175, 176, 110, 10, z);
-        addNorth(m, "Norte", 268, 168, 14, 14, z);
+        addMap(m, "Mapa de cuencas", 12, 24, 273, 140, z);
+        addLegend(m, "Leyenda", 12, 168, 130, 24, z, false);
+        addScale(m, "Escala", 150, 168, 110, 10, z);
+        addNorth(m, "Norte", 268, 155, 14, 14, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 12, 184, 273, 24);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
     }
 
     // ---- A4: Topografia ----
     private static void buildTopografiaA4(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Plano Topografico", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Curvas de nivel", 12, 24, 273, 9, new Font("SansSerif", Font.PLAIN, 8), new Color(0x5B6778), z);
-        addMap(m, "Mapa topografico", 12, 34, 273, 138, z);
-        addLegend(m, "Leyenda", 12, 176, 150, 30, z, false);
-        addScale(m, "Escala", 165, 176, 120, 10, z);
-        addNorth(m, "Norte", 268, 166, 14, 14, z);
+        addMap(m, "Mapa topografico", 12, 34, 273, 130, z);
+        addLegend(m, "Leyenda", 12, 168, 130, 24, z, false);
+        addScale(m, "Escala", 150, 168, 120, 10, z);
+        addNorth(m, "Norte", 268, 156, 14, 14, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 12, 184, 273, 24);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
     }
 
     // ---- A4: Urbano ----
@@ -661,19 +702,23 @@ public class LayoutTemplateManager {
     private static void buildA3Ambiental(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Mapa Ambiental A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Estudio de impacto ambiental", 20, 30, 380, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
-        addMap(m, "Mapa principal", 20, 42, 380, 228, z);
-        addLegend(m, "Leyenda", 20, 276, 200, 40, z, false);
-        addScale(m, "Escala", 230, 276, 170, 10, z);
-        addNorth(m, "Norte", 375, 258, 20, 20, z);
+        addMap(m, "Mapa principal", 20, 42, 380, 210, z);
+        addLegend(m, "Leyenda", 20, 258, 170, 30, z, false);
+        addScale(m, "Escala", 200, 258, 120, 10, z);
+        addNorth(m, "Norte", 375, 242, 18, 18, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 20, 292, 380, 22);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
     }
 
     // ---- A3: Catastral ----
     private static void buildA3Catastral(LayoutModel m) { int[] z = {0};
         addLabel(m, "Titulo", "Plano Catastral A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
-        addMap(m, "Plano catastral", 20, 32, 300, 238, z);
-        addLegend(m, "Nomenclatura", 328, 32, 72, 40, z, true);
-        addScale(m, "Escala", 20, 276, 180, 10, z);
-        addNorth(m, "Norte", 375, 258, 18, 18, z);
+        addMap(m, "Plano catastral", 20, 32, 300, 220, z);
+        addLegend(m, "Nomenclatura", 328, 32, 72, 46, z, true);
+        addScale(m, "Escala", 20, 258, 140, 10, z);
+        addNorth(m, "Norte", 375, 244, 18, 18, z);
+        LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 20, 292, 380, 22);
+        c.setZOrder(z[0]++); c.setName("Datos cartograficos"); m.addElement(c);
     }
 
     // ---- A3: Satelital ----
