@@ -364,7 +364,7 @@ public class LayoutLegend implements LayoutElement {
                 g.drawLine(sx + 1, ly + 2, sx + size - 1, ly + 2);
             } else {
                 g.setColor(c);
-                g.setStroke(buildLineStroke(2.2f, lineStyle));
+                g.setStroke(ar.com.catgis.LineSymbolRenderer.buildStroke(lineStyle, 2.2f));
                 g.drawLine(sx + 1, ly, sx + size - 1, ly);
             }
         } else if (type.contains("POLYGON")) {

@@ -8146,7 +8146,7 @@ public class MapLayoutComposerDialog extends JFrame {
             try {
                 copy.setColor(colorOr(categoryRule != null ? categoryRule.getPrimaryColor() : layer.getLineColor(), new Color(16, 185, 129)));
                 float previewWidth = categoryRule != null ? categoryRule.getLineWidth() : layer.getLineWidth();
-                copy.setStroke(buildLineStroke(Math.max(1.8f, previewWidth), categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle()));
+                copy.setStroke(LineSymbolRenderer.buildStroke(categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle(), Math.max(1.8f, previewWidth)));
                 copy.drawLine(x, y - 4, x + 20, y - 4);
             } finally {
                 copy.dispose();

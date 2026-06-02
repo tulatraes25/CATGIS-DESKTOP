@@ -7546,7 +7546,7 @@ public class MapPanel extends JPanel {
         Layer.LineSymbolStyle lineStyle = categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle();
         float lineWidth = categoryRule != null ? categoryRule.getLineWidth() : layer.getLineWidth();
         g2.setColor(lineColor);
-        g2.setStroke(buildLineStroke(lineWidth, lineStyle));
+        g2.setStroke(LineSymbolRenderer.buildStroke(lineStyle, lineWidth));
         g2.draw(path);
     }
 
@@ -7579,7 +7579,7 @@ public class MapPanel extends JPanel {
         float borderWidth = categoryRule != null ? categoryRule.getLineWidth() : layer.getLineWidth();
         Layer.LineSymbolStyle borderStyle = categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle();
         g2.setColor(borderColor);
-        g2.setStroke(buildLineStroke(borderWidth, borderStyle));
+        g2.setStroke(LineSymbolRenderer.buildStroke(borderStyle, borderWidth));
         g2.draw(exteriorPath);
 
         for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
@@ -7588,30 +7588,6 @@ public class MapPanel extends JPanel {
                 g2.draw(holePath);
             }
         }
-    }
-
-    private BasicStroke buildLineStroke(float width, Layer.LineSymbolStyle style) {
-        Layer.LineSymbolStyle resolved = style != null ? style : Layer.LineSymbolStyle.SOLID;
-        return switch (resolved) {
-            case SOLID -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case DASHED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 7f}, 0f);
-            case DOTTED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{2f, 6f}, 0f);
-            case DASH_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 5f, 2f, 5f}, 0f);
-            case DASH_DOT_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{12f, 4f, 2f, 4f, 2f, 4f}, 0f);
-            case DOUBLE_LINE -> new BasicStroke(width * 2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case BOLD -> new BasicStroke(width * 2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case THIN -> new BasicStroke(Math.max(0.5f, width * 0.4f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case PATH_PRIMARY -> new BasicStroke(width * 1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case PATH_SECONDARY -> new BasicStroke(width * 1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 5f}, 0f);
-            case BOUNDARY -> new BasicStroke(width * 1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{15f, 4f, 3f, 4f}, 0f);
-            case FENCE -> new BasicStroke(width * 1.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 3f, 1.5f, 3f}, 0f);
-            case WATERCOURSE -> new BasicStroke(width * 1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{6f, 4f, 2f, 4f}, 0f);
-            case DUCT -> new BasicStroke(width * 1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{20f, 5f}, 0f);
-            case AXIS -> new BasicStroke(width * 1.1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{25f, 5f, 4f, 5f}, 0f);
-            case PROFILE -> new BasicStroke(width * 0.9f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{14f, 3f, 3f, 3f}, 0f);
-            case EASEMENT -> new BasicStroke(width * 1f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{4f, 8f}, 0f);
-            case BORDERED -> new BasicStroke(width * 1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-        };
     }
 
     private Paint buildPolygonPaint(Layer layer, CategoryStyleRule categoryRule) {
