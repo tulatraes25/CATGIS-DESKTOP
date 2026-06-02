@@ -30,6 +30,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -164,6 +165,8 @@ public class LayerPropertiesDialog extends JDialog {
         pointStyleCombo = new JComboBox<>(Layer.PointSymbolStyle.values());
         pointStyleCombo.setSelectedItem(layer.getPointSymbolStyle());
         pointStyleCombo.setRenderer(new PointStyleRenderer());
+        lineStyleCombo.setRenderer(new LineStyleRenderer());
+        polygonStyleCombo.setRenderer(new PolygonStyleRenderer());
         symbologyPreviewLabel = new JLabel();
         symbologyPreviewLabel.setHorizontalAlignment(SwingConstants.CENTER);
         symbologyPreviewLabel.setVerticalAlignment(SwingConstants.CENTER);
@@ -719,10 +722,83 @@ public class LayerPropertiesDialog extends JDialog {
             Layer.PointSymbolStyle style = value instanceof Layer.PointSymbolStyle
                     ? (Layer.PointSymbolStyle) value
                     : Layer.PointSymbolStyle.CIRCLE;
-            label.setIcon(new ImageIcon(buildPointStylePreview(style, pointColor)));
+            label.setIcon(new ImageIcon(PointSymbolRenderer.buildPreview(style, pointColor, 24, 14)));
             label.setIconTextGap(8);
             return label;
         }
+    }
+
+    private class LineStyleRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value instanceof Layer.LineSymbolStyle style) {
+                label.setIcon(new ImageIcon(buildLineStylePreview(style)));
+                label.setIconTextGap(8);
+            }
+            return label;
+        }
+    }
+
+    private class PolygonStyleRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value instanceof Layer.PolygonFillStyle style) {
+                label.setIcon(new ImageIcon(buildPolygonStylePreview(style)));
+                label.setIconTextGap(8);
+            }
+            return label;
+        }
+    }
+
+    private BufferedImage buildLineStylePreview(Layer.LineSymbolStyle style) {
+        BufferedImage img = new BufferedImage(80, 16, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Color.BLACK);
+        java.awt.BasicStroke stroke = null;
+        float w = 2f;
+        if (style != null) {
+            switch (style) {
+                case DASHED: stroke = new java.awt.BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 7f}, 0f); break;
+                case DOTTED: stroke = new java.awt.BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{2f, 6f}, 0f); break;
+                case DASH_DOT: stroke = new java.awt.BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 5f, 2f, 5f}, 0f); break;
+                case DOUBLE_LINE: g.drawLine(4, 5, 76, 5); g.drawLine(4, 10, 76, 10); g.dispose(); return img;
+                case BOLD: stroke = new java.awt.BasicStroke(w * 2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); break;
+                case THIN: stroke = new java.awt.BasicStroke(0.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); break;
+                case PATH_PRIMARY: stroke = new java.awt.BasicStroke(w * 2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); break;
+                case BOUNDARY: stroke = new java.awt.BasicStroke(w * 1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{15f, 4f, 3f, 4f}, 0f); break;
+                case FENCE: stroke = new java.awt.BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 3f, 1.5f, 3f}, 0f); break;
+                default: stroke = new java.awt.BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND); break;
+            }
+        }
+        if (stroke != null) { g.setStroke(stroke); g.drawLine(4, 8, 76, 8); }
+        g.dispose(); return img;
+    }
+
+    private BufferedImage buildPolygonStylePreview(Layer.PolygonFillStyle style) {
+        BufferedImage img = new BufferedImage(24, 16, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(100, 150, 200));
+        g.fillRect(2, 2, 20, 12);
+        g.setColor(Color.BLACK);
+        g.setStroke(new java.awt.BasicStroke(1f));
+        if (style != null) {
+            switch (style) {
+                case DIAGONAL_HATCH: g.drawLine(2, 14, 14, 2); g.drawLine(10, 14, 22, 2); break;
+                case CROSS_HATCH: g.drawLine(2, 14, 14, 2); g.drawLine(14, 2, 22, 14); break;
+                case DOTS: g.fillOval(6, 5, 3, 3); g.fillOval(15, 8, 3, 3); break;
+                case OUTLINE_ONLY: g.setColor(new Color(0,0,0,0)); g.fillRect(2,2,20,12); g.setColor(Color.BLACK); break;
+                case HORIZONTAL_LINES: g.drawLine(2, 6, 22, 6); g.drawLine(2, 10, 22, 10); break;
+                case VERTICAL_LINES: g.drawLine(10, 2, 10, 14); g.drawLine(16, 2, 16, 14); break;
+                case DIAGONAL_REVERSE: g.drawLine(10, 2, 22, 14); g.drawLine(2, 2, 14, 14); break;
+                default: break;
+            }
+        }
+        g.drawRect(2, 2, 20, 12);
+        g.dispose(); return img;
     }
 
     private class PointCatalogRenderer extends DefaultListCellRenderer {
