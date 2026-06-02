@@ -736,18 +736,24 @@ public class MapLayoutComposerDialog extends JFrame {
         preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Ubicacion general", "Mapa de ubicacion, leyenda lateral, cartucho."});
         preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Acceso operativo", "Rutas y caminos con cartucho compacto."});
         preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento tecnico", "Planta general de proyecto, leyenda y escala."});
-        preferred.put("A4_INFRAESTRUCTURA", new String[]{"Infraestructura · A4 · General", "Obra civil, ductos, locaciones. Layout limpio."});
-        preferred.put("A4_TECNICO", new String[]{"Tecnica · A4 · Leyenda derecha", "Composicion tecnica limpia con leyenda lateral."});
-        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Tecnica · A4 · Leyenda inferior", "Mapa dominante con leyenda abajo y buena area."});
-        preferred.put("A4_TECNICO_CARTUCHO", new String[]{"Tecnica · A4 · Cartucho inferior", "Mapa + cartucho tecnico, sin leyenda recargada."});
-        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estandar", "Mapas ambientales y de monitoreo, sobrio."});
-        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrologia · A4 · General", "Drenaje, cuencas, escorrentia. Layout tecnico."});
+        preferred.put("A4_INFRAESTRUCTURA", new String[]{"Infraestructura · A4 · Obra civil", "Ductos, locaciones, red lineal."});
+        preferred.put("A4_TECNICO", new String[]{"Tecnica · A4 · Leyenda derecha", "Composicion tecnica con leyenda lateral."});
+        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Tecnica · A4 · Leyenda inferior", "Mapa dominante con leyenda abajo."});
+        preferred.put("A4_TECNICO_CARTUCHO", new String[]{"Tecnica · A4 · Cartucho inferior", "Mapa + cartucho tecnico."});
+        preferred.put("A4_TECNICO_LIMPIA", new String[]{"Tecnica · A4 · Mapa limpio", "Solo mapa, titulo y escala. Sin cartucho."});
+        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estandar", "Mapas ambientales y de monitoreo."});
+        preferred.put("A4_AMBIENTAL_LEYENDA_LATERAL", new String[]{"Ambiental · A4 · Leyenda lateral", "Ambiental con leyenda a la derecha."});
+        preferred.put("A4_AMBIENTAL_SATELITAL", new String[]{"Ambiental · A4 · Base satelital", "Imagen satelital con overlay ambiental."});
+        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrologia · A4 · General", "Drenaje, cuencas, escorrentia."});
+        preferred.put("A4_HIDRO_DRENAJE", new String[]{"Hidrologia · A4 · Drenaje", "Red de drenaje superficial."});
         preferred.put("A4_TOPOGRAFIA", new String[]{"Topografia · A4 · Curvas de nivel", "Relieve y curvas con balance visual."});
         preferred.put("A4_CATASTRAL", new String[]{"Catastral · A4 · Estandar", "Plano parcelario, mapa dominante."});
         preferred.put("A4_PARCELARIO", new String[]{"Catastral · A4 · Parcelario con tabla", "Parcelas + tabla de datos."});
         preferred.put("A4_MUESTREO", new String[]{"Ambiental · A4 · Muestreo", "Puntos de muestreo y leyenda clara."});
         preferred.put("A4_SATELITAL", new String[]{"Satelital · A4 · Estandar", "Imagen satelital con titulo y escala."});
         preferred.put("A4_PERFIL", new String[]{"Perfil · A4 · Altimetria tecnica", "Traza, progresivas y tabla altimetrica."});
+        preferred.put("A4_PERFIL_MAPA", new String[]{"Perfil · A4 · Mapa + perfil", "Mapa de traza + perfil altimetrico."});
+        preferred.put("A4_INSTITUCIONAL", new String[]{"Institucional · A4 · Presentacion", "Salida institucional sobria."});
         // A3 section header
         items.add(new TemplateChoice("", "— A3 (420×297 mm) —", ""));
         // A3 templates
