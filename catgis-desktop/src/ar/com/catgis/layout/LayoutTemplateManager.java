@@ -24,6 +24,42 @@ public class LayoutTemplateManager {
         model.clearSelection();
         java.util.List<LayoutElement> rm = new java.util.ArrayList<>(model.getElements());
         for (LayoutElement e : rm) model.removeElement(e.getId());
+        internalApply(key, model);
+        // Auto-populate legend from project layers
+        for (LayoutElement el : model.getElements()) {
+            if (el instanceof LayoutLegend && ((LayoutLegend)el).getItems().isEmpty()) {
+                ar.com.catgis.Project p = ar.com.catgis.AppContext.get().getProject();
+                if (p == null) p = ar.com.catgis.CatgisDesktopApp.currentProject;
+                if (p != null && p.getLayers() != null) {
+                    for (ar.com.catgis.Layer l : p.getLayers()) {
+                        if (l == null || !l.isVisible() || LayoutLegend.isBasemapName(l.getName())) continue;
+                        java.awt.Color c = resolveColor(l);
+                        ((LayoutLegend)el).getItems().add(new LayoutLegend.LegendItem(l.getName(), c, resolveType(l)));
+                    }
+                }
+            }
+        }
+    }
+
+    private static java.awt.Color resolveColor(ar.com.catgis.Layer l) {
+        if (l.getPointColor() != null && !l.getPointColor().equals(java.awt.Color.BLUE)) return l.getPointColor();
+        if (l.getLineColor() != null && !l.getLineColor().equals(java.awt.Color.RED)) return l.getLineColor();
+        if (l.getFillColor() != null) return l.getFillColor();
+        return new java.awt.Color(0x1976D2);
+    }
+
+    private static String resolveType(ar.com.catgis.Layer l) {
+        try {
+            ar.com.catgis.MapPanel mp = ar.com.catgis.CatgisDesktopApp.mapPanel;
+            if (mp != null) {
+                ar.com.catgis.ShapefileData d = mp.getShapefileData(l);
+                if (d != null) { String f = ar.com.catgis.VectorLayerUtils.resolveGeometryFamily(d); if (f != null) return f; }
+            }
+        } catch (Exception ignored) {}
+        return "VECTOR";
+    }
+
+    private static void internalApply(String key, LayoutModel model) {
 
         // Existing templates
         switch (key) {

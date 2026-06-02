@@ -472,6 +472,45 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
+    private void showCartouchePopup(LayoutCartouche cartouche) {
+        JDialog popup = new JDialog(this, "Datos cartograficos", true);
+        popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JPanel panel = new JPanel(new BorderLayout(8,8));
+        panel.setBorder(BorderFactory.createEmptyBorder(14,16,12,16));
+        panel.setBackground(Color.WHITE);
+
+        JPanel form = new JPanel(new java.awt.GridLayout(0, 2, 4, 6));
+        form.setBackground(Color.WHITE);
+        java.util.Map<String, JTextField> fields = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<String, String> e : cartouche.getFields().entrySet()) {
+            JLabel lbl = new JLabel(e.getKey()); lbl.setFont(lbl.getFont().deriveFont(11f));
+            JTextField tf = new JTextField(e.getValue() != null ? e.getValue() : "", 20);
+            form.add(lbl); form.add(tf);
+            fields.put(e.getKey(), tf);
+        }
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0)); btns.setBackground(Color.WHITE);
+        JButton acceptBtn = new JButton("Aceptar"); JButton cancelBtn = new JButton("Cancelar");
+        btns.add(acceptBtn); btns.add(cancelBtn);
+
+        acceptBtn.addActionListener(e -> {
+            for (java.util.Map.Entry<String, JTextField> fe : fields.entrySet())
+                cartouche.setField(fe.getKey(), fe.getValue().getText());
+            previewPanel.repaint(); refreshElementList(); popup.dispose();
+        });
+        cancelBtn.addActionListener(e -> popup.dispose());
+
+        javax.swing.AbstractAction doAccept = new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { acceptBtn.doClick(); } };
+        panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "accept");
+        panel.getActionMap().put("accept", doAccept);
+        panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(javax.swing.KeyStroke.getKeyStroke("ESCAPE"), "cancel");
+        panel.getActionMap().put("cancel", new javax.swing.AbstractAction() { public void actionPerformed(java.awt.event.ActionEvent e) { popup.dispose(); } });
+
+        panel.add(form, BorderLayout.CENTER); panel.add(btns, BorderLayout.SOUTH);
+        popup.add(panel); popup.pack(); popup.setResizable(false);
+        popup.setLocationRelativeTo(this); popup.setVisible(true);
+    }
+
     private void showTemplatePicker() {
         JPopupMenu menu = new JPopupMenu();
         java.util.Map<String, String> all = LayoutTemplateManager.getTemplateList();
@@ -4763,6 +4802,13 @@ public class MapLayoutComposerDialog extends JFrame {
                                 previewPanel.showLegendPopup((LayoutLegend) el);
                                 return;
                             }
+                            if (el instanceof LayoutCartouche) {
+                                layoutModel.clearSelection();
+                                el.setSelected(true);
+                                refreshElementList();
+                                showCartouchePopup((LayoutCartouche) el);
+                                return;
+                            }
                         }
                         Point pagePoint = toPagePoint(e.getPoint());
                         if (pagePoint != null && isInsideElement(LayoutElementType.HEADER, pagePoint)) {
@@ -5616,6 +5662,7 @@ public class MapLayoutComposerDialog extends JFrame {
         private void openElementProperties(LayoutElement el) {
             if (el instanceof LayoutLabel) { showTextPopup((LayoutLabel) el); return; }
             if (el instanceof LayoutLegend) { showLegendPopup((LayoutLegend) el); return; }
+            if (el instanceof LayoutCartouche) { showCartouchePopup((LayoutCartouche) el); return; }
             refreshPropertiesPanel();
         }
 

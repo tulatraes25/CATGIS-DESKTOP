@@ -77,7 +77,12 @@ public class LayoutMap implements LayoutElement {
             try {
                 mg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
                 mg.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                mg.drawImage(cachedImage, px, py, pw, ph, null);
+                // Maintain aspect ratio: fit image within frame centered
+                double imgW = cachedImage.getWidth(), imgH = cachedImage.getHeight();
+                double scale = Math.min((double)pw / imgW, (double)ph / imgH);
+                int drawW = (int)(imgW * scale), drawH = (int)(imgH * scale);
+                int dx = px + (pw - drawW) / 2, dy = py + (ph - drawH) / 2;
+                mg.drawImage(cachedImage, dx, dy, drawW, drawH, null);
             } finally {
                 mg.dispose();
             }
