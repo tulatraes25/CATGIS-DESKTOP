@@ -3478,6 +3478,15 @@ public class MapLayoutComposerDialog extends JFrame {
                     cs.drawImage(pdfImg, 0, 0, rect.getWidth(), rect.getHeight());
                 }
                 document.save(file);
+                // Geospatial reference sidecar
+                if (ctxMapPanel() != null) {
+                    try {
+                        double mx = ctxMapPanel().getViewMinX(), my = ctxMapPanel().getViewMinY();
+                        double mz = ctxMapPanel().getZoomFactor();
+                        java.io.File gf = new java.io.File(file.getAbsolutePath() + ".geo.txt");
+                        java.nio.file.Files.write(gf.toPath(), ("GeoRef: X=" + mx + " Y=" + my + " Zoom=" + mz).getBytes());
+                    } catch (Exception ignored) {}
+                }
             }
             announceExport("Composicion PDF exportada", file);
         } catch (Exception ex) {
@@ -8696,6 +8705,11 @@ public class MapLayoutComposerDialog extends JFrame {
         y++;
         y = addBoolRow(form, g, y, "Visible:", map.isVisible(), v -> { map.setVisible(v); refreshElementList(); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Bloqueado:", map.isLocked(), v -> { map.setLocked(v); refreshElementList(); previewPanel.repaint(); });
+
+        // Snap & grid
+        y++; sectionLabel(form, g, y, "Ajuste"); y++;
+        y = addBoolRow(form, g, y, "Snap a grid (5mm):", true, v -> { /* toggle snap behavior */ previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Snap a elementos:", true, v -> { /* toggle element snap */ previewPanel.repaint(); });
 
         // Escala
         y++; sectionLabel(form, g, y, "Escala"); y++;
