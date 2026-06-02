@@ -700,20 +700,30 @@ public class MapLayoutComposerDialog extends JFrame {
     private List<TemplateChoice> curatedTemplateChoices() {
         List<TemplateChoice> items = new ArrayList<>();
         java.util.Map<String, String[]> preferred = new java.util.LinkedHashMap<>();
-        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Ubicacion general", "Mapa de ubicacion general con leyenda lateral y cartucho tecnico."});
-        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Acceso operativo", "Prioriza rutas, caminos y accesos con cartucho breve y lectura clara."});
-        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento tecnico", "Planta general del area de proyecto con leyenda y escala equilibradas."});
-        preferred.put("A4_TECNICO", new String[]{"Técnica · A4 · Leyenda derecha", "Composición técnica limpia con mapa dominante y leyenda lateral."});
-        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Técnica · A4 · Leyenda inferior", "Diseño técnico horizontal con leyenda inferior y buena área útil."});
-        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estándar", "Plantilla sobria para mapas ambientales y de monitoreo."});
-        preferred.put("A4_CATASTRAL", new String[]{"Catastral · A4 · Estándar", "Plano parcelario sobrio con foco en el mapa principal."});
-        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrología · A4 · General", "Pensada para drenaje, cuencas y escorrentía sin recargar el layout."});
-        preferred.put("A4_TOPOGRAFIA", new String[]{"Topografía · A4 · Curvas de nivel", "Mapa técnico para relieve y curvas con balance visual profesional."});
-        preferred.put("A4_PERFIL", new String[]{"Perfil · A4 · Altimetría", "Mapa de traza con tabla/progresivas y cartucho compacto."});
-        preferred.put("A4_MUESTREO", new String[]{"Ambiental · A4 · Muestreo", "Ubicación de puntos de muestreo y leyenda clara."});
-        preferred.put("A3_TECNICO", new String[]{"Técnica · A3 · General", "Formato grande para planos técnicos con mapa principal amplio."});
-        preferred.put("A3_AMBIENTAL", new String[]{"Ambiental · A3 · Estándar", "Salida de informe ambiental con mejor superficie útil y lectura."});
-        preferred.put("A3_CATASTRAL", new String[]{"Catastral · A3 · Estándar", "Plano parcelario A3 con más aire visual y mejor escala de lectura."});
+        // A4 templates
+        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Ubicacion general", "Mapa de ubicacion, leyenda lateral, cartucho."});
+        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Acceso operativo", "Rutas y caminos con cartucho compacto."});
+        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento tecnico", "Planta general de proyecto, leyenda y escala."});
+        preferred.put("A4_INFRAESTRUCTURA", new String[]{"Infraestructura · A4 · General", "Obra civil, ductos, locaciones. Layout limpio."});
+        preferred.put("A4_TECNICO", new String[]{"Tecnica · A4 · Leyenda derecha", "Composicion tecnica limpia con leyenda lateral."});
+        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Tecnica · A4 · Leyenda inferior", "Mapa dominante con leyenda abajo y buena area."});
+        preferred.put("A4_TECNICO_CARTUCHO", new String[]{"Tecnica · A4 · Cartucho inferior", "Mapa + cartucho tecnico, sin leyenda recargada."});
+        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estandar", "Mapas ambientales y de monitoreo, sobrio."});
+        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrologia · A4 · General", "Drenaje, cuencas, escorrentia. Layout tecnico."});
+        preferred.put("A4_TOPOGRAFIA", new String[]{"Topografia · A4 · Curvas de nivel", "Relieve y curvas con balance visual."});
+        preferred.put("A4_CATASTRAL", new String[]{"Catastral · A4 · Estandar", "Plano parcelario, mapa dominante."});
+        preferred.put("A4_PARCELARIO", new String[]{"Catastral · A4 · Parcelario con tabla", "Parcelas + tabla de datos."});
+        preferred.put("A4_MUESTREO", new String[]{"Ambiental · A4 · Muestreo", "Puntos de muestreo y leyenda clara."});
+        preferred.put("A4_SATELITAL", new String[]{"Satelital · A4 · Estandar", "Imagen satelital con titulo y escala."});
+        preferred.put("A4_PERFIL", new String[]{"Perfil · A4 · Altimetria tecnica", "Traza, progresivas y tabla altimetrica."});
+        // A3 templates
+        preferred.put("A3_TECNICO", new String[]{"Tecnica · A3 · General", "Formato grande, mapa amplio con leyenda lateral."});
+        preferred.put("A3_AMBIENTAL", new String[]{"Ambiental · A3 · Estandar", "Informe ambiental con buena superficie de lectura."});
+        preferred.put("A3_CATASTRAL", new String[]{"Catastral · A3 · Estandar", "Plano parcelario A3, mas aire visual."});
+        preferred.put("A3_SATELITAL", new String[]{"Satelital · A3 · Estandar", "Imagen satelital A3."});
+        preferred.put("A3_HIDROLOGIA", new String[]{"Hidrologia · A3 · General", "Cuencas y drenaje en formato grande."});
+        preferred.put("A3_TOPOGRAFIA", new String[]{"Topografia · A3 · General", "Relieve y curvas en A3."});
+        preferred.put("A3_PRESENTACION", new String[]{"Institucional · A3 · Presentacion", "Salida institucional con mapa dominante."});
         java.util.Map<String, String> all = LayoutTemplateManager.getTemplateList();
         for (java.util.Map.Entry<String, String[]> entry : preferred.entrySet()) {
             String key = entry.getKey();
