@@ -700,9 +700,9 @@ public class MapLayoutComposerDialog extends JFrame {
     private List<TemplateChoice> curatedTemplateChoices() {
         List<TemplateChoice> items = new ArrayList<>();
         java.util.Map<String, String[]> preferred = new java.util.LinkedHashMap<>();
-        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Referencia", "Mapa de ubicación general con leyenda lateral y cartucho técnico."});
-        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Accesibilidad", "Prioriza rutas, caminos y accesos con cartucho breve y lectura clara."});
-        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento", "Planta general del área de proyecto con leyenda y escala equilibradas."});
+        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Ubicacion general", "Mapa de ubicacion general con leyenda lateral y cartucho tecnico."});
+        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Acceso operativo", "Prioriza rutas, caminos y accesos con cartucho breve y lectura clara."});
+        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento tecnico", "Planta general del area de proyecto con leyenda y escala equilibradas."});
         preferred.put("A4_TECNICO", new String[]{"Técnica · A4 · Leyenda derecha", "Composición técnica limpia con mapa dominante y leyenda lateral."});
         preferred.put("A4_TECNICO_INFERIOR", new String[]{"Técnica · A4 · Leyenda inferior", "Diseño técnico horizontal con leyenda inferior y buena área útil."});
         preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estándar", "Plantilla sobria para mapas ambientales y de monitoreo."});
