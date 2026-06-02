@@ -512,6 +512,97 @@ public class MapLayoutComposerDialog extends JFrame {
         popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
+    private void showScalePopup(LayoutScaleBar scale) {
+        JDialog popup = new JDialog(this, "Escala grafica", true);
+        popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JPanel panel = new JPanel(new BorderLayout(8,8));
+        panel.setBorder(BorderFactory.createEmptyBorder(14,16,12,16));
+        panel.setBackground(Color.WHITE);
+
+        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,8));
+        form.setBackground(Color.WHITE);
+
+        JLabel segLbl = new JLabel("Segmentos"); form.add(segLbl);
+        Integer[] segVals = {2,3,4,5,6,8};
+        JComboBox<Integer> segCombo = new JComboBox<>(segVals); segCombo.setSelectedItem(scale.getSegments()); form.add(segCombo);
+
+        JLabel colLbl = new JLabel("Color"); form.add(colLbl);
+        JButton colorBtn = new JButton(); colorBtn.setBackground(scale.getColor()); colorBtn.setOpaque(true); form.add(colorBtn);
+        colorBtn.addActionListener(e -> { Color c = JColorChooser.showDialog(popup,"Color",colorBtn.getBackground()); if(c!=null){scale.setColor(c);colorBtn.setBackground(c);previewPanel.repaint();} });
+
+        JLabel uniLbl = new JLabel("Unidad"); form.add(uniLbl);
+        JTextField unitField = new JTextField(scale.getUnitLabel(), 10); form.add(unitField);
+
+        JButton acceptBtn = new JButton("Aceptar"); JButton cancelBtn = new JButton("Cancelar");
+        acceptBtn.addActionListener(e -> { scale.setSegments((Integer)segCombo.getSelectedItem()); scale.setUnitLabel(unitField.getText().trim()); previewPanel.repaint(); popup.dispose(); });
+        cancelBtn.addActionListener(e -> popup.dispose());
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0)); btns.setBackground(Color.WHITE); btns.add(acceptBtn); btns.add(cancelBtn);
+        panel.add(form, BorderLayout.CENTER); panel.add(btns, BorderLayout.SOUTH);
+        popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
+    }
+
+    private void showNorthPopup(LayoutNorthArrow north) {
+        JDialog popup = new JDialog(this, "Norte", true);
+        popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JPanel panel = new JPanel(new BorderLayout(8,8));
+        panel.setBorder(BorderFactory.createEmptyBorder(14,16,12,16));
+        panel.setBackground(Color.WHITE);
+
+        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,8));
+        form.setBackground(Color.WHITE);
+
+        JLabel xLbl = new JLabel("X (mm)"); form.add(xLbl);
+        JTextField xField = new JTextField(String.format("%.0f", north.getBoundsMm().x), 8); form.add(xField);
+        JLabel yLbl = new JLabel("Y (mm)"); form.add(yLbl);
+        JTextField yField = new JTextField(String.format("%.0f", north.getBoundsMm().y), 8); form.add(yField);
+        JLabel wLbl = new JLabel("Tamano (mm)"); form.add(wLbl);
+        JTextField wField = new JTextField(String.format("%.0f", north.getBoundsMm().width), 8); form.add(wField);
+
+        JButton acceptBtn = new JButton("Aceptar"); JButton cancelBtn = new JButton("Cancelar");
+        acceptBtn.addActionListener(e -> {
+            try { north.setBoundsMm(Double.parseDouble(xField.getText()), Double.parseDouble(yField.getText()), Double.parseDouble(wField.getText()), Double.parseDouble(wField.getText())); } catch(Exception ignored){}
+            previewPanel.repaint(); popup.dispose();
+        });
+        cancelBtn.addActionListener(e -> popup.dispose());
+
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.RIGHT,8,0)); btns.setBackground(Color.WHITE); btns.add(acceptBtn); btns.add(cancelBtn);
+        panel.add(form, BorderLayout.CENTER); panel.add(btns, BorderLayout.SOUTH);
+        popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
+    }
+
+    private void showMapPropsPopup(LayoutMap map) {
+        JDialog popup = new JDialog(this, "Propiedades del mapa", true);
+        popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        JPanel panel = new JPanel(new BorderLayout(8,8));
+        panel.setBorder(BorderFactory.createEmptyBorder(14,16,12,16));
+        panel.setBackground(Color.WHITE);
+
+        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,8));
+        form.setBackground(Color.WHITE);
+
+        JLabel scLbl = new JLabel("Escala 1:"); form.add(scLbl);
+        JTextField scaleField = new JTextField(map.getTargetScaleDenominator() > 0 ? String.valueOf((long)map.getTargetScaleDenominator()) : "", 10);
+        scaleField.setToolTipText("Ingresa la escala deseada. Ej: 5000 para 1:5000"); form.add(scaleField);
+
+        JButton applyBtn = new JButton("Aplicar escala");
+        applyBtn.addActionListener(e -> {
+            try { double s = Double.parseDouble(scaleField.getText()); if(s>0){map.setTargetScaleDenominator(s);applyMapScale(s);previewPanel.repaint();} } catch(Exception ignored){}
+        });
+        form.add(new JLabel()); form.add(applyBtn);
+
+        JCheckBox gridChk = new JCheckBox("Mostrar grilla", gridCheck.isSelected());
+        gridChk.addActionListener(e -> { gridCheck.setSelected(gridChk.isSelected()); previewPanel.repaint(); });
+        form.add(new JLabel()); form.add(gridChk);
+
+        JButton closeBtn = new JButton("Cerrar");
+        closeBtn.addActionListener(e -> popup.dispose());
+        form.add(new JLabel()); form.add(closeBtn);
+
+        panel.add(form, BorderLayout.CENTER);
+        popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
+    }
+
     private void showTemplatePicker() {
         JDialog dialog = new JDialog(this, "Elegir plantilla CATMAP", true);
         dialog.setLayout(new BorderLayout(10, 10));
@@ -5907,6 +5998,9 @@ public class MapLayoutComposerDialog extends JFrame {
             if (el instanceof LayoutLabel) { showTextPopup((LayoutLabel) el); return; }
             if (el instanceof LayoutLegend) { showLegendPopup((LayoutLegend) el); return; }
             if (el instanceof LayoutCartouche) { showCartouchePopup((LayoutCartouche) el); return; }
+            if (el instanceof LayoutScaleBar) { showScalePopup((LayoutScaleBar) el); return; }
+            if (el instanceof LayoutNorthArrow) { showNorthPopup((LayoutNorthArrow) el); return; }
+            if (el instanceof LayoutMap) { showMapPropsPopup((LayoutMap) el); return; }
             refreshPropertiesPanel();
         }
 
