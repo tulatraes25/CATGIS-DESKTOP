@@ -726,10 +726,17 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void applySelectedTemplateFromDialog(TemplateChoice selected, JDialog dialog) {
-        if (selected == null) {
-            return;
+        if (selected == null) return;
+        String key = selected.key();
+        // Auto-set page size based on template
+        if (key.startsWith("A3_")) {
+            pageSizeCombo.setSelectedItem(PageSizePreset.A3);
+            orientationCombo.setSelectedItem(key.contains("VERTICAL") ? PageOrientation.PORTRAIT : PageOrientation.LANDSCAPE);
+        } else {
+            pageSizeCombo.setSelectedItem(PageSizePreset.A4);
+            orientationCombo.setSelectedItem(key.contains("VERTICAL") ? PageOrientation.PORTRAIT : PageOrientation.LANDSCAPE);
         }
-        LayoutTemplateManager.applyTemplate(selected.key(), layoutModel);
+        LayoutTemplateManager.applyTemplate(key, layoutModel);
         refreshAll();
         statusLabel.setText("Plantilla aplicada: " + selected.displayName());
         dialog.dispose();
