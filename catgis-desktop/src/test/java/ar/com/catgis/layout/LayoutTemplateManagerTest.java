@@ -71,7 +71,7 @@ public class LayoutTemplateManagerTest {
     @Test
     public void testTemplateList() {
         var templates = LayoutTemplateManager.getTemplateList();
-        assertTrue(templates.size() >= 10);
+        assertTrue(templates.size() >= 24);
         assertTrue(templates.containsKey("A4_AMBIENTAL"));
         assertTrue(templates.containsKey("A4_TECNICO"));
         assertTrue(templates.containsKey("A3_TECNICO"));
@@ -131,5 +131,28 @@ public class LayoutTemplateManagerTest {
             if (el instanceof LayoutTable) hasTable = true;
         }
         assertTrue(hasTable);
+    }
+
+    @Test
+    public void testAllNewA4Templates() {
+        String[] a4 = {"A4_TECNICO_INFERIOR","A4_CATASTRAL","A4_HIDROLOGIA","A4_TOPOGRAFIA","A4_URBANO","A4_PARCELARIO","A4_INFRAESTRUCTURA"};
+        for (String key : a4) {
+            LayoutModel model = new LayoutModel();
+            LayoutTemplateManager.applyTemplate(key, model);
+            assertTrue(model.size() >= 3, key + " should have >= 3 elements");
+            boolean hasMap = false;
+            for (LayoutElement el : model.getElements()) if (el instanceof LayoutMap) hasMap = true;
+            assertTrue(hasMap, key + " should have a map");
+        }
+    }
+
+    @Test
+    public void testAllNewA3Templates() {
+        String[] a3 = {"A3_AMBIENTAL","A3_CATASTRAL","A3_SATELITAL","A3_PARCELARIO","A3_HIDROLOGIA","A3_TOPOGRAFIA","A3_PRESENTACION"};
+        for (String key : a3) {
+            LayoutModel model = new LayoutModel();
+            LayoutTemplateManager.applyTemplate(key, model);
+            assertTrue(model.size() >= 3, key + " should have >= 3 elements");
+        }
     }
 }

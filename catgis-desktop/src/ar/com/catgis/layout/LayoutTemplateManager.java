@@ -14,16 +14,37 @@ public class LayoutTemplateManager {
 
     public static Map<String, String> getTemplateList() {
         Map<String, String> list = new LinkedHashMap<>();
-        list.put("A4_AMBIENTAL", "A4 horizontal - Informe ambiental");
-        list.put("A4_TECNICO", "A4 horizontal - Tecnico con leyenda");
-        list.put("A3_TECNICO", "A3 horizontal - Mapa grande");
-        list.put("A4_MUESTREO", "A4 horizontal - Muestreo");
-        list.put("A4_SATELITAL", "A4 horizontal - Imagen satelital");
-        list.put("A4_VERTICAL", "A4 vertical - Informe");
-        list.put("A4_REFERENCIA", "A4 - Referencia / Accesibilidad");
+        // Tecnicas A4
+        list.put("A4_TECNICO", "A4 - Tecnico (leyenda derecha)");
+        list.put("A4_TECNICO_INFERIOR", "A4 - Tecnico (leyenda inferior)");
+        list.put("A4_TOPOGRAFIA", "A4 - Topografia");
+        list.put("A4_VERTICAL", "A4 vertical - Tecnico");
+        // Ambientales A4
+        list.put("A4_AMBIENTAL", "A4 - Ambiental");
+        list.put("A4_HIDROLOGIA", "A4 - Hidrologia");
+        list.put("A4_MUESTREO", "A4 - Muestreo");
+        // Catastrales A4
+        list.put("A4_CATASTRAL", "A4 - Catastral");
+        list.put("A4_PARCELARIO", "A4 - Parcelario");
+        list.put("A4_URBANO", "A4 - Urbano");
+        // Satelitales A4
+        list.put("A4_SATELITAL", "A4 - Satelital");
+        // Proyecto A4
+        list.put("A4_REFERENCIA", "A4 - Referencia / Ubicacion");
         list.put("A4_ACCESIBILIDAD", "A4 - Accesibilidad");
         list.put("A4_EMPLAZAMIENTO", "A4 - Emplazamiento");
+        list.put("A4_INFRAESTRUCTURA", "A4 - Infraestructura");
+        // Perfil A4
         list.put("A4_PERFIL", "A4 - Perfil / Altimetria");
+        // A3 templates
+        list.put("A3_TECNICO", "A3 - Tecnico");
+        list.put("A3_AMBIENTAL", "A3 - Ambiental");
+        list.put("A3_CATASTRAL", "A3 - Catastral");
+        list.put("A3_SATELITAL", "A3 - Satelital");
+        list.put("A3_PARCELARIO", "A3 - Parcelario");
+        list.put("A3_HIDROLOGIA", "A3 - Hidrologia");
+        list.put("A3_TOPOGRAFIA", "A3 - Topografia");
+        list.put("A3_PRESENTACION", "A3 - Presentacion");
         return list;
     }
 
@@ -34,14 +55,28 @@ public class LayoutTemplateManager {
         switch (key) {
             case "A4_AMBIENTAL": buildAmbiental(model); break;
             case "A4_TECNICO": buildTecnico(model); break;
-            case "A3_TECNICO": buildA3Tecnico(model); break;
+            case "A4_TECNICO_INFERIOR": buildTecnicoInferior(model); break;
+            case "A4_CATASTRAL": buildCatastralA4(model); break;
+            case "A4_HIDROLOGIA": buildHidrologiaA4(model); break;
+            case "A4_TOPOGRAFIA": buildTopografiaA4(model); break;
+            case "A4_URBANO": buildUrbanoA4(model); break;
+            case "A4_PARCELARIO": buildParcelarioA4(model); break;
+            case "A4_INFRAESTRUCTURA": buildInfraestructuraA4(model); break;
+            case "A4_VERTICAL": buildVertical(model); break;
             case "A4_MUESTREO": buildMuestreo(model); break;
             case "A4_SATELITAL": buildSatelital(model); break;
-            case "A4_VERTICAL": buildVertical(model); break;
             case "A4_REFERENCIA": buildReferencia(model); break;
             case "A4_ACCESIBILIDAD": buildAccesibilidad(model); break;
             case "A4_EMPLAZAMIENTO": buildEmplazamiento(model); break;
             case "A4_PERFIL": buildPerfil(model); break;
+            case "A3_TECNICO": buildA3Tecnico(model); break;
+            case "A3_AMBIENTAL": buildA3Ambiental(model); break;
+            case "A3_CATASTRAL": buildA3Catastral(model); break;
+            case "A3_SATELITAL": buildA3Satelital(model); break;
+            case "A3_PARCELARIO": buildA3Parcelario(model); break;
+            case "A3_HIDROLOGIA": buildA3Hidrologia(model); break;
+            case "A3_TOPOGRAFIA": buildA3Topografia(model); break;
+            case "A3_PRESENTACION": buildA3Presentacion(model); break;
         }
     }
 
@@ -447,5 +482,141 @@ public class LayoutTemplateManager {
         addNorth(m, "Norte", 268, 120, 14, 14, z);
         LayoutCartouche pc = new LayoutCartouche("Datos cartograficos", 148, 192, 137, 20);
         pc.setZOrder(z[0]++); pc.setName("Datos cartograficos"); m.addElement(pc);
+    }
+
+    // ---- A4: Tecnico Inferior ----
+    private static void buildTecnicoInferior(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Mapa Tecnico", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 18), new Color(0x1A2434), z);
+        addMap(m, "Mapa principal", 12, 24, 273, 148, z);
+        addLegend(m, "Leyenda", 12, 176, 273, 20, z, false);
+        addScale(m, "Escala", 12, 198, 130, 10, z);
+        addNorth(m, "Norte", 270, 190, 14, 14, z);
+    }
+
+    // ---- A4: Catastral ----
+    private static void buildCatastralA4(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Catastral", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addMap(m, "Plano catastral", 12, 24, 210, 155, z);
+        addLegend(m, "Leyenda", 228, 24, 57, 40, z, true);
+        addScale(m, "Escala", 12, 184, 130, 10, z);
+        addNorth(m, "Norte", 270, 168, 14, 14, z);
+    }
+
+    // ---- A4: Hidrologia ----
+    private static void buildHidrologiaA4(LayoutModel m) { int[] z = {0};
+        Color wb = new Color(0x0D47A1);
+        addLabel(m, "Titulo", "Mapa Hidrologico", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), wb, z);
+        addMap(m, "Mapa de cuencas", 12, 24, 273, 148, z);
+        addLegend(m, "Leyenda", 12, 176, 160, 30, z, false);
+        addScale(m, "Escala", 175, 176, 110, 10, z);
+        addNorth(m, "Norte", 268, 168, 14, 14, z);
+    }
+
+    // ---- A4: Topografia ----
+    private static void buildTopografiaA4(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Topografico", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Curvas de nivel", 12, 24, 273, 9, new Font("SansSerif", Font.PLAIN, 8), new Color(0x5B6778), z);
+        addMap(m, "Mapa topografico", 12, 34, 273, 138, z);
+        addLegend(m, "Leyenda", 12, 176, 150, 30, z, false);
+        addScale(m, "Escala", 165, 176, 120, 10, z);
+        addNorth(m, "Norte", 268, 166, 14, 14, z);
+    }
+
+    // ---- A4: Urbano ----
+    private static void buildUrbanoA4(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Urbano", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Zonificacion y equipamiento", 12, 24, 273, 9, new Font("SansSerif", Font.PLAIN, 8), new Color(0x5B6778), z);
+        addMap(m, "Mapa urbano", 12, 34, 200, 140, z);
+        addLegend(m, "Zonificacion", 218, 34, 67, 40, z, true);
+        addScale(m, "Escala", 12, 178, 130, 10, z);
+        addNorth(m, "Norte", 270, 168, 14, 14, z);
+    }
+
+    // ---- A4: Parcelario ----
+    private static void buildParcelarioA4(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Parcelario", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Nomenclatura catastral", 12, 24, 273, 9, new Font("SansSerif", Font.PLAIN, 8), new Color(0x5B6778), z);
+        addMap(m, "Mapa parcelario", 12, 34, 273, 128, z);
+        LayoutTable t1 = new LayoutTable("Tabla parcelas", 12, 166, 273, 28); t1.setZOrder(z[0]++);
+        t1.setShowBorders(true); t1.setAlternateRows(true); t1.setMaxVisibleRows(4); t1.setName("Parcelas"); m.addElement(t1);
+        addScale(m, "Escala", 12, 196, 130, 10, z);
+        addNorth(m, "Norte", 268, 158, 14, 14, z);
+    }
+
+    // ---- A4: Infraestructura ----
+    private static void buildInfraestructuraA4(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano de Infraestructura", 12, 8, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1A2434), z);
+        addMap(m, "Mapa infraestructura", 12, 24, 273, 140, z);
+        addLegend(m, "Infraestructura", 12, 168, 160, 30, z, false);
+        addScale(m, "Escala", 175, 168, 110, 10, z);
+        addNorth(m, "Norte", 268, 158, 14, 14, z);
+    }
+
+    // ---- A3: Ambiental ----
+    private static void buildA3Ambiental(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Mapa Ambiental A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Estudio de impacto ambiental", 20, 30, 380, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
+        addMap(m, "Mapa principal", 20, 42, 380, 228, z);
+        addLegend(m, "Leyenda", 20, 276, 200, 40, z, false);
+        addScale(m, "Escala", 230, 276, 170, 10, z);
+        addNorth(m, "Norte", 375, 258, 20, 20, z);
+    }
+
+    // ---- A3: Catastral ----
+    private static void buildA3Catastral(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Catastral A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
+        addMap(m, "Plano catastral", 20, 32, 300, 238, z);
+        addLegend(m, "Nomenclatura", 328, 32, 72, 40, z, true);
+        addScale(m, "Escala", 20, 276, 180, 10, z);
+        addNorth(m, "Norte", 375, 258, 18, 18, z);
+    }
+
+    // ---- A3: Satelital ----
+    private static void buildA3Satelital(LayoutModel m) { int[] z = {0};
+        addMap(m, "Imagen satelital", 20, 8, 380, 276, z);
+        addLabel(m, "Titulo", "Imagen Satelital A3", 20, 288, 250, 14, new Font("SansSerif", Font.BOLD, 16), Color.WHITE, z);
+        addScale(m, "Escala", 280, 288, 120, 10, z);
+        addNorth(m, "Norte", 375, 8, 20, 20, z);
+    }
+
+    // ---- A3: Parcelario ----
+    private static void buildA3Parcelario(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Parcelario A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
+        addMap(m, "Mapa parcelario", 20, 32, 380, 208, z);
+        LayoutTable t2 = new LayoutTable("Tabla", 20, 244, 380, 40); t2.setZOrder(z[0]++);
+        t2.setShowBorders(true); t2.setAlternateRows(true); t2.setMaxVisibleRows(6); t2.setName("Parcelas"); m.addElement(t2);
+        addScale(m, "Escala", 20, 288, 200, 10, z);
+        addNorth(m, "Norte", 375, 238, 18, 18, z);
+    }
+
+    // ---- A3: Hidrologia ----
+    private static void buildA3Hidrologia(LayoutModel m) { int[] z = {0};
+        Color wb2 = new Color(0x0D47A1);
+        addLabel(m, "Titulo", "Mapa Hidrologico A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), wb2, z);
+        addLabel(m, "Subtitulo", "Cuencas y red de drenaje", 20, 30, 380, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
+        addMap(m, "Mapa de cuencas", 20, 42, 380, 228, z);
+        addLegend(m, "Hidrologia", 20, 276, 200, 40, z, false);
+        addScale(m, "Escala", 230, 276, 170, 10, z);
+        addNorth(m, "Norte", 375, 258, 18, 18, z);
+    }
+
+    // ---- A3: Topografia ----
+    private static void buildA3Topografia(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "Plano Topografico A3", 20, 10, 380, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Curvas de nivel y relieve", 20, 30, 380, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
+        addMap(m, "Mapa topografico", 20, 42, 260, 228, z);
+        addLegend(m, "Altimetria", 288, 42, 112, 40, z, true);
+        addScale(m, "Escala", 20, 276, 180, 10, z);
+        addNorth(m, "Norte", 375, 258, 18, 18, z);
+    }
+
+    // ---- A3: Presentacion ----
+    private static void buildA3Presentacion(LayoutModel m) { int[] z = {0};
+        addLabel(m, "Titulo", "CATGIS Desktop", 20, 10, 380, 22, new Font("SansSerif", Font.BOLD, 28), new Color(0x1A2434), z);
+        addLabel(m, "Subtitulo", "Salida cartografica profesional", 20, 36, 380, 12, new Font("SansSerif", Font.PLAIN, 12), new Color(0x5B6778), z);
+        addMap(m, "Mapa principal", 20, 54, 380, 216, z);
+        addLegend(m, "Leyenda", 20, 274, 200, 40, z, true);
+        addScale(m, "Escala", 230, 274, 170, 10, z);
+        addNorth(m, "Norte", 375, 256, 20, 20, z);
     }
 }
