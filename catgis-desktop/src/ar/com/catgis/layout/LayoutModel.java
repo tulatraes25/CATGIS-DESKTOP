@@ -110,4 +110,25 @@ public class LayoutModel {
     public int nextZ() {
         return elements.stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1;
     }
+
+    // Multi-page support
+    private int currentPage = 0;
+    private final List<java.util.List<LayoutElement>> pages = new java.util.ArrayList<>();
+    {
+        pages.add(elements); // page 0 uses the main elements list
+    }
+
+    public int getCurrentPage() { return currentPage; }
+    public void setCurrentPage(int p) { currentPage = Math.max(0, Math.min(p, pages.size() - 1)); }
+    public int getPageCount() { return pages.size(); }
+
+    public void addPage() {
+        pages.add(new java.util.ArrayList<>());
+        currentPage = pages.size() - 1;
+    }
+
+    public List<LayoutElement> getCurrentPageElements() {
+        if (currentPage == 0) return elements;
+        return pages.get(currentPage);
+    }
 }
