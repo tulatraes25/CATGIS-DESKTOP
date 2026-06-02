@@ -4719,18 +4719,32 @@ public class MapLayoutComposerDialog extends JFrame {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                        // Check if double-click on a LayoutMap -> activate map content editing
+                        // Check if double-click on a LayoutElement -> open contextual editor
                         Point pp = toPagePoint(e.getPoint());
                         RectMm pr = toPageRectMm();
                         if (pp != null && pr != null && layoutModel.size() > 0) {
-                    double xMm = pr.xMm + pp.x * pr.pxToMmScale;
-                    double yMm = pr.yMm + pp.y * pr.pxToMmScale;
+                            double xMm = pr.xMm + pp.x * pr.pxToMmScale;
+                            double yMm = pr.yMm + pp.y * pr.pxToMmScale;
                             LayoutElement el = layoutModel.findTopmostElementAtMm(xMm, yMm);
                             if (el instanceof LayoutMap) {
                                 layoutModel.clearSelection();
                                 el.setSelected(true);
                                 mapPanToolButton.doClick();
                                 statusLabel.setText("Editando contenido del mapa: \"" + el.getName() + "\". Esc para salir.");
+                                return;
+                            }
+                            if (el instanceof LayoutLabel) {
+                                layoutModel.clearSelection();
+                                el.setSelected(true);
+                                refreshElementList();
+                                previewPanel.showTextPopup((LayoutLabel) el);
+                                return;
+                            }
+                            if (el instanceof LayoutLegend) {
+                                layoutModel.clearSelection();
+                                el.setSelected(true);
+                                refreshElementList();
+                                previewPanel.showLegendPopup((LayoutLegend) el);
                                 return;
                             }
                         }
@@ -5589,7 +5603,7 @@ public class MapLayoutComposerDialog extends JFrame {
             refreshPropertiesPanel();
         }
 
-        private void showTextPopup(LayoutLabel label) {
+        void showTextPopup(LayoutLabel label) {
             JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
             popup.setUndecorated(true);
             JPanel panel = new JPanel(new GridLayout(0, 2, 4, 4));
@@ -5639,7 +5653,7 @@ public class MapLayoutComposerDialog extends JFrame {
             popup.setVisible(true);
         }
 
-        private void showLegendPopup(LayoutLegend legend) {
+        void showLegendPopup(LayoutLegend legend) {
             JDialog popup = new JDialog(SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this));
             popup.setUndecorated(true);
             JPanel panel = new JPanel(new GridLayout(0, 2, 4, 4));
@@ -7996,6 +8010,22 @@ public class MapLayoutComposerDialog extends JFrame {
         JPanel actionBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 2));
         actionBar.setOpaque(false);
         actionBar.add(addBtn);
+        // Plantillas dropdown
+        JPopupMenu tmplMenu = new JPopupMenu();
+        java.util.Map<String, String> allTmpl = LayoutTemplateManager.getTemplateList();
+        for (java.util.Map.Entry<String, String> e : allTmpl.entrySet()) {
+            String key = e.getKey(), label = e.getValue();
+            tmplMenu.add(menuItem(label, () -> {
+                LayoutTemplateManager.applyTemplate(key, layoutModel);
+                refreshElementList(); previewPanel.repaint();
+                statusLabel.setText("Plantilla: " + label);
+            }));
+        }
+        JButton tmplBtn = new JButton("Plantillas \u25BE");
+        tmplBtn.setFont(tmplBtn.getFont().deriveFont(Font.PLAIN, 10f));
+        tmplBtn.setMargin(new Insets(3, 6, 3, 6));
+        tmplBtn.addActionListener(e -> tmplMenu.show(tmplBtn, 0, tmplBtn.getHeight()));
+        actionBar.add(tmplBtn);
         actionBar.add(miniBtn("Duplicar", "Duplicar seleccionado (Ctrl+D)", e -> {
             LayoutElement sel = layoutModel.getSelected();
             if (sel != null) { duplicateLayoutElement(sel); refreshElementList(); previewPanel.repaint(); }
