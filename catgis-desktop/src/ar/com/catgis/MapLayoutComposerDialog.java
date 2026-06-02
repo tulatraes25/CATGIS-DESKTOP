@@ -4580,6 +4580,8 @@ public class MapLayoutComposerDialog extends JFrame {
         private LayoutElement hoveredElement = null;
         private String drawingShape = null;        // "rect", "ellipse", "line" when drawing mode active
         private Point drawingStart = null;          // page-pixel start of the shape
+        boolean snapToGrid = true;                   // controlled by UI toggle
+        boolean snapToElements = true;               // controlled by UI toggle
         private final JTextField inlineTitleEditor;
         private final JPanel inlineCartoucheEditor;
         private final JTextField inlineCartoucheStudyField;
@@ -5022,8 +5024,9 @@ public class MapLayoutComposerDialog extends JFrame {
                 } else {
                     double newX = dragStartBoundsMm.x + (p.x - dragStartPagePoint.x) * sc;
                     double newY = dragStartBoundsMm.y + (p.y - dragStartPagePoint.y) * sc;
-                    // Smart snap to other element edges
-                    double snapTol = 2.0; // mm
+                    // Smart snap to other element edges (conditional)
+                    if (snapToElements) {
+                    double snapTol = 2.0;
                     for (LayoutElement other : layoutModel.getElements()) {
                         if (other == draggingLayoutElement || !other.isVisible()) continue;
                         double ox = other.getBoundsMm().x, oy = other.getBoundsMm().y;
@@ -5036,10 +5039,13 @@ public class MapLayoutComposerDialog extends JFrame {
                         if (Math.abs(ey + eh - oy - oh) < snapTol) newY = oy + oh - eh;
                         if (Math.abs(ey + eh/2 - oy - oh/2) < snapTol) newY = oy + oh/2 - eh/2;
                     }
-                    // Snap to grid (5mm grid)
+                    }
+                    // Snap to grid (5mm, conditional)
+                    if (snapToGrid) {
                     double gridSize = 5.0;
                     newX = Math.round(newX / gridSize) * gridSize;
                     newY = Math.round(newY / gridSize) * gridSize;
+                    }
                     draggingLayoutElement.setBoundsMm(newX, newY, dragStartBoundsMm.width, dragStartBoundsMm.height);
                                 }
                             }
@@ -8708,8 +8714,8 @@ public class MapLayoutComposerDialog extends JFrame {
 
         // Snap & grid
         y++; sectionLabel(form, g, y, "Ajuste"); y++;
-        y = addBoolRow(form, g, y, "Snap a grid (5mm):", true, v -> { /* snap behavior active by default in mouseDragged */ previewPanel.repaint(); });
-        y = addBoolRow(form, g, y, "Snap a elementos:", true, v -> { /* element snap active by default in mouseDragged */ previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Snap a grid (5mm):", previewPanel.snapToGrid, v -> { previewPanel.snapToGrid = v; previewPanel.repaint(); });
+        y = addBoolRow(form, g, y, "Snap a elementos:", previewPanel.snapToElements, v -> { previewPanel.snapToElements = v; previewPanel.repaint(); });
 
         // Escala
         y++; sectionLabel(form, g, y, "Escala"); y++;
