@@ -17,6 +17,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
@@ -28,6 +30,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -481,16 +484,59 @@ public class LayerPropertiesDialog extends JDialog {
         GridBagConstraints gbc = createFormConstraints();
         int row = 0;
         addSectionTitle(panel, gbc, row++, "Etiquetas");
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2;
         panel.add(labelsVisibleCheck, gbc);
         gbc.gridwidth = 1;
-        addRow(panel, gbc, row++, "Campo etiqueta", labelFieldCombo);
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weighty = 1;
-        gbc.gridwidth = 2;
+        addRow(panel, gbc, row++, "Campo", labelFieldCombo);
+
+        // Fuente
+        JComboBox<String> fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+        fontCombo.setSelectedItem(layer.getLabelFontFamily());
+        fontCombo.addActionListener(e -> layer.setLabelFontFamily((String)fontCombo.getSelectedItem()));
+        addRow(panel, gbc, row++, "Fuente", fontCombo);
+
+        // Tamano
+        JSpinner sizeSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelFontSize(), 6, 72, 1));
+        sizeSpin.addChangeListener(e -> layer.setLabelFontSize((Integer)sizeSpin.getValue()));
+        addRow(panel, gbc, row++, "Tamano", sizeSpin);
+
+        // Bold + Italic
+        JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0)); styleRow.setOpaque(false);
+        JToggleButton boldBtn = new JToggleButton("B", layer.isLabelBold()); boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD));
+        boldBtn.addActionListener(e -> layer.setLabelBold(boldBtn.isSelected()));
+        JToggleButton italicBtn = new JToggleButton("I", layer.isLabelItalic()); italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC));
+        italicBtn.addActionListener(e -> layer.setLabelItalic(italicBtn.isSelected()));
+        styleRow.add(boldBtn); styleRow.add(italicBtn);
+        addRow(panel, gbc, row++, "Estilo", styleRow);
+
+        // Color texto
+        JButton textColorBtn = new JButton(); textColorBtn.setBackground(layer.getLabelColor()); textColorBtn.setOpaque(true);
+        textColorBtn.addActionListener(e -> { Color c = JColorChooser.showDialog(panel, "Color texto", textColorBtn.getBackground()); if (c != null) { layer.setLabelColor(c); textColorBtn.setBackground(c); } });
+        addRow(panel, gbc, row++, "Color texto", textColorBtn);
+
+        // Halo
+        JCheckBox haloCheck = new JCheckBox("Halo", layer.isLabelHaloEnabled());
+        haloCheck.addActionListener(e -> layer.setLabelHaloEnabled(haloCheck.isSelected()));
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; panel.add(haloCheck, gbc); gbc.gridwidth = 1;
+
+        JButton haloColorBtn = new JButton(); haloColorBtn.setBackground(layer.getLabelHaloColor()); haloColorBtn.setOpaque(true);
+        haloColorBtn.addActionListener(e -> { Color c = JColorChooser.showDialog(panel, "Color halo", haloColorBtn.getBackground()); if (c != null) { layer.setLabelHaloColor(c); haloColorBtn.setBackground(c); } });
+        addRow(panel, gbc, row++, "Color halo", haloColorBtn);
+
+        JSpinner haloWidthSpin = new JSpinner(new SpinnerNumberModel((int)layer.getLabelHaloWidth(), 1, 10, 1));
+        haloWidthSpin.addChangeListener(e -> layer.setLabelHaloWidth((Integer)haloWidthSpin.getValue()));
+        addRow(panel, gbc, row++, "Grosor halo", haloWidthSpin);
+
+        // Offset
+        JSpinner offsetXSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelOffsetX(), -50, 50, 1));
+        offsetXSpin.addChangeListener(e -> layer.setLabelOffsetX((Integer)offsetXSpin.getValue()));
+        addRow(panel, gbc, row++, "Offset X (px)", offsetXSpin);
+
+        JSpinner offsetYSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelOffsetY(), -50, 50, 1));
+        offsetYSpin.addChangeListener(e -> layer.setLabelOffsetY((Integer)offsetYSpin.getValue()));
+        addRow(panel, gbc, row++, "Offset Y (px)", offsetYSpin);
+
+        gbc.weighty = 1; gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
         panel.add(new JLabel(""), gbc);
         return wrapInScroll(panel);
     }
