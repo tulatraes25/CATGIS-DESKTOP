@@ -162,6 +162,9 @@ public class AttributeTableWindow extends JFrame {
         assignValueButton = createIconButton(AppIcons.attrAssignIcon(), "Asignar valor a un campo", new Color(14, 165, 233));
         JButton closeButton = createIconButton(AppIcons.attrCloseIcon(), "Cerrar", new Color(107, 114, 128));
 
+        JButton exportCsvButton = createIconButton(AppIcons.exportIcon(), "Exportar a CSV", new Color(16, 185, 129));
+        exportCsvButton.addActionListener(e -> exportToCsv());
+
         copyButton.addActionListener(e -> copySelectedRows());
         refreshButton.addActionListener(e -> reloadFromFeatures());
         editButton.addActionListener(e -> toggleEditMode());
@@ -172,6 +175,7 @@ public class AttributeTableWindow extends JFrame {
         closeButton.addActionListener(e -> dispose());
 
         buttonPanel.add(copyButton);
+        buttonPanel.add(exportCsvButton);
         buttonPanel.add(refreshButton);
         buttonPanel.add(editButton);
         buttonPanel.add(applyButton);
@@ -1032,6 +1036,41 @@ public class AttributeTableWindow extends JFrame {
 
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(sb.toString()), null);
         statusLabel.setText("Fila copiada al portapapeles.");
+    }
+
+    private void exportToCsv() {
+        JFileChooser chooser = FileChooserSupport.createChooser("export-csv", "Exportar atributos a CSV");
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.addChoosableFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("CSV (*.csv)", "csv"));
+        chooser.setSelectedFile(new java.io.File(layer.getName().replaceAll("[^A-Za-z0-9._-]+", "_") + ".csv"));
+        int result = chooser.showSaveDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) return;
+        java.io.File file = chooser.getSelectedFile();
+        if (!file.getName().toLowerCase().endsWith(".csv")) file = new java.io.File(file.getAbsolutePath() + ".csv");
+        try {
+            java.io.PrintWriter pw = new java.io.PrintWriter(file, "UTF-8");
+            // Header
+            for (int i = 0; i < rawColumnNames.size(); i++) {
+                if (i > 0) pw.print(",");
+                pw.print("\"" + rawColumnNames.get(i).replace("\"", "\"\"") + "\"");
+            }
+            pw.println();
+            // Rows
+            for (int r = 0; r < model.getRowCount(); r++) {
+                for (int i = 0; i < model.getColumnCount(); i++) {
+                    if (i > 0) pw.print(",");
+                    Object value = model.getValueAt(r, i);
+                    String str = value != null ? value.toString() : "";
+                    pw.print("\"" + str.replace("\"", "\"\"") + "\"");
+                }
+                pw.println();
+            }
+            pw.close();
+            statusLabel.setText("Exportado: " + file.getName());
+            JOptionPane.showMessageDialog(this, "CSV exportado:\n" + file.getAbsolutePath(), "Exportar CSV", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error al exportar:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void copySelectedRowsToEditingLayer() {

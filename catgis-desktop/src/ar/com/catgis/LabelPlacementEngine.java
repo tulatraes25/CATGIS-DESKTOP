@@ -47,7 +47,7 @@ public final class LabelPlacementEngine {
     /**
      * Candidate position for a label.
      */
-    private record Candidate(int x, int y, String description) {}
+    private record Candidate(int x, int y, String description, double score) {}
 
     /**
      * Compute all label positions for a layer, apply collision detection,
@@ -144,62 +144,88 @@ public final class LabelPlacementEngine {
 
         int offX = layer.getLabelOffsetX();
         int offY = layer.getLabelOffsetY();
-        int gap = 6; // gap between point and label
+        int gap = 6;
+        int halfW = tw / 2;
 
-        return switch (mode) {
-            case POINT_ABOVE -> List.of(
-                    new Candidate(anchorX - tw / 2 + offX, anchorY - gap + offY, "above")
-            );
-            case POINT_BELOW -> List.of(
-                    new Candidate(anchorX - tw / 2 + offX, anchorY + ascent + gap + offY, "below")
-            );
-            case POINT_LEFT -> List.of(
-                    new Candidate(anchorX - tw - gap + offX, anchorY + offY, "left")
-            );
-            case POINT_RIGHT -> List.of(
-                    new Candidate(anchorX + gap + offX, anchorY + offY, "right")
-            );
-            case POINT_CENTER -> List.of(
-                    new Candidate(anchorX - tw / 2 + offX, anchorY + offY, "center")
-            );
-            case LINE_CENTER -> List.of(
-                    new Candidate(anchorX - tw / 2 + offX, anchorY - ascent / 2 + offY, "line_center")
-            );
-            case LINE_FOLLOW -> List.of(
-                    new Candidate(anchorX - tw / 2 + offX, anchorY - ascent - gap + offY, "follow_above"),
-                    new Candidate(anchorX - tw / 2 + offX, anchorY + ascent + gap + offY, "follow_below"),
-                    new Candidate(anchorX - tw / 2 + offX, anchorY + offY, "follow_center")
-            );
-            case POLYGON_CENTROID, POLYGON_INTERIOR -> List.of(
-                    new Candidate(anchorX - tw / 2 + offX, anchorY + offY, "polygon_center"),
-                    new Candidate(anchorX - tw / 2 + offX, anchorY - ascent - gap + offY, "polygon_above"),
-                    new Candidate(anchorX - tw / 2 + offX, anchorY + ascent + gap + offY, "polygon_below")
-            );
+        // Generate all possible positions with scores (lower = better)
+        List<Candidate> candidates = new ArrayList<>();
+
+        switch (mode) {
+            case POINT_ABOVE -> {
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - gap + offY, "above", 0));
+                candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "right", 1));
+                candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "left", 2));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "below", 3));
+            }
+            case POINT_BELOW -> {
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "below", 0));
+                candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "right", 1));
+                candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "left", 2));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - gap + offY, "above", 3));
+            }
+            case POINT_LEFT -> {
+                candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "left", 0));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - gap + offY, "above", 1));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "below", 2));
+                candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "right", 3));
+            }
+            case POINT_RIGHT -> {
+                candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "right", 0));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - gap + offY, "above", 1));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "below", 2));
+                candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "left", 3));
+            }
+            case POINT_CENTER -> {
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + offY, "center", 0));
+            }
+            case LINE_CENTER -> {
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - ascent / 2 + offY, "line_center", 0));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - ascent - gap + offY, "line_above", 1));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "line_below", 2));
+            }
+            case LINE_FOLLOW -> {
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - ascent - gap + offY, "follow_above", 0));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + offY, "follow_center", 1));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "follow_below", 2));
+            }
+            case POLYGON_CENTROID, POLYGON_INTERIOR -> {
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + offY, "poly_center", 0));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY - ascent - gap + offY, "poly_above", 1));
+                candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "poly_below", 2));
+                candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "poly_right", 3));
+                candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "poly_left", 4));
+            }
             case AUTO -> {
                 if ("POINT".equals(geomType) || "MULTIPOINT".equals(geomType)) {
-                    yield List.of(
-                            new Candidate(anchorX + gap + offX, anchorY + offY, "auto_right"),
-                            new Candidate(anchorX - tw - gap + offX, anchorY + offY, "auto_left"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY - gap + offY, "auto_above"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY + ascent + gap + offY, "auto_below"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY + offY, "auto_center")
-                    );
+                    candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "right", 0));
+                    candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "left", 1));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY - gap + offY, "above", 2));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "below", 3));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY + offY, "center", 4));
+                    // Diagonal positions for better displacement
+                    candidates.add(new Candidate(anchorX + gap + offX, anchorY - gap + offY, "right_above", 5));
+                    candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY - gap + offY, "left_above", 6));
+                    candidates.add(new Candidate(anchorX + gap + offX, anchorY + ascent + gap + offY, "right_below", 7));
+                    candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + ascent + gap + offY, "left_below", 8));
                 } else if ("LINESTRING".equals(geomType) || "MULTILINESTRING".equals(geomType)) {
-                    yield List.of(
-                            new Candidate(anchorX - tw / 2 + offX, anchorY - ascent - gap + offY, "auto_line_above"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY + offY, "auto_line_center"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY + ascent + gap + offY, "auto_line_below")
-                    );
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY - ascent - gap + offY, "line_above", 0));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY + offY, "line_center", 1));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "line_below", 2));
+                    candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "line_right", 3));
+                    candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "line_left", 4));
                 } else {
-                    // Polygon or unknown
-                    yield List.of(
-                            new Candidate(anchorX - tw / 2 + offX, anchorY + offY, "auto_poly_center"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY - ascent - gap + offY, "auto_poly_above"),
-                            new Candidate(anchorX - tw / 2 + offX, anchorY + ascent + gap + offY, "auto_poly_below")
-                    );
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY + offY, "poly_center", 0));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY - ascent - gap + offY, "poly_above", 1));
+                    candidates.add(new Candidate(anchorX - halfW + offX, anchorY + ascent + gap + offY, "poly_below", 2));
+                    candidates.add(new Candidate(anchorX + gap + offX, anchorY + offY, "poly_right", 3));
+                    candidates.add(new Candidate(anchorX - tw - gap + offX, anchorY + offY, "poly_left", 4));
                 }
             }
-        };
+        }
+
+        // Sort by score (lower = better position)
+        candidates.sort(Comparator.comparingDouble(Candidate::score));
+        return candidates;
     }
 
     private static boolean intersectsAny(BBox box, List<BBox> boxes) {

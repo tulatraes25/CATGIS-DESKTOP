@@ -202,6 +202,9 @@ public class LoadProjectAction extends AbstractAction {
                 );
             }
 
+            // Track recent file
+            MainMenuBar.addRecentFile(file.getAbsolutePath());
+
             if (showDialogs) {
                 JOptionPane.showMessageDialog(owner, "Proyecto cargado correctamente.");
             }

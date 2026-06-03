@@ -160,6 +160,10 @@ public class MainMenuBar extends JMenuBar {
 
         menuArchivo.add(itemNuevoProyecto);
         menuArchivo.add(itemAbrirProyecto);
+        // Recent files submenu
+        JMenu recentMenu = new JMenu("Proyectos recientes");
+        loadRecentFiles(recentMenu);
+        menuArchivo.add(recentMenu);
         menuArchivo.addSeparator();
         menuArchivo.add(itemGuardarProyecto);
         menuArchivo.add(itemGuardarProyectoComo);
@@ -618,6 +622,70 @@ public class MainMenuBar extends JMenuBar {
         add(menuSalida);
         add(menuHerramientas);
         add(menuAyuda);
+    }
+
+    // --- Recent files ---
+    private static final int MAX_RECENT = 10;
+    private static final java.util.List<String> recentFiles = new java.util.ArrayList<>();
+
+    private void loadRecentFiles(JMenu menu) {
+        menu.removeAll();
+        recentFiles.clear();
+        try {
+            java.io.File recentFile = new java.io.File(System.getProperty("user.home"), ".catgis-recent");
+            if (recentFile.exists()) {
+                java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(recentFile));
+                String line;
+                while ((line = br.readLine()) != null && recentFiles.size() < MAX_RECENT) {
+                    if (!line.trim().isEmpty()) recentFiles.add(line.trim());
+                }
+                br.close();
+            }
+        } catch (Exception ignored) {}
+        if (recentFiles.isEmpty()) {
+            JMenuItem empty = new JMenuItem("(vacio)");
+            empty.setEnabled(false);
+            menu.add(empty);
+        } else {
+            for (String path : recentFiles) {
+                java.io.File f = new java.io.File(path);
+                JMenuItem item = new JMenuItem(f.getName());
+                item.setToolTipText(path);
+                item.addActionListener(e -> {
+                    if (CatgisDesktopApp.confirmProjectContinuation("abrir proyecto reciente")) {
+                        LoadProjectAction.loadProjectFile(f);
+                    }
+                });
+                menu.add(item);
+            }
+            menu.addSeparator();
+            JMenuItem clearItem = new JMenuItem("Limpiar recientes");
+            clearItem.addActionListener(e -> {
+                recentFiles.clear();
+                saveRecentFiles();
+                menu.removeAll();
+                JMenuItem empty = new JMenuItem("(vacio)");
+                empty.setEnabled(false);
+                menu.add(empty);
+            });
+            menu.add(clearItem);
+        }
+    }
+
+    public static void addRecentFile(String path) {
+        recentFiles.remove(path);
+        recentFiles.add(0, path);
+        while (recentFiles.size() > MAX_RECENT) recentFiles.remove(recentFiles.size() - 1);
+        saveRecentFiles();
+    }
+
+    private static void saveRecentFiles() {
+        try {
+            java.io.File recentFile = new java.io.File(System.getProperty("user.home"), ".catgis-recent");
+            java.io.PrintWriter pw = new java.io.PrintWriter(recentFile);
+            for (String path : recentFiles) pw.println(path);
+            pw.close();
+        } catch (Exception ignored) {}
     }
 
     private JMenuItem createItem(String text, Icon icon) {
