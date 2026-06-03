@@ -53,8 +53,28 @@ public class CartographyToolbar extends JPanel {
     private void launchCatmapStandalone() {
         try {
             String javaHome = System.getProperty("java.home");
-            String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
             String classPath = System.getProperty("java.class.path");
+
+            // Try multiple java locations
+            String[] javaCandidates = {
+                javaHome + File.separator + "bin" + File.separator + "java",
+                javaHome + File.separator + "bin" + File.separator + "java.exe",
+                System.getProperty("java.home") + File.separator + "runtime" + File.separator + "bin" + File.separator + "java",
+                System.getProperty("java.home") + File.separator + "runtime" + File.separator + "bin" + File.separator + "java.exe"
+            };
+
+            String javaBin = null;
+            for (String candidate : javaCandidates) {
+                if (new File(candidate).exists()) {
+                    javaBin = candidate;
+                    break;
+                }
+            }
+
+            if (javaBin == null) {
+                // Fallback: try to find java on PATH
+                javaBin = "java";
+            }
 
             ProcessBuilder pb = new ProcessBuilder(
                     javaBin, "-cp", classPath,

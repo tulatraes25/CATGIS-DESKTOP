@@ -91,6 +91,22 @@ public class LayoutMap implements LayoutElement {
             if (cachedImage == null) {
                 cachedImage = captureMapImage(pw, ph);
             }
+            // If still null, create a placeholder
+            if (cachedImage == null) {
+                cachedImage = new BufferedImage(pw, ph, BufferedImage.TYPE_INT_ARGB);
+                java.awt.Graphics2D g = cachedImage.createGraphics();
+                g.setColor(PLACEHOLDER_BG);
+                g.fillRect(0, 0, pw, ph);
+                g.setColor(PLACEHOLDER_BORDER);
+                g.setStroke(new java.awt.BasicStroke(1f));
+                g.drawRect(2, 2, pw - 4, ph - 4);
+                g.setColor(PLACEHOLDER_TEXT);
+                g.setFont(PLACEHOLDER_FONT);
+                String msg = "Mapa del proyecto";
+                int tw = g.getFontMetrics().stringWidth(msg);
+                g.drawString(msg, (pw - tw) / 2, ph / 2);
+                g.dispose();
+            }
             cacheKey = key;
             cachedWidthPx = pw;
             cachedHeightPx = ph;
