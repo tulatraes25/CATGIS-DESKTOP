@@ -371,7 +371,7 @@ public class LayoutLegend implements LayoutElement {
             Layer.PolygonFillStyle fillStyle = item.polygonFillStyle != null ? item.polygonFillStyle : Layer.PolygonFillStyle.SOLID;
             Paint oldPaint = g.getPaint();
             if (fillStyle != Layer.PolygonFillStyle.OUTLINE_ONLY && fillStyle != Layer.PolygonFillStyle.TRANSPARENT) {
-                g.setPaint(buildPolygonPaint(c, stroke, fillStyle));
+                g.setPaint(ar.com.catgis.PolygonSymbolRenderer.buildPaint(fillStyle, c, stroke, 10));
                 g.fillRect(sx + 1, sy + 1, size - 2, size - 2);
                 g.setPaint(oldPaint);
             }
@@ -382,54 +382,6 @@ public class LayoutLegend implements LayoutElement {
             g.setColor(stroke);
             g.drawRect(sx, sy, size, size);
         }
-    }
-
-    private java.awt.Paint buildPolygonPaint(Color fill, Color stroke, Layer.PolygonFillStyle style) {
-        if (style == null || style == Layer.PolygonFillStyle.SOLID) {
-            return fill;
-        }
-        BufferedImage img = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        try {
-            g.setColor(new Color(fill.getRed(), fill.getGreen(), fill.getBlue(), 90));
-            g.fillRect(0, 0, 10, 10);
-            g.setColor(stroke);
-            switch (style) {
-                case DIAGONAL_HATCH, ENVIRONMENTAL, BUFFER_SOFT -> {
-                    g.drawLine(-2, 9, 9, -2);
-                    g.drawLine(2, 11, 11, 2);
-                }
-                case CROSS_HATCH, INFRASTRUCTURE, PARCEL -> {
-                    g.drawLine(0, 5, 10, 5);
-                    g.drawLine(5, 0, 5, 10);
-                }
-                case DOTS, VEGETATION -> {
-                    g.fillOval(2, 2, 2, 2);
-                    g.fillOval(6, 6, 2, 2);
-                }
-                case HORIZONTAL_LINES, WATER -> {
-                    g.drawLine(0, 3, 10, 3);
-                    g.drawLine(0, 7, 10, 7);
-                }
-                case VERTICAL_LINES, RESTRICTION -> {
-                    g.drawLine(3, 0, 3, 10);
-                    g.drawLine(7, 0, 7, 10);
-                }
-                case DIAGONAL_REVERSE, SATELLITE_OVERLAY -> {
-                    g.drawLine(0, 0, 10, 10);
-                    g.drawLine(0, 4, 6, 10);
-                }
-                case SOFT_SHADOW -> {
-                    g.setColor(new Color(fill.getRed(), fill.getGreen(), fill.getBlue(), 140));
-                    g.fillRect(0, 0, 10, 10);
-                }
-                default -> {
-                }
-            }
-        } finally {
-            g.dispose();
-        }
-        return new java.awt.TexturePaint(img, new java.awt.Rectangle(0, 0, 10, 10));
     }
 
     private List<String> wrapLines(String text, FontMetrics fm, int maxW) {

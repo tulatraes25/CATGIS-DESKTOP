@@ -11,6 +11,18 @@ public final class PolygonSymbolRenderer {
 
     private PolygonSymbolRenderer() {}
 
+    /** Return a TexturePaint for use with g2.fill(path) in map rendering */
+    public static Paint buildPaint(Layer.PolygonFillStyle style, Color fillColor, Color borderColor, int tileSize) {
+        BufferedImage img = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        try {
+            paint(g, style, 0, 0, tileSize, tileSize, fillColor, borderColor);
+        } finally {
+            g.dispose();
+        }
+        return new TexturePaint(img, new java.awt.Rectangle(0, 0, tileSize, tileSize));
+    }
+
     /** Preview icon for combo boxes */
     public static BufferedImage buildPreview(Layer.PolygonFillStyle style, Color fillColor, Color borderColor, int width, int height) {
         BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
