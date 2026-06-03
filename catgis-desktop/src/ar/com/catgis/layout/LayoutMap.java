@@ -19,6 +19,8 @@ public class LayoutMap implements LayoutElement {
     private transient int cachedWidthPx = -1;
     private transient int cachedHeightPx = -1;
     private transient long lastRenderTimeNanos = 0;
+    private transient MapFrameRenderer independentRenderer;
+    private transient MapFrameViewport viewport;
     // Cached constants to avoid per-render allocation
     private static final java.awt.Color PLACEHOLDER_BG = new java.awt.Color(0xE8EBF0);
     private static final java.awt.Color PLACEHOLDER_BORDER = new java.awt.Color(0xB0B8C4);
@@ -83,7 +85,11 @@ public class LayoutMap implements LayoutElement {
         boolean stale = cachedImage == null || key != cacheKey || cachedWidthPx != pw || cachedHeightPx != ph
                 || (now - lastRenderTimeNanos > 500_000_000L);
         if (stale) {
-            cachedImage = captureMapImage(pw, ph);
+            // Try independent renderer first, fall back to MapPanel-based rendering
+            cachedImage = renderIndependent(pw, ph);
+            if (cachedImage == null) {
+                cachedImage = captureMapImage(pw, ph);
+            }
             cacheKey = key;
             cachedWidthPx = pw;
             cachedHeightPx = ph;
@@ -221,6 +227,66 @@ public class LayoutMap implements LayoutElement {
             }
         }
         return key;
+    }
+
+    /**
+     * Try to render using the independent MapFrameRenderer.
+     * Returns null if not available (falls back to MapPanel-based rendering).
+     */
+    private BufferedImage renderIndependent(int w, int h) {
+        if (independentRenderer == null) {
+            // Lazy-init viewport from own extent or main map
+            if (viewport == null) {
+                viewport = new MapFrameViewport();
+                if (ownExtent) {
+                    viewport.fitToExtent(ownViewMinX, ownViewMinY,
+                            ownViewMinX + w * ownZoomFactor, ownViewMinY + h * ownZoomFactor);
+                } else {
+                    viewport.fitFromMainMap();
+                }
+            }
+            independentRenderer = new MapFrameRenderer(viewport);
+        }
+        try {
+            return independentRenderer.render(w, h, 96);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Get the independent viewport for this map frame.
+     * Creates one if it doesn't exist yet.
+     */
+    public MapFrameViewport getViewport() {
+        if (viewport == null) {
+            viewport = new MapFrameViewport();
+            if (ownExtent) {
+                viewport.fitToExtent(ownViewMinX, ownViewMinY,
+                        ownViewMinX + 1000, ownViewMinY + 1000);
+            } else {
+                viewport.fitFromMainMap();
+            }
+        }
+        return viewport;
+    }
+
+    /**
+     * Get the independent renderer for this map frame.
+     */
+    public MapFrameRenderer getIndependentRenderer() {
+        if (independentRenderer == null) {
+            independentRenderer = new MapFrameRenderer(getViewport());
+        }
+        return independentRenderer;
+    }
+
+    /**
+     * Force re-render by invalidating cache.
+     */
+    public void invalidateRenderCache() {
+        cachedImage = null;
+        cacheKey = 0;
     }
 
     private BufferedImage captureMapImage(int w, int h) {
