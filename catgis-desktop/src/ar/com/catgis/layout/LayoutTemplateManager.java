@@ -148,6 +148,17 @@ public class LayoutTemplateManager {
     private static void addScale(LayoutModel m, String id, int x, int y, int w, int h, int[] z) { LayoutScaleBar sb = new LayoutScaleBar(id, x, y, w, h); sb.setZOrder(z[0]++); sb.setName(id); m.addElement(sb); }
     private static void addNorth(LayoutModel m, String id, int x, int y, int w, int h, int[] z) { LayoutNorthArrow na = new LayoutNorthArrow(id, x, y, w, h); na.setZOrder(z[0]++); na.setName(id); m.addElement(na); }
     private static void addNorthAuto(LayoutModel m, String id, int size, int[] z) { int nx = z[1] + z[3] - size - 4; int ny = z[2] + 4; addNorth(m, id, nx, ny, size, size, z); }
+    private static void addInsetMap(LayoutModel m, String id, int x, int y, int w, int h, int[] z) {
+        LayoutMap inset = new LayoutMap(id, x, y, w, h);
+        inset.setZOrder(z[0]++);
+        inset.setName(id);
+        inset.setFrameColor(new Color(0x4A5568));
+        inset.setFrameWidth(0.8f);
+        inset.setShowGrid(false);
+        inset.captureFromMainMap();
+        inset.setOwnExtent(true);
+        m.addElement(inset);
+    }
 
     private static void buildAmbiental(LayoutModel m) { int[] z = {0,0,0,0,0};
         addLabel(m, "Titulo", "Mapa Ambiental", 12, 6, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0x1B5E20), z);
@@ -162,7 +173,8 @@ public class LayoutTemplateManager {
         addLabel(m, "Titulo", "Mapa Tecnico", 12, 6, 273, 14, new Font("SansSerif", Font.BOLD, 18), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Salida cartografica del proyecto", 12, 20, 273, 10, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
         addMap(m, "Mapa principal", 12, 30, 190, 138, z);
-        addLegend(m, "Leyenda", 206, 30, 78, 60, z, true);
+        addInsetMap(m, "Mapa de ubicacion", 206, 30, 78, 50, z);
+        addLegend(m, "Leyenda", 206, 84, 78, 50, z, true);
         addScale(m, "Escala", 12, 172, 130, 10, z);
         addNorthAuto(m, "Norte", 16, z);
         LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 12, 184, 273, 24);
@@ -171,7 +183,8 @@ public class LayoutTemplateManager {
         addLabel(m, "Titulo", "Mapa Tecnico A3", 15, 8, 390, 18, new Font("SansSerif", Font.BOLD, 22), new Color(0x1A2434), z);
         addLabel(m, "Subtitulo", "Salida cartografica del proyecto", 15, 26, 390, 10, new Font("SansSerif", Font.PLAIN, 10), new Color(0x5B6778), z);
         addMap(m, "Mapa principal", 15, 36, 280, 228, z);
-        addLegend(m, "Leyenda", 300, 36, 105, 80, z, true);
+        addInsetMap(m, "Mapa de ubicacion", 300, 36, 105, 70, z);
+        addLegend(m, "Leyenda", 300, 110, 105, 80, z, true);
         addScale(m, "Escala", 15, 268, 150, 12, z);
         addNorthAuto(m, "Norte", 20, z);
         LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 15, 284, 390, 24);
@@ -640,7 +653,8 @@ public class LayoutTemplateManager {
         addLabel(m, "Titulo", "Plano Catastral", 12, 6, 273, 14, new Font("SansSerif", Font.BOLD, 16), new Color(0xBF360C), z);
         addLabel(m, "Subtitulo", "Nomenclatura catastral", 12, 20, 273, 9, new Font("SansSerif", Font.PLAIN, 9), new Color(0x5B6778), z);
         addMap(m, "Plano catastral", 12, 30, 195, 138, z);
-        addLegend(m, "Leyenda", 212, 30, 72, 50, z, true);
+        addInsetMap(m, "Mapa de ubicacion", 212, 30, 72, 45, z);
+        addLegend(m, "Leyenda", 212, 78, 72, 50, z, true);
         addScale(m, "Escala", 12, 172, 130, 10, z);
         addNorthAuto(m, "Norte", 14, z);
         LayoutCartouche c = new LayoutCartouche("Datos cartograficos", 12, 184, 273, 24);
