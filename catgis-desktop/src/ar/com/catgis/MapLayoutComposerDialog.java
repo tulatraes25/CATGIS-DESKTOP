@@ -1148,8 +1148,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Exportar PNG", AppIcons.exportIcon(), "Exportar a imagen PNG", this::exportImage),
                 createToolbarButton("SVG", null, "Exportar a SVG vectorial", this::exportSvg),
                 createToolbarButton("Imprimir", AppIcons.projectIcon(), "Imprimir layout", this::printLayout),
-                createToolbarButton("Plantillas...", null, "Abrir galería de plantillas con vista previa.", this::showTemplatePicker),
-                createToolbarButton("Auto-componer", null, "Crear layout completo automaticamente (mapa+leyenda+escala+norte+titulo). Un solo clic.", this::autoComposeLayout)
+                createToolbarButton("Plantillas...", null, "Abrir galería de plantillas con vista previa.", this::showTemplatePicker)
         ));
 
         toolbar.add(buildToolbarGroup("Trabajo",
