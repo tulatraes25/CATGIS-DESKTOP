@@ -169,7 +169,27 @@ public class MainToolBar extends JToolBar {
         labeled.setFont(new Font("SansSerif", Font.PLAIN, 9));
         labeled.setMargin(new Insets(2, 4, 2, 4));
         labeled.setPreferredSize(new Dimension(52, 48));
+        labeled.setOpaque(true);
+        labeled.setContentAreaFilled(true);
+        labeled.setBackground(new Color(0xF7F8FA));
+        labeled.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
         labeled.addActionListener(original.getActionListeners().length > 0 ? original.getActionListeners()[0] : null);
+
+        // Hover shadow effect
+        labeled.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                labeled.setBackground(new Color(0xE0E7EE));
+                labeled.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(0xB0BEC5), 1),
+                    BorderFactory.createEmptyBorder(1, 3, 1, 3)
+                ));
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                labeled.setBackground(new Color(0xF7F8FA));
+                labeled.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+            }
+        });
+
         return labeled;
     }
 
