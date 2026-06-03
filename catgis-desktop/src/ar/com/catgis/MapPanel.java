@@ -6050,9 +6050,11 @@ public class MapPanel extends JPanel {
             ShapefileData shapeData = shapefileLayers.get(layer);
             if (shapeData != null) {
                 drawLayer(g2, layer, shapeData);
-                drawLabels(g2, layer, shapeData);
             }
         }
+
+        // Batch label rendering with collision detection
+        drawAllLabels(g2);
 
         if (!layoutRenderMode) {
             drawAttributeTableSelections(g2);
@@ -7516,29 +7518,8 @@ public class MapPanel extends JPanel {
     }
 
     private void drawLabelForFeature(Graphics2D g2, Layer layer, SimpleFeature feature, int x, int y) {
-        if (!layer.isLabelsVisible() || layer.getLabelField() == null || layer.getLabelField().isEmpty()) return;
-        String labelText = null;
-        try { Object val = feature.getAttribute(layer.getLabelField()); if (val != null) labelText = val.toString(); } catch (Exception ignored) {}
-        if (labelText == null || labelText.isEmpty()) return;
-        int style = Font.PLAIN;
-        if (layer.isLabelBold()) style |= Font.BOLD;
-        if (layer.isLabelItalic()) style |= Font.ITALIC;
-        Font font = new Font(layer.getLabelFontFamily(), style, layer.getLabelFontSize());
-        g2.setFont(font);
-        java.awt.FontMetrics fm = g2.getFontMetrics();
-        int tw = fm.stringWidth(labelText);
-        int lx = x + layer.getLabelOffsetX() - tw / 2;
-        int ly = y + layer.getLabelOffsetY() - 4;
-        if (layer.isLabelHaloEnabled() && layer.getLabelHaloColor().getAlpha() > 0) {
-            g2.setColor(layer.getLabelHaloColor());
-            float hw = layer.getLabelHaloWidth();
-            for (int dx = -1; dx <= 1; dx++)
-                for (int dy = -1; dy <= 1; dy++)
-                    if (dx != 0 || dy != 0)
-                        g2.drawString(labelText, lx + dx * hw, ly + dy * hw);
-        }
-        g2.setColor(layer.getLabelColor());
-        g2.drawString(labelText, lx, ly);
+        // Labels are now rendered in batch via drawAllLabels() with collision detection.
+        // This method is intentionally a no-op to avoid double rendering.
     }
 
     private void drawStyledPoint(Graphics2D g2, Point point, Layer layer, SimpleFeature feature) {
@@ -10650,51 +10631,144 @@ public class MapPanel extends JPanel {
         return polygons;
     }
 
+    private final java.util.List<int[]> globalLabelBoxes = new ArrayList<>();
+
+    private void drawAllLabels(Graphics2D g2) {
+        globalLabelBoxes.clear();
+        Object prevHint = g2.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        for (Layer layer : getRenderOrderLayers()) {
+            if (layer == null || !isLayerEffectivelyVisible(layer)) continue;
+            if (!layer.isLabelsVisible()) continue;
+            if (layer.getLabelField() == null || layer.getLabelField().isBlank()) continue;
+            if (!layer.isLabelVisibleAtScale(getCurrentScaleDenominator())) continue;
+
+            ShapefileData shapeData = shapefileLayers.get(layer);
+            if (shapeData == null) continue;
+            SimpleFeatureCollection collection = shapeData.getFeatureCollection();
+            if (collection == null) continue;
+
+            // Collect all label candidates for this layer
+            List<Object[]> candidates = new ArrayList<>();
+            forEachVisibleFeatureGeometry(List.of(layer), "", (currentLayer, featureGeometry) -> {
+                Object attrValue = featureGeometry.feature().getAttribute(currentLayer.getLabelField());
+                if (attrValue == null) return;
+                String text = String.valueOf(attrValue).trim();
+                if (text.isEmpty()) return;
+
+                Coordinate coord = getLabelCoordinate(featureGeometry.geometry());
+                if (coord == null) return;
+
+                int sx = worldToScreenX(coord.x);
+                int sy = worldToScreenY(coord.y);
+                String geomType = LabelPlacementEngine.resolveGeometryType(featureGeometry.geometry().getClass());
+                candidates.add(new Object[]{text, sx, sy, geomType, currentLayer.getLabelPriority()});
+            });
+
+            if (candidates.isEmpty()) continue;
+
+            // Resolve placements with collision detection
+            List<LabelPlacementEngine.ResolvedLabel> resolved =
+                    LabelPlacementEngine.resolveLabels(g2, layer, candidates, globalLabelBoxes);
+
+            // Render resolved labels
+            for (LabelPlacementEngine.ResolvedLabel rl : resolved) {
+                drawResolvedLabel(g2, rl);
+            }
+        }
+
+        if (prevHint != null) g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, prevHint);
+    }
+
+    private void drawResolvedLabel(Graphics2D g2, LabelPlacementEngine.ResolvedLabel rl) {
+        Layer layer = rl.layer();
+        Font font;
+        Color textColor = Color.BLACK;
+        Color haloColor = Color.WHITE;
+        float haloWidth = 2f;
+        boolean haloEnabled = true;
+        boolean underline = false;
+        boolean bgEnabled = false;
+        Color bgColor = new Color(255, 255, 255, 180);
+
+        if (layer != null) {
+            int style = Font.PLAIN;
+            if (layer.isLabelBold()) style |= Font.BOLD;
+            if (layer.isLabelItalic()) style |= Font.ITALIC;
+            font = new Font(layer.getLabelFontFamily(), style, layer.getLabelFontSize());
+            textColor = layer.getLabelColor();
+            haloColor = layer.getLabelHaloColor();
+            haloWidth = layer.getLabelHaloWidth();
+            haloEnabled = layer.isLabelHaloEnabled();
+            underline = layer.isLabelUnderline();
+            bgEnabled = layer.isLabelBackgroundEnabled();
+            bgColor = layer.getLabelBackgroundColor();
+        } else {
+            font = g2.getFont();
+        }
+
+        g2.setFont(font);
+        int lx = rl.drawX();
+        int ly = rl.drawY();
+        int tw = rl.textWidth();
+        int th = rl.textHeight();
+        FontMetrics fm = g2.getFontMetrics();
+
+        // Background
+        if (bgEnabled && bgColor.getAlpha() > 0) {
+            g2.setColor(bgColor);
+            g2.fillRoundRect(lx - 4, ly - fm.getAscent() - 2, tw + 8, th + 4, 6, 6);
+        }
+
+        // Halo
+        if (haloEnabled && haloColor.getAlpha() > 0) {
+            g2.setColor(haloColor);
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    if (dx != 0 || dy != 0)
+                        g2.drawString(rl.text(), lx + dx * haloWidth, ly + dy * haloWidth);
+        }
+
+        // Text
+        g2.setColor(textColor);
+        g2.drawString(rl.text(), lx, ly);
+
+        // Underline
+        if (underline) {
+            g2.setColor(textColor);
+            g2.drawLine(lx, ly + 2, lx + tw, ly + 2);
+        }
+    }
+
     private void drawLabels(Graphics2D g2, Layer layer, ShapefileData data) {
-        if (layer == null || data == null) {
-            return;
-        }
-
-        if (!isLayerEffectivelyVisible(layer)) {
-            return;
-        }
-
-        if (!layer.isLabelsVisible()) {
-            return;
-        }
-
-        if (layer.getLabelField() == null || layer.getLabelField().isBlank()) {
-            return;
-        }
+        if (layer == null || data == null) return;
+        if (!isLayerEffectivelyVisible(layer)) return;
+        if (!layer.isLabelsVisible()) return;
+        if (layer.getLabelField() == null || layer.getLabelField().isBlank()) return;
+        if (!layer.isLabelVisibleAtScale(getCurrentScaleDenominator())) return;
 
         SimpleFeatureCollection collection = data.getFeatureCollection();
-        if (collection == null) {
-            return;
-        }
+        if (collection == null) return;
 
+        Object prevHint = g2.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2.setColor(Color.BLACK);
 
         forEachVisibleFeatureGeometry(List.of(layer), "Error al dibujar etiquetas para la capa ", (currentLayer, featureGeometry) -> {
             Object attrValue = featureGeometry.feature().getAttribute(currentLayer.getLabelField());
-            if (attrValue == null) {
-                return;
-            }
-
+            if (attrValue == null) return;
             String text = String.valueOf(attrValue).trim();
-            if (text.isEmpty()) {
-                return;
-            }
+            if (text.isEmpty()) return;
 
             Coordinate labelCoordinate = getLabelCoordinate(featureGeometry.geometry());
-            if (labelCoordinate == null) {
-                return;
-            }
+            if (labelCoordinate == null) return;
 
             int x = worldToScreenX(labelCoordinate.x);
             int y = worldToScreenY(labelCoordinate.y);
-            drawTextWithHalo(g2, text, x, y);
+            drawLabelWithSettings(g2, text, x, y, currentLayer);
         });
+
+        if (prevHint != null) g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, prevHint);
     }
 
     private record FeatureGeometryRef(SimpleFeature feature, Geometry geometry) {
@@ -10748,20 +10822,69 @@ public class MapPanel extends JPanel {
     }
 
     private void drawTextWithHalo(Graphics2D g2, String text, int x, int y) {
+        drawLabelWithSettings(g2, text, x, y, null);
+    }
+
+    private void drawLabelWithSettings(Graphics2D g2, String text, int x, int y, Layer layer) {
+        Font font;
+        Color textColor = Color.BLACK;
+        Color haloColor = Color.WHITE;
+        float haloWidth = 2f;
+        boolean haloEnabled = true;
+        boolean underline = false;
+        boolean bgEnabled = false;
+        Color bgColor = new Color(255, 255, 255, 180);
+        int offX = 0, offY = 0;
+
+        if (layer != null) {
+            int style = Font.PLAIN;
+            if (layer.isLabelBold()) style |= Font.BOLD;
+            if (layer.isLabelItalic()) style |= Font.ITALIC;
+            font = new Font(layer.getLabelFontFamily(), style, layer.getLabelFontSize());
+            textColor = layer.getLabelColor();
+            haloColor = layer.getLabelHaloColor();
+            haloWidth = layer.getLabelHaloWidth();
+            haloEnabled = layer.isLabelHaloEnabled();
+            underline = layer.isLabelUnderline();
+            bgEnabled = layer.isLabelBackgroundEnabled();
+            bgColor = layer.getLabelBackgroundColor();
+            offX = layer.getLabelOffsetX();
+            offY = layer.getLabelOffsetY();
+        } else {
+            font = g2.getFont();
+        }
+
+        g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
-        int textWidth = fm.stringWidth(text);
+        int tw = fm.stringWidth(text);
+        int th = fm.getHeight();
+        int drawX = x + offX - tw / 2;
+        int drawY = y + offY;
 
-        int drawX = x - (textWidth / 2);
-        int drawY = y - 4;
+        // Background
+        if (bgEnabled && bgColor.getAlpha() > 0) {
+            g2.setColor(bgColor);
+            g2.fillRoundRect(drawX - 4, drawY - fm.getAscent() - 2, tw + 8, th + 4, 6, 6);
+        }
 
-        g2.setColor(Color.WHITE);
-        g2.drawString(text, drawX - 1, drawY - 1);
-        g2.drawString(text, drawX + 1, drawY - 1);
-        g2.drawString(text, drawX - 1, drawY + 1);
-        g2.drawString(text, drawX + 1, drawY + 1);
+        // Halo
+        if (haloEnabled && haloColor.getAlpha() > 0) {
+            g2.setColor(haloColor);
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    if (dx != 0 || dy != 0)
+                        g2.drawString(text, drawX + dx * haloWidth, drawY + dy * haloWidth);
+        }
 
-        g2.setColor(Color.BLACK);
+        // Text
+        g2.setColor(textColor);
         g2.drawString(text, drawX, drawY);
+
+        // Underline
+        if (underline) {
+            g2.setColor(textColor);
+            g2.drawLine(drawX, drawY + 2, drawX + tw, drawY + 2);
+        }
     }
 
     private void drawTemporaryGeometry(Graphics2D g2, List<Coordinate> tempCoords, String mode, Color lineColor, Color fillColor) {

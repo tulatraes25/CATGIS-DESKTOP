@@ -215,18 +215,25 @@ public class SaveProjectAction extends AbstractAction {
                 .append("|").append(pointTheme);
 
         // Label properties as keyed suffixes (backward compatible)
-        if (layer.isLabelsVisible()) {
-            sb.append("|LABEL_FONT=").append(safe(layer.getLabelFontFamily()))
-              .append("|LABEL_SIZE=").append(layer.getLabelFontSize())
-              .append("|LABEL_BOLD=").append(layer.isLabelBold())
-              .append("|LABEL_ITALIC=").append(layer.isLabelItalic())
-              .append("|LABEL_COLOR=").append(colorToText(layer.getLabelColor()))
-              .append("|LABEL_HALO=").append(layer.isLabelHaloEnabled())
-              .append("|LABEL_HALO_COLOR=").append(colorToText(layer.getLabelHaloColor()))
-              .append("|LABEL_HALO_WIDTH=").append(layer.getLabelHaloWidth())
-              .append("|LABEL_OFFSET_X=").append(layer.getLabelOffsetX())
-              .append("|LABEL_OFFSET_Y=").append(layer.getLabelOffsetY());
-        }
+        sb.append("|LABEL_FONT=").append(safe(layer.getLabelFontFamily()))
+          .append("|LABEL_SIZE=").append(layer.getLabelFontSize())
+          .append("|LABEL_BOLD=").append(layer.isLabelBold())
+          .append("|LABEL_ITALIC=").append(layer.isLabelItalic())
+          .append("|LABEL_UNDERLINE=").append(layer.isLabelUnderline())
+          .append("|LABEL_COLOR=").append(colorToText(layer.getLabelColor()))
+          .append("|LABEL_HALO=").append(layer.isLabelHaloEnabled())
+          .append("|LABEL_HALO_COLOR=").append(colorToText(layer.getLabelHaloColor()))
+          .append("|LABEL_HALO_WIDTH=").append(layer.getLabelHaloWidth())
+          .append("|LABEL_OFFSET_X=").append(layer.getLabelOffsetX())
+          .append("|LABEL_OFFSET_Y=").append(layer.getLabelOffsetY())
+          .append("|LABEL_PLACEMENT=").append(safe(layer.getLabelPlacement()))
+          .append("|LABEL_PLACEMENT_MODE=").append(layer.getLabelPlacementMode().name())
+          .append("|LABEL_PRIORITY=").append(layer.getLabelPriority())
+          .append("|LABEL_COLLISION_AVOID=").append(layer.isLabelCollisionAvoid())
+          .append("|LABEL_BG=").append(layer.isLabelBackgroundEnabled())
+          .append("|LABEL_BG_COLOR=").append(colorToText(layer.getLabelBackgroundColor()))
+          .append("|LABEL_MIN_SCALE=").append((int) layer.getLabelMinScale())
+          .append("|LABEL_MAX_SCALE=").append((int) layer.getLabelMaxScale());
 
         if (layer instanceof GpxLayer) {
             GpxLayer gpx = (GpxLayer) layer;

@@ -31,6 +31,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -480,65 +481,229 @@ public class LayerPropertiesDialog extends JDialog {
     }
 
     private JPanel buildLabelsTab() {
-        JPanel panel = buildCardPanel();
+        JPanel content = new JPanel(new BorderLayout(12, 0));
+        content.setOpaque(false);
+
+        // --- Left column: controls ---
+        JPanel editorColumn = new JPanel(new BorderLayout(0, 12));
+        editorColumn.setOpaque(false);
+
+        // Section 1: Activation & Field
+        JPanel activationCard = buildCardPanel();
         GridBagConstraints gbc = createFormConstraints();
         int row = 0;
-        addSectionTitle(panel, gbc, row++, "Etiquetas");
+        addSectionTitle(activationCard, gbc, row++, "Activacion");
         gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2;
-        panel.add(labelsVisibleCheck, gbc);
+        activationCard.add(labelsVisibleCheck, gbc);
         gbc.gridwidth = 1;
-        addRow(panel, gbc, row++, "Campo", labelFieldCombo);
+        addRow(activationCard, gbc, row++, "Campo", labelFieldCombo);
+        gbc.gridx = 0; gbc.gridy = row; gbc.weighty = 1; gbc.gridwidth = 2;
+        activationCard.add(new JLabel(""), gbc);
+        editorColumn.add(activationCard, BorderLayout.NORTH);
 
-        // Fuente
+        // Section 2: Typography
+        JPanel typographyCard = buildCardPanel();
+        gbc = createFormConstraints();
+        row = 0;
+        addSectionTitle(typographyCard, gbc, row++, "Tipografia");
+
         JComboBox<String> fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
         fontCombo.setSelectedItem(layer.getLabelFontFamily());
-        fontCombo.addActionListener(e -> layer.setLabelFontFamily((String)fontCombo.getSelectedItem()));
-        addRow(panel, gbc, row++, "Fuente", fontCombo);
+        addRow(typographyCard, gbc, row++, "Fuente", fontCombo);
 
-        // Tamano
         JSpinner sizeSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelFontSize(), 6, 72, 1));
-        sizeSpin.addChangeListener(e -> layer.setLabelFontSize((Integer)sizeSpin.getValue()));
-        addRow(panel, gbc, row++, "Tamano", sizeSpin);
+        addRow(typographyCard, gbc, row++, "Tamano", sizeSpin);
 
-        // Bold + Italic
         JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0)); styleRow.setOpaque(false);
-        JToggleButton boldBtn = new JToggleButton("B", layer.isLabelBold()); boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD));
-        boldBtn.addActionListener(e -> layer.setLabelBold(boldBtn.isSelected()));
-        JToggleButton italicBtn = new JToggleButton("I", layer.isLabelItalic()); italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC));
-        italicBtn.addActionListener(e -> layer.setLabelItalic(italicBtn.isSelected()));
-        styleRow.add(boldBtn); styleRow.add(italicBtn);
-        addRow(panel, gbc, row++, "Estilo", styleRow);
+        JToggleButton boldBtn = new JToggleButton("N", layer.isLabelBold()); boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD)); boldBtn.setToolTipText("Negrita");
+        JToggleButton italicBtn = new JToggleButton("K", layer.isLabelItalic()); italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC)); italicBtn.setToolTipText("Cursiva");
+        JToggleButton underlineBtn = new JToggleButton("S", layer.isLabelUnderline()); underlineBtn.setFont(underlineBtn.getFont().deriveFont(Font.PLAIN)); underlineBtn.setToolTipText("Subrayado");
+        styleRow.add(boldBtn); styleRow.add(italicBtn); styleRow.add(underlineBtn);
+        addRow(typographyCard, gbc, row++, "Estilo", styleRow);
 
-        // Color texto
-        JButton textColorBtn = new JButton(); textColorBtn.setBackground(layer.getLabelColor()); textColorBtn.setOpaque(true);
-        textColorBtn.addActionListener(e -> { Color c = JColorChooser.showDialog(panel, "Color texto", textColorBtn.getBackground()); if (c != null) { layer.setLabelColor(c); textColorBtn.setBackground(c); } });
-        addRow(panel, gbc, row++, "Color texto", textColorBtn);
+        JButton textColorBtn = createColorButton(layer.getLabelColor(), "Color de texto");
+        addRow(typographyCard, gbc, row++, "Color", textColorBtn);
 
-        // Halo
-        JCheckBox haloCheck = new JCheckBox("Halo", layer.isLabelHaloEnabled());
-        haloCheck.addActionListener(e -> layer.setLabelHaloEnabled(haloCheck.isSelected()));
-        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; panel.add(haloCheck, gbc); gbc.gridwidth = 1;
+        gbc.gridx = 0; gbc.gridy = row; gbc.weighty = 1; gbc.gridwidth = 2;
+        typographyCard.add(new JLabel(""), gbc);
+        editorColumn.add(typographyCard, BorderLayout.CENTER);
 
-        JButton haloColorBtn = new JButton(); haloColorBtn.setBackground(layer.getLabelHaloColor()); haloColorBtn.setOpaque(true);
-        haloColorBtn.addActionListener(e -> { Color c = JColorChooser.showDialog(panel, "Color halo", haloColorBtn.getBackground()); if (c != null) { layer.setLabelHaloColor(c); haloColorBtn.setBackground(c); } });
-        addRow(panel, gbc, row++, "Color halo", haloColorBtn);
+        // Section 3: Placement
+        JPanel placementCard = buildCardPanel();
+        gbc = createFormConstraints();
+        row = 0;
+        addSectionTitle(placementCard, gbc, row++, "Ubicacion");
 
-        JSpinner haloWidthSpin = new JSpinner(new SpinnerNumberModel((int)layer.getLabelHaloWidth(), 1, 10, 1));
-        haloWidthSpin.addChangeListener(e -> layer.setLabelHaloWidth((Integer)haloWidthSpin.getValue()));
-        addRow(panel, gbc, row++, "Grosor halo", haloWidthSpin);
+        JComboBox<Layer.LabelPlacementMode> placementCombo = new JComboBox<>(Layer.LabelPlacementMode.values());
+        placementCombo.setSelectedItem(layer.getLabelPlacementMode());
+        addRow(placementCard, gbc, row++, "Modo", placementCombo);
 
-        // Offset
-        JSpinner offsetXSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelOffsetX(), -50, 50, 1));
-        offsetXSpin.addChangeListener(e -> layer.setLabelOffsetX((Integer)offsetXSpin.getValue()));
-        addRow(panel, gbc, row++, "Offset X (px)", offsetXSpin);
+        JSpinner offsetXSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelOffsetX(), -100, 100, 1));
+        addRow(placementCard, gbc, row++, "Offset X (px)", offsetXSpin);
 
-        JSpinner offsetYSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelOffsetY(), -50, 50, 1));
-        offsetYSpin.addChangeListener(e -> layer.setLabelOffsetY((Integer)offsetYSpin.getValue()));
-        addRow(panel, gbc, row++, "Offset Y (px)", offsetYSpin);
+        JSpinner offsetYSpin = new JSpinner(new SpinnerNumberModel(layer.getLabelOffsetY(), -100, 100, 1));
+        addRow(placementCard, gbc, row++, "Offset Y (px)", offsetYSpin);
 
-        gbc.weighty = 1; gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
-        panel.add(new JLabel(""), gbc);
-        return wrapInScroll(panel);
+        JCheckBox collisionCheck = new JCheckBox("Evitar superposicion", layer.isLabelCollisionAvoid());
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; placementCard.add(collisionCheck, gbc); gbc.gridwidth = 1;
+
+        JSpinner prioritySpin = new JSpinner(new SpinnerNumberModel(layer.getLabelPriority(), 1, 10, 1));
+        prioritySpin.setToolTipText("1 = mayor prioridad, 10 = menor prioridad");
+        addRow(placementCard, gbc, row++, "Prioridad (1-10)", prioritySpin);
+
+        gbc.gridx = 0; gbc.gridy = row; gbc.weighty = 1; gbc.gridwidth = 2;
+        placementCard.add(new JLabel(""), gbc);
+        editorColumn.add(placementCard, BorderLayout.SOUTH);
+
+        // --- Right column: halo, background, scale, preview ---
+        JPanel rightColumn = new JPanel(new BorderLayout(0, 12));
+        rightColumn.setOpaque(false);
+
+        // Halo & Background card
+        JPanel effectsCard = buildCardPanel();
+        gbc = createFormConstraints();
+        row = 0;
+        addSectionTitle(effectsCard, gbc, row++, "Legibilidad");
+
+        JCheckBox haloCheck = new JCheckBox("Halo activo", layer.isLabelHaloEnabled());
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; effectsCard.add(haloCheck, gbc); gbc.gridwidth = 1;
+
+        JButton haloColorBtn = createColorButton(layer.getLabelHaloColor(), "Color de halo");
+        addRow(effectsCard, gbc, row++, "Color halo", haloColorBtn);
+
+        JSpinner haloWidthSpin = new JSpinner(new SpinnerNumberModel((int) layer.getLabelHaloWidth(), 1, 12, 1));
+        addRow(effectsCard, gbc, row++, "Grosor halo", haloWidthSpin);
+
+        JCheckBox bgCheck = new JCheckBox("Fondo activo", layer.isLabelBackgroundEnabled());
+        gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; effectsCard.add(bgCheck, gbc); gbc.gridwidth = 1;
+
+        JButton bgColorBtn = createColorButton(layer.getLabelBackgroundColor(), "Color de fondo");
+        addRow(effectsCard, gbc, row++, "Color fondo", bgColorBtn);
+
+        gbc.gridx = 0; gbc.gridy = row; gbc.weighty = 1; gbc.gridwidth = 2;
+        effectsCard.add(new JLabel(""), gbc);
+        rightColumn.add(effectsCard, BorderLayout.NORTH);
+
+        // Scale range card
+        JPanel scaleCard = buildCardPanel();
+        gbc = createFormConstraints();
+        row = 0;
+        addSectionTitle(scaleCard, gbc, row++, "Rango de escala (0 = sin limite)");
+
+        JSpinner minScaleSpin = new JSpinner(new SpinnerNumberModel((int) layer.getLabelMinScale(), 0, 100000000, 1000));
+        addRow(scaleCard, gbc, row++, "Escala min (1:)", minScaleSpin);
+
+        JSpinner maxScaleSpin = new JSpinner(new SpinnerNumberModel((int) layer.getLabelMaxScale(), 0, 100000000, 1000));
+        addRow(scaleCard, gbc, row++, "Escala max (1:)", maxScaleSpin);
+
+        gbc.gridx = 0; gbc.gridy = row; gbc.weighty = 1; gbc.gridwidth = 2;
+        scaleCard.add(new JLabel(""), gbc);
+        rightColumn.add(scaleCard, BorderLayout.CENTER);
+
+        // Preview card
+        JPanel previewCard = buildCardPanel();
+        previewCard.setLayout(new BorderLayout(0, 8));
+        JLabel previewTitle = new JLabel("Vista previa");
+        previewTitle.setFont(previewTitle.getFont().deriveFont(Font.BOLD, 14f));
+        previewCard.add(previewTitle, BorderLayout.NORTH);
+
+        JLabel previewLabel = new JLabel();
+        previewLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        previewLabel.setVerticalAlignment(SwingConstants.CENTER);
+        previewLabel.setPreferredSize(new Dimension(260, 80));
+        previewLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(218, 224, 232)),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        previewLabel.setOpaque(true);
+        previewLabel.setBackground(new Color(241, 245, 249));
+        previewCard.add(previewLabel, BorderLayout.CENTER);
+        rightColumn.add(previewCard, BorderLayout.SOUTH);
+
+        content.add(editorColumn, BorderLayout.CENTER);
+        content.add(rightColumn, BorderLayout.EAST);
+
+        // --- Wire up change listeners for live preview ---
+        Runnable previewUpdater = () -> {
+            BufferedImage img = new BufferedImage(240, 60, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = img.createGraphics();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setColor(new Color(241, 245, 249));
+                g2.fillRect(0, 0, 240, 60);
+
+                int style = Font.PLAIN;
+                if (boldBtn.isSelected()) style |= Font.BOLD;
+                if (italicBtn.isSelected()) style |= Font.ITALIC;
+                Font font = new Font((String) fontCombo.getSelectedItem(), style, (Integer) sizeSpin.getValue());
+                g2.setFont(font);
+                FontMetrics fm = g2.getFontMetrics();
+                String sample = "Ejiqueta 123";
+                int tw = fm.stringWidth(sample);
+                int tx = (240 - tw) / 2 + (Integer) offsetXSpin.getValue();
+                int ty = 30 + (Integer) offsetYSpin.getValue();
+
+                // Background
+                if (bgCheck.isSelected()) {
+                    Color bgc = layer.getLabelBackgroundColor();
+                    Object bgcv = bgColorBtn.getClientProperty("catgis.color");
+                    if (bgcv instanceof Color bc) bgc = bc;
+                    g2.setColor(bgc);
+                    g2.fillRoundRect(tx - 4, ty - fm.getAscent() - 2, tw + 8, fm.getHeight() + 4, 6, 6);
+                }
+
+                // Halo
+                if (haloCheck.isSelected()) {
+                    Color hc = layer.getLabelHaloColor();
+                    Object hcv = haloColorBtn.getClientProperty("catgis.color");
+                    if (hcv instanceof Color c) hc = c;
+                    int hw = (Integer) haloWidthSpin.getValue();
+                    g2.setColor(hc);
+                    for (int dx = -1; dx <= 1; dx++)
+                        for (int dy = -1; dy <= 1; dy++)
+                            if (dx != 0 || dy != 0)
+                                g2.drawString(sample, tx + dx * hw, ty + dy * hw);
+                }
+
+                // Text
+                Color tc = layer.getLabelColor();
+                Object tcv = textColorBtn.getClientProperty("catgis.color");
+                if (tcv instanceof Color c) tc = c;
+                g2.setColor(tc);
+                g2.drawString(sample, tx, ty);
+
+                // Underline
+                if (underlineBtn.isSelected()) {
+                    g2.setColor(tc);
+                    g2.drawLine(tx, ty + 2, tx + tw, ty + 2);
+                }
+            } finally {
+                g2.dispose();
+            }
+            previewLabel.setIcon(new ImageIcon(img));
+        };
+
+        fontCombo.addActionListener(e -> { layer.setLabelFontFamily((String) fontCombo.getSelectedItem()); previewUpdater.run(); });
+        sizeSpin.addChangeListener(e -> { layer.setLabelFontSize((Integer) sizeSpin.getValue()); previewUpdater.run(); });
+        boldBtn.addActionListener(e -> { layer.setLabelBold(boldBtn.isSelected()); previewUpdater.run(); });
+        italicBtn.addActionListener(e -> { layer.setLabelItalic(italicBtn.isSelected()); previewUpdater.run(); });
+        underlineBtn.addActionListener(e -> { layer.setLabelUnderline(underlineBtn.isSelected()); previewUpdater.run(); });
+        textColorBtn.addActionListener(e -> previewUpdater.run());
+        haloCheck.addActionListener(e -> { layer.setLabelHaloEnabled(haloCheck.isSelected()); previewUpdater.run(); });
+        haloColorBtn.addActionListener(e -> previewUpdater.run());
+        haloWidthSpin.addChangeListener(e -> { layer.setLabelHaloWidth((Integer) haloWidthSpin.getValue()); previewUpdater.run(); });
+        bgCheck.addActionListener(e -> { layer.setLabelBackgroundEnabled(bgCheck.isSelected()); previewUpdater.run(); });
+        bgColorBtn.addActionListener(e -> previewUpdater.run());
+        offsetXSpin.addChangeListener(e -> { layer.setLabelOffsetX((Integer) offsetXSpin.getValue()); previewUpdater.run(); });
+        offsetYSpin.addChangeListener(e -> { layer.setLabelOffsetY((Integer) offsetYSpin.getValue()); previewUpdater.run(); });
+        placementCombo.addActionListener(e -> layer.setLabelPlacementMode((Layer.LabelPlacementMode) placementCombo.getSelectedItem()));
+        collisionCheck.addActionListener(e -> layer.setLabelCollisionAvoid(collisionCheck.isSelected()));
+        prioritySpin.addChangeListener(e -> layer.setLabelPriority((Integer) prioritySpin.getValue()));
+        minScaleSpin.addChangeListener(e -> layer.setLabelMinScale((Integer) minScaleSpin.getValue()));
+        maxScaleSpin.addChangeListener(e -> layer.setLabelMaxScale((Integer) maxScaleSpin.getValue()));
+
+        previewUpdater.run();
+        return wrapInScroll(content);
     }
 
     private JPanel buildCardPanel() {
@@ -911,6 +1076,7 @@ public class LayerPropertiesDialog extends JDialog {
             target.setLabelsVisible(false);
             target.setLabelField(null);
         }
+        // Label properties are already set on the layer directly via listeners in buildLabelsTab
     }
 
     private Layer buildExportSnapshot() {
