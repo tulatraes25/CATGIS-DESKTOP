@@ -7415,6 +7415,9 @@ public class MapPanel extends JPanel {
 
         if (geometry instanceof LineString) {
             drawStyledLineString(g2, (LineString) geometry, layer, feature);
+            // Label at line midpoint
+            Coordinate[] lc = ((LineString)geometry).getCoordinates();
+            if (lc.length >= 2) { int mi = lc.length / 2; drawLabelForFeature(g2, layer, feature, worldToScreenX(lc[mi].x), worldToScreenY(lc[mi].y)); }
             return;
         }
 
@@ -7431,6 +7434,11 @@ public class MapPanel extends JPanel {
 
         if (geometry instanceof Polygon) {
             drawStyledPolygon(g2, (Polygon) geometry, layer, feature);
+            // Label at polygon interior point
+            try {
+                org.locationtech.jts.geom.Point ip = geometry.getInteriorPoint();
+                if (ip != null) drawLabelForFeature(g2, layer, feature, worldToScreenX(ip.getX()), worldToScreenY(ip.getY()));
+            } catch (Exception ignored) {}
             return;
         }
 
