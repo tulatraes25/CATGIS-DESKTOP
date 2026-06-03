@@ -113,6 +113,7 @@ import ar.com.catgis.layout.LayoutLine;
 import ar.com.catgis.layout.LayoutImage;
 import ar.com.catgis.layout.LayoutRectangle;
 import ar.com.catgis.layout.LayoutMap;
+import ar.com.catgis.layout.MapFrameViewport;
 import ar.com.catgis.layout.LayoutModel;
 import ar.com.catgis.layout.LayoutNorthArrow;
 import ar.com.catgis.layout.LayoutRenderContext;
@@ -593,22 +594,79 @@ public class MapLayoutComposerDialog extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(14,16,12,16));
         panel.setBackground(Color.WHITE);
 
-        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,8));
+        JPanel form = new JPanel(new java.awt.GridLayout(0,2,4,6));
         form.setBackground(Color.WHITE);
 
-        JLabel scLbl = new JLabel("Escala 1:"); form.add(scLbl);
+        // Scale
+        form.add(new JLabel("Escala 1:"));
         JTextField scaleField = new JTextField(map.getTargetScaleDenominator() > 0 ? String.valueOf((long)map.getTargetScaleDenominator()) : "", 10);
-        scaleField.setToolTipText("Ingresa la escala deseada. Ej: 5000 para 1:5000"); form.add(scaleField);
+        scaleField.setToolTipText("Escala deseada. Ej: 5000 para 1:5000");
+        form.add(scaleField);
 
-        JButton applyBtn = new JButton("Aplicar escala");
-        applyBtn.addActionListener(e -> {
-            try { double s = Double.parseDouble(scaleField.getText()); if(s>0){map.setTargetScaleDenominator(s);applyMapScale(s);previewPanel.repaint();} } catch(Exception ignored){}
+        JButton applyScaleBtn = new JButton("Aplicar escala");
+        applyScaleBtn.addActionListener(e -> {
+            try {
+                double s = Double.parseDouble(scaleField.getText());
+                if (s > 0) {
+                    map.setTargetScaleDenominator(s);
+                    map.getViewport().setScaleDenominator(s);
+                    applyMapScale(s);
+                    previewPanel.repaint();
+                }
+            } catch (Exception ignored) {}
         });
-        form.add(new JLabel()); form.add(applyBtn);
+        form.add(new JLabel()); form.add(applyScaleBtn);
 
-        JCheckBox gridChk = new JCheckBox("Mostrar grilla", gridCheck.isSelected());
-        gridChk.addActionListener(e -> { gridCheck.setSelected(gridChk.isSelected()); previewPanel.repaint(); });
+        // Viewport controls
+        form.add(new JLabel("--- Vista independiente ---"));
+        form.add(new JLabel());
+
+        MapFrameViewport vp = map.getViewport();
+        JTextField minXField = new JTextField(String.format("%.1f", vp.getMinX()), 8);
+        JTextField minYField = new JTextField(String.format("%.1f", vp.getMinY()), 8);
+        JTextField maxXField = new JTextField(String.format("%.1f", vp.getMaxX()), 8);
+        JTextField maxYField = new JTextField(String.format("%.1f", vp.getMaxY()), 8);
+
+        form.add(new JLabel("Min X:")); form.add(minXField);
+        form.add(new JLabel("Min Y:")); form.add(minYField);
+        form.add(new JLabel("Max X:")); form.add(maxXField);
+        form.add(new JLabel("Max Y:")); form.add(maxYField);
+
+        JButton applyExtentBtn = new JButton("Aplicar extensión");
+        applyExtentBtn.addActionListener(e -> {
+            try {
+                double mnX = Double.parseDouble(minXField.getText());
+                double mnY = Double.parseDouble(minYField.getText());
+                double mxX = Double.parseDouble(maxXField.getText());
+                double mxY = Double.parseDouble(maxYField.getText());
+                vp.fitToExtent(mnX, mnY, mxX, mxY);
+                map.invalidateRenderCache();
+                previewPanel.repaint();
+            } catch (Exception ignored) {}
+        });
+        form.add(new JLabel()); form.add(applyExtentBtn);
+
+        JButton fitMainBtn = new JButton("Copiar vista del mapa principal");
+        fitMainBtn.addActionListener(e -> {
+            vp.fitFromMainMap();
+            map.invalidateRenderCache();
+            previewPanel.repaint();
+            minXField.setText(String.format("%.1f", vp.getMinX()));
+            minYField.setText(String.format("%.1f", vp.getMinY()));
+            maxXField.setText(String.format("%.1f", vp.getMaxX()));
+            maxYField.setText(String.format("%.1f", vp.getMaxY()));
+        });
+        form.add(new JLabel()); form.add(fitMainBtn);
+
+        // Grid
+        JCheckBox gridChk = new JCheckBox("Mostrar grilla", map.isShowGrid());
+        gridChk.addActionListener(e -> { map.setShowGrid(gridChk.isSelected()); previewPanel.repaint(); });
         form.add(new JLabel()); form.add(gridChk);
+
+        // Indicator
+        JCheckBox indicatorChk = new JCheckBox("Mostrar indicador (inset)", map.isShowIndicator());
+        indicatorChk.addActionListener(e -> { map.setShowIndicator(indicatorChk.isSelected()); map.invalidateRenderCache(); previewPanel.repaint(); });
+        form.add(new JLabel()); form.add(indicatorChk);
 
         JButton closeBtn = new JButton("Cerrar");
         closeBtn.addActionListener(e -> popup.dispose());
