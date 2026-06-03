@@ -7559,7 +7559,9 @@ public class MapPanel extends JPanel {
         CategoryStyleRule categoryRule = resolveCategoryRule(layer.getPolygonCategorizedSymbology(), feature);
         Paint oldPaint = g2.getPaint();
         Layer.PolygonFillStyle fillStyle = categoryRule != null ? categoryRule.getPolygonFillStyle() : layer.getPolygonFillStyle();
-        g2.setPaint(buildPolygonPaint(layer, categoryRule));
+        Color fc = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getFillColor();
+        Color bc = categoryRule != null ? (categoryRule.getSecondaryColor() != null ? categoryRule.getSecondaryColor() : fc.darker()) : layer.getLineColor();
+        g2.setPaint(PolygonSymbolRenderer.buildPaint(fillStyle, fc, bc, 12));
         if (fillStyle != Layer.PolygonFillStyle.OUTLINE_ONLY) {
             g2.fill(exteriorPath);
         }
@@ -7588,111 +7590,6 @@ public class MapPanel extends JPanel {
                 g2.draw(holePath);
             }
         }
-    }
-
-    private Paint buildPolygonPaint(Layer layer, CategoryStyleRule categoryRule) {
-        Layer.PolygonFillStyle style = categoryRule != null ? categoryRule.getPolygonFillStyle() : layer.getPolygonFillStyle();
-        if (style == null || style == Layer.PolygonFillStyle.SOLID) {
-            return categoryRule != null ? categoryRule.getPrimaryColor() : layer.getFillColor();
-        }
-        if (style == Layer.PolygonFillStyle.OUTLINE_ONLY) {
-            return new Color(0, 0, 0, 0);
-        }
-
-        int size = 10;
-        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D pattern = img.createGraphics();
-        try {
-            Color fillColor = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getFillColor();
-            Color borderColor = categoryRule != null ? categoryRule.getSecondaryColor() : layer.getBorderColor();
-            pattern.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            pattern.setColor(new Color(fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), 55));
-            pattern.fillRect(0, 0, size, size);
-            pattern.setColor(borderColor);
-            pattern.setStroke(new BasicStroke(1.2f));
-            switch (style) {
-                case DIAGONAL_HATCH -> {
-                    pattern.drawLine(-2, size - 2, size - 2, -2);
-                    pattern.drawLine(2, size + 2, size + 2, 2);
-                }
-                case CROSS_HATCH -> {
-                    pattern.drawLine(0, size / 2, size, size / 2);
-                    pattern.drawLine(size / 2, 0, size / 2, size);
-                }
-                case DOTS -> {
-                    pattern.fillOval(2, 2, 2, 2);
-                    pattern.fillOval(6, 6, 2, 2);
-                }
-                case DIAGONAL_REVERSE -> {
-                    pattern.drawLine(size + 2, -2, -2, size + 2);
-                    pattern.drawLine(size + 6, -2, 2, size + 2);
-                }
-                case HORIZONTAL_LINES -> {
-                    pattern.drawLine(0, 2, size, 2);
-                    pattern.drawLine(0, 6, size, 6);
-                }
-                case VERTICAL_LINES -> {
-                    pattern.drawLine(2, 0, 2, size);
-                    pattern.drawLine(6, 0, 6, size);
-                }
-                case SOFT_SHADOW -> {
-                    pattern.setColor(new Color(borderColor.getRed(), borderColor.getGreen(), borderColor.getBlue(), 30));
-                    pattern.fillRect(2, 2, size - 4, size - 4);
-                }
-                case TRANSPARENT -> {
-                    pattern.setColor(new Color(0, 0, 0, 0));
-                    pattern.fillRect(0, 0, size, size);
-                }
-                case ENVIRONMENTAL -> {
-                    pattern.setColor(new Color(34, 139, 34, 40));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.setColor(new Color(34, 139, 34, 120));
-                    pattern.drawLine(0, 2, size, 2);
-                    pattern.drawLine(0, 7, size, 7);
-                }
-                case WATER -> {
-                    pattern.setColor(new Color(30, 144, 255, 50));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.drawLine(0, 3, size, 3);
-                    pattern.drawLine(0, 7, size, 7);
-                }
-                case VEGETATION -> {
-                    pattern.setColor(new Color(60, 179, 113, 45));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.fillOval(3, 3, 4, 4);
-                }
-                case INFRASTRUCTURE -> {
-                    pattern.setColor(new Color(128, 128, 128, 40));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.drawRect(1, 1, size - 2, size - 2);
-                }
-                case PARCEL -> {
-                    pattern.setColor(new Color(210, 180, 140, 50));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.drawLine(0, size/2, size, size/2);
-                    pattern.drawLine(size/2, 0, size/2, size);
-                }
-                case RESTRICTION -> {
-                    pattern.setColor(new Color(255, 69, 0, 35));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.drawLine(0, size, size, 0);
-                }
-                case BUFFER_SOFT -> {
-                    pattern.setColor(new Color(100, 149, 237, 30));
-                    pattern.fillOval(1, 1, size - 2, size - 2);
-                }
-                case SATELLITE_OVERLAY -> {
-                    pattern.setColor(new Color(255, 255, 255, 25));
-                    pattern.fillRect(0, 0, size, size);
-                    pattern.drawRect(0, 0, size - 1, size - 1);
-                }
-                default -> {
-                }
-            }
-        } finally {
-            pattern.dispose();
-        }
-        return new TexturePaint(img, new Rectangle(0, 0, size, size));
     }
 
     private CategoryStyleRule resolveCategoryRule(CategorizedSymbology symbology, SimpleFeature feature) {
