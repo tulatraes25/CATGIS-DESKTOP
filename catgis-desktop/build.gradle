@@ -147,7 +147,6 @@ def installerCopyright = 'Copyright (c) 2026 Claudio Alejandro Tula'
 def installerMenuGroup = 'CATGIS'
 def installerInstallDir = 'CATGIS Desktop'
 def bundledWixBinDir = new File(rootDir.parentFile, 'tools/wix314/bin')
-def bundledInnoCompiler = new File(rootDir.parentFile, 'tools/innosetup6/ISCC.exe')
 def javaHomeProvider = javaToolchains.launcherFor {
     languageVersion = JavaLanguageVersion.of(targetJavaVersion)
 }.map { it.metadata.installationPath.asFile }
@@ -385,67 +384,6 @@ tasks.register('packageWindowsJpackageExeInstaller') {
     }
 }
 
-tasks.register('packageWindowsExeInstaller') {
-    onlyIf { windowsHost }
-    dependsOn 'packageWindowsAppImage', 'generateWindowsInstallerAssets', 'verifyWindowsInstallerPrereqs'
-    def outputDirProvider = layout.buildDirectory.dir('installer/windows/exe')
-    def appImageDirProvider = layout.buildDirectory.dir('installer/windows/app-image')
-    def resourcesDirProvider = layout.buildDirectory.dir('installer/windows/resources')
-    inputs.dir(appImageDirProvider)
-    inputs.dir(resourcesDirProvider)
-    inputs.file(file('packaging/windows/CATGIS_BETA_LICENSE.rtf'))
-    inputs.file(file('packaging/windows/CATGIS_BILINGUAL_SETUP.iss'))
-    outputs.dir(outputDirProvider)
-
-    doLast {
-        File innoCompiler = project.ext.resolveInnoCompiler.call()
-        if (innoCompiler == null || !innoCompiler.exists()) {
-            throw new GradleException('No se puede generar el .exe bilingue porque falta Inno Setup 6 (ISCC.exe). Instala o copia Inno Setup en C:\\CATGIS\\tools\\innosetup6\\ISCC.exe y vuelve a ejecutar packageWindowsExeInstaller.')
-        }
-
-        File outputDir = outputDirProvider.get().asFile
-        File appImageDir = new File(appImageDirProvider.get().asFile, installerDisplayName)
-        File resourcesDir = resourcesDirProvider.get().asFile
-        File licenseFile = requiredProjectFile('packaging/windows/CATGIS_BETA_LICENSE.rtf', 'la licencia de instalacion')
-        File issFile = requiredProjectFile('packaging/windows/CATGIS_BILINGUAL_SETUP.iss', 'el script de Inno Setup')
-
-        if (!appImageDir.exists()) {
-            throw new GradleException("No se encontro la app-image esperada en ${appImageDir.absolutePath}.")
-        }
-
-        File appImageExe = new File(appImageDir, "${installerDisplayName}.exe")
-        if (project.ext.resolveSigningConfig.call() != null) {
-            signWindowsBinary(project, appImageExe)
-        } else {
-            logger.lifecycle('Firma digital no configurada: la app-image y el instalador se generan sin firma.')
-        }
-
-        delete outputDir
-        outputDir.mkdirs()
-
-        List<String> innoCommand = [
-                innoCompiler.absolutePath,
-                "/DAppImageDir=${appImageDir.absolutePath}",
-                "/DOutputDir=${outputDir.absolutePath}",
-                "/DInstallerName=${installerDisplayName}",
-                "/DInstallerVersion=${installerVersion}",
-                "/DInstallerPublisher=${installerVendor}",
-                "/DInstallerExeName=${installerStableExeBaseName}",
-                "/DInstallerLicense=${licenseFile.absolutePath}",
-                "/DInstallerIcon=${new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath}",
-                "/DInstallerGroup=${installerMenuGroup}",
-                "/DInstallerDir=${installerInstallDir}",
-                issFile.absolutePath
-        ]
-        runExternalCommand(innoCommand, [:], 'Fallo al generar instalador .exe via Inno Setup.')
-
-        File installerExe = new File(outputDir, "${installerStableExeBaseName}.exe")
-        if (project.ext.resolveSigningConfig.call() != null) {
-            signWindowsBinary(project, installerExe)
-        }
-    }
-}
-
 ext.resolveWixBinDir = {
     if (bundledWixBinDir.exists()) {
         File candle = new File(bundledWixBinDir, 'candle.exe')
@@ -459,23 +397,6 @@ ext.resolveWixBinDir = {
     String light = findExecutableOnPath('light.exe')
     if (candle && light) {
         return new File(candle).parentFile
-    }
-    return null
-}
-
-ext.resolveInnoCompiler = {
-    if (bundledInnoCompiler.exists()) {
-        return bundledInnoCompiler
-    }
-
-    for (String path : [
-            'C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe',
-            'C:\\Program Files\\Inno Setup 6\\ISCC.exe'
-    ]) {
-        File candidate = new File(path)
-        if (candidate.exists()) {
-            return candidate
-        }
     }
     return null
 }
@@ -555,12 +476,10 @@ tasks.register('packageWindowsDistribution') {
     onlyIf { windowsHost }
     dependsOn 'packageWindowsAppImage', 'verifyWindowsInstallerPrereqs'
     doLast {
-        if (project.ext.resolveInnoCompiler.call() != null) {
-            logger.lifecycle('Inno Setup detectado: ejecuta packageWindowsExeInstaller para generar el instalador .exe bilingue.')
-        } else if (project.ext.resolveWixBinDir.call() != null) {
-            logger.lifecycle('WiX detectado: ejecuta packageWindowsJpackageExeInstaller si necesitas el instalador .exe estandar de jpackage.')
+        if (project.ext.resolveWixBinDir.call() != null) {
+            logger.lifecycle('Instalador listo. Ejecuta packageWindowsJpackageExeInstaller para generar el .exe')
         } else {
-            logger.lifecycle('No se detecto Inno Setup ni WiX. Se genero la app-image con runtime embebido en build/installer/windows/app-image y el proyecto quedo listo para generar el .exe cuando se instale un compilador de setup.')
+            logger.lifecycle('WiX no detectado. La app-image queda en build/installer/windows/app-image')
         }
     }
 }

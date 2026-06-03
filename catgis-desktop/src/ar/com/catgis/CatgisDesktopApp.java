@@ -225,7 +225,15 @@ public class CatgisDesktopApp extends JFrame {
     }
 
     private JToggleButton createModuleButton(String text, int index) {
+        javax.swing.Icon icon = switch (index) {
+            case 0 -> AppIcons.addLayerIcon();     // Datos
+            case 1 -> AppIcons.attrEditIcon();     // Edicion
+            case 2 -> AppIcons.demIcon();           // Topografia
+            case 3 -> AppIcons.exportIcon();        // Salida
+            default -> null;
+        };
         JToggleButton btn = new JToggleButton(text);
+        if (icon != null) btn.setIcon(icon);
         btn.setFont(btn.getFont().deriveFont(Font.PLAIN, 11f));
         btn.setFocusPainted(false);
         btn.setContentAreaFilled(false);
