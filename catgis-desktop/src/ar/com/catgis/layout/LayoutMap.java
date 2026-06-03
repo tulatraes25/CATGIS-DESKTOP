@@ -21,7 +21,9 @@ public class LayoutMap implements LayoutElement {
     private boolean showGrid = false;
     private int gridCols = 3;
     private int gridRows = 3;
-    private Color gridColor = new Color(0, 0, 0, 40);
+    private Color gridColor = new Color(0, 0, 0, 80);
+    private float gridLineWidth = 0.5f;
+    private boolean showGridLabels = false;
     // Grid distance mode
     private boolean gridByDistance = false;
     private double gridIntervalX = 100;   // meters or degrees
@@ -109,9 +111,49 @@ public class LayoutMap implements LayoutElement {
                 g2.drawRect(px, py, pw, ph);
             }
         }
-        if (showGrid && gridCols > 0 && gridRows > 0) {
-            g2.setColor(gridColor);
-            g2.setStroke(new java.awt.BasicStroke(0.5f));
+        if (showGrid) {
+            renderGrid(g2, px, py, pw, ph);
+        }
+    }
+
+    private void renderGrid(Graphics2D g2, int px, int py, int pw, int ph) {
+        g2.setColor(gridColor);
+        g2.setStroke(new java.awt.BasicStroke(gridLineWidth, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+
+        if (gridByDistance && gridIntervalX > 0 && gridIntervalY > 0) {
+            // Distance-based grid with coordinate labels
+            double mapMinX = ownExtent ? ownViewMinX : 0;
+            double mapMinY = ownExtent ? ownViewMinY : 0;
+            double mapMaxX = ownExtent ? ownViewMinX + pw * ownZoomFactor : pw;
+            double mapMaxY = ownExtent ? ownViewMinY + ph * ownZoomFactor : ph;
+
+            // Vertical lines (X axis)
+            double startX = Math.ceil((mapMinX - gridOffsetX) / gridIntervalX) * gridIntervalX + gridOffsetX;
+            for (double wx = startX; wx <= mapMaxX; wx += gridIntervalX) {
+                if (wx < mapMinX) continue;
+                double ratio = (wx - mapMinX) / (mapMaxX - mapMinX);
+                int gx = px + (int) (ratio * pw);
+                if (gx < px || gx > px + pw) continue;
+                g2.drawLine(gx, py, gx, py + ph);
+                if (showGridLabels) {
+                    drawGridLabel(g2, formatGridValue(wx, gridIntervalX), gx, py + ph - 2, true);
+                }
+            }
+
+            // Horizontal lines (Y axis)
+            double startY = Math.ceil((mapMinY - gridOffsetY) / gridIntervalY) * gridIntervalY + gridOffsetY;
+            for (double wy = startY; wy <= mapMaxY; wy += gridIntervalY) {
+                if (wy < mapMinY) continue;
+                double ratio = (wy - mapMinY) / (mapMaxY - mapMinY);
+                int gy = py + ph - (int) (ratio * ph);
+                if (gy < py || gy > py + ph) continue;
+                g2.drawLine(px, gy, px + pw, gy);
+                if (showGridLabels) {
+                    drawGridLabel(g2, formatGridValue(wy, gridIntervalY), px + 2, gy - 2, false);
+                }
+            }
+        } else if (gridCols > 0 && gridRows > 0) {
+            // Simple subdivision grid
             for (int i = 1; i < gridCols; i++) {
                 int gx = px + (pw * i) / gridCols;
                 g2.drawLine(gx, py, gx, py + ph);
@@ -121,6 +163,27 @@ public class LayoutMap implements LayoutElement {
                 g2.drawLine(px, gy, px + pw, gy);
             }
         }
+    }
+
+    private void drawGridLabel(Graphics2D g2, String text, int x, int y, boolean horizontal) {
+        java.awt.Font prev = g2.getFont();
+        g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 7));
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        g2.setColor(gridColor);
+        if (horizontal) {
+            int tw = fm.stringWidth(text);
+            g2.drawString(text, x - tw / 2, y - 1);
+        } else {
+            g2.drawString(text, x + 1, y - 1);
+        }
+        g2.setFont(prev);
+    }
+
+    private String formatGridValue(double value, double interval) {
+        if (interval >= 1000) return String.format("%.0f", value);
+        if (interval >= 100) return String.format("%.0f", value);
+        if (interval >= 10) return String.format("%.1f", value);
+        return String.format("%.2f", value);
     }
 
     private long computeCacheKey() {
@@ -173,6 +236,10 @@ public class LayoutMap implements LayoutElement {
     public void setGridRows(int r) { this.gridRows = r; }
     public Color getGridColor() { return gridColor; }
     public void setGridColor(Color c) { if (c != null) this.gridColor = c; }
+    public float getGridLineWidth() { return gridLineWidth; }
+    public void setGridLineWidth(float w) { gridLineWidth = Math.max(0.1f, w); }
+    public boolean isShowGridLabels() { return showGridLabels; }
+    public void setShowGridLabels(boolean b) { showGridLabels = b; }
     public boolean isGridByDistance() { return gridByDistance; }
     public void setGridByDistance(boolean b) { this.gridByDistance = b; }
     public double getGridIntervalX() { return gridIntervalX; }

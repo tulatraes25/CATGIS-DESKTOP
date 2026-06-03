@@ -28,9 +28,11 @@ public class LayoutTable implements LayoutElement {
     private Font font = new Font("SansSerif", Font.PLAIN, 9);
     private Font headerFont = new Font("SansSerif", Font.BOLD, 9);
     private Color textColor = new Color(50, 55, 65);
-    private Color headerBg = new Color(0xE8EBEF);
+    private Color headerBg = new Color(45, 55, 72);
+    private Color headerTextColor = Color.WHITE;
     private Color borderColor = new Color(170, 180, 190);
     private Color rowAltBg = new Color(245, 247, 250);
+    private Color rowSeparatorColor = new Color(220, 225, 232);
     private float borderThickness = 0.5f;
     private double cellPadMm = 1.0;
     private boolean firstRowIsHeader = true;
@@ -165,15 +167,22 @@ public class LayoutTable implements LayoutElement {
             }
 
             g2.setFont(isHeader ? sHdrFont : sFont);
-            g2.setColor(textColor);
+            g2.setColor(isHeader ? headerTextColor : textColor);
+            FontMetrics useFm = isHeader ? g2.getFontMetrics() : fm;
             int cx = xPx + cellPadPx;
             for (int c = 0; c < colCount; c++) {
                 String cell = c < row.length ? row[c] : "";
                 if (cell.length() > 0) {
-                    String clipped = clipText(cell, fm, cw[c] - cellPadPx * 2);
+                    String clipped = clipText(cell, useFm, cw[c] - cellPadPx * 2);
                     g2.drawString(clipped, cx, cy + rowH - cellPadPx - 1);
                 }
                 cx += cw[c];
+            }
+            // Row separator line
+            if (!isHeader && r > 0 && showBorders) {
+                g2.setColor(rowSeparatorColor);
+                g2.setStroke(new BasicStroke(0.3f));
+                g2.drawLine(xPx, cy, xPx + wPx, cy);
             }
             cy += rowH;
         }

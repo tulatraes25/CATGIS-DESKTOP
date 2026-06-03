@@ -14,15 +14,20 @@ public class LayoutCartouche implements LayoutElement {
     private boolean visible = true, locked, selected;
 
     private final Map<String, String> fields = new LinkedHashMap<>();
-    private Font labelFont = new Font("SansSerif", Font.BOLD, 8);
-    private Font valueFont = new Font("SansSerif", Font.PLAIN, 8);
+    private Font titleFont = new Font("SansSerif", Font.BOLD, 9);
+    private Font labelFont = new Font("SansSerif", Font.BOLD, 7);
+    private Font valueFont = new Font("SansSerif", Font.PLAIN, 7);
+    private Color titleColor = new Color(0x1F2937);
     private Color labelColor = new Color(0x4B5563);
     private Color valueColor = new Color(0x1F2937);
-    private Color bgColor = new Color(255, 255, 255, 0);
-    private Color borderColor = new Color(0xD1D5DB);
-    private float borderWidth = 0.5f;
+    private Color titleBgColor = new Color(45, 55, 72);
+    private Color titleTextColor = Color.WHITE;
+    private Color bgColor = new Color(255, 255, 255, 230);
+    private Color borderColor = new Color(45, 55, 72);
+    private float borderWidth = 0.8f;
     private double paddingMm = 1.5;
     private boolean showBorder = true;
+    private boolean showTitleBar = true;
 
     public LayoutCartouche(String id, double xMm, double yMm, double wMm, double hMm) {
         this.id = id; this.name = id;
@@ -75,31 +80,68 @@ public class LayoutCartouche implements LayoutElement {
         int w = ctx.mmToPxInt(boundsMm.width), h = ctx.mmToPxInt(boundsMm.height);
         int pad = ctx.mmToPxInt(paddingMm);
 
-        if (bgColor.getAlpha() > 0) { g2.setColor(bgColor); g2.fillRect(x, y, w, h); }
+        // Background
+        if (bgColor.getAlpha() > 0) {
+            g2.setColor(bgColor);
+            g2.fillRoundRect(x, y, w, h, 3, 3);
+        }
+
+        int cy = y;
+
+        // Title bar
+        if (showTitleBar) {
+            int titleH = ctx.mmToPxInt(4);
+            g2.setColor(titleBgColor);
+            g2.fillRoundRect(x, y, w, titleH, 3, 3);
+            g2.setColor(titleBgColor);
+            g2.fillRect(x, y + titleH - 3, w, 3);
+            Font sTitleFont = titleFont.deriveFont((float)(titleFont.getSize2D() * ctx.getDpi() / 72));
+            g2.setFont(sTitleFont);
+            g2.setColor(titleTextColor);
+            FontMetrics tfm = g2.getFontMetrics();
+            String title = "Datos Cartograficos";
+            int titleY = y + (titleH + tfm.getAscent() - tfm.getDescent()) / 2;
+            g2.drawString(title, x + pad, titleY);
+            cy = y + titleH + 2;
+        }
+
+        // Border
         if (showBorder && borderWidth > 0) {
             g2.setColor(borderColor);
             g2.setStroke(new BasicStroke(borderWidth));
-            g2.drawRect(x, y, w, h);
+            g2.drawRoundRect(x, y, w, h, 3, 3);
         }
 
+        // Fields
         Font sLabelFont = labelFont.deriveFont((float)(labelFont.getSize2D() * ctx.getDpi() / 72));
         Font sValueFont = valueFont.deriveFont((float)(valueFont.getSize2D() * ctx.getDpi() / 72));
-        int rowH = g2.getFontMetrics(sLabelFont).getHeight() + 2;
-        int labelW = w / 3;
-        int cy = y + pad + rowH;
+        FontMetrics lfm = g2.getFontMetrics(sLabelFont);
+        int rowH = lfm.getHeight() + 3;
+        int labelW = Math.min(w / 3, ctx.mmToPxInt(22));
+        int valueX = x + pad + labelW + pad;
 
         for (Map.Entry<String, String> e : fields.entrySet()) {
-            if (cy > y + h - 4) break;
-            g2.setFont(sLabelFont); g2.setColor(labelColor);
-            String lbl = e.getKey() + ":";
-            g2.drawString(lbl, x + pad, cy);
-            g2.setFont(sValueFont); g2.setColor(valueColor);
+            if (cy + rowH > y + h - 2) break;
+            g2.setFont(sLabelFont);
+            g2.setColor(labelColor);
+            g2.drawString(e.getKey() + ":", x + pad, cy + lfm.getAscent());
+            g2.setFont(sValueFont);
+            g2.setColor(valueColor);
             String val = e.getValue();
             if (val == null || val.isEmpty()) val = "-";
-            g2.drawString(val, x + pad + labelW, cy);
-            cy += rowH + 2;
+            FontMetrics vfm = g2.getFontMetrics();
+            String clipped = val;
+            int maxValW = w - pad - valueX + x;
+            if (vfm.stringWidth(clipped) > maxValW && maxValW > 0) {
+                while (clipped.length() > 1 && vfm.stringWidth(clipped + "...") > maxValW) {
+                    clipped = clipped.substring(0, clipped.length() - 1);
+                }
+                clipped += "...";
+            }
+            g2.drawString(clipped, valueX, cy + lfm.getAscent());
+            cy += rowH;
         }
 
-        boundsMm.height = ((cy - y) / ctx.getDpi()) * 25.4;
+        boundsMm.height = ((cy - y + pad) / ctx.getDpi()) * 25.4;
     }
 }

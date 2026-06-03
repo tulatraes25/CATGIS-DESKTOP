@@ -266,7 +266,10 @@ public class LoadProjectAction extends AbstractAction {
                     rasterData = RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
                 }
                 if (rasterData != null) {
-                    layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCRS));
+                    String savedCrs = layer.getSourceCRS();
+                    if (savedCrs == null || savedCrs.isBlank()) {
+                        layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCRS));
+                    }
                     CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
                 }
                 return;
@@ -427,6 +430,10 @@ public class LoadProjectAction extends AbstractAction {
             }
             if (layer instanceof GpxLayer gpxLayer && parts.length > payloadStart && parts[payloadStart].startsWith("GPX_KIND=")) {
                 gpxLayer.setContentKind(GpxLayer.ContentKind.fromValue(parts[payloadStart].substring("GPX_KIND=".length()).trim()));
+                payloadStart++;
+            }
+            // Skip LABEL_* keyed suffixes so raster payload is read from correct positions
+            while (parts.length > payloadStart && (parts[payloadStart].startsWith("LABEL_") || parts[payloadStart].startsWith("CAD_") || parts[payloadStart].startsWith("SOURCE_NAME="))) {
                 payloadStart++;
             }
 
