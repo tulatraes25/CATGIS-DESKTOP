@@ -699,6 +699,26 @@ public class LoadProjectAction extends AbstractAction {
                     layer.setCadHiddenInternalLayersEncoded(part.substring("CAD_HIDDEN_LAYERS=".length()).trim());
                 } else if (part.startsWith("SOURCE_NAME=")) {
                     layer.setSourceName(part.substring("SOURCE_NAME=".length()).trim());
+                } else if (part.startsWith("LABEL_FONT=")) {
+                    layer.setLabelFontFamily(part.substring("LABEL_FONT=".length()).trim());
+                } else if (part.startsWith("LABEL_SIZE=")) {
+                    try { layer.setLabelFontSize(Integer.parseInt(part.substring("LABEL_SIZE=".length()).trim())); } catch (Exception ignored) {}
+                } else if (part.startsWith("LABEL_BOLD=")) {
+                    layer.setLabelBold(Boolean.parseBoolean(part.substring("LABEL_BOLD=".length()).trim()));
+                } else if (part.startsWith("LABEL_ITALIC=")) {
+                    layer.setLabelItalic(Boolean.parseBoolean(part.substring("LABEL_ITALIC=".length()).trim()));
+                } else if (part.startsWith("LABEL_COLOR=")) {
+                    Color c = parseColor(part.substring("LABEL_COLOR=".length()).trim()); if (c != null) layer.setLabelColor(c);
+                } else if (part.startsWith("LABEL_HALO=")) {
+                    layer.setLabelHaloEnabled(Boolean.parseBoolean(part.substring("LABEL_HALO=".length()).trim()));
+                } else if (part.startsWith("LABEL_HALO_COLOR=")) {
+                    Color c = parseColor(part.substring("LABEL_HALO_COLOR=".length()).trim()); if (c != null) layer.setLabelHaloColor(c);
+                } else if (part.startsWith("LABEL_HALO_WIDTH=")) {
+                    try { layer.setLabelHaloWidth(Float.parseFloat(part.substring("LABEL_HALO_WIDTH=".length()).trim())); } catch (Exception ignored) {}
+                } else if (part.startsWith("LABEL_OFFSET_X=")) {
+                    try { layer.setLabelOffsetX(Integer.parseInt(part.substring("LABEL_OFFSET_X=".length()).trim())); } catch (Exception ignored) {}
+                } else if (part.startsWith("LABEL_OFFSET_Y=")) {
+                    try { layer.setLabelOffsetY(Integer.parseInt(part.substring("LABEL_OFFSET_Y=".length()).trim())); } catch (Exception ignored) {}
                 }
             }
 

@@ -7397,6 +7397,7 @@ public class MapPanel extends JPanel {
 
         if (geometry instanceof Point) {
             drawStyledPoint(g2, (Point) geometry, layer, feature);
+            drawLabelForFeature(g2, layer, feature, worldToScreenX(((Point)geometry).getX()), worldToScreenY(((Point)geometry).getY()));
             return;
         }
 
@@ -7406,6 +7407,7 @@ public class MapPanel extends JPanel {
                 Geometry g = mp.getGeometryN(i);
                 if (g instanceof Point) {
                     drawStyledPoint(g2, (Point) g, layer, feature);
+                    drawLabelForFeature(g2, layer, feature, worldToScreenX(((Point)g).getX()), worldToScreenY(((Point)g).getY()));
                 }
             }
             return;
@@ -7503,6 +7505,32 @@ public class MapPanel extends JPanel {
                 }
             }
         }
+    }
+
+    private void drawLabelForFeature(Graphics2D g2, Layer layer, SimpleFeature feature, int x, int y) {
+        if (!layer.isLabelsVisible() || layer.getLabelField() == null || layer.getLabelField().isEmpty()) return;
+        String labelText = null;
+        try { Object val = feature.getAttribute(layer.getLabelField()); if (val != null) labelText = val.toString(); } catch (Exception ignored) {}
+        if (labelText == null || labelText.isEmpty()) return;
+        int style = Font.PLAIN;
+        if (layer.isLabelBold()) style |= Font.BOLD;
+        if (layer.isLabelItalic()) style |= Font.ITALIC;
+        Font font = new Font(layer.getLabelFontFamily(), style, layer.getLabelFontSize());
+        g2.setFont(font);
+        java.awt.FontMetrics fm = g2.getFontMetrics();
+        int tw = fm.stringWidth(labelText);
+        int lx = x + layer.getLabelOffsetX() - tw / 2;
+        int ly = y + layer.getLabelOffsetY() - 4;
+        if (layer.isLabelHaloEnabled() && layer.getLabelHaloColor().getAlpha() > 0) {
+            g2.setColor(layer.getLabelHaloColor());
+            float hw = layer.getLabelHaloWidth();
+            for (int dx = -1; dx <= 1; dx++)
+                for (int dy = -1; dy <= 1; dy++)
+                    if (dx != 0 || dy != 0)
+                        g2.drawString(labelText, lx + dx * hw, ly + dy * hw);
+        }
+        g2.setColor(layer.getLabelColor());
+        g2.drawString(labelText, lx, ly);
     }
 
     private void drawStyledPoint(Graphics2D g2, Point point, Layer layer, SimpleFeature feature) {

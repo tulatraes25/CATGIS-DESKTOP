@@ -214,6 +214,20 @@ public class SaveProjectAction extends AbstractAction {
                 .append("|").append(pointGraphic)
                 .append("|").append(pointTheme);
 
+        // Label properties as keyed suffixes (backward compatible)
+        if (layer.isLabelsVisible()) {
+            sb.append("|LABEL_FONT=").append(safe(layer.getLabelFontFamily()))
+              .append("|LABEL_SIZE=").append(layer.getLabelFontSize())
+              .append("|LABEL_BOLD=").append(layer.isLabelBold())
+              .append("|LABEL_ITALIC=").append(layer.isLabelItalic())
+              .append("|LABEL_COLOR=").append(colorToText(layer.getLabelColor()))
+              .append("|LABEL_HALO=").append(layer.isLabelHaloEnabled())
+              .append("|LABEL_HALO_COLOR=").append(colorToText(layer.getLabelHaloColor()))
+              .append("|LABEL_HALO_WIDTH=").append(layer.getLabelHaloWidth())
+              .append("|LABEL_OFFSET_X=").append(layer.getLabelOffsetX())
+              .append("|LABEL_OFFSET_Y=").append(layer.getLabelOffsetY());
+        }
+
         if (layer instanceof GpxLayer) {
             GpxLayer gpx = (GpxLayer) layer;
             sb.append("|").append("GPX_KIND=").append(safe(gpx.getContentKind().name()));
