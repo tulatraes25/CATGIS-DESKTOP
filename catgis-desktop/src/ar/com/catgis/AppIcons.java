@@ -47,11 +47,11 @@ public final class AppIcons {
     public static Icon cancelIcon() { return proSvg("editing/cancel"); }
     public static Icon undoIcon() { return proSvg("editing/undo"); }
     public static Icon redoIcon() { return proSvg("editing/redo"); }
-    public static Icon finishIcon() { return proSvg("editing/save"); }
+    public static Icon finishIcon() { return proSvg("editing/confirm"); }
     public static Icon snapIcon() { return proSvg("editing/snap"); }
 
     // Data
-    public static Icon openIcon() { return proSvg("data/add-layer"); }
+    public static Icon openIcon() { return proSvg("data/open"); }
     public static Icon addLayerIcon() { return proSvg("data/add-layer"); }
     public static Icon osmIcon() { return proSvg("data/osm"); }
     public static Icon esriIcon() { return proSvg("data/esri"); }
