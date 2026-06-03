@@ -5,6 +5,7 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JToolBar;
+import javax.swing.SwingConstants;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -118,39 +119,58 @@ public class MainToolBar extends JToolBar {
         btnProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
 
         // Bloque global de proyecto y datos
-        add(btnAbrirProyecto);
-        add(btnAgregarCapa);
-        add(btnNuevaCapaVectorial);
-        add(btnTablaPuntos);
-        add(btnGuardar);
-        add(btnGuardarComo);
-        add(btnSalvarVista);
+        add(createLabeledButton(btnAbrirProyecto, "Abrir"));
+        add(createLabeledButton(btnAgregarCapa, "Capa"));
+        add(createLabeledButton(btnNuevaCapaVectorial, "Nueva"));
+        add(createLabeledButton(btnGuardar, "Guardar"));
         addSeparator();
         // Bloque de navegacion del mapa
-        add(btnZoomMas);
-        add(btnZoomMenos);
-        add(btnZoomCapa);
-        add(btnZoomTodo);
-        add(btnVistaAnterior);
-        add(btnVistaSiguiente);
-        add(btnMover);
-        add(btnIdentificar);
-        add(btnBuscarCoord);
+        add(createLabeledButton(btnZoomMas, "+"));
+        add(createLabeledButton(btnZoomMenos, "-"));
+        add(createLabeledButton(btnZoomCapa, "Zoom capa"));
+        add(createLabeledButton(btnZoomTodo, "Todo"));
+        add(createLabeledButton(btnMover, "Mover"));
+        add(createLabeledButton(btnIdentificar, "Info"));
+        add(createLabeledButton(btnBuscarCoord, "Buscar"));
         addSeparator();
-        // Bloque de utilidades globales
-        add(btnProjectCRS);
-        add(btnCRS);
-        add(btnModulos);
+        // Bloque de dibujo
+        add(createLabeledButton(btnPunto, "Punto"));
+        add(createLabeledButton(btnLinea, "Linea"));
+        add(createLabeledButton(btnPoligono, "Poligono"));
+        add(createLabeledButton(btnMedirDist, "Distancia"));
+        add(createLabeledButton(btnMedirArea, "Area"));
+        add(createLabeledButton(btnTerminar, "OK"));
+        add(createLabeledButton(btnCancelar, "X"));
+        addSeparator();
+        // Bloque de herramientas
+        add(createLabeledButton(btnTabla, "Tabla"));
+        add(createLabeledButton(btnProjectCRS, "CRS"));
+        add(createLabeledButton(btnCRS, "Coord"));
+        add(createLabeledButton(btnModulos, "Modulos"));
     }
 
     private JButton createButton(String tooltip, Icon icon) {
         JButton button = new JButton(icon);
         button.setToolTipText(tooltip);
         button.setFocusable(false);
-        button.setMargin(new Insets(6, 6, 6, 6));
-        button.setFont(button.getFont().deriveFont(Font.PLAIN, 12f));
-        button.setPreferredSize(new Dimension(36, 36));
+        button.setMargin(new Insets(4, 4, 4, 4));
+        button.setFont(button.getFont().deriveFont(Font.PLAIN, 10f));
+        button.setPreferredSize(new Dimension(40, 40));
         return button;
+    }
+
+    private JButton createLabeledButton(JButton original, String label) {
+        JButton labeled = new JButton(label);
+        labeled.setIcon(original.getIcon());
+        labeled.setToolTipText(original.getToolTipText());
+        labeled.setFocusable(false);
+        labeled.setVerticalTextPosition(SwingConstants.BOTTOM);
+        labeled.setHorizontalTextPosition(SwingConstants.CENTER);
+        labeled.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        labeled.setMargin(new Insets(2, 4, 2, 4));
+        labeled.setPreferredSize(new Dimension(52, 48));
+        labeled.addActionListener(original.getActionListeners().length > 0 ? original.getActionListeners()[0] : null);
+        return labeled;
     }
 
     private Icon createOpenLayerIcon() {
