@@ -181,6 +181,9 @@ public class Layer {
     private String sourceName;
     private int featureCount;
 
+    // Label configuration (extracted to LabelConfig value object)
+    private final LabelConfig labelConfig = new LabelConfig();
+    // Legacy fields kept for backward compatibility (delegated to labelConfig)
     private boolean labelsVisible = false;
     private String labelField;
     private String labelFontFamily = "SansSerif";
@@ -366,6 +369,68 @@ public class Layer {
         if (labelMinScale > 0 && scaleDenominator < labelMinScale) return false;
         if (labelMaxScale > 0 && scaleDenominator > labelMaxScale) return false;
         return true;
+    }
+
+    /**
+     * Get the LabelConfig value object for this layer.
+     * New code should use this instead of individual label getters/setters.
+     */
+    public LabelConfig getLabelConfig() { return labelConfig; }
+
+    /**
+     * Sync legacy label fields to LabelConfig.
+     * Called after deserialization or manual field setting.
+     */
+    public void syncLabelConfigFromFields() {
+        labelConfig.setVisible(labelsVisible);
+        labelConfig.setField(labelField);
+        labelConfig.setFontFamily(labelFontFamily);
+        labelConfig.setFontSize(labelFontSize);
+        labelConfig.setBold(labelBold);
+        labelConfig.setItalic(labelItalic);
+        labelConfig.setUnderline(labelUnderline);
+        labelConfig.setColor(labelColor);
+        labelConfig.setHaloEnabled(labelHaloEnabled);
+        labelConfig.setHaloColor(labelHaloColor);
+        labelConfig.setHaloWidth(labelHaloWidth);
+        labelConfig.setOffsetX(labelOffsetX);
+        labelConfig.setOffsetY(labelOffsetY);
+        labelConfig.setPlacement(labelPlacement);
+        labelConfig.setPlacementMode(labelPlacementMode.name());
+        labelConfig.setPriority(labelPriority);
+        labelConfig.setCollisionAvoid(labelCollisionAvoid);
+        labelConfig.setBackgroundEnabled(labelBackgroundEnabled);
+        labelConfig.setBackgroundColor(labelBackgroundColor);
+        labelConfig.setMinScale(labelMinScale);
+        labelConfig.setMaxScale(labelMaxScale);
+    }
+
+    /**
+     * Sync LabelConfig back to legacy fields.
+     * Called before serialization.
+     */
+    public void syncLabelFieldsFromConfig() {
+        labelsVisible = labelConfig.isVisible();
+        labelField = labelConfig.getField();
+        labelFontFamily = labelConfig.getFontFamily();
+        labelFontSize = labelConfig.getFontSize();
+        labelBold = labelConfig.isBold();
+        labelItalic = labelConfig.isItalic();
+        labelUnderline = labelConfig.isUnderline();
+        labelColor = labelConfig.getColor();
+        labelHaloEnabled = labelConfig.isHaloEnabled();
+        labelHaloColor = labelConfig.getHaloColor();
+        labelHaloWidth = labelConfig.getHaloWidth();
+        labelOffsetX = labelConfig.getOffsetX();
+        labelOffsetY = labelConfig.getOffsetY();
+        labelPlacement = labelConfig.getPlacement();
+        try { labelPlacementMode = LabelPlacementMode.fromValue(labelConfig.getPlacementMode()); } catch (Exception ignored) {}
+        labelPriority = labelConfig.getPriority();
+        labelCollisionAvoid = labelConfig.isCollisionAvoid();
+        labelBackgroundEnabled = labelConfig.isBackgroundEnabled();
+        labelBackgroundColor = labelConfig.getBackgroundColor();
+        labelMinScale = labelConfig.getMinScale();
+        labelMaxScale = labelConfig.getMaxScale();
     }
 
     public Color getFillColor() {
