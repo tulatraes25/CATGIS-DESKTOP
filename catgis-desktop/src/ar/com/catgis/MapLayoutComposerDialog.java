@@ -8209,16 +8209,6 @@ public class MapLayoutComposerDialog extends JFrame {
             return new java.awt.TexturePaint(img, bounds);
         }
 
-        private static BasicStroke buildLineStroke(float width, Layer.LineSymbolStyle style) {
-            Layer.LineSymbolStyle resolved = style != null ? style : Layer.LineSymbolStyle.SOLID;
-            return switch (resolved) {
-                case DASHED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 5f}, 0f);
-                case DOTTED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{2f, 5f}, 0f);
-                case DASH_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{9f, 4f, 2f, 4f}, 0f);
-                default -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            };
-        }
-
         private static Path2D buildStar(double cx, double cy, double outer, double inner) {
             Path2D path = new Path2D.Double();
             for (int i = 0; i < 10; i++) {
