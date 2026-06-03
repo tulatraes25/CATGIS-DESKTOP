@@ -2,6 +2,8 @@ package ar.com.catgis;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Shared line symbol renderer used by map, properties dialog, categorized symbology, and CATMAP legend.
@@ -9,6 +11,15 @@ import java.awt.image.BufferedImage;
 public final class LineSymbolRenderer {
 
     private LineSymbolRenderer() {}
+
+    // Cache for BasicStroke objects to avoid per-feature allocation
+    private static final int STROKE_CACHE_MAX = 128;
+    private static final Map<Long, BasicStroke> strokeCache = new LinkedHashMap<>(STROKE_CACHE_MAX, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, BasicStroke> eldest) {
+            return size() > STROKE_CACHE_MAX;
+        }
+    };
 
     /** Preview icon for combo boxes */
     public static BufferedImage buildPreview(Layer.LineSymbolStyle style, Color color, int width, int height) {
@@ -43,10 +54,19 @@ public final class LineSymbolRenderer {
         }
     }
 
-    /** Build a BasicStroke for the given line style */
+    /** Build a BasicStroke for the given line style (cached) */
     public static BasicStroke buildStroke(Layer.LineSymbolStyle style, float baseWidth) {
         Layer.LineSymbolStyle s = style != null ? style : Layer.LineSymbolStyle.SOLID;
         float w = Math.max(0.5f, baseWidth);
+        long key = ((long) s.ordinal() << 32) | Float.floatToRawIntBits(w);
+        BasicStroke cached = strokeCache.get(key);
+        if (cached != null) return cached;
+        BasicStroke stroke = createStroke(s, w);
+        strokeCache.put(key, stroke);
+        return stroke;
+    }
+
+    private static BasicStroke createStroke(Layer.LineSymbolStyle s, float w) {
         return switch (s) {
             case SOLID -> new BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
             case DASHED -> new BasicStroke(w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 7f}, 0f);
@@ -68,4 +88,6 @@ public final class LineSymbolRenderer {
             case BORDERED -> new BasicStroke(w * 1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
         };
     }
+
+    public static void clearCache() { strokeCache.clear(); }
 }

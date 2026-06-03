@@ -3,6 +3,8 @@ package ar.com.catgis;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Shared polygon symbol renderer used by map, properties dialog, categorized symbology, and CATMAP legend.
@@ -11,8 +13,21 @@ public final class PolygonSymbolRenderer {
 
     private PolygonSymbolRenderer() {}
 
+    // Cache for TexturePaint objects to avoid per-polygon allocation
+    private static final int PAINT_CACHE_MAX = 64;
+    private static final Map<Long, Paint> paintCache = new LinkedHashMap<>(PAINT_CACHE_MAX, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Paint> eldest) {
+            return size() > PAINT_CACHE_MAX;
+        }
+    };
+
     /** Return a TexturePaint for use with g2.fill(path) in map rendering */
     public static Paint buildPaint(Layer.PolygonFillStyle style, Color fillColor, Color borderColor, int tileSize) {
+        long key = paintCacheKey(style, fillColor, borderColor, tileSize);
+        Paint cached = paintCache.get(key);
+        if (cached != null) return cached;
+
         BufferedImage img = new BufferedImage(tileSize, tileSize, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         try {
@@ -20,8 +35,21 @@ public final class PolygonSymbolRenderer {
         } finally {
             g.dispose();
         }
-        return new TexturePaint(img, new java.awt.Rectangle(0, 0, tileSize, tileSize));
+        Paint paint = new TexturePaint(img, new java.awt.Rectangle(0, 0, tileSize, tileSize));
+        paintCache.put(key, paint);
+        return paint;
     }
+
+    private static long paintCacheKey(Layer.PolygonFillStyle style, Color fillColor, Color borderColor, int tileSize) {
+        long h = 17;
+        h = h * 31 + (style != null ? style.ordinal() : 0);
+        h = h * 31 + (fillColor != null ? fillColor.getRGB() : 0);
+        h = h * 31 + (borderColor != null ? borderColor.getRGB() : 0);
+        h = h * 31 + tileSize;
+        return h;
+    }
+
+    public static void clearCache() { paintCache.clear(); }
 
     /** Preview icon for combo boxes */
     public static BufferedImage buildPreview(Layer.PolygonFillStyle style, Color fillColor, Color borderColor, int width, int height) {

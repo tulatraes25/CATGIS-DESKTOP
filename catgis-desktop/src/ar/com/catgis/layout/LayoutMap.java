@@ -19,6 +19,12 @@ public class LayoutMap implements LayoutElement {
     private transient int cachedWidthPx = -1;
     private transient int cachedHeightPx = -1;
     private transient long lastRenderTimeNanos = 0;
+    // Cached constants to avoid per-render allocation
+    private static final java.awt.Color PLACEHOLDER_BG = new java.awt.Color(0xE8EBF0);
+    private static final java.awt.Color PLACEHOLDER_BORDER = new java.awt.Color(0xB0B8C4);
+    private static final java.awt.Color PLACEHOLDER_TEXT = new java.awt.Color(0x8B95A5);
+    private static final java.awt.Font PLACEHOLDER_FONT = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 14);
+    private static final java.awt.Font GRID_LABEL_FONT = new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 7);
     private boolean showGrid = false;
     private int gridCols = 3;
     private int gridRows = 3;
@@ -96,13 +102,13 @@ public class LayoutMap implements LayoutElement {
             }
         } else {
             // Placeholder when no map content available (preview without project)
-            g2.setColor(new Color(0xE8EBF0));
+            g2.setColor(PLACEHOLDER_BG);
             g2.fillRect(px, py, pw, ph);
-            g2.setColor(new Color(0xB0B8C4));
+            g2.setColor(PLACEHOLDER_BORDER);
             g2.setStroke(new java.awt.BasicStroke(1f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 10f, new float[]{4f, 4f}, 0f));
             g2.drawRect(px + 2, py + 2, pw - 4, ph - 4);
-            g2.setColor(new Color(0x8B95A5));
-            g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, Math.min(14, pw / 10)));
+            g2.setColor(PLACEHOLDER_TEXT);
+            g2.setFont(PLACEHOLDER_FONT);
             String msg = "Mapa";
             int tw = g2.getFontMetrics().stringWidth(msg);
             g2.drawString(msg, px + (pw - tw) / 2, py + ph / 2);
@@ -173,7 +179,7 @@ public class LayoutMap implements LayoutElement {
 
     private void drawGridLabel(Graphics2D g2, String text, int x, int y, boolean horizontal) {
         java.awt.Font prev = g2.getFont();
-        g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 7));
+        g2.setFont(GRID_LABEL_FONT);
         java.awt.FontMetrics fm = g2.getFontMetrics();
         g2.setColor(gridColor);
         if (horizontal) {
