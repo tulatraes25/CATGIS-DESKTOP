@@ -49,6 +49,7 @@ public class LayoutMap implements LayoutElement {
     // Independent extent
     private boolean ownExtent = false;
     private double ownViewMinX, ownViewMinY, ownZoomFactor = 1;
+    private boolean showIndicator = false; // For inset maps: show indicator rectangle
 
     public LayoutMap(String id, double xMm, double yMm, double wMm, double hMm) {
         this.id = id;
@@ -247,6 +248,14 @@ public class LayoutMap implements LayoutElement {
             }
             independentRenderer = new MapFrameRenderer(viewport);
         }
+        // Set indicator extent for inset maps
+        if (showIndicator) {
+            MapFrameViewport mainViewport = new MapFrameViewport();
+            mainViewport.fitFromMainMap();
+            independentRenderer.setIndicatorExtent(mainViewport);
+        } else {
+            independentRenderer.setIndicatorExtent(null);
+        }
         try {
             return independentRenderer.render(w, h, 96);
         } catch (Exception ex) {
@@ -350,6 +359,8 @@ public class LayoutMap implements LayoutElement {
         ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
         if (map != null) { ownViewMinX = map.getViewMinX(); ownViewMinY = map.getViewMinY(); ownZoomFactor = map.getZoomFactor(); ownExtent = true; }
     }
+    public boolean isShowIndicator() { return showIndicator; }
+    public void setShowIndicator(boolean b) { showIndicator = b; }
 
     @Override
     public boolean containsMm(double xMm, double yMm) {

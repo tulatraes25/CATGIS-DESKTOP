@@ -22,9 +22,45 @@ public class MapFrameRenderer {
 
     private final MapFrameViewport viewport;
     private final java.util.List<int[]> collisionBoxes = new ArrayList<>();
+    private MapFrameViewport indicatorExtent; // For inset maps: shows where the main map is
 
     public MapFrameRenderer(MapFrameViewport viewport) {
         this.viewport = viewport;
+    }
+
+    /**
+     * Set the indicator extent for inset maps.
+     * This draws a rectangle showing where the main map's area is within this inset.
+     */
+    public void setIndicatorExtent(MapFrameViewport extent) {
+        this.indicatorExtent = extent;
+    }
+
+    private void renderIndicatorRectangle(Graphics2D g2, int widthPx, int heightPx) {
+        if (indicatorExtent == null) return;
+
+        // Convert indicator extent to screen coordinates
+        int ix1 = worldToScreenX(indicatorExtent.getMinX(), widthPx);
+        int iy1 = worldToScreenY(indicatorExtent.getMaxY(), heightPx);
+        int ix2 = worldToScreenX(indicatorExtent.getMaxX(), widthPx);
+        int iy2 = worldToScreenY(indicatorExtent.getMinY(), heightPx);
+
+        // Clamp to image bounds
+        ix1 = Math.max(0, Math.min(widthPx, ix1));
+        iy1 = Math.max(0, Math.min(heightPx, iy1));
+        ix2 = Math.max(0, Math.min(widthPx, ix2));
+        iy2 = Math.max(0, Math.min(heightPx, iy2));
+
+        if (ix2 <= ix1 || iy2 <= iy1) return;
+
+        // Draw semi-transparent fill
+        g2.setColor(new Color(255, 0, 0, 30));
+        g2.fillRect(ix1, iy1, ix2 - ix1, iy2 - iy1);
+
+        // Draw border
+        g2.setColor(new Color(220, 50, 50, 200));
+        g2.setStroke(new java.awt.BasicStroke(2f, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+        g2.drawRect(ix1, iy1, ix2 - ix1, iy2 - iy1);
     }
 
     /**
@@ -57,6 +93,11 @@ public class MapFrameRenderer {
             // Render labels with collision detection
             collisionBoxes.clear();
             renderLabels(g2, project, widthPx, heightPx, dpi);
+
+            // Render indicator rectangle if this is an inset with a reference extent
+            if (indicatorExtent != null) {
+                renderIndicatorRectangle(g2, widthPx, heightPx);
+            }
 
         } finally {
             g2.dispose();

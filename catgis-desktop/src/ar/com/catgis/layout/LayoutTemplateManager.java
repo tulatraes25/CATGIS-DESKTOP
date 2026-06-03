@@ -157,6 +157,7 @@ public class LayoutTemplateManager {
         inset.setShowGrid(false);
         inset.captureFromMainMap();
         inset.setOwnExtent(true);
+        inset.setShowIndicator(true);
         m.addElement(inset);
     }
 
