@@ -9,6 +9,31 @@ import java.util.Map;
 import java.util.Set;
 
 public class Layer {
+    public enum LabelPlacementMode {
+        AUTO("Auto (intenta mejor posicion)"),
+        POINT_ABOVE("Punto - Arriba"),
+        POINT_BELOW("Punto - Abajo"),
+        POINT_LEFT("Punto - Izquierda"),
+        POINT_RIGHT("Punto - Derecha"),
+        POINT_CENTER("Punto - Centro"),
+        LINE_CENTER("Linea - Centro"),
+        LINE_FOLLOW("Linea - Seguir trazo"),
+        POLYGON_CENTROID("Poligono - Centroide"),
+        POLYGON_INTERIOR("Poligono - Punto interior");
+
+        private final String label;
+        LabelPlacementMode(String label) { this.label = label; }
+        public static LabelPlacementMode fromValue(String value) {
+            if (value != null) {
+                for (LabelPlacementMode m : values()) {
+                    if (m.name().equalsIgnoreCase(value.trim())) return m;
+                }
+            }
+            return AUTO;
+        }
+        @Override public String toString() { return label; }
+    }
+
     public enum PointSymbolStyle {
         CIRCLE("Circulo"),
         SQUARE("Cuadrado"),
@@ -162,13 +187,21 @@ public class Layer {
     private int labelFontSize = 10;
     private boolean labelBold = false;
     private boolean labelItalic = false;
+    private boolean labelUnderline = false;
     private Color labelColor = Color.BLACK;
     private boolean labelHaloEnabled = false;
     private Color labelHaloColor = new Color(255, 255, 255, 200);
     private float labelHaloWidth = 2f;
     private int labelOffsetX = 0;
     private int labelOffsetY = 0;
-    private String labelPlacement = "AUTO"; // AUTO, TOP, BOTTOM, LEFT, RIGHT, CENTER
+    private String labelPlacement = "AUTO"; // kept for backward compat
+    private LabelPlacementMode labelPlacementMode = LabelPlacementMode.AUTO;
+    private int labelPriority = 5; // 1=highest, 10=lowest
+    private boolean labelCollisionAvoid = true;
+    private boolean labelBackgroundEnabled = false;
+    private Color labelBackgroundColor = new Color(255, 255, 255, 180);
+    private double labelMinScale = 0; // 0 = no limit
+    private double labelMaxScale = 0; // 0 = no limit
 
     private Color fillColor = new Color(120, 170, 255, 120);
     private Color borderColor = Color.BLUE;
@@ -311,6 +344,29 @@ public class Layer {
     public void setLabelOffsetY(int y) { labelOffsetY = y; }
     public String getLabelPlacement() { return labelPlacement; }
     public void setLabelPlacement(String p) { if (p != null) labelPlacement = p; }
+    public LabelPlacementMode getLabelPlacementMode() { return labelPlacementMode; }
+    public void setLabelPlacementMode(LabelPlacementMode m) { if (m != null) labelPlacementMode = m; }
+    public int getLabelPriority() { return labelPriority; }
+    public void setLabelPriority(int p) { labelPriority = Math.max(1, Math.min(10, p)); }
+    public boolean isLabelCollisionAvoid() { return labelCollisionAvoid; }
+    public void setLabelCollisionAvoid(boolean b) { labelCollisionAvoid = b; }
+    public boolean isLabelUnderline() { return labelUnderline; }
+    public void setLabelUnderline(boolean b) { labelUnderline = b; }
+    public boolean isLabelBackgroundEnabled() { return labelBackgroundEnabled; }
+    public void setLabelBackgroundEnabled(boolean b) { labelBackgroundEnabled = b; }
+    public Color getLabelBackgroundColor() { return labelBackgroundColor; }
+    public void setLabelBackgroundColor(Color c) { if (c != null) labelBackgroundColor = c; }
+    public double getLabelMinScale() { return labelMinScale; }
+    public void setLabelMinScale(double s) { labelMinScale = s >= 0 ? s : 0; }
+    public double getLabelMaxScale() { return labelMaxScale; }
+    public void setLabelMaxScale(double s) { labelMaxScale = s >= 0 ? s : 0; }
+
+    public boolean isLabelVisibleAtScale(double scaleDenominator) {
+        if (scaleDenominator <= 0) return true;
+        if (labelMinScale > 0 && scaleDenominator < labelMinScale) return false;
+        if (labelMaxScale > 0 && scaleDenominator > labelMaxScale) return false;
+        return true;
+    }
 
     public Color getFillColor() {
         return fillColor;
