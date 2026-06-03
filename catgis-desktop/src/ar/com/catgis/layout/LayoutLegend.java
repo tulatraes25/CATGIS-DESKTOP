@@ -384,26 +384,6 @@ public class LayoutLegend implements LayoutElement {
         }
     }
 
-    private BasicStroke buildLineStroke(float width, Layer.LineSymbolStyle style) {
-        if (style == null) {
-            return new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-        }
-        return switch (style) {
-            case DASHED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{7f, 5f}, 0f);
-            case DOTTED -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{1f, 4f}, 0f);
-            case DASH_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 4f, 1.5f, 4f}, 0f);
-            case DASH_DOT_DOT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{8f, 4f, 1.5f, 3f, 1.5f, 4f}, 0f);
-            case BOLD -> new BasicStroke(Math.max(width, 3.2f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case THIN -> new BasicStroke(Math.max(1.1f, width * 0.7f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case FENCE -> new BasicStroke(width, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 3f, 2f, 3f}, 0f);
-            case PATH_SECONDARY -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{5f, 5f}, 0f);
-            case WATERCOURSE -> new BasicStroke(Math.max(width, 2.6f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case DUCT -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{10f, 4f}, 0f);
-            case PROFILE, AXIS, EASEMENT, BOUNDARY, BORDERED, PATH_PRIMARY, SOLID -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-            case DOUBLE_LINE -> new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
-        };
-    }
-
     private java.awt.Paint buildPolygonPaint(Color fill, Color stroke, Layer.PolygonFillStyle style) {
         if (style == null || style == Layer.PolygonFillStyle.SOLID) {
             return fill;
