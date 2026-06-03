@@ -158,6 +158,17 @@ public class Layer {
 
     private boolean labelsVisible = false;
     private String labelField;
+    private String labelFontFamily = "SansSerif";
+    private int labelFontSize = 10;
+    private boolean labelBold = false;
+    private boolean labelItalic = false;
+    private Color labelColor = Color.BLACK;
+    private boolean labelHaloEnabled = false;
+    private Color labelHaloColor = new Color(255, 255, 255, 200);
+    private float labelHaloWidth = 2f;
+    private int labelOffsetX = 0;
+    private int labelOffsetY = 0;
+    private String labelPlacement = "AUTO"; // AUTO, TOP, BOTTOM, LEFT, RIGHT, CENTER
 
     private Color fillColor = new Color(120, 170, 255, 120);
     private Color borderColor = Color.BLUE;
@@ -277,6 +288,29 @@ public class Layer {
     public void setLabelField(String labelField) {
         this.labelField = labelField;
     }
+
+    public String getLabelFontFamily() { return labelFontFamily; }
+    public void setLabelFontFamily(String f) { if (f != null) labelFontFamily = f; }
+    public int getLabelFontSize() { return labelFontSize; }
+    public void setLabelFontSize(int s) { labelFontSize = Math.max(6, s); }
+    public boolean isLabelBold() { return labelBold; }
+    public void setLabelBold(boolean b) { labelBold = b; }
+    public boolean isLabelItalic() { return labelItalic; }
+    public void setLabelItalic(boolean b) { labelItalic = b; }
+    public Color getLabelColor() { return labelColor; }
+    public void setLabelColor(Color c) { if (c != null) labelColor = c; }
+    public boolean isLabelHaloEnabled() { return labelHaloEnabled; }
+    public void setLabelHaloEnabled(boolean b) { labelHaloEnabled = b; }
+    public Color getLabelHaloColor() { return labelHaloColor; }
+    public void setLabelHaloColor(Color c) { if (c != null) labelHaloColor = c; }
+    public float getLabelHaloWidth() { return labelHaloWidth; }
+    public void setLabelHaloWidth(float w) { labelHaloWidth = Math.max(0.5f, w); }
+    public int getLabelOffsetX() { return labelOffsetX; }
+    public void setLabelOffsetX(int x) { labelOffsetX = x; }
+    public int getLabelOffsetY() { return labelOffsetY; }
+    public void setLabelOffsetY(int y) { labelOffsetY = y; }
+    public String getLabelPlacement() { return labelPlacement; }
+    public void setLabelPlacement(String p) { if (p != null) labelPlacement = p; }
 
     public Color getFillColor() {
         return fillColor;
