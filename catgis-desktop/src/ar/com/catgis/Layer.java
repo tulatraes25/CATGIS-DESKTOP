@@ -222,6 +222,9 @@ public class Layer {
     private final CategorizedSymbology polygonCategorizedSymbology = new CategorizedSymbology();
 
     private String sourceCRS = "";
+    // CAD georeference (extracted to CadGeoreference value object)
+    private final CadGeoreference cadGeoref = new CadGeoreference();
+    // Legacy fields kept for backward compatibility
     private double cadOffsetX = 0d;
     private double cadOffsetY = 0d;
     private double cadScale = 1d;
@@ -750,6 +753,11 @@ public class Layer {
         cadGeorefReferenceCount = 0;
         cadGeorefCheckCount = 0;
     }
+
+    /**
+     * Get the CadGeoreference value object for this layer.
+     */
+    public CadGeoreference getCadGeoref() { return cadGeoref; }
 
     public boolean hasCadGeoreference() {
         return (cadGeoreferenceMethod != null && !cadGeoreferenceMethod.isBlank())
