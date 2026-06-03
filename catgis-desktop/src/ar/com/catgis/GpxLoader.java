@@ -51,7 +51,7 @@ public final class GpxLoader {
         if (!file.exists()) {
             throw new RuntimeException("No existe el archivo: " + file.getAbsolutePath());
         }
-        if (!file.getName().toLowerCase().endsWith(".gpx")) {
+        if (!file.getName().toLowerCase(java.util.Locale.ROOT).endsWith(".gpx")) {
             throw new RuntimeException("El archivo no es GPX: " + file.getAbsolutePath());
         }
 
