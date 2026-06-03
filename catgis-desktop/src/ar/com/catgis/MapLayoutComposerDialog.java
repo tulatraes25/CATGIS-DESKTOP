@@ -5582,7 +5582,14 @@ public class MapLayoutComposerDialog extends JFrame {
                             if (hoveredElement.isLocked()) {
                                 setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
                             } else {
-                                setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                                boolean overMapContent = hoveredElement instanceof ar.com.catgis.layout.LayoutMap;
+                                if (overMapContent && interactionState.isMapFrameZoomToolActive()) {
+                                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+                                } else if (overMapContent && interactionState.isMapFramePanToolActive()) {
+                                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                                } else {
+                                    setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+                                }
                             }
                             setToolTipText(hoveredElement.getName());
                         } else {
@@ -8814,6 +8821,15 @@ public class MapLayoutComposerDialog extends JFrame {
         double pxPerMm = PREVIEW_RENDER_DPI / 25.4 * previewPanel.lastPreviewScale;
         int sx = pr.x + (int)(cx * pxPerMm) - previewPanel.getWidth() / 2;
         int sy = pr.y + (int)(cy * pxPerMm) - previewPanel.getHeight() / 2;
+        java.awt.Container parent = previewPanel.getParent();
+        while (parent != null) {
+            if (parent instanceof javax.swing.JScrollPane jsp) {
+                javax.swing.JViewport viewport = jsp.getViewport();
+                viewport.setViewPosition(new java.awt.Point(Math.max(0, sx), Math.max(0, sy)));
+                break;
+            }
+            parent = parent.getParent();
+        }
     }
 
     private void importQpt() {

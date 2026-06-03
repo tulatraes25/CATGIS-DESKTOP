@@ -18,6 +18,7 @@ public class LayoutMap implements LayoutElement {
     private transient long cacheKey;
     private transient int cachedWidthPx = -1;
     private transient int cachedHeightPx = -1;
+    private transient long lastRenderTimeNanos = 0;
     private boolean showGrid = false;
     private int gridCols = 3;
     private int gridRows = 3;
@@ -71,11 +72,16 @@ public class LayoutMap implements LayoutElement {
         if (pw < 10 || ph < 10) return;
 
         long key = computeCacheKey();
-        if (cachedImage == null || key != cacheKey || cachedWidthPx != pw || cachedHeightPx != ph) {
+        long now = System.nanoTime();
+        // Re-render if: no cache, key changed, size changed, or more than 500ms elapsed (live update)
+        boolean stale = cachedImage == null || key != cacheKey || cachedWidthPx != pw || cachedHeightPx != ph
+                || (now - lastRenderTimeNanos > 500_000_000L);
+        if (stale) {
             cachedImage = captureMapImage(pw, ph);
             cacheKey = key;
             cachedWidthPx = pw;
             cachedHeightPx = ph;
+            lastRenderTimeNanos = now;
         }
 
         if (cachedImage != null) {
