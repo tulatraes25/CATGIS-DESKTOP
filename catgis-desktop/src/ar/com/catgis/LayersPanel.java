@@ -93,11 +93,32 @@ public class LayersPanel extends JPanel {
             }
         });
 
-        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 4));
         topBar.setBorder(BorderFactory.createEmptyBorder(4, 4, 0, 4));
-        newGroupButton = new JButton(I18n.t("Nuevo grupo"), AppIcons.openIcon());
+        newGroupButton = new JButton(I18n.t("Grupo"), AppIcons.openIcon());
+        newGroupButton.setToolTipText(I18n.t("Crear nuevo grupo de capas"));
+        newGroupButton.setFont(new Font("SansSerif", Font.PLAIN, 10));
         newGroupButton.addActionListener(e -> createNewGroupFromSelection());
         topBar.add(newGroupButton);
+
+        JButton zoomBtn = new JButton(I18n.t("Zoom"));
+        zoomBtn.setToolTipText(I18n.t("Hacer zoom a la capa seleccionada"));
+        zoomBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        zoomBtn.addActionListener(e -> zoomToSelectedLayer());
+        topBar.add(zoomBtn);
+
+        JButton propsBtn = new JButton(I18n.t("Propiedades"));
+        propsBtn.setToolTipText(I18n.t("Abrir propiedades de la capa seleccionada"));
+        propsBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        propsBtn.addActionListener(e -> openPropertiesForSelectedLayer());
+        topBar.add(propsBtn);
+
+        JButton removeBtn = new JButton(I18n.t("Quitar"));
+        removeBtn.setToolTipText(I18n.t("Quitar la capa seleccionada del proyecto"));
+        removeBtn.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        removeBtn.addActionListener(e -> removeSelectedLayers());
+        topBar.add(removeBtn);
+
         scrollTopButton = new JButton(AppIcons.upIcon());
         scrollTopButton.setToolTipText(I18n.t("Ir al inicio"));
         scrollTopButton.addActionListener(e -> scrollToTop());
@@ -106,6 +127,7 @@ public class LayersPanel extends JPanel {
         scrollBottomButton.setToolTipText(I18n.t("Ir al final"));
         scrollBottomButton.addActionListener(e -> scrollToBottom());
         topBar.add(scrollBottomButton);
+
         add(topBar, BorderLayout.NORTH);
 
         layerScrollPane = new JScrollPane(layerList);
@@ -579,6 +601,43 @@ public class LayersPanel extends JPanel {
                 layerScrollPane.getVerticalScrollBar().setValue(layerScrollPane.getVerticalScrollBar().getMaximum());
             }
         });
+    }
+
+    private void zoomToSelectedLayer() {
+        Object sel = layerList.getSelectedValue();
+        if (sel instanceof Layer layer) {
+            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+        }
+    }
+
+    private void openPropertiesForSelectedLayer() {
+        Object sel = layerList.getSelectedValue();
+        if (sel instanceof Layer layer) {
+            LayerPropertiesDialog.open(layer);
+        }
+    }
+
+    private void removeSelectedLayers() {
+        List<Object> selected = layerList.getSelectedValuesList();
+        if (selected.isEmpty()) return;
+        StringBuilder names = new StringBuilder();
+        for (Object obj : selected) {
+            if (obj instanceof Layer l) names.append("- ").append(l.getName()).append("\n");
+        }
+        int opt = JOptionPane.showConfirmDialog(this,
+                I18n.t("Quitar las siguientes capas?\n") + names,
+                I18n.t("Quitar capas"), JOptionPane.YES_NO_OPTION);
+        if (opt != JOptionPane.YES_OPTION) return;
+        for (Object obj : selected) {
+            if (obj instanceof Layer l) {
+                CatgisDesktopApp.mapPanel.removeLayers(List.of(l));
+                if (CatgisDesktopApp.currentProject != null) {
+                    CatgisDesktopApp.currentProject.removeLayer(l);
+                }
+            }
+        }
+        refreshLayerList();
+        CatgisDesktopApp.markProjectDirty();
     }
 
     private boolean isVisibilityToggleHit(MouseEvent e, Rectangle bounds, Object rowValue) {

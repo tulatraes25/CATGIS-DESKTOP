@@ -235,8 +235,8 @@ public class AttributeTableWindow extends JFrame {
         button.setOpaque(true);
         button.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
         button.setContentAreaFilled(true);
-        button.setPreferredSize(new Dimension(22, 20));
-        button.setMargin(new Insets(1, 1, 1, 1));
+        button.setPreferredSize(new Dimension(32, 28));
+        button.setMargin(new Insets(2, 4, 2, 4));
         return button;
     }
 
