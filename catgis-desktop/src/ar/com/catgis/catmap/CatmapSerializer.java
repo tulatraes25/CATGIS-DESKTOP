@@ -305,11 +305,11 @@ public final class CatmapSerializer {
 
     private static String encodeText(String text) {
         if (text == null) return "";
-        return text.replace("|", "%7C").replace("\n", "%0A");
+        return text.replace("%", "%25").replace("|", "%7C").replace("\n", "%0A");
     }
 
     private static String decodeText(String text) {
         if (text == null) return "";
-        return text.replace("%7C", "|").replace("%0A", "\n");
+        return text.replace("%7C", "|").replace("%0A", "\n").replace("%25", "%");
     }
 }

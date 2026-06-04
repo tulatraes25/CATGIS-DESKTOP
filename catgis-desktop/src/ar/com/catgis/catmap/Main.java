@@ -461,8 +461,11 @@ public class Main {
 
     private static void newLayout() {
         layoutModel = new LayoutModel();
+        currentFile = null;
         addDefaultElements(layoutModel);
+        previewPanel.invalidateRender();
         previewPanel.repaint();
+        mainFrame.setTitle("CATMAP - Nuevo layout");
         statusLabel.setText("Nuevo layout creado");
     }
 
@@ -778,6 +781,7 @@ public class Main {
             mainFrame.setTitle("CATMAP - " + file.getName());
             previewPanel = new LayoutPreviewPanel(layoutModel, new LayoutRenderContext(
                     LayoutRenderContext.Mode.PREVIEW, 96, 297, 210));
+            previewPanel.setSelectionCallback(element -> updatePropertiesPanel(element));
             // Rebuild preview panel in the center
             Component center = ((JSplitPane) mainFrame.getContentPane().getComponent(0)).getLeftComponent();
             if (center instanceof JSplitPane leftSplit) {
