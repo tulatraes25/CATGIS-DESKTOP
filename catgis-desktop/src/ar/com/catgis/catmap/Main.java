@@ -98,6 +98,7 @@ public class Main {
         LayoutRenderContext renderCtx = new LayoutRenderContext(
                 LayoutRenderContext.Mode.PREVIEW, 96, 297, 210);
         previewPanel = new LayoutPreviewPanel(layoutModel, renderCtx);
+        previewPanel.setSelectionCallback(element -> updatePropertiesPanel(element));
 
         // Build UI
         frame.setJMenuBar(createMenuBar());
