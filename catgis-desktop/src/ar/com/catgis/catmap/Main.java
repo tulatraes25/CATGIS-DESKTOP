@@ -261,6 +261,9 @@ public class Main {
         return toolbar;
     }
 
+    private static JPanel propsPanel;
+    private static JLabel selectedElementLabel;
+
     private static JPanel createMainPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout());
 
@@ -281,28 +284,39 @@ public class Main {
         previewScroll.getHorizontalScrollBar().setUnitIncrement(16);
         previewScroll.getVerticalScrollBar().setUnitIncrement(16);
 
-        // Right panel: properties
+        // Right panel: contextual properties
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 1, 0, 0, new Color(220, 224, 230)),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-        rightPanel.setPreferredSize(new Dimension(220, 0));
+        rightPanel.setPreferredSize(new Dimension(240, 0));
         JLabel rightTitle = new JLabel("Propiedades");
         rightTitle.setFont(rightTitle.getFont().deriveFont(Font.BOLD, 12f));
         rightPanel.add(rightTitle, BorderLayout.NORTH);
-        JPanel propsPanel = new JPanel(new GridBagLayout());
-        propsPanel.add(new JLabel("Selecciona un elemento"));
+        propsPanel = new JPanel();
+        propsPanel.setLayout(new BoxLayout(propsPanel, BoxLayout.Y_AXIS));
+        selectedElementLabel = new JLabel("Selecciona un elemento");
+        selectedElementLabel.setFont(selectedElementLabel.getFont().deriveFont(Font.PLAIN, 11f));
+        selectedElementLabel.setForeground(new Color(107, 114, 128));
+        propsPanel.add(selectedElementLabel);
         rightPanel.add(new JScrollPane(propsPanel), BorderLayout.CENTER);
 
-        // Bottom: layer panel
+        // Bottom: layer panel with checkboxes
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 224, 230)),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
         bottomPanel.setPreferredSize(new Dimension(0, 150));
+        JPanel bottomHeader = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        bottomHeader.setOpaque(false);
         JLabel bottomTitle = new JLabel("Capas del mapa");
         bottomTitle.setFont(bottomTitle.getFont().deriveFont(Font.BOLD, 12f));
-        bottomPanel.add(bottomTitle, BorderLayout.NORTH);
+        JButton refreshLayersBtn = new JButton("Refrescar");
+        refreshLayersBtn.setFont(refreshLayersBtn.getFont().deriveFont(Font.PLAIN, 10f));
+        refreshLayersBtn.addActionListener(e -> refreshLayerList());
+        bottomHeader.add(bottomTitle);
+        bottomHeader.add(refreshLayersBtn);
+        bottomPanel.add(bottomHeader, BorderLayout.NORTH);
         JList<String> layerList = new JList<>(new DefaultListModel<>());
         bottomPanel.add(new JScrollPane(layerList), BorderLayout.CENTER);
 
@@ -316,6 +330,69 @@ public class Main {
 
         mainPanel.add(mainSplit, BorderLayout.CENTER);
         return mainPanel;
+    }
+
+    private static void updatePropertiesPanel(LayoutElement element) {
+        propsPanel.removeAll();
+        if (element == null) {
+            selectedElementLabel.setText("Selecciona un elemento");
+            propsPanel.add(selectedElementLabel);
+        } else {
+            selectedElementLabel.setText(element.getClass().getSimpleName());
+            propsPanel.add(selectedElementLabel);
+
+            // Position & Size
+            addPropRow(propsPanel, "X:", String.format("%.1f mm", element.getBoundsMm().x));
+            addPropRow(propsPanel, "Y:", String.format("%.1f mm", element.getBoundsMm().y));
+            addPropRow(propsPanel, "Ancho:", String.format("%.1f mm", element.getBoundsMm().width));
+            addPropRow(propsPanel, "Alto:", String.format("%.1f mm", element.getBoundsMm().height));
+
+            // Type-specific properties
+            if (element instanceof LayoutLabel label) {
+                addPropRow(propsPanel, "Texto:", label.getText());
+                addPropRow(propsPanel, "Fuente:", label.getFont().getFamily());
+                addPropRow(propsPanel, "Tamaño:", String.valueOf(label.getFont().getSize()));
+                addPropRow(propsPanel, "Estilo:", (label.getFont().isBold() ? "N " : "") + (label.getFont().isItalic() ? "K " : ""));
+                addPropRow(propsPanel, "Color:", String.format("#%06X", label.getColor().getRGB() & 0xFFFFFF));
+            } else if (element instanceof LayoutMap) {
+                addPropRow(propsPanel, "Tipo:", "Mapa principal");
+                addPropRow(propsPanel, "Grilla:", "No");
+            } else if (element instanceof LayoutLegend legend) {
+                addPropRow(propsPanel, "Título:", legend.getTitle());
+                addPropRow(propsPanel, "Auto-alto:", legend.isAutoHeight() ? "Sí" : "No");
+            } else if (element instanceof LayoutScaleBar scale) {
+                addPropRow(propsPanel, "Escala:", "1:" + (int) scale.getMapScaleDenominator());
+                addPropRow(propsPanel, "Segmentos:", String.valueOf(scale.getSegments()));
+            } else if (element instanceof LayoutNorthArrow) {
+                addPropRow(propsPanel, "Tipo:", "Flecha norte");
+            } else if (element instanceof LayoutCartouche cartouche) {
+                addPropRow(propsPanel, "Tipo:", "Datos cartográficos");
+                for (var entry : cartouche.getFields().entrySet()) {
+                    addPropRow(propsPanel, entry.getKey() + ":", entry.getValue());
+                }
+            }
+        }
+        propsPanel.revalidate();
+        propsPanel.repaint();
+    }
+
+    private static void addPropRow(JPanel panel, String label, String value) {
+        JPanel row = new JPanel(new BorderLayout(4, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 10f));
+        lbl.setForeground(new Color(107, 114, 128));
+        lbl.setPreferredSize(new Dimension(70, 20));
+        JLabel val = new JLabel(value);
+        val.setFont(val.getFont().deriveFont(Font.PLAIN, 10f));
+        row.add(lbl, BorderLayout.WEST);
+        row.add(val, BorderLayout.CENTER);
+        panel.add(row);
+    }
+
+    private static void refreshLayerList() {
+        statusLabel.setText("Capas actualizadas");
     }
 
     // --- Actions ---
