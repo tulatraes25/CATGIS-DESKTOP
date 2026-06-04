@@ -64,6 +64,14 @@ public class Main {
             mainFrame = createMainWindow();
             mainFrame.setVisible(true);
 
+            // Try to connect to CATGIS
+            if (CatmapSocketClient.connect()) {
+                statusLabel.setText("Conectado a CATGIS Desktop");
+                syncFromCatgis();
+            } else {
+                statusLabel.setText("CATMAP Standalone (sin conexión a CATGIS)");
+            }
+
             // Load layout if specified
             if (layoutPath != null) {
                 loadLayoutFile(new File(layoutPath));
@@ -652,12 +660,21 @@ public class Main {
         statusLabel.setText("Tabla insertada");
     }
 
-    private static void refreshFromCatgis() {
-        if (CatgisDesktopApp.currentProject != null) {
-            statusLabel.setText("Actualizando desde CATGIS...");
-            refreshMap();
-            statusLabel.setText("Actualizado desde CATGIS");
+    private static void syncFromCatgis() {
+        CatmapSocketClient.ProjectState state = CatmapSocketClient.getProjectState();
+        if (state != null) {
+            statusLabel.setText("Proyecto: " + state.name() + " | CRS: " + state.crs());
         }
+    }
+
+    private static void refreshFromCatgis() {
+        if (CatmapSocketClient.isConnected()) {
+            syncFromCatgis();
+        } else if (CatgisDesktopApp.currentProject != null) {
+            statusLabel.setText("Actualizando desde CATGIS...");
+        }
+        refreshMap();
+        statusLabel.setText("Mapa actualizado");
     }
 
     private static void useCatgisExtent() {

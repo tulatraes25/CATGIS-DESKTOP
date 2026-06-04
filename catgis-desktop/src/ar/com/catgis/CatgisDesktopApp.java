@@ -79,6 +79,9 @@ public class CatgisDesktopApp extends JFrame {
         add(statusBar, BorderLayout.SOUTH);
         FileDropSupport.install(getRootPane(), mapPanel, layersPanel);
 
+        // Start CATMAP socket server
+        ar.com.catgis.catmap.CatgisSocketServer.start();
+
         installWindowCloseHandler();
         initializeProjectAtStartup();
         WindowLayoutSupport.fitFrameToScreen(this, 1280, 720, 1024, 680);
