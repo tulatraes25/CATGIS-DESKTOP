@@ -351,10 +351,21 @@ public class Main {
         }
     }
 
+    private static File currentFile = null;
+
     private static void saveLayout() {
-        statusLabel.setText("Guardando layout...");
-        // TODO: implement save
-        statusLabel.setText("Layout guardado");
+        if (currentFile == null) {
+            saveLayoutAs();
+            return;
+        }
+        try {
+            CatmapSerializer.save(layoutModel, currentFile);
+            statusLabel.setText("Layout guardado: " + currentFile.getName());
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(mainFrame,
+                    "Error al guardar:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private static void saveLayoutAs() {
@@ -365,8 +376,16 @@ public class Main {
             if (!file.getName().endsWith(".catmap")) {
                 file = new File(file.getAbsolutePath() + ".catmap");
             }
-            statusLabel.setText("Guardando como: " + file.getName());
-            // TODO: implement save
+            try {
+                CatmapSerializer.save(layoutModel, file);
+                currentFile = file;
+                mainFrame.setTitle("CATMAP - " + file.getName());
+                statusLabel.setText("Layout guardado: " + file.getName());
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainFrame,
+                        "Error al guardar:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
@@ -545,9 +564,24 @@ public class Main {
     }
 
     private static void loadLayoutFile(File file) {
-        statusLabel.setText("Cargando layout: " + file.getName());
-        // TODO: implement .catmap loading
-        statusLabel.setText("Layout cargado: " + file.getName());
+        try {
+            layoutModel = CatmapSerializer.load(file);
+            currentFile = file;
+            mainFrame.setTitle("CATMAP - " + file.getName());
+            previewPanel = new LayoutPreviewPanel(layoutModel, new LayoutRenderContext(
+                    LayoutRenderContext.Mode.PREVIEW, 96, 297, 210));
+            // Rebuild preview panel in the center
+            Component center = ((JSplitPane) mainFrame.getContentPane().getComponent(0)).getLeftComponent();
+            if (center instanceof JSplitPane leftSplit) {
+                leftSplit.setRightComponent(new JScrollPane(previewPanel));
+            }
+            previewPanel.repaint();
+            statusLabel.setText("Layout cargado: " + file.getName());
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(mainFrame,
+                    "Error al cargar layout:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private static void showShortcuts() {

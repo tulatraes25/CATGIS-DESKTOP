@@ -95,6 +95,7 @@ public class LayoutTable implements LayoutElement {
     public void setTextColor(Color c) { textColor = c; }
     public void setHeaderBg(Color c) { headerBg = c; }
     public void setBorderColor(Color c) { borderColor = c; }
+    public int getMaxVisibleRows() { return maxVisibleRows; }
     public void setMaxVisibleRows(int n) { maxVisibleRows = n; }
     public List<String[]> getRows() { return rows; }
 
