@@ -1,5 +1,6 @@
 package ar.com.catgis;
 
+import ar.com.catgis.TopologyValidator;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.ButtonGroup;
@@ -214,6 +215,20 @@ public class MainMenuBar extends JMenuBar {
         menuAnalisis.add(itemInundacion);
         menuAnalisis.add(itemRiesgoBooleano);
         menuAnalisis.add(itemPerfilTopografico);
+        menuAnalisis.addSeparator();
+        // Topology validation
+        JMenuItem itemTopologyNoGaps = createItem("Validar gaps entre polígonos", null);
+        itemTopologyNoGaps.addActionListener(e -> runTopologyValidation("NO_GAPS"));
+        menuAnalisis.add(itemTopologyNoGaps);
+        JMenuItem itemTopologyNoOverlaps = createItem("Validar superposiciones", null);
+        itemTopologyNoOverlaps.addActionListener(e -> runTopologyValidation("NO_OVERLAPS"));
+        menuAnalisis.add(itemTopologyNoOverlaps);
+        JMenuItem itemTopologyNoSelfInt = createItem("Validar geometrías inválidas", null);
+        itemTopologyNoSelfInt.addActionListener(e -> runTopologyValidation("NO_SELF_INTERSECTION"));
+        menuAnalisis.add(itemTopologyNoSelfInt);
+        JMenuItem itemTopologyLineConn = createItem("Validar conectividad de líneas", null);
+        itemTopologyLineConn.addActionListener(e -> runTopologyValidation("NO_DANGLES"));
+        menuAnalisis.add(itemTopologyLineConn);
 
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
@@ -698,6 +713,46 @@ public class MainMenuBar extends JMenuBar {
             item.setAccelerator(accelerator);
         }
         return item;
+    }
+
+    private void runTopologyValidation(String rule) {
+        Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+        if (layer == null) {
+            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
+                    I18n.t("Selecciona una capa para validar topología."));
+            return;
+        }
+
+        java.util.List<org.geotools.api.feature.simple.SimpleFeature> features = new java.util.ArrayList<>();
+        ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        if (data != null && data.getFeatureCollection() != null) {
+            org.geotools.data.simple.SimpleFeatureCollection fc = data.getFeatureCollection();
+            try (org.geotools.feature.FeatureIterator<org.geotools.api.feature.simple.SimpleFeature> it = fc.features()) {
+                while (it.hasNext()) { features.add(it.next()); }
+            }
+        }
+
+        if (features.isEmpty()) {
+            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
+                    I18n.t("La capa no tiene features para validar."));
+            return;
+        }
+
+        TopologyValidator.TopologyResult result = switch (rule) {
+            case "NO_GAPS" -> TopologyValidator.validateNoGaps(features, 1e-6);
+            case "NO_OVERLAPS" -> TopologyValidator.validateNoOverlaps(features);
+            case "NO_SELF_INTERSECTION" -> TopologyValidator.validateNoSelfIntersections(features);
+            case "NO_DANGLES" -> TopologyValidator.validateLineConnectivity(features, 1e-6);
+            default -> new TopologyValidator.TopologyResult(true, new java.util.ArrayList<>());
+        };
+
+        String msg = result.valid()
+                ? I18n.t("Validación OK: sin problemas de topología encontrados.")
+                : I18n.t("Problemas encontrados: ") + result.issues().size() + "\n\n"
+                + result.issues().stream().limit(5).map(i -> "- " + i.message()).reduce("", (a, b) -> a + "\n" + b);
+        JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), msg,
+                I18n.t("Validación de topología"),
+                result.valid() ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
     }
 
     private JMenu buildLanguageMenu() {
