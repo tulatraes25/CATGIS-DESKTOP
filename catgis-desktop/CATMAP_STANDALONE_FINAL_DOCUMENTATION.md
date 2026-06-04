@@ -1,4 +1,4 @@
-# CATMAP Standalone — Documentación Final
+# CATMAP Standalone — Documentación Final v2
 
 **Fecha**: 2026-06-03
 **Versión**: CATMAP Standalone v1.0
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Resumen Ejecutivo
+## Resumen Ejecutivo
 
 CATMAP Standalone es una aplicación independiente de composición cartográfica, separada de CATGIS Desktop. Permite crear, editar y exportar layouts profesionales para mapas técnicos y ambientales.
 
@@ -14,59 +14,47 @@ CATMAP Standalone es una aplicación independiente de composición cartográfica
 - Crear layouts desde cero
 - Abrir proyectos .catgis de CATGIS
 - Insertar mapas, leyendas, escalas, nortes, textos, imágenes, tablas
-- Exportar a PDF, PNG, JPG
+- Exportar a PDF, PNG, JPG, SVG
+- Generar atlas/map series
 - Guardar/cargar layouts en formato .catmap
 - Funcionar sin CATGIS abierto
+- Comunicarse con CATGIS via socket
 
 ---
 
-## 2. Arquitectura
+## Arquitectura
 
 ### Componentes principales
 
 | Clase | Propósito |
 |-------|-----------|
 | `Main.java` | Entry point, menú, toolbar, paneles |
-| `LayoutPreviewPanel.java` | Preview del layout |
+| `LayoutPreviewPanel.java` | Preview con drag & drop y selección |
 | `LayoutExportEngine.java` | Exportación PDF/PNG/JPG |
+| `SvgExportEngine.java` | Exportación SVG |
+| `AtlasEngine.java` | Generación batch de páginas |
 | `CatmapSerializer.java` | Persistencia .catmap |
+| `CatgisSocketServer.java` | Server en CATGIS |
+| `CatmapSocketClient.java` | Client en CATMAP |
 | `LayoutContext.java` | Contexto de acceso a proyecto |
-
-### Dependencias
-
-```
-CATMAP Standalone
-├── LayoutModel (modelo de layout)
-├── LayoutElement (elementos base)
-├── LayoutMap (mapa principal)
-├── LayoutLegend (leyenda)
-├── LayoutScaleBar (escala gráfica)
-├── LayoutNorthArrow (norte)
-├── LayoutCartouche (datos cartográficos)
-├── LayoutLabel (textos)
-├── LayoutImage (imágenes)
-├── LayoutRectangle/Elipse/Line (formas)
-├── LayoutTable (tablas)
-└── LayoutRenderContext (contexto de render)
-```
 
 ---
 
-## 3. Menús
+## Menús
 
 ### Archivo
-- Nuevo layout
-- Abrir layout (.catmap)
-- Abrir proyecto (.catgis)
-- Guardar / Guardar como
-- Exportar PDF / PNG / JPG
-- Imprimir
+- Nuevo layout (Ctrl+N)
+- Abrir layout (Ctrl+O)
+- Abrir proyecto .catgis
+- Guardar (Ctrl+S) / Guardar como
+- Exportar PDF / PNG / SVG
+- Imprimir (Ctrl+P)
 - Salir
 
 ### Edición
-- Deshacer / Rehacer
-- Copiar / Pegar
-- Duplicar / Eliminar
+- Deshacer (Ctrl+Z) / Rehacer (Ctrl+Y)
+- Copiar (Ctrl+C) / Pegar (Ctrl+V)
+- Duplicar / Eliminar (Delete)
 - Seleccionar todo
 - Bloquear / Desbloquear
 
@@ -84,7 +72,7 @@ CATMAP Standalone
 - Actualizar desde CATGIS
 - Sincronizar capas/simbología/etiquetas
 - Usar/fijar/ajustar extent
-- Refrescar mapa
+- Refrescar mapa (F5)
 
 ### Exportar
 - PDF, PNG, JPG, SVG
@@ -97,7 +85,7 @@ CATMAP Standalone
 
 ---
 
-## 4. Toolbar
+## Toolbar
 
 | Icono | Acción |
 |-------|--------|
@@ -126,7 +114,7 @@ CATMAP Standalone
 
 ---
 
-## 5. Paneles
+## Paneles
 
 ### Panel izquierdo: Elementos del layout
 - Lista de elementos del layout
@@ -135,11 +123,13 @@ CATMAP Standalone
 ### Panel central: Preview
 - Hoja A4/A3 con contenido
 - Zoom con rueda del mouse
-- Scroll horizontal/vertical
+- Drag para mover elementos
+- Selección con highlight azul + handles
 
 ### Panel derecho: Propiedades
 - Contextual según elemento seleccionado
-- Muestra: posición, tamaño, tipo, propiedades específicas
+- Campos editables (X, Y, Ancho, Alto)
+- Propiedades específicas por tipo
 
 ### Panel inferior: Capas del mapa
 - Lista de capas del proyecto
@@ -147,7 +137,7 @@ CATMAP Standalone
 
 ---
 
-## 6. Formato .catmap
+## Formato .catmap
 
 ### Estructura
 ```
@@ -159,41 +149,43 @@ ELEMENT|LayoutMap|main-map|Mapa principal|15|25|267|145|1|true|false|SHOW_GRID=f
 ELEMENT|LayoutLegend|main-legend|Leyenda|155|55|75|40|2|true|false|AUTO_HEIGHT=true|SHOW_BACKGROUND=false|TITLE=Leyenda
 ELEMENT|LayoutScaleBar|scale-1|Escala|145|175|95|10|3|true|false|SCALE_DENOMINATOR=10000.0|SEGMENTS=4
 ELEMENT|LayoutNorthArrow|north-1|Norte|250|30|16|16|4|true|false
+ELEMENT|LayoutCartouche|cartouche-1|Datos cartograficos|15|190|267|18|5|true|false|FIELD_Estudio=|FIELD_Proyecto=|FIELD_Empresa=|FIELD_Cartografo=|FIELD_Fuente=|FIELD_Coord.=
 # End of layout
 ```
 
-### Propiedades soportadas por tipo
+---
 
-| Tipo | Propiedades |
-|------|------------|
-| LayoutLabel | TEXT, FONT_FAMILY, FONT_SIZE, FONT_STYLE, COLOR |
-| LayoutMap | SHOW_GRID, FRAME_COLOR, FRAME_WIDTH, OWN_EXTENT, VIEW_MIN_X/Y, ZOOM_FACTOR |
-| LayoutLegend | AUTO_HEIGHT, SHOW_BACKGROUND, TITLE |
-| LayoutScaleBar | SCALE_DENOMINATOR, SEGMENTS |
-| LayoutNorthArrow | (sin propiedades extra) |
-| LayoutCartouche | FIELD_* (campos dinámicos) |
+## Exportación
+
+| Formato | Motor | DPI | Notas |
+|---------|-------|-----|-------|
+| PDF | PDFBox | 150 | A4 landscape, imagen embebida |
+| PNG | ImageIO | 150 | Sin pérdida |
+| JPG | ImageIO | 150 | Conversión RGB |
+| SVG | Embed base64 | 150 | PNG embebido en SVG |
 
 ---
 
-## 7. Exportación
+## Comunicación CATGIS↔CATMAP
 
-### PDF
-- Motor: Apache PDFBox
-- Formato: A4 landscape
-- Resolución: 150 DPI
-- Método: Render a BufferedImage → embed en PDF
+### Protocolo TCP (puerto 8899)
 
-### PNG
-- Resolución: 150 DPI
-- Formato: PNG sin pérdida
+| Comando | Respuesta |
+|---------|-----------|
+| `PING` | `{"status":"ok","version":"1.0"}` |
+| `GET_PROJECT_STATE` | `{"status":"ok","projectName":"...","crs":"...","layers":[...],"extent":{...}}` |
+| `GET_LAYERS` | `{"layers":[{"name":"...","type":"...","visible":true,"crs":"..."}]}` |
+| `GET_EXTENT` | `{"extent":{"minX":...,"minY":...,"zoomFactor":...}}` |
 
-### JPG
-- Resolución: 150 DPI
-- Formato: JPG con conversión a RGB
+### Comportamiento
+- CATGIS inicia server al arrancar
+- CATMAP intenta conectar al iniciar
+- Si conecta, sincroniza estado del proyecto
+- Si no conecta, trabaja standalone
 
 ---
 
-## 8. Keyboard shortcuts
+## Keyboard shortcuts
 
 | Atajo | Acción |
 |-------|--------|
@@ -207,65 +199,59 @@ ELEMENT|LayoutNorthArrow|north-1|Norte|250|30|16|16|4|true|false
 | Delete | Eliminar |
 | F5 | Refrescar mapa |
 | Ctrl+P | Imprimir |
+| Mouse wheel | Zoom |
 
 ---
 
-## 9. Integración con CATGIS
+## Drag & Drop
+
+- Click en elemento → selección
+- Drag → mover elemento
+- Selection highlight → borde azul + handles
+- Propiedades se actualizan al seleccionar
+
+---
+
+## Atlas/Map Series
+
+```java
+List<AtlasEngine.AtlasPage> pages = List.of(
+    new AtlasEngine.AtlasPage("Página 1", "Subtítulo 1", minX, minY, zoom),
+    new AtlasEngine.AtlasPage("Página 2", "Subtítulo 2", minX2, minY2, zoom2)
+);
+AtlasEngine.generateAndSave(template, pages, outputDir, "mapa", 150);
+```
+
+---
+
+## Integración con CATGIS
 
 ### Desde CATGIS
 - Botón "Abrir CATMAP" → abre CATMAP embebido
-- Botón "CATMAP Standalone" → abre CATMAP como aplicación independiente
+- Botón "CATMAP Standalone" → abre como aplicación independiente
 
 ### Desde CATMAP
 - Archivo → Abrir proyecto → carga .catgis
 - Mapa → Actualizar desde CATGIS → sincroniza estado
 
-### Formato de intercambio
-- .catgis → proyecto CATGIS (capas, CRS, estilos)
-- .catmap → layout CATMAP (elementos, posiciones, estilos)
-
 ---
 
-## 10. Limitaciones actuales
+## Limitaciones actuales
 
 ### No implementado
-- Comunicación socket CATGIS↔CATMAP (pendiente)
-- Panel de propiedades con edición en tiempo real
-- Drag & drop de elementos
-- Undo/Redo funcional (solo estructura en menú)
-- SVG export
-- Atlas/map series
-- Inset maps con extent independiente
-
-### Pendiente para Etapa 7
-- Comunicación socket para sincronización en tiempo real
-- Panel de propiedades con campos editables
-- Drag & drop de elementos
-- Undo/Redo completo
-- Keyboard shortcuts para acciones de edición
+- Drag & drop de elementos desde toolbar
+- Propiedades con edición en tiempo real (solo al perder foco)
+- Undo/Redo visual (funciona con Ctrl+Z/Y pero sin indicador)
+- Topology rules
+- Python scripting
+- Plugin system
 
 ---
 
-## 11. Validación
+## Validación
 
 | Comando | Resultado |
 |---------|-----------|
 | `gradlew compileJava` | BUILD SUCCESSFUL |
 | `gradlew test` | 268/268 PASSED |
 | `gradlew build` | BUILD SUCCESSFUL |
-
----
-
-## 12. Commits de la sesión
-
-```
-afe8cfd feat: CATMAP Standalone Etapa 5 - Export PDF/PNG/JPG funcional
-4468c8a feat: CATMAP Standalone Etapa 4 - Panel propiedades contextual
-0aa6096 feat: CATMAP Standalone Etapa 3 - .catmap format + save/load
-f93a4e9 feat: CATMAP Standalone Etapa 2 - Toolbar con iconos + hover effects
-cdc8817 feat: CATMAP Standalone Etapa 1 - Menú completo + Fix viewport
-8e894a9 fix: CATMAP viewport/extent fix
-86e5c14 feat: Hover shadow effect on toolbar buttons
-e927966 fix: CATMAP Standalone path + empty map fallback
-55c62b7 fix: Tab icons + Installer cleanup + Geometry tools
-```
