@@ -73,6 +73,22 @@ public class MapFrameRenderer {
         Project project = CatgisDesktopApp.currentProject;
         if (project == null) return null;
 
+        // Check if there are online/raster layers - if so, return null to trigger
+        // MapPanel-based rendering which handles all layer types
+        boolean hasOnlineOrRaster = false;
+        for (Layer layer : project.getLayers()) {
+            if (layer == null || !layer.isVisible()) continue;
+            if (layer instanceof ar.com.catgis.OnlineTileLayer
+                    || layer instanceof ar.com.catgis.OnlineWmsLayer
+                    || layer instanceof ar.com.catgis.RasterLayer) {
+                hasOnlineOrRaster = true;
+                break;
+            }
+        }
+        if (hasOnlineOrRaster) {
+            return null; // Let LayoutMap fall back to MapPanel-based rendering
+        }
+
         BufferedImage image = new BufferedImage(widthPx, heightPx, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = image.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -397,8 +413,11 @@ public class MapFrameRenderer {
     }
 
     private ShapefileData getShapefileData(Layer layer) {
-        // Access shapefile data from MapPanel if available, or from project
         MapPanel mapPanel = CatgisDesktopApp.mapPanel;
-        return mapPanel != null ? mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = mapPanel != null ? mapPanel.getShapefileData(layer) : null;
+        if (data != null) {
+            return data;
+        }
+        return VectorLayerUtils.ensureVectorData(layer);
     }
 }

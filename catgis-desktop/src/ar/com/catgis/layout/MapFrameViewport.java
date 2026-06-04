@@ -1,7 +1,14 @@
 package ar.com.catgis.layout;
 
 import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.Layer;
 import ar.com.catgis.MapPanel;
+import ar.com.catgis.OnlineTileLayer;
+import ar.com.catgis.OnlineWmsLayer;
+import ar.com.catgis.Project;
+import ar.com.catgis.ShapefileData;
+import ar.com.catgis.VectorLayerUtils;
+import org.locationtech.jts.geom.Envelope;
 
 /**
  * Independent viewport state for a map frame.
@@ -92,16 +99,97 @@ public class MapFrameViewport {
         this.maxY = targetMaxY;
     }
 
-    public void fitFromMainMap() {
+    public boolean fitFromMainMap() {
         MapPanel map = CatgisDesktopApp.mapPanel;
         if (map != null) {
-            this.minX = map.getViewMinX();
-            this.minY = map.getViewMinY();
-            double zf = map.getZoomFactor();
-            if (zf <= 0) zf = 1;
-            this.maxX = minX + 1000 * zf;
-            this.maxY = minY + 1000 * zf;
+            Envelope env = map.getCurrentViewEnvelope();
+            if (env != null && !env.isNull() && env.getWidth() > 0 && env.getHeight() > 0) {
+                this.minX = env.getMinX();
+                this.minY = env.getMinY();
+                this.maxX = env.getMaxX();
+                this.maxY = env.getMaxY();
+                return true;
+            }
         }
+        return fitFromProjectLayers();
+    }
+
+    public boolean fitFromProjectLayers() {
+        Project project = CatgisDesktopApp.currentProject;
+        if (project == null || project.getLayers() == null || project.getLayers().isEmpty()) {
+            return false;
+        }
+
+        Envelope combined = null;
+        for (Layer layer : project.getLayers()) {
+            if (layer == null || !layer.isVisible()) {
+                continue;
+            }
+
+            Envelope env = resolveLayerEnvelope(layer);
+            if (env == null || env.isNull() || env.getWidth() <= 0 || env.getHeight() <= 0) {
+                continue;
+            }
+
+            if (combined == null) {
+                combined = new Envelope(env);
+            } else {
+                combined.expandToInclude(env);
+            }
+        }
+
+        if (combined == null || combined.isNull()) {
+            return false;
+        }
+
+        double expandX = Math.max(combined.getWidth() * 0.08d, 1d);
+        double expandY = Math.max(combined.getHeight() * 0.08d, 1d);
+        combined.expandBy(expandX, expandY);
+        this.minX = combined.getMinX();
+        this.minY = combined.getMinY();
+        this.maxX = combined.getMaxX();
+        this.maxY = combined.getMaxY();
+        return true;
+    }
+
+    private Envelope resolveLayerEnvelope(Layer layer) {
+        if (layer == null) {
+            return null;
+        }
+
+        if (layer instanceof OnlineWmsLayer wmsLayer) {
+            if (Double.isFinite(wmsLayer.getExtentMinX())
+                    && Double.isFinite(wmsLayer.getExtentMinY())
+                    && Double.isFinite(wmsLayer.getExtentMaxX())
+                    && Double.isFinite(wmsLayer.getExtentMaxY())) {
+                return new Envelope(
+                        wmsLayer.getExtentMinX(),
+                        wmsLayer.getExtentMaxX(),
+                        wmsLayer.getExtentMinY(),
+                        wmsLayer.getExtentMaxY()
+                );
+            }
+        }
+
+        // For online tile layers, try to get the current view from MapPanel
+        // instead of returning the entire world extent
+        if (layer instanceof OnlineTileLayer) {
+            MapPanel map = CatgisDesktopApp.mapPanel;
+            if (map != null) {
+                Envelope viewEnv = map.getCurrentViewEnvelope();
+                if (viewEnv != null && !viewEnv.isNull() && viewEnv.getWidth() > 0 && viewEnv.getHeight() > 0) {
+                    return new Envelope(viewEnv);
+                }
+            }
+            // Only fall back to world extent if no view available
+            return null;
+        }
+
+        ShapefileData data = VectorLayerUtils.ensureVectorData(layer);
+        if (data != null && data.getEnvelope() != null && !data.getEnvelope().isNull()) {
+            return new Envelope(data.getEnvelope());
+        }
+        return null;
     }
 
     public MapFrameViewport copy() {

@@ -86,10 +86,16 @@ public class LayoutMap implements LayoutElement {
         boolean stale = cachedImage == null || key != cacheKey || cachedWidthPx != pw || cachedHeightPx != ph
                 || (now - lastRenderTimeNanos > 500_000_000L);
         if (stale) {
-            // Try independent renderer first, fall back to MapPanel-based rendering
-            cachedImage = renderIndependent(pw, ph);
-            if (cachedImage == null) {
+            if (shouldPreferMainMapComposite()) {
                 cachedImage = captureMapImage(pw, ph);
+                if (cachedImage == null) {
+                    cachedImage = renderIndependent(pw, ph);
+                }
+            } else {
+                cachedImage = renderIndependent(pw, ph);
+                if (cachedImage == null) {
+                    cachedImage = captureMapImage(pw, ph);
+                }
             }
             // If still null, create a placeholder
             if (cachedImage == null) {
@@ -246,22 +252,31 @@ public class LayoutMap implements LayoutElement {
         return key;
     }
 
+    private boolean shouldPreferMainMapComposite() {
+        ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        if (proj == null || proj.getLayers() == null) {
+            return false;
+        }
+        for (ar.com.catgis.Layer layer : proj.getLayers()) {
+            if (layer == null || !layer.isVisible()) {
+                continue;
+            }
+            if (layer instanceof ar.com.catgis.RasterLayer
+                    || layer instanceof ar.com.catgis.OnlineTileLayer
+                    || layer instanceof ar.com.catgis.OnlineWmsLayer) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Try to render using the independent MapFrameRenderer.
      * Returns null if not available (falls back to MapPanel-based rendering).
      */
     private BufferedImage renderIndependent(int w, int h) {
+        syncViewportToSource(w, h);
         if (independentRenderer == null) {
-            // Lazy-init viewport from own extent or main map
-            if (viewport == null) {
-                viewport = new MapFrameViewport();
-                if (ownExtent) {
-                    viewport.fitToExtent(ownViewMinX, ownViewMinY,
-                            ownViewMinX + w * ownZoomFactor, ownViewMinY + h * ownZoomFactor);
-                } else {
-                    viewport.fitFromMainMap();
-                }
-            }
             independentRenderer = new MapFrameRenderer(viewport);
         }
         // Set indicator extent for inset maps
@@ -314,6 +329,27 @@ public class LayoutMap implements LayoutElement {
         cacheKey = 0;
     }
 
+    private void syncViewportToSource(int w, int h) {
+        if (viewport == null) {
+            viewport = new MapFrameViewport();
+        }
+
+        if (ownExtent) {
+            double effectiveZoom = ownZoomFactor > 0 ? ownZoomFactor : 1d;
+            viewport.fitToExtent(
+                    ownViewMinX,
+                    ownViewMinY,
+                    ownViewMinX + w * effectiveZoom,
+                    ownViewMinY + h * effectiveZoom
+            );
+            return;
+        }
+
+        if (!viewport.fitFromMainMap()) {
+            viewport.fitFromProjectLayers();
+        }
+    }
+
     private BufferedImage captureMapImage(int w, int h) {
         ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
         if (map == null) return null;
@@ -322,9 +358,27 @@ public class LayoutMap implements LayoutElement {
             if (ownExtent) {
                 vx = ownViewMinX; vy = ownViewMinY; zf = ownZoomFactor;
             } else {
-                vx = map.getViewMinX(); vy = map.getViewMinY(); zf = map.getZoomFactor();
+                // Use MapPanel's current view
+                vx = map.getViewMinX();
+                vy = map.getViewMinY();
+                zf = map.getZoomFactor();
             }
             if (zf <= 0) zf = 1;
+
+            // Calculate correct zoom to fit the view into the layout frame
+            // MapPanel's zoomFactor is pixels-per-world-unit
+            // We need to adjust for the layout frame size
+            double mapWidth = map.getWidth();
+            double mapHeight = map.getHeight();
+            if (mapWidth > 0 && mapHeight > 0) {
+                // Scale factor to fit MapPanel view into layout frame
+                double scaleX = w / mapWidth;
+                double scaleY = h / mapHeight;
+                double fitScale = Math.min(scaleX, scaleY);
+                // Keep the original zoom but scale for the layout frame
+                zf = zf * fitScale;
+            }
+
             return map.renderMapViewImage(vx, vy, zf, w, h);
         } catch (Exception ex) {
             return null;
@@ -373,7 +427,15 @@ public class LayoutMap implements LayoutElement {
     public void setOwnZoomFactor(double v) { ownZoomFactor = v; }
     public void captureFromMainMap() {
         ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
-        if (map != null) { ownViewMinX = map.getViewMinX(); ownViewMinY = map.getViewMinY(); ownZoomFactor = map.getZoomFactor(); ownExtent = true; }
+        if (map != null) {
+            ownViewMinX = map.getViewMinX();
+            ownViewMinY = map.getViewMinY();
+            ownZoomFactor = map.getZoomFactor();
+            ownExtent = true;
+            viewport = null;
+            independentRenderer = null;
+            invalidateRenderCache();
+        }
     }
     public boolean isShowIndicator() { return showIndicator; }
     public void setShowIndicator(boolean b) { showIndicator = b; }
