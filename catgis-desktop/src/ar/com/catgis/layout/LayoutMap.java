@@ -162,13 +162,16 @@ public class LayoutMap implements LayoutElement {
         g2.setStroke(new java.awt.BasicStroke(gridLineWidth, java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
 
         if (gridByDistance && gridIntervalX > 0 && gridIntervalY > 0) {
-            // Distance-based grid with coordinate labels
+            // CRS-based grid with coordinate labels
             double mapMinX = ownExtent ? ownViewMinX : 0;
             double mapMinY = ownExtent ? ownViewMinY : 0;
             double mapMaxX = ownExtent ? ownViewMinX + pw * ownZoomFactor : pw;
             double mapMaxY = ownExtent ? ownViewMinY + ph * ownZoomFactor : ph;
 
-            // Vertical lines (X axis)
+            // Determine if geographic (degrees) or projected (meters)
+            boolean isGeographic = isGeographicCRS();
+
+            // Vertical lines (X axis / Longitude)
             double startX = Math.ceil((mapMinX - gridOffsetX) / gridIntervalX) * gridIntervalX + gridOffsetX;
             for (double wx = startX; wx <= mapMaxX; wx += gridIntervalX) {
                 if (wx < mapMinX) continue;
@@ -177,11 +180,11 @@ public class LayoutMap implements LayoutElement {
                 if (gx < px || gx > px + pw) continue;
                 g2.drawLine(gx, py, gx, py + ph);
                 if (showGridLabels) {
-                    drawGridLabel(g2, formatGridValue(wx, gridIntervalX), gx, py + ph - 2, true);
+                    drawGridLabel(g2, formatGridCoordinate(wx, isGeographic), gx, py + ph - 2, true);
                 }
             }
 
-            // Horizontal lines (Y axis)
+            // Horizontal lines (Y axis / Latitude)
             double startY = Math.ceil((mapMinY - gridOffsetY) / gridIntervalY) * gridIntervalY + gridOffsetY;
             for (double wy = startY; wy <= mapMaxY; wy += gridIntervalY) {
                 if (wy < mapMinY) continue;
@@ -190,7 +193,7 @@ public class LayoutMap implements LayoutElement {
                 if (gy < py || gy > py + ph) continue;
                 g2.drawLine(px, gy, px + pw, gy);
                 if (showGridLabels) {
-                    drawGridLabel(g2, formatGridValue(wy, gridIntervalY), px + 2, gy - 2, false);
+                    drawGridLabel(g2, formatGridCoordinate(wy, isGeographic), px + 2, gy - 2, false);
                 }
             }
         } else if (gridCols > 0 && gridRows > 0) {
@@ -204,6 +207,39 @@ public class LayoutMap implements LayoutElement {
                 g2.drawLine(px, gy, px + pw, gy);
             }
         }
+    }
+
+    private boolean isGeographicCRS() {
+        ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        if (proj == null) return false;
+        String crs = proj.getProjectCRS();
+        if (crs == null) return false;
+        // EPSG codes for geographic CRS are typically in range 4000-4999
+        // WGS84 is 4326, that's the most common
+        return crs.contains("4326") || crs.contains("4269") || crs.contains("4283");
+    }
+
+    private String formatGridCoordinate(double value, boolean isGeographic) {
+        if (isGeographic) {
+            // Format as DMS (degrees, minutes, seconds)
+            return formatDMS(value);
+        }
+        // Format as meters with appropriate precision
+        if (Math.abs(value) >= 10000) return String.format("%.0f m", value);
+        if (Math.abs(value) >= 100) return String.format("%.0f m", value);
+        if (Math.abs(value) >= 10) return String.format("%.1f m", value);
+        return String.format("%.2f m", value);
+    }
+
+    private String formatDMS(double decimalDegrees) {
+        boolean negative = decimalDegrees < 0;
+        double abs = Math.abs(decimalDegrees);
+        int degrees = (int) abs;
+        double minutesFull = (abs - degrees) * 60;
+        int minutes = (int) minutesFull;
+        double seconds = (minutesFull - minutes) * 60;
+        String dir = negative ? (decimalDegrees >= 0 ? "E" : "W") : (decimalDegrees >= 0 ? "E" : "W");
+        return String.format("%d°%02d'%04.1f\"%s", degrees, minutes, seconds, dir);
     }
 
     private void drawGridLabel(Graphics2D g2, String text, int x, int y, boolean horizontal) {
