@@ -130,6 +130,7 @@ public class Main {
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Exportar PDF", 0, e -> exportPdf());
         addMenuItem(menuArchivo, "Exportar PNG", 0, e -> exportPng());
+        addMenuItem(menuArchivo, "Exportar SVG", 0, e -> exportSvg());
         addMenuItem(menuArchivo, "Exportar imagen...", 0, e -> exportImage());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Imprimir...", KeyEvent.VK_P, e -> printLayout());
@@ -595,6 +596,30 @@ public class Main {
                         "Error al exportar JPG:\n" + ex.getMessage(),
                         "Error", JOptionPane.ERROR_MESSAGE);
                 statusLabel.setText("Error al exportar JPG");
+            }
+        }
+    }
+
+    private static void exportSvg() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter("SVG (*.svg)", "svg"));
+        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(".svg")) {
+                file = new File(file.getAbsolutePath() + ".svg");
+            }
+            statusLabel.setText("Exportando SVG...");
+            try {
+                SvgExportEngine.exportSvg(layoutModel, file, 150);
+                statusLabel.setText("SVG exportado: " + file.getName());
+                JOptionPane.showMessageDialog(mainFrame,
+                        "SVG exportado correctamente:\n" + file.getAbsolutePath(),
+                        "Exportar SVG", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainFrame,
+                        "Error al exportar SVG:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                statusLabel.setText("Error al exportar SVG");
             }
         }
     }
