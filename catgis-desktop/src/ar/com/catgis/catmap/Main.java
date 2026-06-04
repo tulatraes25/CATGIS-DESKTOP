@@ -349,34 +349,54 @@ public class Main {
             selectedElementLabel.setText(element.getClass().getSimpleName());
             propsPanel.add(selectedElementLabel);
 
-            // Position & Size
-            addPropRow(propsPanel, "X:", String.format("%.1f mm", element.getBoundsMm().x));
-            addPropRow(propsPanel, "Y:", String.format("%.1f mm", element.getBoundsMm().y));
-            addPropRow(propsPanel, "Ancho:", String.format("%.1f mm", element.getBoundsMm().width));
-            addPropRow(propsPanel, "Alto:", String.format("%.1f mm", element.getBoundsMm().height));
+            // Position & Size (editable)
+            JTextField xField = addEditablePropRow(propsPanel, "X (mm):", String.format("%.1f", element.getBoundsMm().x),
+                    e -> { try { element.setBoundsMm(Double.parseDouble(e), element.getBoundsMm().y, element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+            JTextField yField = addEditablePropRow(propsPanel, "Y (mm):", String.format("%.1f", element.getBoundsMm().y),
+                    e -> { try { element.setBoundsMm(element.getBoundsMm().x, Double.parseDouble(e), element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+            JTextField wField = addEditablePropRow(propsPanel, "Ancho (mm):", String.format("%.1f", element.getBoundsMm().width),
+                    e -> { try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, Double.parseDouble(e), element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+            JTextField hField = addEditablePropRow(propsPanel, "Alto (mm):", String.format("%.1f", element.getBoundsMm().height),
+                    e -> { try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, element.getBoundsMm().width, Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
 
-            // Type-specific properties
+            // Type-specific editable properties
             if (element instanceof LayoutLabel label) {
-                addPropRow(propsPanel, "Texto:", label.getText());
-                addPropRow(propsPanel, "Fuente:", label.getFont().getFamily());
-                addPropRow(propsPanel, "Tamaño:", String.valueOf(label.getFont().getSize()));
-                addPropRow(propsPanel, "Estilo:", (label.getFont().isBold() ? "N " : "") + (label.getFont().isItalic() ? "K " : ""));
-                addPropRow(propsPanel, "Color:", String.format("#%06X", label.getColor().getRGB() & 0xFFFFFF));
-            } else if (element instanceof LayoutMap) {
-                addPropRow(propsPanel, "Tipo:", "Mapa principal");
-                addPropRow(propsPanel, "Grilla:", "No");
+                addEditablePropRow(propsPanel, "Texto:", label.getText(),
+                        e -> { label.setText(e); previewPanel.repaint(); });
+                addEditablePropRow(propsPanel, "Fuente:", label.getFont().getFamily(),
+                        e -> { label.setFont(new Font(e, label.getFont().getStyle(), label.getFont().getSize())); previewPanel.repaint(); });
+                addEditablePropRow(propsPanel, "Tamaño:", String.valueOf(label.getFont().getSize()),
+                        e -> { try { label.setFont(new Font(label.getFont().getFamily(), label.getFont().getStyle(), Integer.parseInt(e))); previewPanel.repaint(); } catch (Exception ignored) {} });
+                JCheckBox boldCheck = new JCheckBox("Negrita", label.getFont().isBold());
+                boldCheck.addActionListener(e -> { label.setFont(label.getFont().deriveFont(boldCheck.isSelected() ? label.getFont().getStyle() | Font.BOLD : label.getFont().getStyle() & ~Font.BOLD)); previewPanel.repaint(); });
+                JCheckBox italicCheck = new JCheckBox("Cursiva", label.getFont().isItalic());
+                italicCheck.addActionListener(e -> { label.setFont(label.getFont().deriveFont(italicCheck.isSelected() ? label.getFont().getStyle() | Font.ITALIC : label.getFont().getStyle() & ~Font.ITALIC)); previewPanel.repaint(); });
+                JPanel stylePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+                stylePanel.setOpaque(false);
+                stylePanel.add(boldCheck);
+                stylePanel.add(italicCheck);
+                addPropRowCustom(propsPanel, "Estilo:", stylePanel);
+            } else if (element instanceof LayoutMap map) {
+                JCheckBox gridCheck = new JCheckBox("Mostrar grilla", map.isShowGrid());
+                gridCheck.addActionListener(e -> { map.setShowGrid(gridCheck.isSelected()); previewPanel.repaint(); });
+                addPropRowCustom(propsPanel, "Grilla:", gridCheck);
             } else if (element instanceof LayoutLegend legend) {
-                addPropRow(propsPanel, "Título:", legend.getTitle());
-                addPropRow(propsPanel, "Auto-alto:", legend.isAutoHeight() ? "Sí" : "No");
+                addEditablePropRow(propsPanel, "Título:", legend.getTitle(),
+                        e -> { legend.setTitle(e); previewPanel.repaint(); });
+                JCheckBox autoCheck = new JCheckBox("Auto-alto", legend.isAutoHeight());
+                autoCheck.addActionListener(e -> { legend.setAutoHeight(autoCheck.isSelected()); previewPanel.repaint(); });
+                addPropRowCustom(propsPanel, "Auto-alto:", autoCheck);
             } else if (element instanceof LayoutScaleBar scale) {
-                addPropRow(propsPanel, "Escala:", "1:" + (int) scale.getMapScaleDenominator());
-                addPropRow(propsPanel, "Segmentos:", String.valueOf(scale.getSegments()));
+                addEditablePropRow(propsPanel, "Escala 1:", String.valueOf((int) scale.getMapScaleDenominator()),
+                        e -> { try { scale.setMapScaleDenominator(Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                addEditablePropRow(propsPanel, "Segmentos:", String.valueOf(scale.getSegments()),
+                        e -> { try { scale.setSegments(Integer.parseInt(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
             } else if (element instanceof LayoutNorthArrow) {
                 addPropRow(propsPanel, "Tipo:", "Flecha norte");
             } else if (element instanceof LayoutCartouche cartouche) {
-                addPropRow(propsPanel, "Tipo:", "Datos cartográficos");
                 for (var entry : cartouche.getFields().entrySet()) {
-                    addPropRow(propsPanel, entry.getKey() + ":", entry.getValue());
+                    addEditablePropRow(propsPanel, entry.getKey() + ":", entry.getValue(),
+                            e -> { cartouche.setField(entry.getKey(), e); previewPanel.repaint(); });
                 }
             }
         }
@@ -396,6 +416,38 @@ public class Main {
         val.setFont(val.getFont().deriveFont(Font.PLAIN, 10f));
         row.add(lbl, BorderLayout.WEST);
         row.add(val, BorderLayout.CENTER);
+        panel.add(row);
+    }
+
+    private static JTextField addEditablePropRow(JPanel panel, String label, String value, java.util.function.Consumer<String> onChange) {
+        JPanel row = new JPanel(new BorderLayout(4, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 10f));
+        lbl.setForeground(new Color(107, 114, 128));
+        lbl.setPreferredSize(new Dimension(70, 20));
+        JTextField field = new JTextField(value, 12);
+        field.setFont(field.getFont().deriveFont(Font.PLAIN, 10f));
+        field.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusLost(java.awt.event.FocusEvent e) { onChange.accept(field.getText()); }
+        });
+        row.add(lbl, BorderLayout.WEST);
+        row.add(field, BorderLayout.CENTER);
+        panel.add(row);
+        return field;
+    }
+
+    private static void addPropRowCustom(JPanel panel, String label, java.awt.Component component) {
+        JPanel row = new JPanel(new BorderLayout(4, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 10f));
+        lbl.setForeground(new Color(107, 114, 128));
+        lbl.setPreferredSize(new Dimension(70, 20));
+        row.add(lbl, BorderLayout.WEST);
+        row.add(component, BorderLayout.CENTER);
         panel.add(row);
     }
 
