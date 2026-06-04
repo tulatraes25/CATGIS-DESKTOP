@@ -4,6 +4,8 @@ import ar.com.catgis.TopologyValidator;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.ButtonGroup;
+import javax.swing.JFileChooser;
+import java.io.File;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -588,6 +590,13 @@ public class MainMenuBar extends JMenuBar {
         menuHerramientas.add(itemRenombrarProyecto);
         menuHerramientas.addSeparator();
         menuHerramientas.add(menuModulos);
+        menuHerramientas.addSeparator();
+        // Scripting
+        JMenu menuScripting = new JMenu("Scripting");
+        JMenuItem itemRunScript = createItem("Ejecutar script Python...", null);
+        itemRunScript.addActionListener(e -> runPythonScript());
+        menuScripting.add(itemRunScript);
+        menuHerramientas.add(menuScripting);
 
         JMenuItem itemVentanaPrincipal = createItem("Traer CATGIS al frente", AppIcons.projectIcon());
         itemVentanaPrincipal.addActionListener(e -> {
@@ -713,6 +722,21 @@ public class MainMenuBar extends JMenuBar {
             item.setAccelerator(accelerator);
         }
         return item;
+    }
+
+    private void runPythonScript() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Python scripts (*.py)", "py"));
+        if (chooser.showOpenDialog(CatgisDesktopApp.getMainFrameSafe()) == JFileChooser.APPROVE_OPTION) {
+            File script = chooser.getSelectedFile();
+            ar.com.catgis.scripting.ScriptEngine.ScriptResult result = ar.com.catgis.scripting.ScriptEngine.executeScript(script);
+            String msg = result.success()
+                    ? "Script ejecutado correctamente.\n\nSalida:\n" + result.output()
+                    : "Error al ejecutar script:\n" + result.error() + "\n\nSalida:\n" + result.output();
+            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), msg,
+                    result.success() ? "Script ejecutado" : "Error en script",
+                    result.success() ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void runTopologyValidation(String rule) {
