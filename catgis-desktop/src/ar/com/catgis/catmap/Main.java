@@ -224,39 +224,39 @@ public class Main {
         toolbar.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
 
         // File actions
-        addToolButton(toolbar, "Nuevo", e -> newLayout());
-        addToolButton(toolbar, "Abrir", e -> openLayout());
-        addToolButton(toolbar, "Guardar", e -> saveLayout());
+        addToolIconButton(toolbar, "Nuevo", null, e -> newLayout());
+        addToolIconButton(toolbar, "Abrir", AppIcons.openIcon(), e -> openLayout());
+        addToolIconButton(toolbar, "Guardar", AppIcons.saveIcon(), e -> saveLayout());
         toolbar.addSeparator();
-        addToolButton(toolbar, "PDF", e -> exportPdf());
-        addToolButton(toolbar, "PNG", e -> exportPng());
-        addToolButton(toolbar, "Imprimir", e -> printLayout());
+        addToolIconButton(toolbar, "Exportar PDF", AppIcons.exportIcon(), e -> exportPdf());
+        addToolIconButton(toolbar, "Exportar PNG", AppIcons.exportIcon(), e -> exportPng());
+        addToolIconButton(toolbar, "Imprimir", null, e -> printLayout());
         toolbar.addSeparator();
 
         // Layout tools
-        addToolButton(toolbar, "Seleccionar", e -> {});
-        addToolButton(toolbar, "Pan mapa", e -> {});
-        addToolButton(toolbar, "Zoom mapa", e -> {});
+        addToolIconButton(toolbar, "Seleccionar", AppIcons.selectIcon(), e -> {});
+        addToolIconButton(toolbar, "Pan mapa", AppIcons.panIcon(), e -> {});
+        addToolIconButton(toolbar, "Zoom mapa", AppIcons.zoomInIcon(), e -> {});
         toolbar.addSeparator();
 
         // Insert elements
-        addToolButton(toolbar, "Texto", e -> insertText());
-        addToolButton(toolbar, "Imagen", e -> insertImage());
-        addToolButton(toolbar, "Rectángulo", e -> insertRectangle());
-        addToolButton(toolbar, "Elipse", e -> insertEllipse());
-        addToolButton(toolbar, "Línea", e -> insertLine());
+        addToolIconButton(toolbar, "Texto", null, e -> insertText());
+        addToolIconButton(toolbar, "Imagen", null, e -> insertImage());
+        addToolIconButton(toolbar, "Rectángulo", null, e -> insertRectangle());
+        addToolIconButton(toolbar, "Elipse", null, e -> insertEllipse());
+        addToolIconButton(toolbar, "Línea", AppIcons.lineIcon(), e -> insertLine());
         toolbar.addSeparator();
-        addToolButton(toolbar, "Mapa", e -> insertMap());
-        addToolButton(toolbar, "Leyenda", e -> insertLegend());
-        addToolButton(toolbar, "Escala", e -> insertScaleBar());
-        addToolButton(toolbar, "Norte", e -> insertNorth());
+        addToolIconButton(toolbar, "Mapa", null, e -> insertMap());
+        addToolIconButton(toolbar, "Leyenda", null, e -> insertLegend());
+        addToolIconButton(toolbar, "Escala", null, e -> insertScaleBar());
+        addToolIconButton(toolbar, "Norte", null, e -> insertNorth());
         toolbar.addSeparator();
 
         // Edit actions
-        addToolButton(toolbar, "Duplicar", e -> {});
-        addToolButton(toolbar, "Subir", e -> {});
-        addToolButton(toolbar, "Bajar", e -> {});
-        addToolButton(toolbar, "Quitar", e -> {});
+        addToolIconButton(toolbar, "Duplicar", AppIcons.attrCopyIcon(), e -> {});
+        addToolIconButton(toolbar, "Subir", AppIcons.upIcon(), e -> {});
+        addToolIconButton(toolbar, "Bajar", AppIcons.downIcon(), e -> {});
+        addToolIconButton(toolbar, "Quitar", AppIcons.removeIcon(), e -> {});
 
         return toolbar;
     }
@@ -631,6 +631,28 @@ public class Main {
         btn.setFocusable(false);
         btn.setMargin(new Insets(4, 6, 4, 6));
         btn.addActionListener(action);
+        toolbar.add(btn);
+    }
+
+    private static void addToolIconButton(JToolBar toolbar, String tooltip, javax.swing.Icon icon, java.awt.event.ActionListener action) {
+        JButton btn = new JButton();
+        if (icon != null) btn.setIcon(icon);
+        btn.setToolTipText(tooltip);
+        btn.setFocusable(false);
+        btn.setMargin(new Insets(4, 6, 4, 6));
+        btn.setPreferredSize(new Dimension(40, 36));
+        btn.addActionListener(action);
+        // Hover effect
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                btn.setBackground(new Color(0xE0E7EE));
+                btn.setBorder(BorderFactory.createLineBorder(new Color(0xB0BEC5), 1));
+            }
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                btn.setBackground(UIManager.getColor("Button.background"));
+                btn.setBorder(UIManager.getLookAndFeel().getDefaults().getBorder("Button.border"));
+            }
+        });
         toolbar.add(btn);
     }
 
