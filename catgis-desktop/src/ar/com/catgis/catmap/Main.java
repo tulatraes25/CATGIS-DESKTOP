@@ -470,9 +470,23 @@ public class Main {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("PDF (*.pdf)", "pdf"));
         if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(".pdf")) {
+                file = new File(file.getAbsolutePath() + ".pdf");
+            }
             statusLabel.setText("Exportando PDF...");
-            // TODO: implement export
-            statusLabel.setText("PDF exportado");
+            try {
+                LayoutExportEngine.exportPdf(layoutModel, file, 150);
+                statusLabel.setText("PDF exportado: " + file.getName());
+                JOptionPane.showMessageDialog(mainFrame,
+                        "PDF exportado correctamente:\n" + file.getAbsolutePath(),
+                        "Exportar PDF", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainFrame,
+                        "Error al exportar PDF:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                statusLabel.setText("Error al exportar PDF");
+            }
         }
     }
 
@@ -480,9 +494,23 @@ public class Main {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("PNG (*.png)", "png"));
         if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(".png")) {
+                file = new File(file.getAbsolutePath() + ".png");
+            }
             statusLabel.setText("Exportando PNG...");
-            // TODO: implement export
-            statusLabel.setText("PNG exportado");
+            try {
+                LayoutExportEngine.exportPng(layoutModel, file, 150);
+                statusLabel.setText("PNG exportado: " + file.getName());
+                JOptionPane.showMessageDialog(mainFrame,
+                        "PNG exportado correctamente:\n" + file.getAbsolutePath(),
+                        "Exportar PNG", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainFrame,
+                        "Error al exportar PNG:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                statusLabel.setText("Error al exportar PNG");
+            }
         }
     }
 
@@ -490,20 +518,28 @@ public class Main {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("JPG (*.jpg)", "jpg"));
         if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            if (!file.getName().toLowerCase().endsWith(".jpg")) {
+                file = new File(file.getAbsolutePath() + ".jpg");
+            }
             statusLabel.setText("Exportando JPG...");
-            // TODO: implement export
-            statusLabel.setText("JPG exportado");
+            try {
+                LayoutExportEngine.exportJpg(layoutModel, file, 150);
+                statusLabel.setText("JPG exportado: " + file.getName());
+                JOptionPane.showMessageDialog(mainFrame,
+                        "JPG exportado correctamente:\n" + file.getAbsolutePath(),
+                        "Exportar JPG", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainFrame,
+                        "Error al exportar JPG:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                statusLabel.setText("Error al exportar JPG");
+            }
         }
     }
 
     private static void exportImage() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("PNG (*.png)", "png"));
-        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            statusLabel.setText("Exportando imagen...");
-            // TODO: implement export
-            statusLabel.setText("Imagen exportada");
-        }
+        exportPng(); // Default to PNG
     }
 
     private static void printLayout() {
