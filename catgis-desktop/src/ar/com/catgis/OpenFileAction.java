@@ -148,7 +148,13 @@ public class OpenFileAction extends AbstractAction {
             }
 
             if (NetCdfLoader.isGribFile(lowerName)) {
-                JOptionPane.showMessageDialog(parent, GribLoader.getSupportMessage(), "GRIB2", JOptionPane.INFORMATION_MESSAGE);
+                RasterLayer gribLayer = GribLoader.loadGribFile(file, parent);
+                if (gribLayer != null) {
+                    if (CatgisDesktopApp.statusBar != null) {
+                        CatgisDesktopApp.statusBar.setMessage("Datos GRIB agregados: " + gribLayer.getName());
+                    }
+                    return true;
+                }
                 return false;
             }
 
