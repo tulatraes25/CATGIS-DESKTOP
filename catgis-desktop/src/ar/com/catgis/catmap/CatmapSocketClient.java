@@ -107,18 +107,29 @@ public final class CatmapSocketClient {
             if (start < 0) return layers;
             start = json.indexOf('[', start) + 1;
             int end = json.indexOf(']', start);
-            if (end < 0) return layers;
-            String array = json.substring(start, end);
-            if (array.trim().isEmpty()) return layers;
+            if (end < 0 || start >= end) return layers;
+            String array = json.substring(start, end).trim();
+            if (array.isEmpty()) return layers;
 
-            String[] items = array.split("\\},\\{");
-            for (String item : items) {
-                String clean = item.replaceAll("[{}]", "");
-                String name = extractJsonValue(clean, "name");
-                String type = extractJsonValue(clean, "type");
-                boolean visible = clean.contains("\"visible\":true");
-                String crs = extractJsonValue(clean, "crs");
-                layers.add(new LayerInfo(name, type, visible, crs));
+            int depth = 0;
+            int objStart = -1;
+            for (int i = 0; i < array.length(); i++) {
+                char c = array.charAt(i);
+                if (c == '{') {
+                    if (depth == 0) objStart = i;
+                    depth++;
+                } else if (c == '}') {
+                    depth--;
+                    if (depth == 0 && objStart >= 0) {
+                        String obj = array.substring(objStart, i + 1);
+                        String name = extractJsonValue(obj, "name");
+                        String type = extractJsonNullValue(obj, "type");
+                        boolean visible = obj.contains("\"visible\":true");
+                        String crs = extractJsonNullValue(obj, "crs");
+                        layers.add(new LayerInfo(name, type != null ? type : "", visible, crs != null ? crs : ""));
+                        objStart = -1;
+                    }
+                }
             }
         } catch (Exception ignored) {}
         return layers;
@@ -129,9 +140,19 @@ public final class CatmapSocketClient {
         int start = json.indexOf(search);
         if (start < 0) return "";
         start += search.length();
-        int end = json.indexOf("\"", start);
-        if (end < 0) return "";
-        return json.substring(start, end);
+        StringBuilder value = new StringBuilder();
+        for (int i = start; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '\\' && i + 1 < json.length()) {
+                value.append(json.charAt(i + 1));
+                i++;
+            } else if (c == '"') {
+                break;
+            } else {
+                value.append(c);
+            }
+        }
+        return value.toString();
     }
 
     private static double extractJsonDouble(String json, String key) {
@@ -139,18 +160,47 @@ public final class CatmapSocketClient {
         int start = json.indexOf(search);
         if (start < 0) return 0;
         start += search.length();
-        int end = json.indexOf(",", start);
-        if (end < 0) end = json.indexOf("}", start);
-        if (end < 0) return 0;
+        // Skip whitespace
+        while (start < json.length() && json.charAt(start) == ' ') start++;
+        // Skip null
+        if (start + 3 < json.length() && json.substring(start, start + 4).equals("null")) return 0;
+        int end = start;
+        while (end < json.length()) {
+            char c = json.charAt(end);
+            if (c == ',' || c == '}' || c == ']' || c == ' ') break;
+            end++;
+        }
+        if (end <= start) return 0;
         try {
-            return Double.parseDouble(json.substring(start, end).trim());
+            return Double.parseDouble(json.substring(start, end));
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    private static String extractJsonNullValue(String json, String key) {
+        String search = "\"" + key + "\":";
+        int start = json.indexOf(search);
+        if (start < 0) return null;
+        start += search.length();
+        while (start < json.length() && json.charAt(start) == ' ') start++;
+        if (start + 3 < json.length() && json.substring(start, start + 4).equals("null")) return null;
+        if (start < json.length() && json.charAt(start) == '"') {
+            return extractJsonValue(json, key);
+        }
+        int end = start;
+        while (end < json.length()) {
+            char c = json.charAt(end);
+            if (c == ',' || c == '}' || c == ']') break;
+            end++;
+        }
+        if (end <= start) return null;
+        return json.substring(start, end).trim();
     }
 
     // --- Data classes ---
 
     public record ProjectState(String name, String crs, double minX, double minY, double zoomFactor) {}
     public record LayerInfo(String name, String type, boolean visible, String crs) {}
+
 }

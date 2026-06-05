@@ -11,6 +11,8 @@ import java.awt.Insets;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CartographyToolbar extends JPanel {
 
@@ -52,40 +54,59 @@ public class CartographyToolbar extends JPanel {
 
     private void launchCatmapStandalone() {
         try {
-            String javaHome = System.getProperty("java.home");
-            String classPath = System.getProperty("java.class.path");
-
-            // Try multiple java locations
-            String[] javaCandidates = {
-                javaHome + File.separator + "bin" + File.separator + "java",
-                javaHome + File.separator + "bin" + File.separator + "java.exe",
-                System.getProperty("java.home") + File.separator + "runtime" + File.separator + "bin" + File.separator + "java",
-                System.getProperty("java.home") + File.separator + "runtime" + File.separator + "bin" + File.separator + "java.exe"
-            };
-
-            String javaBin = null;
-            for (String candidate : javaCandidates) {
-                if (new File(candidate).exists()) {
-                    javaBin = candidate;
-                    break;
-                }
-            }
-
-            if (javaBin == null) {
-                // Fallback: try to find java on PATH
-                javaBin = "java";
-            }
-
-            ProcessBuilder pb = new ProcessBuilder(
-                    javaBin, "-cp", classPath,
-                    "ar.com.catgis.catmap.Main"
-            );
-            pb.directory(new File(System.getProperty("user.dir")));
+            ProcessBuilder pb = buildStandaloneLaunchProcess();
             pb.start();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "No se pudo abrir CATMAP Standalone:\n" + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private ProcessBuilder buildStandaloneLaunchProcess() {
+        String jpackageAppPath = System.getProperty("jpackage.app-path");
+        if (jpackageAppPath != null && !jpackageAppPath.isBlank()) {
+            File launcher = new File(jpackageAppPath);
+            if (launcher.exists()) {
+                List<String> command = new ArrayList<>();
+                command.add(launcher.getAbsolutePath());
+                command.add("--catmap-standalone");
+
+                ProcessBuilder pb = new ProcessBuilder(command);
+                File parent = launcher.getParentFile();
+                if (parent != null && parent.exists()) {
+                    pb.directory(parent);
+                }
+                return pb;
+            }
+        }
+
+        String javaHome = System.getProperty("java.home");
+        String classPath = System.getProperty("java.class.path");
+        String[] javaCandidates = {
+                javaHome + File.separator + "bin" + File.separator + "java",
+                javaHome + File.separator + "bin" + File.separator + "java.exe",
+                javaHome + File.separator + "runtime" + File.separator + "bin" + File.separator + "java",
+                javaHome + File.separator + "runtime" + File.separator + "bin" + File.separator + "java.exe"
+        };
+
+        String javaBin = null;
+        for (String candidate : javaCandidates) {
+            if (new File(candidate).exists()) {
+                javaBin = candidate;
+                break;
+            }
+        }
+
+        if (javaBin == null) {
+            javaBin = "java";
+        }
+
+        ProcessBuilder pb = new ProcessBuilder(
+                javaBin, "-cp", classPath,
+                "ar.com.catgis.catmap.Main"
+        );
+        pb.directory(new File(System.getProperty("user.dir")));
+        return pb;
     }
 }

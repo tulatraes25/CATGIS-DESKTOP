@@ -353,14 +353,9 @@ tasks.register('packageWindowsJpackageExeInstaller') {
                 '--vendor', installerVendor,
                 '--description', installerDescription,
                 '--copyright', installerCopyright,
-                '--license-file', licenseFile.absolutePath,
                 '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
-                '--win-shortcut',
                 '--win-menu',
                 '--win-menu-group', installerMenuGroup,
-                '--win-dir-chooser',
-                '--win-shortcut-prompt',
-                '--install-dir', installerInstallDir,
                 '--verbose'
         ]
         Map<String, String> jpackageEnv = [

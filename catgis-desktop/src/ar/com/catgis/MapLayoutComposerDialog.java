@@ -418,10 +418,10 @@ public class MapLayoutComposerDialog extends JFrame {
         WindowLayoutSupport.fitFrameToScreen(this, 1380, 900, 1040, 700);
         setLocationRelativeTo(owner);
 
-        LayoutMap mapEl = new LayoutMap("main-map", 15, 25, 267, 160);
-        mapEl.setZOrder(layoutModel.nextZ());
-        mapEl.setName("Mapa principal");
-        layoutModel.addElement(mapEl);
+        // NOTE: No default LayoutMap is added here because the template
+        // (LayoutRenderer.drawMapFrame) already renders the live map frame
+        // from the current MapPanel view. LayoutMap elements are intended
+        // for additional/inset maps only. This avoids dual-map rendering.
 
         LayoutLegend legend = new LayoutLegend("main-legend", 155, 55, 75, 40);
         legend.setZOrder(layoutModel.nextZ());
@@ -1216,6 +1216,42 @@ public class MapLayoutComposerDialog extends JFrame {
         ));
 
         toolbar.add(buildToolbarGroup("Insertar",
+                createToolbarButton("Mapa", AppIcons.genericLayerIcon(), "Inserta un map frame vivo sincronizado.", () -> {
+                    LayoutMap map = new LayoutMap("map-" + System.currentTimeMillis(), 15, 25, 267, 145);
+                    map.setZOrder(layoutModel.nextZ());
+                    map.setName("Mapa " + (layoutModel.size() + 1));
+                    map.setFrameColor(new Color(0x4A5568));
+                    map.setFrameWidth(0.8f);
+                    map.setShowGrid(false);
+                    layoutModel.addElement(map);
+                    refreshElementList();
+                    previewPanel.repaint();
+                }),
+                createToolbarButton("Leyenda", AppIcons.tableIcon(), "Inserta una leyenda.", () -> {
+                    LayoutLegend leg = new LayoutLegend("leg-" + System.currentTimeMillis(), 155, 55, 75, 40);
+                    leg.setZOrder(layoutModel.nextZ());
+                    leg.setAutoHeight(true);
+                    leg.setName("Leyenda " + (layoutModel.size() + 1));
+                    layoutModel.addElement(leg);
+                    refreshElementList();
+                    previewPanel.repaint();
+                }),
+                createToolbarButton("Escala", null, "Inserta una barra de escala.", () -> {
+                    LayoutScaleBar sb = new LayoutScaleBar("scale-" + System.currentTimeMillis(), 145, 175, 95, 10);
+                    sb.setZOrder(layoutModel.nextZ());
+                    sb.setName("Escala " + (layoutModel.size() + 1));
+                    layoutModel.addElement(sb);
+                    refreshElementList();
+                    previewPanel.repaint();
+                }),
+                createToolbarButton("Norte", null, "Inserta una flecha de norte.", () -> {
+                    LayoutNorthArrow na = new LayoutNorthArrow("north-" + System.currentTimeMillis(), 250, 30, 16, 16);
+                    na.setZOrder(layoutModel.nextZ());
+                    na.setName("Norte " + (layoutModel.size() + 1));
+                    layoutModel.addElement(na);
+                    refreshElementList();
+                    previewPanel.repaint();
+                }),
                 createToolbarButton("Texto", AppIcons.attrEditIcon(), "Inserta un texto libre en el layout.", () -> {
                     LayoutLabel lbl = new LayoutLabel("lbl-" + System.currentTimeMillis(), "Texto libre", 60, 60, 160, 24);
                     lbl.setZOrder(layoutModel.nextZ()); lbl.setName("Texto " + (layoutModel.size() + 1));

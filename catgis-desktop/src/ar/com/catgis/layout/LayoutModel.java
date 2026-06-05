@@ -9,11 +9,68 @@ public class LayoutModel {
 
     private final List<LayoutElement> elements = new ArrayList<>();
 
+    // --- Undo / Redo ---
+
+    private static final int MAX_UNDO = 100;
+    private final List<String> undoStack = new ArrayList<>();
+    private final List<String> redoStack = new ArrayList<>();
+
+    /**
+     * Save a snapshot BEFORE making a change. Call this manually before
+     * operations that modify elements in place (move, resize, text change).
+     * addElement / removeElement call it automatically.
+     */
+    public void saveSnapshot() {
+        undoStack.add(serializeElements());
+        if (undoStack.size() > MAX_UNDO) undoStack.remove(0);
+        redoStack.clear();
+    }
+
+    public boolean canUndo() { return !undoStack.isEmpty(); }
+    public boolean canRedo() { return !redoStack.isEmpty(); }
+
+    public void undo() {
+        if (undoStack.isEmpty()) return;
+        redoStack.add(serializeElements());
+        String snapshot = undoStack.remove(undoStack.size() - 1);
+        restoreFromSnapshot(snapshot);
+    }
+
+    public void redo() {
+        if (redoStack.isEmpty()) return;
+        undoStack.add(serializeElements());
+        String snapshot = redoStack.remove(redoStack.size() - 1);
+        restoreFromSnapshot(snapshot);
+    }
+
+    private String serializeElements() {
+        StringBuilder sb = new StringBuilder();
+        for (LayoutElement e : elements) {
+            sb.append(ar.com.catgis.catmap.CatmapSerializer.serializeElementRaw(e)).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private void restoreFromSnapshot(String data) {
+        elements.clear();
+        for (String line : data.split("\n")) {
+            String t = line.trim();
+            if (t.isEmpty()) continue;
+            LayoutElement e = ar.com.catgis.catmap.CatmapSerializer.parseElementRaw(t);
+            if (e != null) elements.add(e);
+        }
+    }
+
+    // --- Element management ---
+
     public void addElement(LayoutElement e) {
-        if (e != null) elements.add(e);
+        if (e == null) return;
+        saveSnapshot();
+        elements.add(e);
     }
 
     public void removeElement(String id) {
+        saveSnapshot();
         elements.removeIf(e -> e.getId().equals(id));
     }
 

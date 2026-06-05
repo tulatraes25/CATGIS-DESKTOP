@@ -19,6 +19,9 @@ public class LayoutImage implements LayoutElement {
         this.boundsMm = new Rectangle2D.Double(xMm, yMm, wMm, hMm);
     }
 
+    public BufferedImage getImage() { return image; }
+    public void setImage(BufferedImage img) { this.image = img; }
+
     @Override public String getId() { return id; }
     @Override public String getName() { return id; }
     @Override public void setName(String n) {}

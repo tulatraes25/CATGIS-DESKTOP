@@ -141,8 +141,8 @@ public class Main {
         // --- Edición ---
         JMenu menuEdicion = new JMenu("Edición");
         menuEdicion.setMnemonic(KeyEvent.VK_E);
-        addMenuItem(menuEdicion, "Deshacer", KeyEvent.VK_Z, e -> {});
-        addMenuItem(menuEdicion, "Rehacer", KeyEvent.VK_Y, e -> {});
+        addMenuItem(menuEdicion, "Deshacer", KeyEvent.VK_Z, e -> { layoutModel.undo(); previewPanel.invalidateRender(); previewPanel.repaint(); });
+        addMenuItem(menuEdicion, "Rehacer", KeyEvent.VK_Y, e -> { layoutModel.redo(); previewPanel.invalidateRender(); previewPanel.repaint(); });
         menuEdicion.addSeparator();
         addMenuItem(menuEdicion, "Copiar", KeyEvent.VK_C, e -> {});
         addMenuItem(menuEdicion, "Pegar", KeyEvent.VK_V, e -> {});
@@ -353,22 +353,22 @@ public class Main {
 
             // Position & Size (editable)
             JTextField xField = addEditablePropRow(propsPanel, "X (mm):", String.format("%.1f", element.getBoundsMm().x),
-                    e -> { try { element.setBoundsMm(Double.parseDouble(e), element.getBoundsMm().y, element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(Double.parseDouble(e), element.getBoundsMm().y, element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
             JTextField yField = addEditablePropRow(propsPanel, "Y (mm):", String.format("%.1f", element.getBoundsMm().y),
-                    e -> { try { element.setBoundsMm(element.getBoundsMm().x, Double.parseDouble(e), element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, Double.parseDouble(e), element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
             JTextField wField = addEditablePropRow(propsPanel, "Ancho (mm):", String.format("%.1f", element.getBoundsMm().width),
-                    e -> { try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, Double.parseDouble(e), element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, Double.parseDouble(e), element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
             JTextField hField = addEditablePropRow(propsPanel, "Alto (mm):", String.format("%.1f", element.getBoundsMm().height),
-                    e -> { try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, element.getBoundsMm().width, Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, element.getBoundsMm().width, Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
 
             // Type-specific editable properties
             if (element instanceof LayoutLabel label) {
                 addEditablePropRow(propsPanel, "Texto:", label.getText(),
-                        e -> { label.setText(e); previewPanel.repaint(); });
+                        e -> { layoutModel.saveSnapshot(); label.setText(e); previewPanel.repaint(); });
                 addEditablePropRow(propsPanel, "Fuente:", label.getFont().getFamily(),
-                        e -> { label.setFont(new Font(e, label.getFont().getStyle(), label.getFont().getSize())); previewPanel.repaint(); });
+                        e -> { layoutModel.saveSnapshot(); label.setFont(new Font(e, label.getFont().getStyle(), label.getFont().getSize())); previewPanel.repaint(); });
                 addEditablePropRow(propsPanel, "Tamaño:", String.valueOf(label.getFont().getSize()),
-                        e -> { try { label.setFont(new Font(label.getFont().getFamily(), label.getFont().getStyle(), Integer.parseInt(e))); previewPanel.repaint(); } catch (Exception ignored) {} });
+                        e -> { layoutModel.saveSnapshot(); try { label.setFont(new Font(label.getFont().getFamily(), label.getFont().getStyle(), Integer.parseInt(e))); previewPanel.repaint(); } catch (Exception ignored) {} });
                 JCheckBox boldCheck = new JCheckBox("Negrita", label.getFont().isBold());
                 boldCheck.addActionListener(e -> { label.setFont(label.getFont().deriveFont(boldCheck.isSelected() ? label.getFont().getStyle() | Font.BOLD : label.getFont().getStyle() & ~Font.BOLD)); previewPanel.repaint(); });
                 JCheckBox italicCheck = new JCheckBox("Cursiva", label.getFont().isItalic());
@@ -384,21 +384,21 @@ public class Main {
                 addPropRowCustom(propsPanel, "Grilla:", gridCheck);
             } else if (element instanceof LayoutLegend legend) {
                 addEditablePropRow(propsPanel, "Título:", legend.getTitle(),
-                        e -> { legend.setTitle(e); previewPanel.repaint(); });
+                        e -> { layoutModel.saveSnapshot(); legend.setTitle(e); previewPanel.repaint(); });
                 JCheckBox autoCheck = new JCheckBox("Auto-alto", legend.isAutoHeight());
                 autoCheck.addActionListener(e -> { legend.setAutoHeight(autoCheck.isSelected()); previewPanel.repaint(); });
                 addPropRowCustom(propsPanel, "Auto-alto:", autoCheck);
             } else if (element instanceof LayoutScaleBar scale) {
                 addEditablePropRow(propsPanel, "Escala 1:", String.valueOf((int) scale.getMapScaleDenominator()),
-                        e -> { try { scale.setMapScaleDenominator(Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                        e -> { layoutModel.saveSnapshot(); try { scale.setMapScaleDenominator(Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
                 addEditablePropRow(propsPanel, "Segmentos:", String.valueOf(scale.getSegments()),
-                        e -> { try { scale.setSegments(Integer.parseInt(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                        e -> { layoutModel.saveSnapshot(); try { scale.setSegments(Integer.parseInt(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
             } else if (element instanceof LayoutNorthArrow) {
                 addPropRow(propsPanel, "Tipo:", "Flecha norte");
             } else if (element instanceof LayoutCartouche cartouche) {
                 for (var entry : cartouche.getFields().entrySet()) {
                     addEditablePropRow(propsPanel, entry.getKey() + ":", entry.getValue(),
-                            e -> { cartouche.setField(entry.getKey(), e); previewPanel.repaint(); });
+                            e -> { layoutModel.saveSnapshot(); cartouche.setField(entry.getKey(), e); previewPanel.repaint(); });
                 }
             }
         }
@@ -633,7 +633,39 @@ public class Main {
 
     private static void printLayout() {
         statusLabel.setText("Preparando impresión...");
-        // TODO: implement print
+        try {
+            java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
+            job.setJobName("CATMAP - Layout");
+
+            // Render at print resolution
+            java.awt.image.BufferedImage image = LayoutExportEngine.renderLayout(layoutModel, 200);
+
+            job.setPrintable((java.awt.print.Printable) (java.awt.Graphics graphics,
+                    java.awt.print.PageFormat pageFormat, int pageIndex) -> {
+                if (pageIndex > 0) return java.awt.print.Printable.NO_SUCH_PAGE;
+                java.awt.Graphics2D g2 = (java.awt.Graphics2D) graphics;
+                g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
+                double sx = pageFormat.getImageableWidth() / image.getWidth();
+                double sy = pageFormat.getImageableHeight() / image.getHeight();
+                double scale = Math.min(sx, sy);
+                g2.scale(scale, scale);
+                g2.drawImage(image, 0, 0, null);
+                return java.awt.print.Printable.PAGE_EXISTS;
+            });
+
+            if (job.printDialog()) {
+                statusLabel.setText("Imprimiendo...");
+                job.print();
+                statusLabel.setText("Impresión completada");
+            } else {
+                statusLabel.setText("Impresión cancelada");
+            }
+        } catch (Exception ex) {
+            javax.swing.JOptionPane.showMessageDialog(mainFrame,
+                    "Error al imprimir:\n" + ex.getMessage(),
+                    "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            statusLabel.setText("Error al imprimir");
+        }
     }
 
     private static void insertText() {

@@ -381,7 +381,10 @@ public class LayoutMap implements LayoutElement {
             return;
         }
 
+        // Step 1: Try to sync from main map (fitFromMainMap now checks
+        // if the view actually contains useful data, otherwise falls back)
         if (!viewport.fitFromMainMap()) {
+            // Step 2: Fallback to project visible layers
             viewport.fitFromProjectLayers();
         }
     }

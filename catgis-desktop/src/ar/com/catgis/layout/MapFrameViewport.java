@@ -104,6 +104,51 @@ public class MapFrameViewport {
         if (map != null) {
             Envelope env = map.getCurrentViewEnvelope();
             if (env != null && !env.isNull() && env.getWidth() > 0 && env.getHeight() > 0) {
+                // Check if this view actually contains the project data.
+                // In standalone mode, MapPanel is created fresh with default view
+                // (viewMinX=0, viewMinY=0, zoomFactor=1) which gives an envelope
+                // around (0,0) — this is wrong for real-world data.
+                Project project = CatgisDesktopApp.currentProject;
+                boolean hasData = project != null && project.getLayers() != null
+                    && project.getLayers().stream().anyMatch(l -> l != null);
+
+                if (hasData) {
+                    // Get combined envelope of visible layers
+                    Envelope layersEnv = null;
+                    for (Layer layer : project.getLayers()) {
+                        if (layer == null || !layer.isVisible()) continue;
+                        Envelope le = resolveLayerEnvelope(layer);
+                        if (le != null && !le.isNull()) {
+                            if (layersEnv == null) layersEnv = new Envelope(le);
+                            else layersEnv.expandToInclude(le);
+                        }
+                    }
+                    // If the map view doesn't intersect the data at all,
+                    // it's an uninitialized/empty panel — use layers extent instead
+                    if (layersEnv != null && !env.intersects(layersEnv)) {
+                        double expandX = Math.max(layersEnv.getWidth() * 0.08d, 1d);
+                        double expandY = Math.max(layersEnv.getHeight() * 0.08d, 1d);
+                        this.minX = layersEnv.getMinX() - expandX;
+                        this.minY = layersEnv.getMinY() - expandY;
+                        this.maxX = layersEnv.getMaxX() + expandX;
+                        this.maxY = layersEnv.getMaxY() + expandY;
+                        return true;
+                    }
+                    // Also check if the main map view is suspiciously large
+                    // (indicates default zoomFactor=1 with data in local area)
+                    if (layersEnv != null
+                            && (env.getWidth() > layersEnv.getWidth() * 100
+                             || env.getHeight() > layersEnv.getHeight() * 100)) {
+                        double expandX = Math.max(layersEnv.getWidth() * 0.08d, 1d);
+                        double expandY = Math.max(layersEnv.getHeight() * 0.08d, 1d);
+                        this.minX = layersEnv.getMinX() - expandX;
+                        this.minY = layersEnv.getMinY() - expandY;
+                        this.maxX = layersEnv.getMaxX() + expandX;
+                        this.maxY = layersEnv.getMaxY() + expandY;
+                        return true;
+                    }
+                }
+
                 this.minX = env.getMinX();
                 this.minY = env.getMinY();
                 this.maxX = env.getMaxX();

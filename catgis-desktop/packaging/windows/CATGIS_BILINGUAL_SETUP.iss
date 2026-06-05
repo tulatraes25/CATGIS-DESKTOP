@@ -64,5 +64,74 @@ Name: "{autodesktop}\{#InstallerName}"; Filename: "{app}\CATGIS Desktop.exe"; Ta
 [Tasks]
 Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Accesos directos:"
 
+[Code]
+const
+  LegacyMsiUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall';
+
+function TryFindLegacyMsiProductCode(var ProductCode: string): Boolean;
+var
+  SubKeys: TArrayOfString;
+  I: Integer;
+  DisplayName: string;
+  UninstallString: string;
+  CandidateKey: string;
+begin
+  Result := False;
+  ProductCode := '';
+
+  if not RegGetSubkeyNames(HKLM64, LegacyMsiUninstallKey, SubKeys) then
+    exit;
+
+  for I := 0 to GetArrayLength(SubKeys) - 1 do
+  begin
+    CandidateKey := LegacyMsiUninstallKey + '\' + SubKeys[I];
+    if RegQueryStringValue(HKLM64, CandidateKey, 'DisplayName', DisplayName) and
+       (CompareText(Trim(DisplayName), '{#InstallerName}') = 0) and
+       RegQueryStringValue(HKLM64, CandidateKey, 'UninstallString', UninstallString) and
+       (Pos('MsiExec.exe', UninstallString) > 0) and
+       (Length(SubKeys[I]) > 2) and
+       (SubKeys[I][1] = '{') and
+       (SubKeys[I][Length(SubKeys[I])] = '}') then
+    begin
+      ProductCode := SubKeys[I];
+      Result := True;
+      exit;
+    end;
+  end;
+end;
+
+procedure UninstallLegacyMsiIfPresent;
+var
+  ProductCode: string;
+  ResultCode: Integer;
+begin
+  if not TryFindLegacyMsiProductCode(ProductCode) then
+    exit;
+
+  Log(Format('Se detectó una instalación MSI heredada de %s con ProductCode=%s. Se desinstalará antes de continuar.', ['{#InstallerName}', ProductCode]));
+  if not Exec(
+    ExpandConstant('{sys}\msiexec.exe'),
+    '/x ' + ProductCode + ' /qn /norestart',
+    '',
+    SW_HIDE,
+    ewWaitUntilTerminated,
+    ResultCode
+  ) then
+  begin
+    RaiseException('No se pudo iniciar la desinstalación de la instalación MSI heredada de CATGIS Desktop.');
+  end;
+
+  if (ResultCode <> 0) and (ResultCode <> 1605) and (ResultCode <> 3010) then
+  begin
+    RaiseException(Format('La desinstalación de la instalación MSI heredada devolvió código %d.', [ResultCode]));
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssInstall then
+    UninstallLegacyMsiIfPresent;
+end;
+
 [Run]
 Filename: "{app}\CATGIS Desktop.exe"; Description: "Iniciar CATGIS Desktop"; Flags: nowait postinstall skipifsilent

@@ -6,6 +6,11 @@ import javax.swing.UIManager;
 public class Main {
 
     public static void main(String[] args) {
+        if (isCatmapStandaloneLaunch(args)) {
+            ar.com.catgis.catmap.Main.main(stripStandaloneFlag(args));
+            return;
+        }
+
         SwingUtilities.invokeLater(() -> {
             installLookAndFeel();
             I18n.initialize();
@@ -18,6 +23,32 @@ public class Main {
                 SwingUtilities.invokeLater(app::showStartupProjectCrsPromptIfNeeded);
             });
         });
+    }
+
+    private static boolean isCatmapStandaloneLaunch(String[] args) {
+        if (args == null) {
+            return false;
+        }
+        for (String arg : args) {
+            if ("--catmap-standalone".equals(arg)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String[] stripStandaloneFlag(String[] args) {
+        if (args == null || args.length == 0) {
+            return new String[0];
+        }
+
+        java.util.List<String> filtered = new java.util.ArrayList<>();
+        for (String arg : args) {
+            if (!"--catmap-standalone".equals(arg)) {
+                filtered.add(arg);
+            }
+        }
+        return filtered.toArray(new String[0]);
     }
 
     private static void installLookAndFeel() {

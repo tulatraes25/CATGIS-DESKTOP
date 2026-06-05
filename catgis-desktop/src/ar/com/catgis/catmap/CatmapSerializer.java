@@ -3,9 +3,12 @@ package ar.com.catgis.catmap;
 import ar.com.catgis.layout.*;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import javax.imageio.ImageIO;
 
 /**
  * Serializer/deserializer for .catmap layout files.
@@ -63,6 +66,15 @@ public final class CatmapSerializer {
         return model;
     }
 
+    // Public entry for undo/redo in LayoutModel
+    public static String serializeElementRaw(LayoutElement el) {
+        return serializeElement(el);
+    }
+
+    public static LayoutElement parseElementRaw(String line) {
+        return parseElement(line);
+    }
+
     private static String serializeElement(LayoutElement el) {
         StringBuilder sb = new StringBuilder();
         sb.append("ELEMENT|");
@@ -106,6 +118,20 @@ public final class CatmapSerializer {
         } else if (el instanceof LayoutCartouche cartouche) {
             for (var entry : cartouche.getFields().entrySet()) {
                 sb.append("|FIELD_").append(entry.getKey()).append("=").append(encodeText(entry.getValue()));
+            }
+        } else if (el instanceof LayoutImage image) {
+            BufferedImage bi = image.getImage();
+            if (bi != null) {
+                try {
+                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                    ImageIO.write(bi, "png", baos);
+                    String encoded = Base64.getEncoder().encodeToString(baos.toByteArray());
+                    sb.append("|IMAGE_DATA=").append(encoded);
+                } catch (Exception e) {
+                    sb.append("|IMAGE_DATA=");
+                }
+            } else {
+                sb.append("|IMAGE_DATA=");
             }
         } else if (el instanceof LayoutTable table) {
             sb.append("|MAX_ROWS=").append(table.getMaxVisibleRows());
@@ -166,6 +192,10 @@ public final class CatmapSerializer {
             case "LayoutLine" -> {
                 LayoutLine ln = new LayoutLine(id, x, y, w, h);
                 yield ln;
+            }
+            case "LayoutImage" -> {
+                LayoutImage img = new LayoutImage(id, null, x, y, w, h);
+                yield img;
             }
             case "LayoutTable" -> {
                 LayoutTable tbl = new LayoutTable(id, x, y, w, h);
@@ -254,6 +284,17 @@ public final class CatmapSerializer {
             } else if (part.startsWith("SEGMENTS=")) {
                 if (element instanceof LayoutScaleBar scale) {
                     scale.setSegments(parseInt(part.substring(9)));
+                }
+            } else if (part.startsWith("IMAGE_DATA=")) {
+                if (element instanceof LayoutImage img) {
+                    String data = part.substring(11);
+                    if (!data.isEmpty()) {
+                        try {
+                            byte[] bytes = Base64.getDecoder().decode(data);
+                            BufferedImage bi = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
+                            if (bi != null) img.setImage(bi);
+                        } catch (Exception ignored) {}
+                    }
                 }
             } else if (part.startsWith("FIELD_")) {
                 if (element instanceof LayoutCartouche cartouche) {

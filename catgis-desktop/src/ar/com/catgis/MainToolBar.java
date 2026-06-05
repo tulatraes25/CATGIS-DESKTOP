@@ -139,8 +139,8 @@ public class MainToolBar extends JToolBar {
         add(createLabeledButton(btnPoligono, "Poligono"));
         add(createLabeledButton(btnMedirDist, "Distancia"));
         add(createLabeledButton(btnMedirArea, "Area"));
-        add(createLabeledButton(btnTerminar, "OK"));
-        add(createLabeledButton(btnCancelar, "X"));
+        add(createLabeledButton(btnTerminar, I18n.t("Terminar")));
+        add(createLabeledButton(btnCancelar, I18n.t("Cancelar")));
         addSeparator();
         // Bloque de herramientas
         add(createLabeledButton(btnTabla, "Tabla"));

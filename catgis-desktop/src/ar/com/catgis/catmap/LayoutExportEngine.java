@@ -47,7 +47,11 @@ public final class LayoutExportEngine {
 
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
             // A4 landscape: 297mm x 210mm
-            org.apache.pdfbox.pdmodel.common.PDRectangle rect = org.apache.pdfbox.pdmodel.common.PDRectangle.A4;
+            // PDFBox PDRectangle.A4 is portrait (595.28 x 841.89), rotate to landscape
+            org.apache.pdfbox.pdmodel.common.PDRectangle rect = new org.apache.pdfbox.pdmodel.common.PDRectangle(
+                org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getHeight(),
+                org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getWidth()
+            );
             org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(rect);
             document.addPage(page);
 
