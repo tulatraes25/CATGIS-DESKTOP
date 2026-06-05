@@ -1,9 +1,10 @@
 package ar.com.catgis.climate;
 
 import ar.com.catgis.*;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.geometry.jts.JTS;
 import org.locationtech.jts.geom.*;
-import java.awt.image.BufferedImage;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -131,21 +132,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
         resultsTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         resultsTable.setFillsViewportHeight(true);
 
-        // Disclaimer panel about pixel sampling precision
-        JPanel disclaimerPanel = new JPanel(new BorderLayout());
-        JLabel disclaimerLabel = new JLabel(
-            "<html><b>Nota:</b> Este an\u00e1lisis usa muestreo de p\u00edxeles de la imagen renderizada "
-            + "(cada 2-4 p\u00edxeles), no estad\u00edsticas zonales raster completas. "
-            + "La precisi\u00f3n es adecuada para informes ambientales preliminares, "
-            + "no para an\u00e1lisis cient\u00edfico exacto.</html>");
-        disclaimerLabel.setFont(disclaimerLabel.getFont().deriveFont(java.awt.Font.ITALIC, 10f));
-        disclaimerLabel.setForeground(new java.awt.Color(100, 100, 100));
-        disclaimerLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-        disclaimerPanel.add(disclaimerLabel, BorderLayout.CENTER);
-        disclaimerPanel.setBorder(BorderFactory.createTitledBorder("Precisi\u00f3n"));
-
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.add(disclaimerPanel, BorderLayout.NORTH);
         centerPanel.add(new JScrollPane(resultsTable), BorderLayout.CENTER);
         add(centerPanel, BorderLayout.CENTER);
 
@@ -219,11 +206,11 @@ public class ClimateAreaAnalysisDialog extends JDialog {
         }
 
         try {
-            // Get the raster pixel samples
-            LocalRasterData rasterData = mapPanel.getRasterData(rasterLayer);
-            if (rasterData == null) {
+            // Get the raw GridCoverage2D for precise pixel evaluation
+            GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
+            if (coverage == null) {
                 JOptionPane.showMessageDialog(this,
-                        "No se pudieron obtener los datos del raster.",
+                        "No se pudo leer el raster como GridCoverage2D.",
                         "Análisis climático", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -236,12 +223,11 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                 return;
             }
 
-            BufferedImage image = rasterData.getImage();
-            if (image == null) return;
-
-            org.locationtech.jts.geom.Envelope rasterEnv = rasterData.getEnvelope();
-            int imgWidth = image.getWidth();
-            int imgHeight = image.getHeight();
+            org.geotools.geometry.jts.ReferencedEnvelope gridEnv = new org.geotools.geometry.jts.ReferencedEnvelope(
+                    coverage.getEnvelope2D());
+            CoordinateReferenceSystem coverageCrs = coverage.getCoordinateReferenceSystem2D();
+            int gridW = coverage.getRenderedImage().getWidth();
+            int gridH = coverage.getRenderedImage().getHeight();
 
             boolean doMean = meanCb.isSelected();
             boolean doMin = minCb.isSelected();
@@ -268,6 +254,9 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             String areaLabel = areaType != null ? areaType.getLabel() : (areaLayer != null ? areaLayer.getName() : "Área");
 
             int processedCount = 0;
+            int numBands = coverage.getSampleDimensions().length;
+            double[] pixelBuffer = new double[numBands];
+
             for (var feature : shapefileData.getFeatures()) {
                 Object geomObj = feature.getDefaultGeometry();
                 if (!(geomObj instanceof org.locationtech.jts.geom.Polygon) && !(geomObj instanceof MultiPolygon)) continue;
@@ -277,50 +266,40 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                         : feature.getAttribute("nombre") != null ? feature.getAttribute("nombre").toString()
                         : "Área " + (processedCount + 1);
 
-                // Sample pixels within polygon
-                List<Double> pixelsInPoly = new ArrayList<>();
-                int pxCount = 0;
-
-                for (int y = 0; y < imgHeight; y += 2) {
-                    for (int x = 0; x < imgWidth; x += 2) {
-                        // Map pixel to world coordinates
-                        double wx = rasterEnv.getMinX() + (x / (double) imgWidth) * rasterEnv.getWidth();
-                        double wy = rasterEnv.getMaxY() - (y / (double) imgHeight) * rasterEnv.getHeight();
-
-                        Coordinate pointCoord = new Coordinate(wx, wy);
-                        org.locationtech.jts.geom.Point point = new GeometryFactory().createPoint(pointCoord);
-
-                        if (geom.contains(point)) {
-                            int rgb = image.getRGB(x, y);
-                            int gray = (rgb >> 16) & 0xFF;
-
-                            // Get actual value from the layer metadata or estimate
-                            double val = estimatePixelValue(rasterLayer, gray, x, y, image, rasterEnv);
-                            if (Double.isFinite(val)) {
-                                pixelsInPoly.add(val);
-                                pxCount++;
-                            }
+                // Reproject polygon to coverage CRS if needed
+                Geometry evalGeom = geom;
+                try {
+                    String layerCrs = areaLayer.getSourceCRS();
+                    if (layerCrs != null && !layerCrs.isBlank() && coverageCrs != null) {
+                        String coverageCrsCode = RasterCoverageSupport.resolveCoverageCrsCode(coverage, rasterLayer);
+                        if (coverageCrsCode != null && !coverageCrsCode.equals(layerCrs)) {
+                            var transform = org.geotools.referencing.CRS.findMathTransform(
+                                    org.geotools.referencing.CRS.decode(layerCrs),
+                                    org.geotools.referencing.CRS.decode(coverageCrsCode), true);
+                            evalGeom = JTS.transform(geom, transform);
                         }
                     }
-                }
+                } catch (Exception ignored) {}
 
-                if (pixelsInPoly.isEmpty()) {
-                    // Try coarser sampling
-                    for (int y = 0; y < imgHeight; y += 4) {
-                        for (int x = 0; x < imgWidth; x += 4) {
-                            double wx = rasterEnv.getMinX() + (x / (double) imgWidth) * rasterEnv.getWidth();
-                            double wy = rasterEnv.getMaxY() - (y / (double) imgHeight) * rasterEnv.getHeight();
-                            Coordinate pointCoord = new Coordinate(wx, wy);
-                            org.locationtech.jts.geom.Point point = new GeometryFactory().createPoint(pointCoord);
-                            if (geom.contains(point)) {
-                                int rgb = image.getRGB(x, y);
-                                int gray = (rgb >> 16) & 0xFF;
-                                double val = estimatePixelValue(rasterLayer, gray, x, y, image, rasterEnv);
-                                if (Double.isFinite(val)) {
-                                    pixelsInPoly.add(val);
+                // Evaluate GridCoverage2D at grid cell centers within the polygon
+                List<Double> pixelsInPoly = new ArrayList<>();
+                int pxCount = 0;
+                int step = Math.max(1, Math.min(gridW, gridH) / 500);
+
+                for (int gy = 0; gy < gridH; gy += step) {
+                    for (int gx = 0; gx < gridW; gx += step) {
+                        double wx = gridEnv.getMinX() + ((gx + 0.5) / gridW) * gridEnv.getWidth();
+                        double wy = gridEnv.getMaxY() - ((gy + 0.5) / gridH) * gridEnv.getHeight();
+
+                        if (evalGeom.contains(new GeometryFactory().createPoint(new Coordinate(wx, wy)))) {
+                            try {
+                                double[] result = coverage.evaluate(
+                                        new java.awt.geom.Point2D.Double(wx, wy), pixelBuffer);
+                                if (result != null && result.length > 0 && Double.isFinite(result[0])) {
+                                    pixelsInPoly.add(result[0]);
                                     pxCount++;
                                 }
-                            }
+                            } catch (Exception ignored) {}
                         }
                     }
                 }
@@ -341,7 +320,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                         doStd ? DF.format(result.stdDev) : "-",
                         doSum ? DF.format(result.sum) : "-",
                         doCount ? String.valueOf(result.pixelCount) : "-",
-                        result.pixelCount + " píxeles (muestreo aprox.)"
+                        result.pixelCount + " píxeles evaluados sobre " + (pxCount > 0 ? pxCount : "sin datos")
                 });
                 processedCount++;
             }
@@ -363,19 +342,6 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                     "Error al ejecutar el análisis: " + ex.getMessage(),
                     "Análisis climático", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    private double estimatePixelValue(Layer layer, int grayValue, int pixelX, int pixelY,
-                                      BufferedImage image, org.locationtech.jts.geom.Envelope env) {
-        // Try to recover original value from layer metadata
-        Object minObj = layer.getUserData("climateMin");
-        Object maxObj = layer.getUserData("climateMax");
-        if (minObj instanceof Number && maxObj instanceof Number) {
-            double min = ((Number) minObj).doubleValue();
-            double max = ((Number) maxObj).doubleValue();
-            return min + (grayValue / 255.0) * (max - min);
-        }
-        return grayValue; // Fallback: use gray value
     }
 
     private AnalysisResult computeStatistics(List<Double> values, String areaLabel, String featureName,

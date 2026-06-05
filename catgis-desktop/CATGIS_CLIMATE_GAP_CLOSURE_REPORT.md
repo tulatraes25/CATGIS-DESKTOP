@@ -32,11 +32,10 @@ This round closes 5 identified gaps in the climate module and the CATGIS→CATMA
 
 4. **GRIB honesty**: GribLoader now explicitly documents GRIB2 as unsupported with the CDO conversion workflow.
 
-5. **Area analysis honesty**: Disclaimer warns about pixel sampling, observations now say "muestreo aprox." instead of "píxeles muestreados".
+5. **Full GridCoverage2D zonal statistics** (2026-06-05): Replaced BufferedImage pixel-sampling with real `GridCoverage2D.evaluate()`. Now evaluates actual pixel values directly from the grid coverage, not estimations from rendered image. Removed disclaimer panel and "muestreo aprox." labels. Renamed observation column to "píxeles evaluados".
 
 ## Remaining Gaps
 
 - GRIB native support (requires gt-grib + GDAL)
-- Full GridCoverage2D zonal statistics
 - Multi-temporal analysis
 - Direct ERA5/Copernicus download (requires CDS API key)
