@@ -1,5 +1,6 @@
 package ar.com.catgis.layout;
 
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -166,6 +167,66 @@ public class LayoutModel {
 
     public int nextZ() {
         return elements.stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1;
+    }
+
+    // --- Grouping ---
+
+    /**
+     * Group the given elements under a new group ID.
+     * Elements in a group should be moved/resized as a unit.
+     * Returns the group ID, or null if fewer than 2 elements.
+     */
+    public String groupElements(List<LayoutElement> els) {
+        if (els == null || els.size() < 2) return null;
+        saveSnapshot();
+        String gid = "group-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        for (LayoutElement e : els) {
+            e.setGroupId(gid);
+        }
+        return gid;
+    }
+
+    /** Remove grouping for the given group ID. */
+    public void ungroupElements(String gid) {
+        if (gid == null) return;
+        saveSnapshot();
+        for (LayoutElement e : elements) {
+            if (gid.equals(e.getGroupId())) {
+                e.setGroupId(null);
+            }
+        }
+    }
+
+    /** Get all elements that belong to a group. */
+    public List<LayoutElement> getGroupMembers(String gid) {
+        if (gid == null) return java.util.Collections.emptyList();
+        return elements.stream()
+                .filter(e -> gid.equals(e.getGroupId()))
+                .collect(Collectors.toList());
+    }
+
+    /** Get all elements that belong to ANY group. */
+    public List<LayoutElement> getGroupedElements() {
+        return elements.stream()
+                .filter(e -> e.getGroupId() != null)
+                .collect(Collectors.toList());
+    }
+
+    /** Get the group ID of the selected element, or null. */
+    public String getSelectedGroupId() {
+        LayoutElement sel = getSelected();
+        return sel != null ? sel.getGroupId() : null;
+    }
+
+    /** Move all members of a group by delta (dx, dy) in mm. */
+    public void translateGroup(String gid, double dx, double dy) {
+        if (gid == null) return;
+        for (LayoutElement e : elements) {
+            if (gid.equals(e.getGroupId())) {
+                Rectangle2D.Double b = e.getBoundsMm();
+                e.setBoundsMm(b.x + dx, b.y + dy, b.width, b.height);
+            }
+        }
     }
 
     // Multi-page support

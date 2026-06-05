@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.util.Locale;
 import java.util.Properties;
 
-final class RasterSidecarSupport {
+public final class RasterSidecarSupport {
 
     private static final String VERSION = "1";
     private static final String EXTENSION = ".catgis-raster.properties";
@@ -17,7 +17,7 @@ final class RasterSidecarSupport {
     private RasterSidecarSupport() {
     }
 
-    static void write(java.io.File rasterFile, Envelope envelope, String sourceCrsCode) throws IOException {
+    public static void write(java.io.File rasterFile, Envelope envelope, String sourceCrsCode) throws IOException {
         if (rasterFile == null || envelope == null || envelope.isNull()) {
             return;
         }

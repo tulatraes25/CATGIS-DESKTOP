@@ -1,5 +1,7 @@
 package ar.com.catgis;
 
+import ar.com.catgis.climate.GribLoader;
+import ar.com.catgis.climate.NetCdfLoader;
 import javax.swing.AbstractAction;
 import javax.swing.JOptionPane;
 import java.awt.Color;
@@ -131,6 +133,23 @@ public class OpenFileAction extends AbstractAction {
                     );
                 }
                 return true;
+            }
+
+            // Climate data files
+            if (NetCdfLoader.isNetCdfFile(lowerName)) {
+                RasterLayer climateLayer = NetCdfLoader.loadNetCdfFile(file, parent);
+                if (climateLayer != null) {
+                    if (CatgisDesktopApp.statusBar != null) {
+                        CatgisDesktopApp.statusBar.setMessage("Datos climáticos NetCDF agregados: " + climateLayer.getName());
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            if (NetCdfLoader.isGribFile(lowerName)) {
+                JOptionPane.showMessageDialog(parent, GribLoader.getSupportMessage(), "GRIB2", JOptionPane.INFORMATION_MESSAGE);
+                return false;
             }
 
             if (isRasterOrImage(lowerName)) {

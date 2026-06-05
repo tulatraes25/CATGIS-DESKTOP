@@ -792,6 +792,17 @@ public class LayersPanel extends JPanel {
 
         popupMenu.add(simbologiaMenu);
 
+        // Environmental area marking
+        JMenuItem envMarkItem = createMenuItem("Marcar como área de influencia...", AppIcons.propertiesIcon());
+        envMarkItem.addActionListener(ev -> {
+            ar.com.catgis.climate.EnvironmentalAreaMarker.markSingleLayer(
+                SwingUtilities.getWindowAncestor(this), selectedLayer);
+            ar.com.catgis.climate.EnvironmentalAreaMarker.showMarkDialog(
+                SwingUtilities.getWindowAncestor(this));
+        });
+        popupMenu.add(envMarkItem);
+        popupMenu.addSeparator();
+
         JMenu advancedMenu = new JMenu("Configuracion avanzada");
         advancedMenu.setIcon(AppIcons.crsIcon());
 
@@ -1008,6 +1019,39 @@ public class LayersPanel extends JPanel {
         JMenuItem basinOutletItem = createMenuItem(I18n.t("Cuenca desde outlet..."), AppIcons.pointIcon());
         basinOutletItem.addActionListener(ev -> BasinFromOutletDialog.open(selectedLayer));
         popupMenu.add(basinOutletItem);
+
+        popupMenu.addSeparator();
+
+        // Climate visualization
+        JMenu climateMenu = new JMenu("Clima y ambiente");
+        climateMenu.setIcon(AppIcons.imageryIcon());
+
+        JMenuItem climateSymbologyItem = createMenuItem("Aplicar simbología climática...", AppIcons.attrEditIcon());
+        climateSymbologyItem.setEnabled(selectedLayer instanceof RasterLayer);
+        climateSymbologyItem.addActionListener(ev -> {
+            if (selectedLayer instanceof RasterLayer rl) {
+                ar.com.catgis.climate.ClimateVisualizationDialog.open(
+                    SwingUtilities.getWindowAncestor(this), rl);
+            }
+        });
+        climateMenu.add(climateSymbologyItem);
+
+        JMenuItem areaAnalysisItem = createMenuItem("Análisis climático por áreas (AID/AII)...", AppIcons.propertiesIcon());
+        areaAnalysisItem.addActionListener(ev -> {
+            ar.com.catgis.climate.ClimateAreaAnalysisDialog.open(
+                SwingUtilities.getWindowAncestor(this));
+        });
+        climateMenu.add(areaAnalysisItem);
+
+        JMenuItem windRoseItem = createMenuItem("Rosa de los vientos...", AppIcons.attrRefreshIcon());
+        windRoseItem.addActionListener(ev -> {
+            ar.com.catgis.climate.WindRoseDialog.open(
+                SwingUtilities.getWindowAncestor(this));
+        });
+        climateMenu.add(windRoseItem);
+
+        popupMenu.add(climateMenu);
+        popupMenu.addSeparator();
 
         JMenu advancedMenu = new JMenu("Configuracion avanzada");
         advancedMenu.setIcon(AppIcons.toolboxIcon());

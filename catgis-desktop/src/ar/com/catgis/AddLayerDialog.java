@@ -35,6 +35,7 @@ public class AddLayerDialog extends JDialog {
                 new FormatOption(I18n.t("KML / KMZ"), "kml"),
                 new FormatOption(I18n.t("Fichero de imagen"), "image"),
                 new FormatOption(I18n.t("CAD DWG / DXF"), "dxf"),
+                new FormatOption(I18n.t("Datos climáticos (NetCDF)"), "netcdf"),
                 new FormatOption(I18n.t("Todos los soportados"), "all")
         });
 
@@ -165,6 +166,9 @@ public class AddLayerDialog extends JDialog {
                 break;
             case "dxf":
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("CAD DWG / DXF (*.dwg, *.dxf)"), "dwg", "dxf"));
+                break;
+            case "netcdf":
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Datos climáticos NetCDF (*.nc, *.nc4)"), "nc", "nc4"));
                 break;
             case "all":
             default:

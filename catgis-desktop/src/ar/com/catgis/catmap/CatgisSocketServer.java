@@ -8,6 +8,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.prefs.Preferences;
 
 /**
  * Socket server for CATGIS-CATMAP communication.
@@ -84,6 +85,22 @@ public final class CatgisSocketServer {
             return getExtent();
         } else if (command.startsWith("PING")) {
             return "{\"status\":\"ok\",\"version\":\"1.0\"}";
+        } else if (command.startsWith("ADD_TABLE|")) {
+            String csvPath = command.substring("ADD_TABLE|".length()).trim();
+            if (!csvPath.isEmpty() && new File(csvPath).exists()) {
+                try {
+                    // Use same Preferences key as ClimateAreaAnalysisDialog
+                    Preferences prefs = Preferences.userNodeForPackage(
+                        Class.forName("ar.com.catgis.climate.ClimateAreaAnalysisDialog"));
+                    prefs.put("pendingCatmapTable", csvPath);
+                } catch (Exception e) {
+                    // Fallback
+                    Preferences prefs = Preferences.userNodeForPackage(CatgisSocketServer.class);
+                    prefs.put("pendingCatmapTable", csvPath);
+                }
+                return "{\"status\":\"ok\",\"message\":\"table stored\"}";
+            }
+            return "{\"status\":\"error\",\"message\":\"file not found\"}";
         }
         return "{\"error\":\"unknown command\"}";
     }

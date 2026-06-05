@@ -99,6 +99,51 @@ public class LayoutTable implements LayoutElement {
     public void setMaxVisibleRows(int n) { maxVisibleRows = n; }
     public List<String[]> getRows() { return rows; }
 
+    /**
+     * Create a LayoutTable directly from string data (no CSV file needed).
+     * @param id unique element id
+     * @param xMm X position in mm
+     * @param yMm Y position in mm
+     * @param data String[][] where first row is header
+     * @return new LayoutTable populated with the given data
+     */
+    public static LayoutTable createFromData(String id, double xMm, double yMm, String[][] data) {
+        LayoutTable table = new LayoutTable(id, xMm, yMm, 180, 60);
+        table.loadFromData(data);
+        return table;
+    }
+
+    /**
+     * Load table data from a String[][] array (first row is header).
+     * Automatically computes column widths and adjusts table bounds.
+     */
+    public void loadFromData(String[][] data) {
+        rows.clear();
+        columns.clear();
+        if (data == null || data.length == 0) return;
+        for (String[] row : data) {
+            if (row != null) {
+                rows.add(row);
+            }
+        }
+        int colCount = 0;
+        for (String[] r : rows) colCount = Math.max(colCount, r.length);
+        colWidths = new int[colCount];
+        for (int c = 0; c < colCount; c++) {
+            int maxW = 60;
+            for (int r = 0; r < rows.size(); r++) {
+                String[] row = rows.get(r);
+                String cell = c < row.length ? row[c] : "";
+                maxW = Math.max(maxW, cell.length() * 7 + 10);
+            }
+            colWidths[c] = Math.min(maxW, 200);
+        }
+        int totalW = 0;
+        for (int w : colWidths) totalW += w;
+        boundsMm.width = Math.max(boundsMm.width, totalW * 0.3528 + 4);
+        boundsMm.height = Math.max(boundsMm.height, rows.size() * 6.0);
+    }
+
     @Override public String getId() { return id; }
     @Override public String getName() { return name; }
     @Override public void setName(String n) { name = n; }

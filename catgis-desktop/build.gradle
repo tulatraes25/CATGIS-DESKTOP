@@ -57,6 +57,12 @@ dependencies {
     implementation 'com.formdev:flatlaf-extras:3.7'
     implementation 'com.formdev:flatlaf-intellij-themes:3.7'
     implementation 'com.github.weisj:jsvg:2.0.0'
+
+    // Climate / environmental module
+    implementation 'org.geotools:gt-netcdf:34.0'
+    implementation 'edu.ucar:netcdf4:4.6.15'
+    implementation 'edu.ucar:opendap:4.6.15'
+    implementation 'com.opencsv:opencsv:5.9'
     implementation 'org.apache.logging.log4j:log4j-api:2.24.3'
 
     runtimeOnly 'org.apache.logging.log4j:log4j-core:2.24.3'
@@ -244,6 +250,16 @@ tasks.register('generateWindowsInstallerAssets') {
         File pngFile = new File(outputDir, 'catgis-installer-icon.png')
         File icoFile = new File(outputDir, 'catgis-installer-icon.ico')
 
+        // CATMAP launcher properties for --add-launcher
+        File catmapProps = new File(outputDir, 'catmap-launcher.properties')
+        catmapProps.text = """
+app-name=CATMAP Standalone
+main-class=ar.com.catgis.catmap.Main
+shortcut=true
+win-menu=true
+win-menu-group=CATGIS
+""".stripIndent().trim()
+
         BufferedImage pngImage = createBrandIconImage(512)
         ImageIO.write(pngImage, 'png', pngFile)
 
@@ -300,6 +316,7 @@ tasks.register('packageWindowsAppImage') {
                 '--description', installerDescription,
                 '--copyright', installerCopyright,
                 '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
+                '--add-launcher', "catmap=${new File(resourcesDir, 'catmap-launcher.properties').absolutePath}",
                 '--verbose'
         ]
         runExternalCommand(appImageCommand, [:], 'Fallo al generar la app-image de Windows.')
@@ -356,6 +373,7 @@ tasks.register('packageWindowsJpackageExeInstaller') {
                 '--icon', new File(resourcesDir, 'catgis-installer-icon.ico').absolutePath,
                 '--win-menu',
                 '--win-menu-group', installerMenuGroup,
+                '--add-launcher', "catmap=${new File(resourcesDir, 'catmap-launcher.properties').absolutePath}",
                 '--verbose'
         ]
         Map<String, String> jpackageEnv = [

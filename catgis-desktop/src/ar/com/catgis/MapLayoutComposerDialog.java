@@ -1257,6 +1257,17 @@ public class MapLayoutComposerDialog extends JFrame {
                     lbl.setZOrder(layoutModel.nextZ()); lbl.setName("Texto " + (layoutModel.size() + 1));
                     layoutModel.addElement(lbl); refreshElementList(); previewPanel.repaint();
                 }),
+                createToolbarButton("Texto Dinámico", null, "Inserta texto auto-actualizable ({date}, {project}, {crs}, {scale})", () -> {
+                    LayoutLabel lbl = new LayoutLabel("dlbl-" + System.currentTimeMillis(), "{date}", 60, 60, 160, 24);
+                    lbl.setZOrder(layoutModel.nextZ());
+                    lbl.setName("Texto dinamico " + (layoutModel.size() + 1));
+                    lbl.setDynamicExpression("{date}");
+                    lbl.setFont(new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 10));
+                    lbl.setColor(new java.awt.Color(0x6B7280));
+                    layoutModel.addElement(lbl);
+                    refreshElementList();
+                    previewPanel.repaint();
+                }),
                 createToolbarButton("Imagen", AppIcons.imageryIcon(), "Inserta una imagen desde archivo.", () -> {
                     JFileChooser fc = new JFileChooser();
                     fc.setFileFilter(new FileNameExtensionFilter("Imagenes", "png", "jpg", "jpeg", "gif", "bmp"));
@@ -1290,6 +1301,22 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Bajar", AppIcons.downIcon(), "Bajar en orden visual.", () -> {
                     LayoutElement sel = layoutModel.getSelected();
                     if (sel != null) { layoutModel.moveDown(sel); refreshElementList(); previewPanel.repaint(); }
+                }),
+                createToolbarButton("Agrupar", null, "Agrupar elementos (Ctrl+G).", () -> {
+                    // Group selected elements: find all selected
+                    List<LayoutElement> selList = layoutModel.getElements().stream()
+                        .filter(LayoutElement::isSelected)
+                        .collect(java.util.stream.Collectors.toList());
+                    if (layoutModel.groupElements(selList) != null) {
+                        refreshElementList(); previewPanel.repaint();
+                    }
+                }),
+                createToolbarButton("Desagrupar", null, "Desagrupar (Ctrl+Shift+G).", () -> {
+                    LayoutElement sel = layoutModel.getSelected();
+                    if (sel != null && sel.getGroupId() != null) {
+                        layoutModel.ungroupElements(sel.getGroupId());
+                        refreshElementList(); previewPanel.repaint();
+                    }
                 }),
                 createToolbarButton("Quitar", AppIcons.removeIcon(), "Eliminar seleccionado.", () -> {
                     LayoutElement sel = layoutModel.getSelected();

@@ -3,12 +3,12 @@ package ar.com.catgis;
 import javax.swing.JOptionPane;
 import java.awt.Component;
 
-final class AppErrorSupport {
+public final class AppErrorSupport {
 
     private AppErrorSupport() {
     }
 
-    static void logFailure(String context, Throwable ex) {
+    public static void logFailure(String context, Throwable ex) {
         CatgisLogger.warn(context, ex);
     }
 
@@ -26,7 +26,7 @@ final class AppErrorSupport {
         return ex.getClass().getSimpleName();
     }
 
-    static void showErrorDialog(Component parent, String title, String intro, Throwable ex) {
+    public static void showErrorDialog(Component parent, String title, String intro, Throwable ex) {
         JOptionPane.showMessageDialog(
                 parent,
                 buildDialogMessage(intro, ex),

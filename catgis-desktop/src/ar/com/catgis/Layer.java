@@ -3,6 +3,7 @@ package ar.com.catgis;
 import java.awt.Color;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -245,6 +246,7 @@ public class Layer {
     private float opacity = 1.0f;
 
     private final Map<String, FieldConfig> fieldConfigs = new LinkedHashMap<>();
+    private final Map<String, Object> userData = new HashMap<>();
 
     public Layer(String name, String path, String type) {
         this.name = name;
@@ -825,6 +827,30 @@ public class Layer {
     @Override
     public String toString() {
         return name + (visible ? "" : " [Oculta]");
+    }
+
+    /**
+     * Get the user data properties map for this layer.
+     * Used for arbitrary metadata (e.g., AID/AII area marking, climate attributes).
+     */
+    public Map<String, Object> getUserData() {
+        return userData;
+    }
+
+    /**
+     * Get a user data property value by key.
+     */
+    public Object getUserData(String key) {
+        return key != null ? userData.get(key) : null;
+    }
+
+    /**
+     * Set a user data property on this layer.
+     */
+    public void putUserData(String key, Object value) {
+        if (key != null) {
+            userData.put(key, value);
+        }
     }
 
     public float getOpacity() {

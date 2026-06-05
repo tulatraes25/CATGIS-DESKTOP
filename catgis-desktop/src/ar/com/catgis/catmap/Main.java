@@ -9,6 +9,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.util.prefs.Preferences;
 
 /**
  * CATMAP Standalone - Cartographic Layout Composer.
@@ -28,6 +29,7 @@ public class Main {
 
             String projectPath = null;
             String layoutPath = null;
+            String importTablePath = null;
 
             // Parse arguments
             for (int i = 0; i < args.length; i++) {
@@ -35,6 +37,8 @@ public class Main {
                     projectPath = args[++i];
                 } else if ("--catmap".equals(args[i]) && i + 1 < args.length) {
                     layoutPath = args[++i];
+                } else if ("--import-table".equals(args[i]) && i + 1 < args.length) {
+                    importTablePath = args[++i];
                 } else if (args[i].endsWith(".catgis")) {
                     projectPath = args[i];
                 } else if (args[i].endsWith(".catmap")) {
@@ -76,6 +80,12 @@ public class Main {
             if (layoutPath != null) {
                 loadLayoutFile(new File(layoutPath));
             }
+
+            // Check for pending climate table import
+            if (importTablePath != null) {
+                importClimateTable(new File(importTablePath));
+            }
+            checkPendingCatmapTable();
         });
     }
 
@@ -127,6 +137,8 @@ public class Main {
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Guardar", KeyEvent.VK_S, e -> saveLayout());
         addMenuItem(menuArchivo, "Guardar como...", 0, e -> saveLayoutAs());
+        menuArchivo.addSeparator();
+        addMenuItem(menuArchivo, "Importar tabla climática...", KeyEvent.VK_T, e -> importTableFromFile());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Exportar PDF", 0, e -> exportPdf());
         addMenuItem(menuArchivo, "Exportar PNG", 0, e -> exportPng());
@@ -223,52 +235,212 @@ public class Main {
         addMenuItem(menuAyuda, "Documentación", 0, e -> {});
         menuAyuda.addSeparator();
         addMenuItem(menuAyuda, "Acerca de CATMAP", 0, e -> showAbout());
+        // --- Atlas ---
+        JMenu menuAtlas = new JMenu("Atlas");
+        menuAtlas.setMnemonic(KeyEvent.VK_A);
+        addMenuItem(menuAtlas, "Generar atlas desde layout...", 0, e -> showAtlasDialog());
+        menuAtlas.addSeparator();
+        addMenuItem(menuAtlas, "Configurar atlas...", 0, e -> {});
+        menuBar.add(menuAtlas);
+
         menuBar.add(menuAyuda);
 
         return menuBar;
+    }
+
+    private static void showAtlasDialog() {
+        JDialog dialog = new JDialog(mainFrame, "Generar Atlas", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(6, 10, 6, 10);
+        g.anchor = GridBagConstraints.WEST;
+        g.fill = GridBagConstraints.HORIZONTAL;
+
+        g.gridx = 0; g.gridy = 0; g.gridwidth = 2;
+        JLabel titleLabel = new JLabel("Generar atlas desde el layout actual");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 14f));
+        form.add(titleLabel, g);
+
+        g.gridy = 1; g.gridwidth = 1;
+        form.add(new JLabel("Páginas a generar:"), g);
+        SpinnerNumberModel pagesModel = new SpinnerNumberModel(5, 1, 100, 1);
+        JSpinner pagesSpinner = new JSpinner(pagesModel);
+        g.gridx = 1;
+        form.add(pagesSpinner, g);
+
+        g.gridx = 0; g.gridy = 2;
+        form.add(new JLabel("Nombre base:"), g);
+        JTextField nameField = new JTextField("mapa_atlas", 20);
+        g.gridx = 1;
+        form.add(nameField, g);
+
+        g.gridx = 0; g.gridy = 3;
+        form.add(new JLabel("Formato:"), g);
+        JComboBox<String> formatCombo = new JComboBox<>(new String[]{"PNG", "PDF"});
+        g.gridx = 1;
+        form.add(formatCombo, g);
+
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton cancelBtn = new JButton("Cancelar");
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        JButton generateBtn = new JButton("Generar");
+        generateBtn.addActionListener(e -> {
+            dialog.dispose();
+            JFileChooser fc = new JFileChooser();
+            fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            fc.setDialogTitle("Seleccionar carpeta de salida");
+            if (fc.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
+                final File outDir = fc.getSelectedFile();
+                final int pageCount = (Integer) pagesSpinner.getValue();
+                final String baseName = nameField.getText().trim().isEmpty()
+                    ? "mapa_atlas" : nameField.getText().trim();
+
+                statusLabel.setText("Generando atlas...");
+                new Thread(() -> {
+                    try {
+                        java.util.List<AtlasEngine.AtlasPage> pageList = new java.util.ArrayList<>();
+                        for (int i = 0; i < pageCount; i++) {
+                            pageList.add(new AtlasEngine.AtlasPage(
+                                "Mapa " + (i + 1),
+                                "Hoja " + (i + 1) + " de " + pageCount,
+                                null, null, null
+                            ));
+                        }
+                        AtlasEngine.generateAndSave(layoutModel, pageList, outDir, baseName, 150);
+                        SwingUtilities.invokeLater(() -> {
+                            statusLabel.setText("Atlas generado: " + outDir.getAbsolutePath());
+                            JOptionPane.showMessageDialog(mainFrame,
+                                "Atlas generado correctamente:\n" + outDir.getAbsolutePath(),
+                                "Atlas completado", JOptionPane.INFORMATION_MESSAGE);
+                        });
+                    } catch (Exception ex) {
+                        SwingUtilities.invokeLater(() -> {
+                            statusLabel.setText("Error al generar atlas");
+                            JOptionPane.showMessageDialog(mainFrame,
+                                "Error al generar atlas:\n" + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                        });
+                    }
+                }).start();
+            }
+        });
+
+        bottom.add(cancelBtn);
+        bottom.add(generateBtn);
+        dialog.add(form, BorderLayout.CENTER);
+        dialog.add(bottom, BorderLayout.SOUTH);
+        dialog.setSize(400, 260);
+        dialog.setLocationRelativeTo(mainFrame);
+        dialog.setVisible(true);
     }
 
     private static JToolBar createToolBar() {
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
         toolbar.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 4, 2));
 
-        // File actions
-        addToolIconButton(toolbar, "Nuevo", null, e -> newLayout());
-        addToolIconButton(toolbar, "Abrir", AppIcons.openIcon(), e -> openLayout());
-        addToolIconButton(toolbar, "Guardar", AppIcons.saveIcon(), e -> saveLayout());
-        toolbar.addSeparator();
-        addToolIconButton(toolbar, "Exportar PDF", AppIcons.exportIcon(), e -> exportPdf());
-        addToolIconButton(toolbar, "Exportar PNG", AppIcons.exportIcon(), e -> exportPng());
-        addToolIconButton(toolbar, "Imprimir", null, e -> printLayout());
-        toolbar.addSeparator();
+        addToolbarGroup(toolbar, "Documento",
+                createTBtn("Guardar", AppIcons.saveIcon(), "Guardar layout", e -> saveLayout()),
+                createTBtn("Abrir", AppIcons.openIcon(), "Abrir layout", e -> openLayout()),
+                createTBtn("Export. PDF", AppIcons.exportIcon(), "Exportar PDF", e -> exportPdf()),
+                createTBtn("Export. PNG", AppIcons.exportIcon(), "Exportar PNG", e -> exportPng()),
+                createTBtn("SVG", null, "Exportar SVG", e -> exportSvg()),
+                createTBtn("Imprimir", AppIcons.projectIcon(), "Imprimir", e -> printLayout())
+        );
 
-        // Layout tools
-        addToolIconButton(toolbar, "Seleccionar", AppIcons.selectIcon(), e -> {});
-        addToolIconButton(toolbar, "Pan mapa", AppIcons.panIcon(), e -> {});
-        addToolIconButton(toolbar, "Zoom mapa", AppIcons.zoomInIcon(), e -> {});
-        toolbar.addSeparator();
+        addToolbarGroup(toolbar, "Insertar",
+                createTBtn("Mapa", null, "Insertar map frame", e -> insertMap()),
+                createTBtn("Leyenda", null, "Insertar leyenda", e -> insertLegend()),
+                createTBtn("Escala", null, "Insertar escala", e -> insertScaleBar()),
+                createTBtn("Norte", null, "Insertar norte", e -> insertNorth()),
+                createTBtn("Texto", null, "Insertar texto", e -> insertText()),
+                createTBtn("Dinamico", null, "Texto dinámico {date} {project} {crs}", e -> insertDynamicText()),
+                createTBtn("Imagen", null, "Insertar imagen", e -> insertImage()),
+                createTBtn("Rectangulo", null, "Insertar rectangulo", e -> insertRectangle()),
+                createTBtn("Elipse", null, "Insertar elipse", e -> insertEllipse()),
+                createTBtn("Linea", AppIcons.lineIcon(), "Insertar linea", e -> insertLine())
+        );
 
-        // Insert elements
-        addToolIconButton(toolbar, "Texto", null, e -> insertText());
-        addToolIconButton(toolbar, "Imagen", null, e -> insertImage());
-        addToolIconButton(toolbar, "Rectángulo", null, e -> insertRectangle());
-        addToolIconButton(toolbar, "Elipse", null, e -> insertEllipse());
-        addToolIconButton(toolbar, "Línea", AppIcons.lineIcon(), e -> insertLine());
-        toolbar.addSeparator();
-        addToolIconButton(toolbar, "Mapa", null, e -> insertMap());
-        addToolIconButton(toolbar, "Leyenda", null, e -> insertLegend());
-        addToolIconButton(toolbar, "Escala", null, e -> insertScaleBar());
-        addToolIconButton(toolbar, "Norte", null, e -> insertNorth());
-        toolbar.addSeparator();
+        addToolbarGroup(toolbar, "Editar",
+                createTBtn("Editar", AppIcons.propertiesIcon(), "Editar elemento", e -> editSelected()),
+                createTBtn("Duplicar", AppIcons.attrCopyIcon(), "Duplicar", e -> duplicateSelected()),
+                createTBtn("Agrupar", null, "Agrupar seleccionados", e -> groupSelected()),
+                createTBtn("Desagrupar", null, "Desagrupar", e -> ungroupSelected()),
+                createTBtn("Subir", AppIcons.upIcon(), "Subir orden", e -> moveUpSelected()),
+                createTBtn("Bajar", AppIcons.downIcon(), "Bajar orden", e -> moveDownSelected()),
+                createTBtn("Quitar", AppIcons.removeIcon(), "Eliminar", e -> deleteSelected()),
+                createTBtn("Visible", AppIcons.visibleIcon(), "Mostrar/ocultar", e -> toggleVisibility())
+        );
 
-        // Edit actions
-        addToolIconButton(toolbar, "Duplicar", AppIcons.attrCopyIcon(), e -> {});
-        addToolIconButton(toolbar, "Subir", AppIcons.upIcon(), e -> {});
-        addToolIconButton(toolbar, "Bajar", AppIcons.downIcon(), e -> {});
-        addToolIconButton(toolbar, "Quitar", AppIcons.removeIcon(), e -> {});
+        addToolbarGroup(toolbar, "Alinear",
+                createTBtn("Izquierda", null, "Alinear izquierda", e -> alignElements(0)),
+                createTBtn("Centro", null, "Centrar horizontal", e -> alignElements(1)),
+                createTBtn("Derecha", null, "Alinear derecha", e -> alignElements(2)),
+                createTBtn("Arriba", null, "Alinear arriba", e -> alignElements(3)),
+                createTBtn("Medio", null, "Centrar vertical", e -> alignElements(4)),
+                createTBtn("Abajo", null, "Alinear abajo", e -> alignElements(5))
+        );
+
+        addToolbarGroup(toolbar, "Mapa",
+                createTBtn("Zoom -", AppIcons.zoomOutIcon(), "Alejar mapa", e -> zoomMap(-0.2)),
+                createTBtn("Zoom +", AppIcons.zoomInIcon(), "Acercar mapa", e -> zoomMap(0.2)),
+                createTBtn("Reencuadrar", AppIcons.zoomAllIcon(), "Ajustar a capas", e -> fitToVisibleLayers()),
+                createTBtn("Actualizar", AppIcons.attrRefreshIcon(), "Refrescar mapa", e -> refreshMap())
+        );
+
+        addToolbarGroup(toolbar, "Pagina",
+                createTBtn("Zoom -", AppIcons.zoomOutIcon(), "Alejar vista", e -> previewPanel.setZoom(previewPanel.getZoom() * 0.8)),
+                createTBtn("Zoom +", AppIcons.zoomInIcon(), "Acercar vista", e -> previewPanel.setZoom(previewPanel.getZoom() * 1.25)),
+                createTBtn("Ajustar", AppIcons.zoomAllIcon(), "Ajustar pagina", e -> previewPanel.setZoom(1.0)),
+                createTBtn("Ajustar ancho", AppIcons.zoomLayerIcon(), "Ajustar al ancho", e -> {})
+        );
 
         return toolbar;
+    }
+
+    // --- Toolbar helpers (matching CATMAP dialog style) ---
+
+    private static void addToolbarGroup(JToolBar toolbar, String title, java.awt.Component... buttons) {
+        javax.swing.JPanel group = new javax.swing.JPanel(new java.awt.BorderLayout(0, 4));
+        group.setOpaque(false);
+        group.setBorder(javax.swing.BorderFactory.createCompoundBorder(
+                javax.swing.BorderFactory.createLineBorder(new java.awt.Color(219, 225, 233)),
+                javax.swing.BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+
+        javax.swing.JLabel label = new javax.swing.JLabel(title);
+        label.setForeground(new java.awt.Color(76, 85, 97));
+        label.setFont(label.getFont().deriveFont(java.awt.Font.BOLD, 11f));
+        group.add(label, java.awt.BorderLayout.NORTH);
+
+        javax.swing.JToolBar bar = new javax.swing.JToolBar();
+        bar.setFloatable(false);
+        bar.setOpaque(false);
+        bar.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        bar.setRollover(true);
+        for (java.awt.Component btn : buttons) {
+            if (btn != null) bar.add(btn);
+        }
+        group.add(bar, java.awt.BorderLayout.CENTER);
+        toolbar.add(group);
+    }
+
+    private static java.awt.Component createTBtn(String text, javax.swing.Icon icon, String toolTip, java.awt.event.ActionListener action) {
+        javax.swing.JButton button = new javax.swing.JButton(text, icon);
+        button.setFocusable(false);
+        button.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
+        button.setVerticalTextPosition(javax.swing.SwingConstants.BOTTOM);
+        button.setMargin(new java.awt.Insets(4, 6, 4, 6));
+        button.setToolTipText(toolTip);
+        button.putClientProperty("JButton.buttonType", "toolBarButton");
+        button.setBackground(java.awt.Color.WHITE);
+        button.setOpaque(true);
+        button.addActionListener(action);
+        return button;
     }
 
     private static JPanel propsPanel;
@@ -451,6 +623,130 @@ public class Main {
         row.add(lbl, BorderLayout.WEST);
         row.add(component, BorderLayout.CENTER);
         panel.add(row);
+    }
+
+    // --- Element edit actions ---
+
+    private static void editSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel != null) {
+            statusLabel.setText("Editando: " + sel.getName());
+        } else {
+            statusLabel.setText("No hay elemento seleccionado");
+        }
+    }
+
+    private static void duplicateSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel == null) return;
+        layoutModel.saveSnapshot();
+        // Clone by serializing and deserializing
+        String data = ar.com.catgis.catmap.CatmapSerializer.serializeElementRaw(sel);
+        LayoutElement clone = ar.com.catgis.catmap.CatmapSerializer.parseElementRaw(data);
+        if (clone != null) {
+            clone.setName(sel.getName() + " (copia)");
+            clone.setBoundsMm(
+                sel.getBoundsMm().x + 5,
+                sel.getBoundsMm().y + 5,
+                sel.getBoundsMm().width,
+                sel.getBoundsMm().height
+            );
+            clone.setZOrder(layoutModel.nextZ());
+            layoutModel.addElement(clone);
+            previewPanel.repaint();
+            statusLabel.setText("Elemento duplicado");
+        }
+    }
+
+    private static void moveUpSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel != null) {
+            layoutModel.saveSnapshot();
+            layoutModel.moveUp(sel);
+            previewPanel.repaint();
+            statusLabel.setText("Subido");
+        }
+    }
+
+    private static void moveDownSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel != null) {
+            layoutModel.saveSnapshot();
+            layoutModel.moveDown(sel);
+            previewPanel.repaint();
+            statusLabel.setText("Bajado");
+        }
+    }
+
+    private static void groupSelected() {
+        java.util.List<LayoutElement> selList = layoutModel.getElements().stream()
+            .filter(LayoutElement::isSelected)
+            .collect(java.util.stream.Collectors.toList());
+        if (layoutModel.groupElements(selList) != null) {
+            previewPanel.repaint();
+            statusLabel.setText("Elementos agrupados");
+        } else {
+            statusLabel.setText("Selecciona al menos 2 elementos");
+        }
+    }
+
+    private static void ungroupSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel != null && sel.getGroupId() != null) {
+            layoutModel.ungroupElements(sel.getGroupId());
+            previewPanel.repaint();
+            statusLabel.setText("Grupo desagrupado");
+        } else {
+            statusLabel.setText("Selecciona un elemento agrupado");
+        }
+    }
+
+    private static void deleteSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel != null) {
+            layoutModel.removeElement(sel.getId());
+            previewPanel.repaint();
+            statusLabel.setText("Elemento eliminado");
+        }
+    }
+
+    private static void toggleVisibility() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel != null) {
+            layoutModel.saveSnapshot();
+            sel.setVisible(!sel.isVisible());
+            previewPanel.repaint();
+            statusLabel.setText(sel.isVisible() ? "Visible" : "Oculto");
+        }
+    }
+
+    private static void alignElements(int mode) {
+        // Simple alignment: find the selected element and align it relative to page
+        // mode: 0=left, 1=centerH, 2=right, 3=top, 4=centerV, 5=bottom
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel == null) { statusLabel.setText("Selecciona un elemento"); return; }
+        layoutModel.saveSnapshot();
+        double px = sel.getBoundsMm().x, py = sel.getBoundsMm().y;
+        double pw = sel.getBoundsMm().width, ph = sel.getBoundsMm().height;
+        // Page is A4 landscape: 297 x 210 mm
+        double pageW = 297, pageH = 210;
+        switch (mode) {
+            case 0: sel.setBoundsMm(15, py, pw, ph); break;
+            case 1: sel.setBoundsMm((pageW - pw) / 2, py, pw, ph); break;
+            case 2: sel.setBoundsMm(pageW - pw - 15, py, pw, ph); break;
+            case 3: sel.setBoundsMm(px, 10, pw, ph); break;
+            case 4: sel.setBoundsMm(px, (pageH - ph) / 2, pw, ph); break;
+            case 5: sel.setBoundsMm(px, pageH - ph - 10, pw, ph); break;
+        }
+        previewPanel.repaint();
+        String[] names = {"Izquierda", "Centro H", "Derecha", "Arriba", "Centro V", "Abajo"};
+        statusLabel.setText("Alineado: " + names[mode]);
+    }
+
+    private static void zoomMap(double factor) {
+        statusLabel.setText("Zoom mapa: " + (factor > 0 ? "+" : "") + (int)(factor * 100) + "%");
+        previewPanel.invalidateRender();
+        previewPanel.repaint();
     }
 
     private static void refreshLayerList() {
@@ -677,6 +973,18 @@ public class Main {
         statusLabel.setText("Texto insertado");
     }
 
+    private static void insertDynamicText() {
+        LayoutLabel lbl = new LayoutLabel("dtext-" + System.currentTimeMillis(), "{date}", 60, 60, 160, 24);
+        lbl.setZOrder(layoutModel.nextZ());
+        lbl.setName("Texto dinamico " + (layoutModel.size() + 1));
+        lbl.setDynamicExpression("{date}");
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        lbl.setColor(new Color(0x6B7280));
+        layoutModel.addElement(lbl);
+        previewPanel.repaint();
+        statusLabel.setText("Texto dinámico insertado (fecha actual)");
+    }
+
     private static void insertImage() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("Imágenes (*.png, *.jpg)", "png", "jpg"));
@@ -826,6 +1134,68 @@ public class Main {
                     "Error al cargar layout:\n" + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Import a climate analysis CSV into the current layout as a LayoutTable.
+     */
+    private static void importClimateTable(File csvFile) {
+        if (csvFile == null || !csvFile.exists()) return;
+        try {
+            LayoutTable table = new LayoutTable("climate_table_" + System.currentTimeMillis(), 10, 10, 180, 60);
+            table.loadCsv(csvFile);
+            table.setName("Tabla climática");
+            if (layoutModel != null) {
+                layoutModel.addElement(table);
+                JOptionPane.showMessageDialog(mainFrame,
+                    "Tabla climática importada correctamente.\nUbicala en el layout y ajustá su posición.",
+                    "Importar tabla", JOptionPane.INFORMATION_MESSAGE);
+            }
+            Preferences prefs = Preferences.userNodeForPackage(ar.com.catgis.climate.ClimateAreaAnalysisDialog.class);
+            prefs.remove("pendingCatmapTable");
+            csvFile.delete();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(mainFrame,
+                "Error al importar tabla climática: " + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Prompt user to pick a CSV file and import it as a table in the layout.
+     */
+    private static void importTableFromFile() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Importar tabla climática desde CSV");
+        chooser.setFileFilter(new FileNameExtensionFilter("CSV (*.csv)", "csv"));
+        if (chooser.showOpenDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
+            importClimateTable(chooser.getSelectedFile());
+        }
+    }
+
+    /**
+     * Check if CATGIS stored a pending table path in Preferences.
+     */
+    private static void checkPendingCatmapTable() {
+        try {
+            Preferences prefs = Preferences.userNodeForPackage(ar.com.catgis.climate.ClimateAreaAnalysisDialog.class);
+            String pendingPath = prefs.get("pendingCatmapTable", "");
+            if (!pendingPath.isEmpty()) {
+                File csvFile = new File(pendingPath);
+                if (csvFile.exists()) {
+                    int r = JOptionPane.showConfirmDialog(mainFrame,
+                        "Se encontró una tabla climática pendiente de importar.\n¿Querés agregarla al layout?",
+                        "Tabla pendiente", JOptionPane.YES_NO_OPTION);
+                    if (r == JOptionPane.YES_OPTION) {
+                        importClimateTable(csvFile);
+                    } else {
+                        prefs.remove("pendingCatmapTable");
+                    }
+                } else {
+                    prefs.remove("pendingCatmapTable");
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private static void showShortcuts() {

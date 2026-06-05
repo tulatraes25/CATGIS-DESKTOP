@@ -113,6 +113,9 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemSuelosOnline = createItem("Suelos online...", AppIcons.basemapIcon());
         itemSuelosOnline.addActionListener(e -> OnlineSoilDownloadDialog.open());
 
+        JMenuItem itemClimaOnline = createItem("Clima online...", AppIcons.propertiesIcon());
+        itemClimaOnline.addActionListener(e -> ar.com.catgis.climate.ClimateOnlineDownloadDialog.open());
+
         JMenuItem itemRecortarDem = createItem("Recortar DEM...", AppIcons.cutIcon());
         itemRecortarDem.addActionListener(e -> {
             if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
@@ -208,6 +211,7 @@ public class MainMenuBar extends JMenuBar {
         menuDatos.add(itemDemOnline);
         menuDatos.add(itemCargarDem);
         menuDatos.add(itemSuelosOnline);
+        menuDatos.add(itemClimaOnline);
 
         menuAnalisis.add(itemRecortarDem);
         menuAnalisis.add(itemCurvasNivel);
