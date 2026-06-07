@@ -209,6 +209,7 @@ public class Layer {
     private double labelMaxScale = 0; // 0 = no limit
 
     private Color fillColor = new Color(120, 170, 255, 120);
+    private transient GradientFill gradientFill;
     private Color borderColor = Color.BLUE;
     private Color lineColor = Color.RED;
     private float lineWidth = 1.5f;
@@ -456,6 +457,9 @@ public class Layer {
     public Color getFillColor() {
         return fillColor;
     }
+
+    public GradientFill getGradientFill() { return gradientFill; }
+    public void setGradientFill(GradientFill gf) { this.gradientFill = gf; }
 
     public void setFillColor(Color fillColor) {
         if (fillColor != null) {
