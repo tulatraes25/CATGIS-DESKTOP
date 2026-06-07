@@ -69,13 +69,9 @@ public class AppContextTest {
     }
 
     @Test
-    public void testSyncFromLegacy() {
-        CatgisDesktopApp.mapPanel = null;
-        CatgisDesktopApp.currentProject = null;
-        AppContext.get().setMapPanel(null);
-        AppContext.get().setProject(null);
-        AppContext.get().syncFromLegacy();
-        assertNull(AppContext.get().getMapPanel());
-        assertNull(AppContext.get().getProject());
+    public void testToolbarAccessors() {
+        AppContext ctx = AppContext.get();
+        assertNull(ctx.getFloatingEditToolbar());
+        assertNull(ctx.getCartographyToolbar());
     }
 }

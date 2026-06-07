@@ -63,20 +63,29 @@ public class CatgisDesktopApp extends JFrame {
         ModuleRegistry.initializeDefaults();
         mapPanel = new MapPanel();
         layersPanel = new LayersPanel();
-        AppContext.get().setMapPanel(mapPanel);
-        AppContext.get().setLayersPanel(layersPanel);
-        AppContext.get().setMainFrame(this);
         statusBar = new StatusBar();
-        statusBar.setScaleApplyListener(value -> {
-            if (mapPanel != null) {
-                mapPanel.applyRequestedScale(value);
-            }
-        });
         floatingVectorEditToolbar = new FloatingVectorEditToolbar();
         cartographyToolbar = new CartographyToolbar();
         catserverToolbar = new CatserverToolbar();
         onlineConnectionsToolbar = new OnlineConnectionsToolbar();
         topographyToolbar = new TopographyToolbar();
+
+        // Wire AppContext (migration in progress — new code should use AppContext, not static fields)
+        AppContext ctx = AppContext.get();
+        ctx.setMapPanel(mapPanel);
+        ctx.setLayersPanel(layersPanel);
+        ctx.setMainFrame(this);
+        ctx.setStatusBar(statusBar);
+        ctx.setFloatingEditToolbar(floatingVectorEditToolbar);
+        ctx.setCartographyToolbar(cartographyToolbar);
+        ctx.setCatserverToolbar(catserverToolbar);
+        ctx.setOnlineConnectionsToolbar(onlineConnectionsToolbar);
+        ctx.setTopographyToolbar(topographyToolbar);
+        statusBar.setScaleApplyListener(value -> {
+            if (mapPanel != null) {
+                mapPanel.applyRequestedScale(value);
+            }
+        });
 
         setJMenuBar(new MainMenuBar());
         add(buildTopContainer(), BorderLayout.NORTH);
