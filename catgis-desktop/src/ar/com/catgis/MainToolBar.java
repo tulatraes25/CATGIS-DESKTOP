@@ -154,6 +154,7 @@ public class MainToolBar extends JToolBar {
         add(createToggleStyleButton());
         addSeparator();
         // Analisis
+        add(createRasterCalcButton());
         add(createAnalysisButton());
     }
 
@@ -232,6 +233,35 @@ public class MainToolBar extends JToolBar {
         btn.setFocusPainted(false);
         btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
         btn.addActionListener(e -> CatgisDesktopApp.toggleQuickStylePanel());
+        return btn;
+    }
+
+    private JButton createRasterCalcButton() {
+        JButton btn = new JButton("Raster") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(142, 68, 173));
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.setColor(Color.WHITE);
+                g2.setFont(g2.getFont().deriveFont(Font.BOLD, 10f));
+                String text = getText();
+                FontMetrics fm = g2.getFontMetrics();
+                int tw = fm.stringWidth(text);
+                int tx = (getWidth() - tw) / 2;
+                int ty = (getHeight() + fm.getAscent() / 2) / 2;
+                g2.drawString(text, tx, ty);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(56, 44));
+        btn.setToolTipText("Calculadora Raster");
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> RasterCalculatorDialog.open());
         return btn;
     }
 
