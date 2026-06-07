@@ -130,7 +130,9 @@ public final class LabelExpressionEngine {
         FUNCTION, COMMA, LPAREN, RPAREN, CONCAT, IDENTIFIER
     }
 
-    private record Token(TokenType type, String value, int position) {}
+    private record Token(TokenType type, String value, int position, int arity) {
+        Token(TokenType type, String value, int position) { this(type, value, position, 0); }
+    }
 
     private static List<Token> tokenize(String expr) {
         List<Token> tokens = new ArrayList<>();
@@ -386,7 +388,7 @@ public final class LabelExpressionEngine {
                 }
                 case FUNCTION -> {
                     String func = t.value().toLowerCase();
-                    int argCount = countFunctionArgs(t, rpn);
+                    int argCount = t.arity();
 
                     switch (func) {
                         case "upper" -> {
@@ -522,19 +524,8 @@ public final class LabelExpressionEngine {
         return stack.pop();
     }
 
-    private static int countFunctionArgs(Token functionToken, List<Token> rpn) {
-        // Find the function in the RPN and count how many items above it
-        // are its arguments. This is a heuristic based on the last comma or LPAREN.
-        // For simplicity, we use a simpler approach: look for COMMA tokens
-        // between this function's position and where arguments end.
-        // In practice, we don't pre-count; we just pop what we need.
-        // The min/max functions are varargs, so we need to know.
-        int idx = rpn.indexOf(functionToken);
-        if (idx < 0) return 0;
-        // Walk backwards from idx-1, counting items until we hit the token before
-        // the arguments start. This is complex, so we use a simpler heuristic:
-        return 0; // caller should use argCount parameter from elsewhere
-    }
+    // Arity is now stored in the FUNCTION token during tokenization.
+    // This method is kept for backward compatibility.
 
     // --- Helpers ---
 
