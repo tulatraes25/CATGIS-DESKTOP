@@ -8,6 +8,8 @@ import java.awt.Paint;
 import java.awt.RadialGradientPaint;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Gradient fill configuration for polygon symbology.
@@ -24,6 +26,13 @@ import java.awt.geom.Rectangle2D;
  * </p>
  */
 public class GradientFill {
+
+    private static final Map<Long, Paint> PAINT_CACHE = new LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<Long, Paint> eldest) {
+            return size() > 64;
+        }
+    };
 
     public enum Type { LINEAR, RADIAL }
 
@@ -85,6 +94,13 @@ public class GradientFill {
             return colors != null && colors.length > 0 ? colors[0] : Color.GRAY;
         }
 
+        // Cache key: hash of config + bounds (rounded to 4px grid to reduce cache misses)
+        long key = computeCacheKey(bounds);
+        synchronized (PAINT_CACHE) {
+            Paint cached = PAINT_CACHE.get(key);
+            if (cached != null) return cached;
+        }
+
         float[] clampedFractions = fractions.clone();
         for (int i = 0; i < clampedFractions.length; i++) {
             clampedFractions[i] = Math.max(0, Math.min(1, clampedFractions[i]));
@@ -105,15 +121,35 @@ public class GradientFill {
                 ? MultipleGradientPaint.CycleMethod.REPEAT
                 : MultipleGradientPaint.CycleMethod.NO_CYCLE;
 
+        Paint result;
         try {
             if (type == Type.LINEAR) {
-                return createLinearPaint(bounds, clampedFractions, clampedColors, cycle);
+                result = createLinearPaint(bounds, clampedFractions, clampedColors, cycle);
             } else {
-                return createRadialPaint(bounds, clampedFractions, clampedColors, cycle);
+                result = createRadialPaint(bounds, clampedFractions, clampedColors, cycle);
             }
         } catch (Exception e) {
-            return colors.length > 0 ? colors[0] : Color.GRAY;
+            result = colors.length > 0 ? colors[0] : Color.GRAY;
         }
+
+        synchronized (PAINT_CACHE) {
+            PAINT_CACHE.put(key, result);
+        }
+        return result;
+    }
+
+    private long computeCacheKey(Rectangle2D b) {
+        long h = 17;
+        h = h * 31 + ((int)(b.getMinX() / 4) * 4000 + (int)(b.getMinY() / 4));
+        h = h * 31 + ((int)(b.getWidth() / 4) * 100 + (int)(b.getHeight() / 4));
+        h = h * 31 + type.ordinal();
+        h = h * 31 + Float.floatToIntBits(opacity);
+        h = h * 31 + (cyclic ? 1 : 0);
+        h = h * 31 + (int)(angle * 10);
+        if (colors != null) {
+            for (Color c : colors) h = h * 31 + (c != null ? c.getRGB() : 0);
+        }
+        return h;
     }
 
     private Paint createLinearPaint(Rectangle2D bounds,

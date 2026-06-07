@@ -48,6 +48,17 @@ public class MapDecorationRenderer {
     public boolean isShowCoordinates() { return showCoordinates; }
     public void setShowCoordinates(boolean v) { showCoordinates = v; }
 
+    // Live cursor coordinates (updated by MapPanel mouse listener)
+    private volatile String cursorCoordinateText = null;
+
+    /**
+     * Update the cursor coordinate display text.
+     * Called by MapPanel on mouse move.
+     */
+    public void setCursorCoordinate(String coordText) {
+        this.cursorCoordinateText = coordText;
+    }
+
     /**
      * Render all enabled decorations onto the given Graphics2D context.
      */
@@ -193,8 +204,10 @@ public class MapDecorationRenderer {
     // --- Coordinates ---
 
     private void renderCoordinates(Graphics2D g, int width, int height) {
-        // Show current cursor coordinates (if available)
-        String coordText = "Lat/Lon: ---, ---";
+        // Show live cursor coordinates (updated by MapPanel mouse listener)
+        String coordText = cursorCoordinateText != null
+                ? cursorCoordinateText
+                : "Lat/Lon: ---, ---";
         g.setFont(new Font("Monospaced", Font.PLAIN, 10));
         g.setColor(DECORATION_BG);
         FontMetrics fm = g.getFontMetrics();

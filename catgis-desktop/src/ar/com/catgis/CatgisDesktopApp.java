@@ -27,17 +27,17 @@ import java.awt.event.WindowEvent;
 
 public class CatgisDesktopApp extends JFrame {
 
-    public static MapPanel mapPanel;
-    public static LayersPanel layersPanel;
-    public static StatusBar statusBar;
-    public static Project currentProject;
-    public static FloatingVectorEditToolbar floatingVectorEditToolbar;
-    public static CartographyToolbar cartographyToolbar;
-    public static CatserverToolbar catserverToolbar;
-    public static OnlineConnectionsToolbar onlineConnectionsToolbar;
-    public static TopographyToolbar topographyToolbar;
-    public static QuickStylePanel quickStylePanel;
-    public static boolean quickStylePanelVisible = false;
+    public static volatile MapPanel mapPanel;
+    public static volatile LayersPanel layersPanel;
+    public static volatile StatusBar statusBar;
+    public static volatile Project currentProject;
+    public static volatile FloatingVectorEditToolbar floatingVectorEditToolbar;
+    public static volatile CartographyToolbar cartographyToolbar;
+    public static volatile CatserverToolbar catserverToolbar;
+    public static volatile OnlineConnectionsToolbar onlineConnectionsToolbar;
+    public static volatile TopographyToolbar topographyToolbar;
+    public static volatile QuickStylePanel quickStylePanel;
+    public static volatile boolean quickStylePanelVisible = false;
     private static JLabel sidebarTitleLabel;
     private static JLabel sidebarSubtitleLabel;
     private static JLabel sidebarOrderHintLabel;
