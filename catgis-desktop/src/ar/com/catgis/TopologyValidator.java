@@ -1,9 +1,13 @@
 package ar.com.catgis;
 
+import ar.com.catgis.core.geometry.SpatialIndex;
 import org.locationtech.jts.geom.*;
+import org.locationtech.jts.index.strtree.STRtree;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Basic topology validation rules for CATGIS.
@@ -37,38 +41,43 @@ public final class TopologyValidator {
     public static TopologyResult validateNoGaps(List<org.geotools.api.feature.simple.SimpleFeature> features, double tolerance) {
         List<TopologyIssue> issues = new ArrayList<>();
         List<Geometry> polygons = new ArrayList<>();
+        List<Integer> featureIndices = new ArrayList<>();
 
-        for (org.geotools.api.feature.simple.SimpleFeature feature : features) {
-            Geometry geom = (Geometry) feature.getDefaultGeometry();
-            if (geom instanceof Polygon) {
-                polygons.add(geom);
-            } else if (geom instanceof MultiPolygon mp) {
-                for (int i = 0; i < mp.getNumGeometries(); i++) {
-                    if (mp.getGeometryN(i) instanceof Polygon) {
-                        polygons.add(mp.getGeometryN(i));
-                    }
+        for (int i = 0; i < features.size(); i++) {
+            Geometry geom = (Geometry) features.get(i).getDefaultGeometry();
+            if (geom instanceof Polygon) { polygons.add(geom); featureIndices.add(i); }
+            else if (geom instanceof MultiPolygon mp) {
+                for (int j = 0; j < mp.getNumGeometries(); j++) {
+                    if (mp.getGeometryN(j) instanceof Polygon) { polygons.add(mp.getGeometryN(j)); featureIndices.add(i); }
                 }
             }
         }
+        if (polygons.size() < 2) return new TopologyResult(true, issues);
 
-        // Check each polygon for gaps by buffering and comparing
+        STRtree tree = new STRtree(10);
+        for (int i = 0; i < polygons.size(); i++) tree.insert(polygons.get(i).getEnvelopeInternal(), i);
+        try { tree.build(); } catch (Exception ignored) {}
+
+        Set<String> checked = new LinkedHashSet<>();
         for (int i = 0; i < polygons.size(); i++) {
-            Geometry poly1 = polygons.get(i);
-            for (int j = i + 1; j < polygons.size(); j++) {
-                Geometry poly2 = polygons.get(j);
+            Geometry p1 = polygons.get(i);
+            for (Object obj : tree.query(p1.getEnvelopeInternal())) {
+                int j = (Integer) obj;
+                if (i >= j) continue;
+                String key = i < j ? i + "_" + j : j + "_" + i;
+                if (checked.contains(key)) continue;
+                checked.add(key);
                 try {
-                    Geometry union = poly1.union(poly2);
-                    Geometry gap = poly1.symDifference(poly2).difference(union);
+                    Geometry p2 = polygons.get(j);
+                    if (!p1.getEnvelopeInternal().intersects(p2.getEnvelopeInternal())) continue;
+                    Geometry union = p1.union(p2);
+                    Geometry gap = p1.symDifference(p2).difference(union);
                     if (gap != null && !gap.isEmpty() && gap.getArea() > tolerance) {
-                        issues.add(new TopologyIssue(
-                                "NO_GAPS",
-                                "Gap found between polygons " + i + " and " + j,
-                                i, gap));
+                        issues.add(new TopologyIssue("NO_GAPS", "Gap found between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), gap));
                     }
                 } catch (Exception ignored) {}
             }
         }
-
         return new TopologyResult(issues.isEmpty(), issues);
     }
 
@@ -78,34 +87,42 @@ public final class TopologyValidator {
     public static TopologyResult validateNoOverlaps(List<org.geotools.api.feature.simple.SimpleFeature> features) {
         List<TopologyIssue> issues = new ArrayList<>();
         List<Geometry> polygons = new ArrayList<>();
+        List<Integer> featureIndices = new ArrayList<>();
 
-        for (org.geotools.api.feature.simple.SimpleFeature feature : features) {
-            Geometry geom = (Geometry) feature.getDefaultGeometry();
-            if (geom instanceof Polygon) {
-                polygons.add(geom);
-            } else if (geom instanceof MultiPolygon mp) {
-                for (int i = 0; i < mp.getNumGeometries(); i++) {
-                    if (mp.getGeometryN(i) instanceof Polygon) {
-                        polygons.add(mp.getGeometryN(i));
-                    }
+        for (int i = 0; i < features.size(); i++) {
+            Geometry geom = (Geometry) features.get(i).getDefaultGeometry();
+            if (geom instanceof Polygon) { polygons.add(geom); featureIndices.add(i); }
+            else if (geom instanceof MultiPolygon mp) {
+                for (int j = 0; j < mp.getNumGeometries(); j++) {
+                    if (mp.getGeometryN(j) instanceof Polygon) { polygons.add(mp.getGeometryN(j)); featureIndices.add(i); }
                 }
             }
         }
+        if (polygons.size() < 2) return new TopologyResult(true, issues);
 
+        STRtree tree = new STRtree(10);
+        for (int i = 0; i < polygons.size(); i++) tree.insert(polygons.get(i).getEnvelopeInternal(), i);
+        try { tree.build(); } catch (Exception ignored) {}
+
+        Set<String> checked = new LinkedHashSet<>();
         for (int i = 0; i < polygons.size(); i++) {
-            for (int j = i + 1; j < polygons.size(); j++) {
+            Geometry p1 = polygons.get(i);
+            for (Object obj : tree.query(p1.getEnvelopeInternal())) {
+                int j = (Integer) obj;
+                if (i >= j) continue;
+                String key = i < j ? i + "_" + j : j + "_" + i;
+                if (checked.contains(key)) continue;
+                checked.add(key);
                 try {
-                    Geometry intersection = polygons.get(i).intersection(polygons.get(j));
+                    Geometry p2 = polygons.get(j);
+                    if (!p1.getEnvelopeInternal().intersects(p2.getEnvelopeInternal())) continue;
+                    Geometry intersection = p1.intersection(p2);
                     if (intersection != null && !intersection.isEmpty() && intersection.getArea() > 0) {
-                        issues.add(new TopologyIssue(
-                                "NO_OVERLAPS",
-                                "Overlap between polygons " + i + " and " + j,
-                                i, intersection));
+                        issues.add(new TopologyIssue("NO_OVERLAPS", "Overlap between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), intersection));
                     }
                 } catch (Exception ignored) {}
             }
         }
-
         return new TopologyResult(issues.isEmpty(), issues);
     }
 
