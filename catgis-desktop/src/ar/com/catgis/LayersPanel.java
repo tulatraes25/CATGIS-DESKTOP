@@ -28,6 +28,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTextField;
+import javax.swing.Timer;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
@@ -71,6 +73,8 @@ public class LayersPanel extends JPanel {
     private final DefaultListModel<Object> model;
     private final JList<Object> layerList;
     private final JButton newGroupButton;
+    private final JTextField layerFilterField;
+    private final List<Object> unfilteredItems = new ArrayList<>();
     private final JButton scrollTopButton;
     private final JButton scrollBottomButton;
     private final JScrollPane layerScrollPane;
@@ -129,7 +133,35 @@ public class LayersPanel extends JPanel {
         scrollBottomButton.addActionListener(e -> scrollToBottom());
         topBar.add(scrollBottomButton);
 
-        add(topBar, BorderLayout.NORTH);
+        // Layer search / filter
+        JPanel searchPanel = new JPanel(new BorderLayout());
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        layerFilterField = new JTextField();
+        layerFilterField.putClientProperty("JTextField.placeholderText", "Filtrar capas...");
+        layerFilterField.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        layerFilterField.setToolTipText("Filtrar capas por nombre (presione Escape para limpiar)");
+
+        // Debounced filter: wait 300ms after typing stops
+        Timer filterTimer = new Timer(300, e -> applyLayerFilter());
+        filterTimer.setRepeats(false);
+        layerFilterField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { filterTimer.restart(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { filterTimer.restart(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { filterTimer.restart(); }
+        });
+        layerFilterField.registerKeyboardAction(
+                e -> { layerFilterField.setText(""); applyLayerFilter(); },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_FOCUSED
+        );
+
+        searchPanel.add(layerFilterField, BorderLayout.CENTER);
+
+        JPanel northPanel = new JPanel(new BorderLayout());
+        northPanel.add(topBar, BorderLayout.NORTH);
+        northPanel.add(searchPanel, BorderLayout.SOUTH);
+
+        add(northPanel, BorderLayout.NORTH);
 
         layerScrollPane = new JScrollPane(layerList);
         layerScrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -333,6 +365,7 @@ public class LayersPanel extends JPanel {
 
     public void clearLayers() {
         model.clear();
+        unfilteredItems.clear();
     }
 
     public Layer getSelectedLayer() {
@@ -508,6 +541,7 @@ public class LayersPanel extends JPanel {
     public void refreshLayerList() {
         List<Object> previousSelection = new ArrayList<>(layerList.getSelectedValuesList());
         model.clear();
+        unfilteredItems.clear();
         Project project = CatgisDesktopApp.currentProject;
         if (project == null) {
             layerList.repaint();
@@ -517,7 +551,7 @@ public class LayersPanel extends JPanel {
 
         for (Layer layer : project.getUngroupedLayers()) {
             if (layer != null) {
-                model.addElement(layer);
+                unfilteredItems.add(layer);
             }
         }
 
@@ -525,15 +559,18 @@ public class LayersPanel extends JPanel {
             if (group == null) {
                 continue;
             }
-            model.addElement(group);
+            unfilteredItems.add(group);
             if (group.isExpanded()) {
                 for (Layer layer : project.getLayersForGroup(group.getName())) {
                     if (layer != null) {
-                        model.addElement(layer);
+                        unfilteredItems.add(layer);
                     }
                 }
             }
         }
+
+        // Apply any active filter
+        applyLayerFilterImpl();
 
         restoreSelection(previousSelection);
         layerList.repaint();
@@ -542,6 +579,51 @@ public class LayersPanel extends JPanel {
         }
         CatgisDesktopApp.syncProInterpretationToolbar();
     }
+
+    // --- Layer filter methods ---
+
+    private void applyLayerFilter() {
+        SwingUtilities.invokeLater(this::applyLayerFilterImpl);
+    }
+
+    private void applyLayerFilterImpl() {
+        String query = layerFilterField.getText().trim().toLowerCase();
+        model.clear();
+
+        if (query.isEmpty()) {
+            for (Object item : unfilteredItems) {
+                model.addElement(item);
+            }
+            updateEmptyState();
+            return;
+        }
+
+        for (Object item : unfilteredItems) {
+            String name = getItemName(item);
+            if (name != null && name.toLowerCase().contains(query)) {
+                model.addElement(item);
+            }
+        }
+        updateEmptyState();
+    }
+
+    private String getItemName(Object item) {
+        if (item instanceof Layer layer) {
+            return layer.getName();
+        }
+        if (item instanceof LayerGroup group) {
+            return group.getName();
+        }
+        return null;
+    }
+
+    private void updateEmptyState() {
+        if (tocCardLayout != null) {
+            tocCardLayout.show((JPanel) emptyStateLabel.getParent(), model.isEmpty() ? "empty" : "layers");
+        }
+    }
+
+    // --- End filter methods ---
 
     private void configureKeyboardShortcuts() {
         layerList.getInputMap(JComponent.WHEN_FOCUSED).put(
