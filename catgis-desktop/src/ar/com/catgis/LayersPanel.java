@@ -17,6 +17,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JComponent;
 import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
@@ -792,6 +793,21 @@ public class LayersPanel extends JPanel {
 
         popupMenu.add(simbologiaMenu);
 
+        // Heatmap toggle (point layers only)
+        JCheckBoxMenuItem heatmapItem = new JCheckBoxMenuItem("Mapa de calor (heatmap)", selectedLayer.isHeatmapEnabled());
+        heatmapItem.addActionListener(ev -> {
+            selectedLayer.setHeatmapEnabled(!selectedLayer.isHeatmapEnabled());
+            CatgisDesktopApp.mapPanel.repaint();
+        });
+        popupMenu.add(heatmapItem);
+
+        JCheckBoxMenuItem clusterItem = new JCheckBoxMenuItem("Agrupar puntos (clustering)", selectedLayer.isClusteringEnabled());
+        clusterItem.addActionListener(ev -> {
+            selectedLayer.setClusteringEnabled(!selectedLayer.isClusteringEnabled());
+            CatgisDesktopApp.mapPanel.repaint();
+        });
+        popupMenu.add(clusterItem);
+
         // Environmental area marking
         JMenuItem envMarkItem = createMenuItem("Marcar como área de influencia...", AppIcons.propertiesIcon());
         envMarkItem.addActionListener(ev -> {
@@ -847,6 +863,12 @@ public class LayersPanel extends JPanel {
         JMenuItem exportItem = createMenuItem("Exportar capa", AppIcons.exportIcon());
         exportItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
         advancedMenu.add(exportItem);
+
+        if (selectedLayer != null && "VECTOR".equalsIgnoreCase(selectedLayer.getType())) {
+            JMenuItem exportDxfItem = createMenuItem("Exportar a DXF...", AppIcons.exportIcon());
+            exportDxfItem.addActionListener(ev -> DxfExportEngine.exportLayerWithDialog(null, selectedLayer));
+            advancedMenu.add(exportDxfItem);
+        }
 
         JMenuItem sendPostgisItem = createMenuItem("Enviar a CATSERVER...", AppIcons.tableIcon());
         sendPostgisItem.addActionListener(ev -> PostgisDataSourceAction.exportLayerToPostgis(selectedLayer));

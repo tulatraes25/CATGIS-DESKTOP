@@ -44,7 +44,41 @@ public final class ProjectSerializer {
         sb.append(layer.isVisible()).append("|");
         sb.append(layer.getOpacity()).append("|");
         sb.append(layer.getPointSymbolStyle().name()).append("|");
-        sb.append(layer.getCatalogSymbolId() != null ? layer.getCatalogSymbolId() : "");
+        sb.append(layer.getCatalogSymbolId() != null ? layer.getCatalogSymbolId() : "").append("|");
+        // Extended fields: heatmap, clustering, proportional
+        sb.append(layer.isHeatmapEnabled()).append("|");
+        sb.append(layer.getHeatmapRadius()).append("|");
+        sb.append(layer.getHeatmapOpacity()).append("|");
+        sb.append(layer.isClusteringEnabled()).append("|");
+        sb.append(layer.getClusterRadius()).append("|");
+        ProportionalSymbols ps = layer.getProportionalSymbols();
+        sb.append(ps != null && ps.getFieldName() != null ? safe(ps.getFieldName()) : "").append("|");
+        sb.append(ps != null ? ps.getMinSize() : 4).append("|");
+        sb.append(ps != null ? ps.getMaxSize() : 40).append("|");
+        sb.append(ps != null ? ps.isScaleByArea() : false).append("|");
+        sb.append(ps != null && ps.isEnabled());
+        // Label fields
+        sb.append("|").append(layer.isLabelsVisible());
+        sb.append("|").append(safe(layer.getLabelField()));
+        sb.append("|").append(safe(layer.getLabelExpression()));
+        sb.append("|").append(safe(layer.getLabelFontFamily()));
+        sb.append("|").append(layer.getLabelFontSize());
+        sb.append("|").append(layer.isLabelBold());
+        sb.append("|").append(layer.isLabelItalic());
+        sb.append("|").append(layer.isLabelUnderline());
+        sb.append("|").append(colorHex(layer.getLabelColor()));
+        sb.append("|").append(layer.isLabelHaloEnabled());
+        sb.append("|").append(colorHex(layer.getLabelHaloColor()));
+        sb.append("|").append(layer.getLabelHaloWidth());
+        sb.append("|").append(layer.getLabelOffsetX());
+        sb.append("|").append(layer.getLabelOffsetY());
+        sb.append("|").append(layer.getLabelPlacementMode().name());
+        sb.append("|").append(layer.getLabelPriority());
+        sb.append("|").append(layer.isLabelCollisionAvoid());
+        sb.append("|").append(layer.isLabelBackgroundEnabled());
+        sb.append("|").append(colorHex(layer.getLabelBackgroundColor()));
+        sb.append("|").append(layer.getLabelMinScale());
+        sb.append("|").append(layer.getLabelMaxScale());
         return sb.toString();
     }
 

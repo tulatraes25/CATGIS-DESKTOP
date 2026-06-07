@@ -73,8 +73,8 @@ public class MapFrameRenderer {
         Project project = CatgisDesktopApp.currentProject;
         if (project == null) return null;
 
-        // Check if there are online/raster layers - if so, return null to trigger
-        // MapPanel-based rendering which handles all layer types
+        // Check if there are online/raster layers — MapFrameRenderer only handles vectors.
+        // For complex layers, delegate to MapPanel's renderMapViewImage which handles all types.
         boolean hasOnlineOrRaster = false;
         for (Layer layer : project.getLayers()) {
             if (layer == null || !layer.isVisible()) continue;
@@ -86,7 +86,17 @@ public class MapFrameRenderer {
             }
         }
         if (hasOnlineOrRaster) {
-            return null; // Let LayoutMap fall back to MapPanel-based rendering
+            // Try to delegate to MapPanel (works in standalone and integrated mode)
+            ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+            if (map != null) {
+                double vpWidth = Math.max(viewport.getWidth(), 1);
+                double zoomFactor = (double) widthPx / vpWidth;
+                BufferedImage mapImage = map.renderMapViewImage(
+                    viewport.getMinX(), viewport.getMinY(), zoomFactor,
+                    widthPx, heightPx);
+                if (mapImage != null) return mapImage;
+            }
+            // Fallback: render just the vectors we can handle
         }
 
         BufferedImage image = new BufferedImage(widthPx, heightPx, BufferedImage.TYPE_INT_ARGB);
@@ -109,6 +119,12 @@ public class MapFrameRenderer {
             // Render labels with collision detection
             collisionBoxes.clear();
             renderLabels(g2, project, widthPx, heightPx, dpi);
+
+            // Heatmap overlay for point layers
+            renderHeatmap(g2, project, widthPx, heightPx, dpi);
+
+            // Point clusters
+            renderClusters(g2, project, widthPx, heightPx);
 
             // Render indicator rectangle if this is an inset with a reference extent
             if (indicatorExtent != null) {
@@ -155,6 +171,11 @@ public class MapFrameRenderer {
     private void renderFeatureGeometry(Graphics2D g2, org.locationtech.jts.geom.Geometry geometry,
                                         Layer layer, org.geotools.api.feature.simple.SimpleFeature feature,
                                         int widthPx, int heightPx) {
+        if ((geometry instanceof org.locationtech.jts.geom.Point
+                || geometry instanceof org.locationtech.jts.geom.MultiPoint)
+                && layer.isClusteringEnabled()) {
+            return; // Individual points suppressed when clustering is active
+        }
         if (geometry instanceof org.locationtech.jts.geom.Point point) {
             int x = worldToScreenX(point.getX(), widthPx);
             int y = worldToScreenY(point.getY(), heightPx);
@@ -191,8 +212,8 @@ public class MapFrameRenderer {
 
     private void renderPoint(Graphics2D g2, int x, int y, Layer layer,
                              org.geotools.api.feature.simple.SimpleFeature feature) {
-        CategoryStyleRule categoryRule = resolveCategoryRule(layer.getPointCategorizedSymbology(), feature);
-        int size = Math.max(4, categoryRule != null ? categoryRule.getPointSize() : layer.getPointSize());
+        CategoryStyleRule categoryRule = ar.com.catgis.LayerRenderHelper.resolveBestRule(layer, feature, "point");
+        int size = ar.com.catgis.LayerRenderHelper.resolveProportionalSize(layer, feature, categoryRule != null ? categoryRule.getPointSize() : layer.getPointSize());
         Color color = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor();
 
         String catId = categoryRule != null ? categoryRule.getCatalogSymbolId() : layer.getCatalogSymbolId();
@@ -218,7 +239,7 @@ public class MapFrameRenderer {
             path.lineTo(worldToScreenX(coords[i].x, widthPx), worldToScreenY(coords[i].y, heightPx));
         }
 
-        CategoryStyleRule categoryRule = resolveCategoryRule(layer.getLineCategorizedSymbology(), feature);
+        CategoryStyleRule categoryRule = ar.com.catgis.LayerRenderHelper.resolveBestRule(layer, feature, "line");
         Color lineColor = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getLineColor();
         Layer.LineSymbolStyle lineStyle = categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle();
         float lineWidth = categoryRule != null ? categoryRule.getLineWidth() : layer.getLineWidth();
@@ -231,7 +252,7 @@ public class MapFrameRenderer {
     private void renderPolygon(Graphics2D g2, org.locationtech.jts.geom.Polygon polygon,
                                 Layer layer, org.geotools.api.feature.simple.SimpleFeature feature,
                                 int widthPx, int heightPx) {
-        CategoryStyleRule categoryRule = resolveCategoryRule(layer.getPolygonCategorizedSymbology(), feature);
+        CategoryStyleRule categoryRule = ar.com.catgis.LayerRenderHelper.resolveBestRule(layer, feature, "polygon");
         Color fillColor = categoryRule != null ? categoryRule.getPrimaryColor() : layer.getFillColor();
         Color borderColor = layer.getBorderColor();
         Layer.PolygonFillStyle fillStyle = categoryRule != null ? categoryRule.getPolygonFillStyle() : layer.getPolygonFillStyle();
@@ -278,7 +299,12 @@ public class MapFrameRenderer {
 
         for (Layer layer : project.getLayers()) {
             if (layer == null || !layer.isVisible() || !layer.isLabelsVisible()) continue;
-            if (layer.getLabelField() == null || layer.getLabelField().isBlank()) continue;
+
+            String labelExpr = layer.getLabelExpression();
+            boolean useExpression = (labelExpr != null && !labelExpr.isBlank());
+            String labelField = useExpression ? null : layer.getLabelField();
+
+            if (!useExpression && (labelField == null || labelField.isBlank())) continue;
 
             ShapefileData data = getShapefileData(layer);
             if (data == null) continue;
@@ -288,10 +314,14 @@ public class MapFrameRenderer {
             try (FeatureIterator<SimpleFeature> iterator = collection.features()) {
                 while (iterator.hasNext()) {
                     org.geotools.api.feature.simple.SimpleFeature feature = iterator.next();
-                    Object attrValue = feature.getAttribute(layer.getLabelField());
-                    if (attrValue == null) continue;
-                    String text = String.valueOf(attrValue).trim();
-                    if (text.isEmpty()) continue;
+                    String text;
+                    if (useExpression) {
+                        text = LabelExpressionEngine.evaluate(labelExpr, feature);
+                    } else {
+                        Object attrValue = feature.getAttribute(labelField);
+                        text = attrValue != null ? String.valueOf(attrValue).trim() : "";
+                    }
+                    if (text == null || text.isEmpty()) continue;
 
                     Object geomObj = feature.getDefaultGeometry();
                     if (geomObj == null || !(geomObj instanceof org.locationtech.jts.geom.Geometry)) continue;
@@ -310,7 +340,9 @@ public class MapFrameRenderer {
             // Use first layer's settings for font (simplified — in full impl, per-layer)
             Layer firstLabelLayer = null;
             for (Layer l : project.getLayers()) {
-                if (l != null && l.isLabelsVisible() && l.getLabelField() != null && !l.getLabelField().isBlank()) {
+                if (l != null && l.isLabelsVisible() &&
+                    ((l.getLabelExpression() != null && !l.getLabelExpression().isBlank()) ||
+                     (l.getLabelField() != null && !l.getLabelField().isBlank()))) {
                     firstLabelLayer = l;
                     break;
                 }
@@ -394,22 +426,100 @@ public class MapFrameRenderer {
         return centroid != null ? centroid.getCoordinate() : null;
     }
 
-    private CategoryStyleRule resolveCategoryRule(CategorizedSymbology symbology,
-                                                  org.geotools.api.feature.simple.SimpleFeature feature) {
-        if (symbology == null || symbology.getRules().isEmpty()) return null;
-        String value = null;
-        try {
-            String fieldName = symbology.getFieldName();
-            if (fieldName != null && !fieldName.isBlank()) {
-                Object v = feature.getAttribute(fieldName);
-                if (v != null) value = v.toString();
-            }
-        } catch (Exception ignored) {}
-        if (value == null) return null;
-        for (CategoryStyleRule rule : symbology.getRules().values()) {
-            if (value.equals(rule.getValue())) return rule;
+    // resolveCategoryRule, resolveGraduatedRule, resolveBestRule, resolveProportionalSize
+    // moved to LayerRenderHelper for shared use
+
+    private void renderClusters(Graphics2D g2, Project project,
+                                  int widthPx, int heightPx) {
+        java.util.List<java.awt.geom.Point2D> allPoints = new java.util.ArrayList<>();
+        int radius = 30;
+        boolean hasClustering = false;
+
+        for (Layer layer : project.getLayers()) {
+            if (layer == null || !layer.isVisible() || !layer.isClusteringEnabled()) continue;
+            hasClustering = true;
+            radius = layer.getClusterRadius();
+
+            ShapefileData data = getShapefileData(layer);
+            if (data == null || data.getFeatureCollection() == null) continue;
+
+            try (org.geotools.feature.FeatureIterator<org.geotools.api.feature.simple.SimpleFeature> it =
+                    data.getFeatureCollection().features()) {
+                while (it.hasNext()) {
+                    org.geotools.api.feature.simple.SimpleFeature f = it.next();
+                    Object geomObj = f.getDefaultGeometry();
+                    if (geomObj instanceof org.locationtech.jts.geom.Point pt) {
+                        allPoints.add(new java.awt.geom.Point2D.Double(
+                            worldToScreenX(pt.getX(), widthPx),
+                            worldToScreenY(pt.getY(), heightPx)));
+                    } else if (geomObj instanceof org.locationtech.jts.geom.MultiPoint mp) {
+                        for (int i = 0; i < mp.getNumGeometries(); i++) {
+                            org.locationtech.jts.geom.Geometry g = mp.getGeometryN(i);
+                            if (g instanceof org.locationtech.jts.geom.Point p) {
+                                allPoints.add(new java.awt.geom.Point2D.Double(
+                                    worldToScreenX(p.getX(), widthPx),
+                                    worldToScreenY(p.getY(), heightPx)));
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
         }
-        return null;
+
+        if (!hasClustering || allPoints.isEmpty()) return;
+
+        var clusters = ar.com.catgis.PointClusterRenderer.clusterPoints(allPoints, radius);
+        BufferedImage clusterImg = ar.com.catgis.PointClusterRenderer.renderClusters(
+            clusters, widthPx, heightPx);
+        if (clusterImg != null) g2.drawImage(clusterImg, 0, 0, null);
+    }
+
+    private void renderHeatmap(Graphics2D g2, Project project,
+                               int widthPx, int heightPx, int dpi) {
+        java.util.List<java.awt.geom.Point2D> allPoints = new java.util.ArrayList<>();
+        int radius = 30;
+        float opacity = 0.6f;
+        boolean hasHeatmap = false;
+
+        for (Layer layer : project.getLayers()) {
+            if (layer == null || !layer.isVisible() || !layer.isHeatmapEnabled()) continue;
+            hasHeatmap = true;
+            radius = layer.getHeatmapRadius();
+            opacity = layer.getHeatmapOpacity();
+
+            ShapefileData data = getShapefileData(layer);
+            if (data == null || data.getFeatureCollection() == null) continue;
+
+            try (org.geotools.feature.FeatureIterator<org.geotools.api.feature.simple.SimpleFeature> it =
+                    data.getFeatureCollection().features()) {
+                while (it.hasNext()) {
+                    org.geotools.api.feature.simple.SimpleFeature f = it.next();
+                    Object geomObj = f.getDefaultGeometry();
+                    if (geomObj instanceof org.locationtech.jts.geom.Point pt) {
+                        int sx = worldToScreenX(pt.getX(), widthPx);
+                        int sy = worldToScreenY(pt.getY(), heightPx);
+                        allPoints.add(new java.awt.geom.Point2D.Double(sx, sy));
+                    } else if (geomObj instanceof org.locationtech.jts.geom.MultiPoint mp) {
+                        for (int i = 0; i < mp.getNumGeometries(); i++) {
+                            org.locationtech.jts.geom.Geometry g = mp.getGeometryN(i);
+                            if (g instanceof org.locationtech.jts.geom.Point p) {
+                                int sx = worldToScreenX(p.getX(), widthPx);
+                                int sy = worldToScreenY(p.getY(), heightPx);
+                                allPoints.add(new java.awt.geom.Point2D.Double(sx, sy));
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (!hasHeatmap || allPoints.isEmpty()) return;
+
+        BufferedImage heatmap = ar.com.catgis.HeatmapRenderer.renderHeatmap(
+            allPoints, widthPx, heightPx, radius, opacity);
+        if (heatmap != null) {
+            g2.drawImage(heatmap, 0, 0, null);
+        }
     }
 
     private ShapefileData getShapefileData(Layer layer) {

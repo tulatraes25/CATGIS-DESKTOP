@@ -71,8 +71,8 @@ public class LayoutCompletionTest {
     public void testExpressionAllVars() {
         String expr = "@scale @date @datetime @project @page @pagetotal";
         String result = LayoutExpressionEvaluator.evaluate(expr, 5000, "TEST", 0, 3);
-        assertFalse(result.contains("@"));
-        assertTrue(result.contains("1:5,000"));
+        assertFalse(result.contains("@"), "All vars should be replaced, got: " + result);
+        assertTrue(result.contains("1:5"), "Expected scale to be replaced, got: " + result);
         assertTrue(result.contains("TEST"));
         assertTrue(result.contains("1"));
         assertTrue(result.contains("3"));

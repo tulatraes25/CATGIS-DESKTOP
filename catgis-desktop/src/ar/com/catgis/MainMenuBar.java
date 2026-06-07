@@ -235,6 +235,12 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemTopologyLineConn = createItem("Validar conectividad de líneas", null);
         itemTopologyLineConn.addActionListener(e -> runTopologyValidation("NO_DANGLES"));
         menuAnalisis.add(itemTopologyLineConn);
+        menuAnalisis.addSeparator();
+
+        JMenuItem itemGeoAnalyzer = createItem("Analizador GEO (un clic)...", AppIcons.terrainAnalysisIcon());
+        itemGeoAnalyzer.addActionListener(e ->
+            ar.com.catgis.climate.UnifiedAnalysisDialog.open(MainMenuBar.this));
+        menuAnalisis.add(itemGeoAnalyzer);
 
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);

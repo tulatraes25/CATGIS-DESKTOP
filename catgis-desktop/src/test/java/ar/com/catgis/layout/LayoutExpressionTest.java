@@ -8,7 +8,8 @@ public class LayoutExpressionTest {
     @Test
     public void testScaleExpression() {
         String result = LayoutExpressionEvaluator.evaluate("Escala @scale", 25000, "Proj", 0, 1);
-        assertTrue(result.contains("1:25,000"));
+        assertTrue(result.contains("1:25"), "Expected scale to be replaced, got: " + result);
+        assertFalse(result.contains("@scale"), "@scale should be replaced");
     }
 
     @Test

@@ -58,6 +58,7 @@ public class LayerPropertiesDialog extends JDialog {
     private final JCheckBox visibleCheck;
     private final JCheckBox labelsVisibleCheck;
     private final JComboBox<String> labelFieldCombo;
+    private final JTextField expressionField; // used by buildLabelsTab, applyChanges, reload
     private final JButton sourceCrsButton;
     private final JButton clearSourceCrsButton;
     private final JButton cadGeorefButton;
@@ -252,6 +253,10 @@ public class LayerPropertiesDialog extends JDialog {
 
         JButton categorizedButton = new JButton(I18n.t("Simbologia por campo..."));
         categorizedButton.addActionListener(e -> CategorizedSymbologyDialog.open(this, layer));
+        JButton graduatedButton = new JButton("Simbologia graduada...");
+        graduatedButton.addActionListener(e -> GraduatedSymbologyDialog.open(this, layer));
+        JButton propSymbolBtn = new JButton("Simbolos proporcionales...");
+        propSymbolBtn.addActionListener(e -> ProportionalSymbolsDialog.open(this, layer));
         JButton importSldButton = new JButton("Importar SLD...");
         importSldButton.addActionListener(e -> importSldStyle());
         JButton exportSldButton = new JButton("Exportar SLD...");
@@ -264,6 +269,9 @@ public class LayerPropertiesDialog extends JDialog {
         if (data != null) {
             fields = data.getAttributeNames();
         }
+        expressionField = new JTextField(layer.getLabelExpression() != null ? layer.getLabelExpression() : "", 20);
+        expressionField.setToolTipText("Usa [campo], \"texto\", || Ej: [nombre] || \" (\" || [codigo] || \")\"");
+
         labelFieldCombo = new JComboBox<>();
         if (fields != null && !fields.isEmpty()) {
             for (String field : fields) {
@@ -497,6 +505,9 @@ public class LayerPropertiesDialog extends JDialog {
         activationCard.add(labelsVisibleCheck, gbc);
         gbc.gridwidth = 1;
         addRow(activationCard, gbc, row++, "Campo", labelFieldCombo);
+
+        addRow(activationCard, gbc, row++, "Expresion", expressionField);
+
         gbc.gridx = 0; gbc.gridy = row; gbc.weighty = 1; gbc.gridwidth = 2;
         activationCard.add(new JLabel(""), gbc);
         editorColumn.add(activationCard, BorderLayout.NORTH);
@@ -1077,6 +1088,14 @@ public class LayerPropertiesDialog extends JDialog {
             target.setLabelField(null);
         }
         // Label properties are already set on the layer directly via listeners in buildLabelsTab
+        // But expression needs explicit save since it's a text field without a listener
+        // Expression field (live save since no listener attached)
+        String exprText = expressionField.getText().trim();
+        if (!exprText.isEmpty()) {
+            target.setLabelExpression(exprText);
+        } else {
+            target.setLabelExpression(null);
+        }
     }
 
     private Layer buildExportSnapshot() {
@@ -1321,6 +1340,9 @@ public class LayerPropertiesDialog extends JDialog {
         labelsVisibleCheck.setSelected(layer.isLabelsVisible());
         if (layer.getLabelField() != null && labelFieldCombo.isEnabled()) {
             labelFieldCombo.setSelectedItem(layer.getLabelField());
+        }
+        if (layer.getLabelExpression() != null && !layer.getLabelExpression().isBlank()) {
+            expressionField.setText(layer.getLabelExpression());
         }
 
         PointSymbolCatalog.Entry entry = PointSymbolCatalog.findByReference(layer.getPointGraphicSymbol());

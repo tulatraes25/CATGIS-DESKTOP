@@ -971,8 +971,19 @@ public class MapLayoutComposerDialog extends JFrame {
             if (name == null) continue;
             if (LayoutLegend.isBasemapName(name)) continue;
             if (layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) continue;
-            Color c = resolveLayerColor(layer);
+
             String gtype = resolveGeometryType(layer);
+
+            // Check for graduated symbology first (most specific)
+            boolean hasGraduated = addGraduatedLegendItems(legend, layer, gtype);
+            if (hasGraduated) continue;
+
+            // Check for categorized symbology
+            boolean hasCategorized = addCategorizedLegendItems(legend, layer, gtype);
+            if (hasCategorized) continue;
+
+            // Default: single legend item per layer
+            Color c = resolveLayerColor(layer);
             LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(name, c, gtype);
             item.catalogSymbolId = layer.getCatalogSymbolId();
             item.pointSymbolStyle = layer.getPointSymbolStyle();
@@ -981,6 +992,60 @@ public class MapLayoutComposerDialog extends JFrame {
             item.strokeColor = layer.getBorderColor() != null ? layer.getBorderColor() : layer.getLineColor();
             legend.getItems().add(item);
         }
+    }
+
+    private boolean addGraduatedLegendItems(LayoutLegend legend, Layer layer, String gtype) {
+        // Determine which graduated symbology to use based on geometry type
+        GraduatedSymbology sym = null;
+        if (gtype.contains("POINT")) sym = layer.getPointGraduatedSymbology();
+        else if (gtype.contains("LINE")) sym = layer.getLineGraduatedSymbology();
+        else if (gtype.contains("POLYGON")) sym = layer.getPolygonGraduatedSymbology();
+        if (sym == null || !sym.isConfigured()) return false;
+
+        // Add category for the layer name
+        String layerLabel = layer.getName();
+
+        for (GraduatedRangeRule rule : sym.getRules()) {
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(rule.getLabel(), rule.getPrimaryColor(), gtype);
+            item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor().darker();
+            if ("POINT".equals(gtype)) {
+                item.pointSymbolStyle = layer.getPointSymbolStyle();
+                item.catalogSymbolId = rule.getCatalogSymbolId();
+            } else if ("LINE".equals(gtype)) {
+                item.lineSymbolStyle = rule.getLineStyle();
+                item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor();
+            } else {
+                item.polygonFillStyle = rule.getPolygonFillStyle();
+            }
+            legend.getItems().add(item);
+        }
+        return true;
+    }
+
+    private boolean addCategorizedLegendItems(LayoutLegend legend, Layer layer, String gtype) {
+        CategorizedSymbology sym = null;
+        if (gtype.contains("POINT")) sym = layer.getPointCategorizedSymbology();
+        else if (gtype.contains("LINE")) sym = layer.getLineCategorizedSymbology();
+        else if (gtype.contains("POLYGON")) sym = layer.getPolygonCategorizedSymbology();
+        if (sym == null || !sym.isConfigured()) return false;
+
+        for (CategoryStyleRule rule : sym.getRules().values()) {
+            String label = rule.getValue();
+            if (label.isEmpty()) label = "(sin valor)";
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(label, rule.getPrimaryColor(), gtype);
+            item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor().darker();
+            if ("POINT".equals(gtype)) {
+                item.pointSymbolStyle = rule.getPointSymbolStyle();
+                item.catalogSymbolId = rule.getCatalogSymbolId();
+            } else if ("LINE".equals(gtype)) {
+                item.lineSymbolStyle = rule.getLineStyle();
+                item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor();
+            } else {
+                item.polygonFillStyle = rule.getPolygonFillStyle();
+            }
+            legend.getItems().add(item);
+        }
+        return true;
     }
 
     private Color resolveLayerColor(Layer layer) {

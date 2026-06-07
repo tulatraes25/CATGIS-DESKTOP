@@ -187,6 +187,7 @@ public class Layer {
     // Legacy fields kept for backward compatibility (delegated to labelConfig)
     private boolean labelsVisible = false;
     private String labelField;
+    private String labelExpression;
     private String labelFontFamily = "SansSerif";
     private int labelFontSize = 10;
     private boolean labelBold = false;
@@ -221,6 +222,15 @@ public class Layer {
     private final CategorizedSymbology pointCategorizedSymbology = new CategorizedSymbology();
     private final CategorizedSymbology lineCategorizedSymbology = new CategorizedSymbology();
     private final CategorizedSymbology polygonCategorizedSymbology = new CategorizedSymbology();
+    private final GraduatedSymbology pointGraduatedSymbology = new GraduatedSymbology();
+    private final GraduatedSymbology lineGraduatedSymbology = new GraduatedSymbology();
+    private final GraduatedSymbology polygonGraduatedSymbology = new GraduatedSymbology();
+    private final ProportionalSymbols proportionalSymbols = new ProportionalSymbols();
+    private boolean heatmapEnabled = false;
+    private int heatmapRadius = 30;
+    private float heatmapOpacity = 0.6f;
+    private boolean clusteringEnabled = false;
+    private int clusterRadius = 30;
 
     private String sourceCRS = "";
     // CAD georeference (extracted to CadGeoreference value object)
@@ -330,6 +340,9 @@ public class Layer {
         this.labelField = labelField;
     }
 
+    public String getLabelExpression() { return labelExpression; }
+    public void setLabelExpression(String expr) { this.labelExpression = expr; }
+
     public String getLabelFontFamily() { return labelFontFamily; }
     public void setLabelFontFamily(String f) { if (f != null) labelFontFamily = f; }
     public int getLabelFontSize() { return labelFontSize; }
@@ -389,6 +402,7 @@ public class Layer {
     public void syncLabelConfigFromFields() {
         labelConfig.setVisible(labelsVisible);
         labelConfig.setField(labelField);
+        labelConfig.setExpression(labelExpression);
         labelConfig.setFontFamily(labelFontFamily);
         labelConfig.setFontSize(labelFontSize);
         labelConfig.setBold(labelBold);
@@ -417,6 +431,7 @@ public class Layer {
     public void syncLabelFieldsFromConfig() {
         labelsVisible = labelConfig.isVisible();
         labelField = labelConfig.getField();
+        labelExpression = labelConfig.getExpression();
         labelFontFamily = labelConfig.getFontFamily();
         labelFontSize = labelConfig.getFontSize();
         labelBold = labelConfig.isBold();
@@ -554,6 +569,37 @@ public class Layer {
     public CategorizedSymbology getPolygonCategorizedSymbology() {
         return polygonCategorizedSymbology;
     }
+
+    public GraduatedSymbology getPointGraduatedSymbology() {
+        return pointGraduatedSymbology;
+    }
+
+    public GraduatedSymbology getLineGraduatedSymbology() {
+        return lineGraduatedSymbology;
+    }
+
+    public GraduatedSymbology getPolygonGraduatedSymbology() {
+        return polygonGraduatedSymbology;
+    }
+
+    public ProportionalSymbols getProportionalSymbols() {
+        return proportionalSymbols;
+    }
+
+    public boolean isHeatmapEnabled() { return heatmapEnabled; }
+    public void setHeatmapEnabled(boolean e) { this.heatmapEnabled = e; }
+
+    public int getHeatmapRadius() { return heatmapRadius; }
+    public void setHeatmapRadius(int r) { this.heatmapRadius = Math.max(5, Math.min(200, r)); }
+
+    public float getHeatmapOpacity() { return heatmapOpacity; }
+    public void setHeatmapOpacity(float o) { this.heatmapOpacity = Math.max(0.1f, Math.min(1.0f, o)); }
+
+    public boolean isClusteringEnabled() { return clusteringEnabled; }
+    public void setClusteringEnabled(boolean e) { this.clusteringEnabled = e; }
+
+    public int getClusterRadius() { return clusterRadius; }
+    public void setClusterRadius(int r) { this.clusterRadius = Math.max(5, Math.min(200, r)); }
 
     public String getSourceCRS() {
         return sourceCRS;

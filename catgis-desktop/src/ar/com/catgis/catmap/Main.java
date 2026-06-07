@@ -21,6 +21,9 @@ public class Main {
     private static LayoutPreviewPanel previewPanel;
     private static JLabel statusLabel;
     private static JFrame mainFrame;
+    private static String clipboardData; // for copy/paste
+    private static LayoutAtlas layoutAtlas; // for atlas/map series
+    private static int exportResolution = 200; // default DPI for exports
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -156,21 +159,21 @@ public class Main {
         addMenuItem(menuEdicion, "Deshacer", KeyEvent.VK_Z, e -> { layoutModel.undo(); previewPanel.invalidateRender(); previewPanel.repaint(); });
         addMenuItem(menuEdicion, "Rehacer", KeyEvent.VK_Y, e -> { layoutModel.redo(); previewPanel.invalidateRender(); previewPanel.repaint(); });
         menuEdicion.addSeparator();
-        addMenuItem(menuEdicion, "Copiar", KeyEvent.VK_C, e -> {});
-        addMenuItem(menuEdicion, "Pegar", KeyEvent.VK_V, e -> {});
-        addMenuItem(menuEdicion, "Duplicar", 0, e -> {});
-        addMenuItem(menuEdicion, "Eliminar", KeyEvent.VK_DELETE, e -> {});
+        addMenuItem(menuEdicion, "Copiar", KeyEvent.VK_C, e -> copySelected());
+        addMenuItem(menuEdicion, "Pegar", KeyEvent.VK_V, e -> pasteClipboard());
+        addMenuItem(menuEdicion, "Duplicar", 0, e -> duplicateSelected());
+        addMenuItem(menuEdicion, "Eliminar", KeyEvent.VK_DELETE, e -> deleteSelected());
         menuEdicion.addSeparator();
-        addMenuItem(menuEdicion, "Seleccionar todo", KeyEvent.VK_A, e -> {});
-        addMenuItem(menuEdicion, "Bloquear elemento", 0, e -> {});
-        addMenuItem(menuEdicion, "Desbloquear elemento", 0, e -> {});
+        addMenuItem(menuEdicion, "Seleccionar todo", KeyEvent.VK_A, e -> selectAll());
+        addMenuItem(menuEdicion, "Bloquear elemento", 0, e -> lockSelected());
+        addMenuItem(menuEdicion, "Desbloquear elemento", 0, e -> unlockSelected());
         menuBar.add(menuEdicion);
 
         // --- Vista ---
         JMenu menuVista = new JMenu("Vista");
         menuVista.setMnemonic(KeyEvent.VK_V);
         addMenuItem(menuVista, "Zoom a página", 0, e -> previewPanel.setZoom(1.0));
-        addMenuItem(menuVista, "Zoom al ancho", 0, e -> {});
+        addMenuItem(menuVista, "Zoom al ancho", 0, e -> zoomToWidth());
         addMenuItem(menuVista, "Zoom 100%", 0, e -> previewPanel.setZoom(1.0));
         menuVista.addSeparator();
         JCheckBoxMenuItem showRulers = new JCheckBoxMenuItem("Mostrar reglas", true);
@@ -208,11 +211,15 @@ public class Main {
         menuMapa.setMnemonic(KeyEvent.VK_M);
         addMenuItem(menuMapa, "Actualizar desde CATGIS", 0, e -> refreshFromCatgis());
         addMenuItem(menuMapa, "Sincronizar capas visibles", 0, e -> {});
-        addMenuItem(menuMapa, "Sincronizar simbología", 0, e -> {});
-        addMenuItem(menuMapa, "Sincronizar etiquetas", 0, e -> {});
+        addMenuItem(menuMapa, "Sincronizar simbología", 0, e ->
+            statusLabel.setText("Sincronizar simbologia: " + (CatmapSocketClient.isConnected()
+                ? "conectado" : "modo standalone")));
+        addMenuItem(menuMapa, "Sincronizar etiquetas", 0, e ->
+            statusLabel.setText("Sincronizar etiquetas: " + (CatmapSocketClient.isConnected()
+                ? "conectado" : "modo standalone")));
         menuMapa.addSeparator();
         addMenuItem(menuMapa, "Usar extent actual de CATGIS", 0, e -> useCatgisExtent());
-        addMenuItem(menuMapa, "Fijar extent del mapa", 0, e -> {});
+        addMenuItem(menuMapa, "Fijar extent del mapa", 0, e -> toggleMapExtentLock());
         addMenuItem(menuMapa, "Ajustar mapa al extent de capas visibles", 0, e -> fitToVisibleLayers());
         addMenuItem(menuMapa, "Refrescar mapa", KeyEvent.VK_F5, e -> refreshMap());
         menuBar.add(menuMapa);
@@ -223,16 +230,16 @@ public class Main {
         addMenuItem(menuExportar, "Exportar PDF", 0, e -> exportPdf());
         addMenuItem(menuExportar, "Exportar PNG", 0, e -> exportPng());
         addMenuItem(menuExportar, "Exportar JPG", 0, e -> exportJpg());
-        addMenuItem(menuExportar, "Exportar SVG", 0, e -> {});
+        addMenuItem(menuExportar, "Exportar SVG", 0, e -> exportSvg());
         menuExportar.addSeparator();
-        addMenuItem(menuExportar, "Configuración de resolución/DPI...", 0, e -> {});
+        addMenuItem(menuExportar, "Configuración de resolución/DPI...", 0, e -> showDpiConfigDialog());
         menuBar.add(menuExportar);
 
         // --- Ayuda ---
         JMenu menuAyuda = new JMenu("Ayuda");
         menuAyuda.setMnemonic(KeyEvent.VK_H);
         addMenuItem(menuAyuda, "Atajos de teclado", 0, e -> showShortcuts());
-        addMenuItem(menuAyuda, "Documentación", 0, e -> {});
+        addMenuItem(menuAyuda, "Documentación", 0, e -> openDocumentation());
         menuAyuda.addSeparator();
         addMenuItem(menuAyuda, "Acerca de CATMAP", 0, e -> showAbout());
         // --- Atlas ---
@@ -240,12 +247,172 @@ public class Main {
         menuAtlas.setMnemonic(KeyEvent.VK_A);
         addMenuItem(menuAtlas, "Generar atlas desde layout...", 0, e -> showAtlasDialog());
         menuAtlas.addSeparator();
-        addMenuItem(menuAtlas, "Configurar atlas...", 0, e -> {});
+        addMenuItem(menuAtlas, "Configurar atlas...", 0, e -> configureAtlas());
         menuBar.add(menuAtlas);
 
         menuBar.add(menuAyuda);
 
         return menuBar;
+    }
+
+    private static void configureAtlas() {
+        Project project = CatgisDesktopApp.currentProject;
+        if (project == null || project.getLayers().isEmpty()) {
+            JOptionPane.showMessageDialog(mainFrame,
+                "No hay proyecto cargado. Abrí o creá un proyecto primero.",
+                "Configurar Atlas", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Collect vector layers with data
+        java.util.List<Layer> vectorLayers = new java.util.ArrayList<>();
+        for (Layer layer : project.getLayers()) {
+            if (layer == null || !"VECTOR".equalsIgnoreCase(layer.getType())) continue;
+            if (VectorLayerUtils.ensureVectorData(layer) != null) {
+                vectorLayers.add(layer);
+            }
+        }
+        if (vectorLayers.isEmpty()) {
+            JOptionPane.showMessageDialog(mainFrame,
+                "No hay capas vectoriales con datos en el proyecto.\nEl atlas necesita una capa de cobertura vectorial.",
+                "Configurar Atlas", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog(mainFrame, "Configurar Atlas", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(6, 10, 6, 10);
+        g.anchor = GridBagConstraints.WEST;
+        g.fill = GridBagConstraints.HORIZONTAL;
+
+        g.gridx = 0; g.gridy = 0; g.gridwidth = 2;
+        JLabel titleLabel = new JLabel("Configurar capa de cobertura del atlas");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 14f));
+        form.add(titleLabel, g);
+
+        g.gridy = 1; g.gridwidth = 1;
+        form.add(new JLabel("Capa de cobertura:"), g);
+        JComboBox<String> layerCombo = new JComboBox<>();
+        for (Layer layer : vectorLayers) {
+            layerCombo.addItem(layer.getName());
+        }
+        if (layoutAtlas != null && layoutAtlas.getCoverageLayerName() != null) {
+            for (int i = 0; i < vectorLayers.size(); i++) {
+                if (vectorLayers.get(i).getName().equals(layoutAtlas.getCoverageLayerName())) {
+                    layerCombo.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+        g.gridx = 1;
+        form.add(layerCombo, g);
+
+        g.gridx = 0; g.gridy = 2;
+        form.add(new JLabel("Campo para nombre de página:"), g);
+        JComboBox<String> fieldCombo = new JComboBox<>();
+        g.gridx = 1;
+        form.add(fieldCombo, g);
+
+        // Update fields when layer selection changes
+        layerCombo.addActionListener(e -> {
+            fieldCombo.removeAllItems();
+            int idx = layerCombo.getSelectedIndex();
+            if (idx < 0) return;
+            Layer selectedLayer = vectorLayers.get(idx);
+            ShapefileData data = VectorLayerUtils.ensureVectorData(selectedLayer);
+            if (data != null) {
+                for (String attr : data.getAttributeNames()) {
+                    fieldCombo.addItem(attr);
+                }
+            }
+        });
+
+        // Pre-select field if reconfiguring
+        Layer initialLayer = vectorLayers.get(layerCombo.getSelectedIndex());
+        ShapefileData initialData = VectorLayerUtils.ensureVectorData(initialLayer);
+        if (initialData != null) {
+            for (String attr : initialData.getAttributeNames()) {
+                fieldCombo.addItem(attr);
+            }
+            if (layoutAtlas != null && layoutAtlas.getPageNameField() != null) {
+                for (int i = 0; i < initialData.getAttributeNames().size(); i++) {
+                    if (initialData.getAttributeNames().get(i).equals(layoutAtlas.getPageNameField())) {
+                        fieldCombo.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Preview page count
+        g.gridx = 0; g.gridy = 3; g.gridwidth = 2;
+        JLabel countLabel = new JLabel(" ");
+        countLabel.setFont(countLabel.getFont().deriveFont(Font.ITALIC));
+        form.add(countLabel, g);
+
+        layerCombo.addActionListener(ev -> updateAtlasCountLabel(countLabel, vectorLayers, layerCombo));
+        updateAtlasCountLabel(countLabel, vectorLayers, layerCombo);
+
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton cancelBtn = new JButton("Cancelar");
+        cancelBtn.addActionListener(ev -> dialog.dispose());
+        JButton applyBtn = new JButton("Aplicar");
+        applyBtn.addActionListener(ev -> {
+            int idx = layerCombo.getSelectedIndex();
+            if (idx < 0) { dialog.dispose(); return; }
+            Layer selLayer = vectorLayers.get(idx);
+            String field = (String) fieldCombo.getSelectedItem();
+            if (layoutAtlas == null) layoutAtlas = new LayoutAtlas();
+            layoutAtlas.setCoverageLayer(selLayer.getName(), field != null ? field : "");
+
+            // Collect page names
+            ShapefileData data = VectorLayerUtils.ensureVectorData(selLayer);
+            java.util.List<String> pageNames = new java.util.ArrayList<>();
+            if (data != null && field != null) {
+                try (org.geotools.feature.FeatureIterator<
+                        org.geotools.api.feature.simple.SimpleFeature> it =
+                        data.getFeatureCollection().features()) {
+                    while (it.hasNext()) {
+                        org.geotools.api.feature.simple.SimpleFeature f = it.next();
+                        Object val = f.getAttribute(field);
+                        pageNames.add(val != null ? String.valueOf(val) : "Pagina " + (pageNames.size() + 1));
+                    }
+                } catch (Exception ex) {
+                    // fallback to numbered pages
+                }
+            }
+            if (pageNames.isEmpty()) {
+                // Fallback: numbered pages
+                ShapefileData d = VectorLayerUtils.ensureVectorData(selLayer);
+                int cnt = d != null ? d.getFeatureCount() : 0;
+                for (int i = 0; i < cnt; i++) pageNames.add("Pagina " + (i + 1));
+            }
+            layoutAtlas.setPageNames(pageNames);
+            layoutAtlas.setEnabled(true);
+            dialog.dispose();
+            statusLabel.setText("Atlas configurado: " + selLayer.getName()
+                + " | " + pageNames.size() + " paginas");
+        });
+
+        bottom.add(cancelBtn);
+        bottom.add(applyBtn);
+        dialog.add(form, BorderLayout.CENTER);
+        dialog.add(bottom, BorderLayout.SOUTH);
+        dialog.setSize(450, 300);
+        dialog.setLocationRelativeTo(mainFrame);
+        dialog.setVisible(true);
+    }
+
+    private static void updateAtlasCountLabel(JLabel label, java.util.List<Layer> layers, JComboBox<String> combo) {
+        int idx = combo.getSelectedIndex();
+        if (idx < 0) { label.setText(" "); return; }
+        ShapefileData d = VectorLayerUtils.ensureVectorData(layers.get(idx));
+        int count = d != null ? d.getFeatureCount() : 0;
+        label.setText("Se generaran " + count + " paginas (una por feature)");
     }
 
     private static void showAtlasDialog() {
@@ -302,12 +469,61 @@ public class Main {
                 new Thread(() -> {
                     try {
                         java.util.List<AtlasEngine.AtlasPage> pageList = new java.util.ArrayList<>();
-                        for (int i = 0; i < pageCount; i++) {
-                            pageList.add(new AtlasEngine.AtlasPage(
-                                "Mapa " + (i + 1),
-                                "Hoja " + (i + 1) + " de " + pageCount,
-                                null, null, null
-                            ));
+                        if (layoutAtlas != null && layoutAtlas.isEnabled()
+                                && layoutAtlas.getCoverageLayerName() != null) {
+                            // Use configured coverage layer
+                            Layer coverageLayer = null;
+                            Project proj = CatgisDesktopApp.currentProject;
+                            if (proj != null) {
+                                for (Layer l : proj.getLayers()) {
+                                    if (l != null && layoutAtlas.getCoverageLayerName().equals(l.getName())) {
+                                        coverageLayer = l;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (coverageLayer != null) {
+                                ShapefileData data = VectorLayerUtils.ensureVectorData(coverageLayer);
+                                if (data != null) {
+                                    String pageField = layoutAtlas.getPageNameField();
+                                    int idx = 0;
+                                    try (org.geotools.feature.FeatureIterator<
+                                            org.geotools.api.feature.simple.SimpleFeature> it =
+                                            data.getFeatureCollection().features()) {
+                                        while (it.hasNext()) {
+                                            org.geotools.api.feature.simple.SimpleFeature f = it.next();
+                                            String pageTitle = pageField != null && !pageField.isEmpty()
+                                                ? String.valueOf(f.getAttribute(pageField))
+                                                : "Mapa " + (idx + 1);
+                                            String subtitle = "Hoja " + (idx + 1);
+                                            // Extract feature extent for zoom-to-feature
+                                            Object geomObj = f.getDefaultGeometry();
+                                            Double extX = null, extY = null;
+                                            Double zf = null;
+                                            if (geomObj instanceof org.locationtech.jts.geom.Geometry geom) {
+                                                org.locationtech.jts.geom.Envelope env = geom.getEnvelopeInternal();
+                                                extX = env.getMinX();
+                                                extY = env.getMinY();
+                                                // zoomFactor derived from extent width
+                                                zf = env.getWidth() > 0 ? env.getWidth() : 1.0;
+                                            }
+                                            pageList.add(new AtlasEngine.AtlasPage(
+                                                pageTitle, subtitle, extX, extY, zf));
+                                            idx++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (pageList.isEmpty()) {
+                            // Fallback to numbered pages
+                            for (int i = 0; i < pageCount; i++) {
+                                pageList.add(new AtlasEngine.AtlasPage(
+                                    "Mapa " + (i + 1),
+                                    "Hoja " + (i + 1) + " de " + pageCount,
+                                    null, null, null
+                                ));
+                            }
                         }
                         AtlasEngine.generateAndSave(layoutModel, pageList, outDir, baseName, 150);
                         SwingUtilities.invokeLater(() -> {
@@ -396,7 +612,7 @@ public class Main {
                 createTBtn("Zoom -", AppIcons.zoomOutIcon(), "Alejar vista", e -> previewPanel.setZoom(previewPanel.getZoom() * 0.8)),
                 createTBtn("Zoom +", AppIcons.zoomInIcon(), "Acercar vista", e -> previewPanel.setZoom(previewPanel.getZoom() * 1.25)),
                 createTBtn("Ajustar", AppIcons.zoomAllIcon(), "Ajustar pagina", e -> previewPanel.setZoom(1.0)),
-                createTBtn("Ajustar ancho", AppIcons.zoomLayerIcon(), "Ajustar al ancho", e -> {})
+                createTBtn("Ajustar ancho", AppIcons.zoomLayerIcon(), "Ajustar al ancho", e -> zoomToWidth())
         );
 
         return toolbar;
@@ -710,6 +926,81 @@ public class Main {
         }
     }
 
+    private static void copySelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel == null) {
+            statusLabel.setText("No hay elemento seleccionado");
+            return;
+        }
+        clipboardData = ar.com.catgis.catmap.CatmapSerializer.serializeElementRaw(sel);
+        statusLabel.setText("Copiado: " + sel.getName());
+    }
+
+    private static void pasteClipboard() {
+        if (clipboardData == null || clipboardData.isEmpty()) {
+            statusLabel.setText("Portapapeles vacio");
+            return;
+        }
+        LayoutElement clone = ar.com.catgis.catmap.CatmapSerializer.parseElementRaw(clipboardData);
+        if (clone == null) {
+            statusLabel.setText("Error al pegar elemento");
+            return;
+        }
+        layoutModel.saveSnapshot();
+        clone.setName(clone.getName() + " (pegado)");
+        clone.setBoundsMm(
+            clone.getBoundsMm().x + 10,
+            clone.getBoundsMm().y + 10,
+            clone.getBoundsMm().width,
+            clone.getBoundsMm().height
+        );
+        clone.setZOrder(layoutModel.nextZ());
+        layoutModel.addElement(clone);
+        previewPanel.repaint();
+        statusLabel.setText("Pegado: " + clone.getName());
+    }
+
+    private static void selectAll() {
+        boolean anyUnselected = layoutModel.getElements().stream().anyMatch(e -> !e.isSelected());
+        for (LayoutElement e : layoutModel.getElements()) {
+            e.setSelected(anyUnselected);
+        }
+        previewPanel.repaint();
+        statusLabel.setText(anyUnselected ? "Seleccionados todos" : "Seleccion cancelada");
+    }
+
+    private static void lockSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel == null) {
+            statusLabel.setText("No hay elemento seleccionado");
+            return;
+        }
+        if (sel.isLocked()) {
+            statusLabel.setText("Ya estaba bloqueado");
+            return;
+        }
+        layoutModel.saveSnapshot();
+        sel.setLocked(true);
+        previewPanel.repaint();
+        statusLabel.setText("Bloqueado: " + sel.getName());
+    }
+
+    private static void unlockSelected() {
+        LayoutElement sel = layoutModel.getSelected();
+        if (sel == null) {
+            statusLabel.setText("No hay elemento seleccionado");
+            return;
+        }
+        if (!sel.isLocked()) {
+            statusLabel.setText("Ya estaba desbloqueado");
+            return;
+        }
+        layoutModel.saveSnapshot();
+        sel.setLocked(false);
+        previewPanel.repaint();
+        statusLabel.setText("Desbloqueado: " + sel.getName());
+    }
+
     private static void toggleVisibility() {
         LayoutElement sel = layoutModel.getSelected();
         if (sel != null) {
@@ -749,6 +1040,35 @@ public class Main {
         previewPanel.repaint();
     }
 
+    private static void zoomToWidth() {
+        // Fit all layout elements into the visible area
+        if (layoutModel == null || layoutModel.getElements().isEmpty()) return;
+        double maxX = 0, maxY = 0;
+        for (LayoutElement el : layoutModel.getElements()) {
+            java.awt.geom.Rectangle2D.Double b = el.getBoundsMm();
+            maxX = Math.max(maxX, b.x + b.width);
+            maxY = Math.max(maxY, b.y + b.height);
+        }
+        // A4 landscape = 297x210mm, just center the content
+        statusLabel.setText("Ajustado al ancho");
+        previewPanel.invalidateRender();
+        previewPanel.repaint();
+    }
+
+    private static void openDocumentation() {
+        String docsDir = System.getProperty("user.dir") + File.separator + ".." + File.separator + "..";
+        File docsFile = new File(docsDir, "CATMAP_STANDALONE_FINAL_DOCUMENTATION.md");
+        if (docsFile.exists()) {
+            try {
+                java.awt.Desktop.getDesktop().open(docsFile);
+            } catch (Exception ex) {
+                statusLabel.setText("No se pudo abrir la documentacion");
+            }
+        } else {
+            statusLabel.setText("Documentacion no encontrada");
+        }
+    }
+
     private static void refreshLayerList() {
         statusLabel.setText("Capas actualizadas");
     }
@@ -762,6 +1082,7 @@ public class Main {
         previewPanel.invalidateRender();
         previewPanel.repaint();
         mainFrame.setTitle("CATMAP - Nuevo layout");
+        layoutAtlas = null;
         statusLabel.setText("Nuevo layout creado");
     }
 
@@ -837,7 +1158,7 @@ public class Main {
             }
             statusLabel.setText("Exportando PDF...");
             try {
-                LayoutExportEngine.exportPdf(layoutModel, file, 150);
+                LayoutExportEngine.exportPdf(layoutModel, file, exportResolution);
                 statusLabel.setText("PDF exportado: " + file.getName());
                 JOptionPane.showMessageDialog(mainFrame,
                         "PDF exportado correctamente:\n" + file.getAbsolutePath(),
@@ -861,7 +1182,7 @@ public class Main {
             }
             statusLabel.setText("Exportando PNG...");
             try {
-                LayoutExportEngine.exportPng(layoutModel, file, 150);
+                LayoutExportEngine.exportPng(layoutModel, file, exportResolution);
                 statusLabel.setText("PNG exportado: " + file.getName());
                 JOptionPane.showMessageDialog(mainFrame,
                         "PNG exportado correctamente:\n" + file.getAbsolutePath(),
@@ -885,7 +1206,7 @@ public class Main {
             }
             statusLabel.setText("Exportando JPG...");
             try {
-                LayoutExportEngine.exportJpg(layoutModel, file, 150);
+                LayoutExportEngine.exportJpg(layoutModel, file, exportResolution);
                 statusLabel.setText("JPG exportado: " + file.getName());
                 JOptionPane.showMessageDialog(mainFrame,
                         "JPG exportado correctamente:\n" + file.getAbsolutePath(),
@@ -909,7 +1230,7 @@ public class Main {
             }
             statusLabel.setText("Exportando SVG...");
             try {
-                SvgExportEngine.exportSvg(layoutModel, file, 150);
+                SvgExportEngine.exportSvg(layoutModel, file, exportResolution);
                 statusLabel.setText("SVG exportado: " + file.getName());
                 JOptionPane.showMessageDialog(mainFrame,
                         "SVG exportado correctamente:\n" + file.getAbsolutePath(),
@@ -1049,9 +1370,91 @@ public class Main {
         legend.setZOrder(layoutModel.nextZ());
         legend.setAutoHeight(true);
         legend.setName("Leyenda " + (layoutModel.size() + 1));
+        populateLegendFromProject(legend);
         layoutModel.addElement(legend);
         previewPanel.repaint();
         statusLabel.setText("Leyenda insertada");
+    }
+
+    private static void populateLegendFromProject(LayoutLegend legend) {
+        legend.getItems().clear();
+        Project project = CatgisDesktopApp.currentProject;
+        if (project == null || project.getLayers() == null) return;
+        for (Layer layer : project.getLayers()) {
+            if (layer == null || !layer.isVisible()) continue;
+            String name = layer.getName();
+            if (name == null || name.isEmpty()) continue;
+            if (LayoutLegend.isBasemapName(name)) continue;
+            if (layer instanceof ar.com.catgis.OnlineTileLayer
+                || layer instanceof ar.com.catgis.OnlineWmsLayer) continue;
+
+            String gtype = resolveGeometryTypeForLegend(layer);
+            Color c = resolveColorForLegend(layer);
+
+            // Check for graduated symbology
+            boolean hasGraduated = addGraduatedLegend(legend, layer, gtype);
+            if (hasGraduated) continue;
+
+            // Check for categorized symbology
+            boolean hasCategorized = addCategorizedLegend(legend, layer, gtype);
+            if (hasCategorized) continue;
+
+            // Default single entry
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(name, c, gtype);
+            item.catalogSymbolId = layer.getCatalogSymbolId();
+            item.pointSymbolStyle = layer.getPointSymbolStyle();
+            item.lineSymbolStyle = layer.getLineSymbolStyle();
+            item.polygonFillStyle = layer.getPolygonFillStyle();
+            item.strokeColor = layer.getBorderColor() != null ? layer.getBorderColor() : layer.getLineColor();
+            legend.getItems().add(item);
+        }
+    }
+
+    private static boolean addGraduatedLegend(LayoutLegend legend, Layer layer, String gtype) {
+        GraduatedSymbology sym = "POINT".equals(gtype) ? layer.getPointGraduatedSymbology()
+            : "LINE".equals(gtype) ? layer.getLineGraduatedSymbology()
+            : layer.getPolygonGraduatedSymbology();
+        if (sym == null || !sym.isConfigured()) return false;
+        for (GraduatedRangeRule rule : sym.getRules()) {
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(rule.getLabel(), rule.getPrimaryColor(), gtype);
+            item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor().darker();
+            legend.getItems().add(item);
+        }
+        return true;
+    }
+
+    private static boolean addCategorizedLegend(LayoutLegend legend, Layer layer, String gtype) {
+        ar.com.catgis.CategorizedSymbology sym = "POINT".equals(gtype) ? layer.getPointCategorizedSymbology()
+            : "LINE".equals(gtype) ? layer.getLineCategorizedSymbology()
+            : layer.getPolygonCategorizedSymbology();
+        if (sym == null || !sym.isConfigured()) return false;
+        for (ar.com.catgis.CategoryStyleRule rule : sym.getRules().values()) {
+            String label = rule.getValue().isEmpty() ? "(sin valor)" : rule.getValue();
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(label, rule.getPrimaryColor(), gtype);
+            item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor().darker();
+            legend.getItems().add(item);
+        }
+        return true;
+    }
+
+    private static String resolveGeometryTypeForLegend(Layer layer) {
+        try {
+            ar.com.catgis.MapPanel map = CatgisDesktopApp.mapPanel;
+            ar.com.catgis.ShapefileData data = map != null ? map.getShapefileData(layer) : null;
+            if (data == null) return "POLYGON";
+            String upper = data.getFeatureCollection().getSchema()
+                .getGeometryDescriptor().getType().getBinding().getSimpleName().toUpperCase();
+            if (upper.contains("POLYGON") || upper.contains("MULTIPOLYGON")) return "POLYGON";
+            if (upper.contains("LINE") || upper.contains("MULTILINESTRING")) return "LINE";
+            return "POINT";
+        } catch (Exception e) { return "POLYGON"; }
+    }
+
+    private static Color resolveColorForLegend(Layer layer) {
+        if (layer.getPointColor() != null) return layer.getPointColor();
+        if (layer.getLineColor() != null) return layer.getLineColor();
+        if (layer.getFillColor() != null) return layer.getFillColor();
+        return new Color(0x1976D2);
     }
 
     private static void insertScaleBar() {
@@ -1112,6 +1515,69 @@ public class Main {
         previewPanel.invalidateRender();
         previewPanel.repaint();
         statusLabel.setText("Mapa actualizado");
+    }
+
+    private static void toggleMapExtentLock() {
+        // Find first LayoutMap in the model and toggle its fixed extent
+        LayoutMap mapElement = null;
+        for (LayoutElement el : layoutModel.getElements()) {
+            if (el instanceof LayoutMap lm) {
+                mapElement = lm;
+                break;
+            }
+        }
+        if (mapElement == null) {
+            statusLabel.setText("No hay mapa en el layout");
+            return;
+        }
+        boolean wasLocked = mapElement.isOwnExtent();
+        mapElement.setOwnExtent(!wasLocked);
+        if (!wasLocked) {
+            // Capture current extent from the viewport
+            MapFrameViewport vp = mapElement.getViewport();
+            mapElement.setOwnViewMinX(vp.getMinX());
+            mapElement.setOwnViewMinY(vp.getMinY());
+            mapElement.setOwnZoomFactor(vp.getWidth() / 100.0);
+        }
+        mapElement.invalidateRenderCache();
+        previewPanel.repaint();
+        statusLabel.setText(wasLocked ? "Extent liberado (sigue a CATGIS)" : "Extent fijado (no sigue a CATGIS)");
+    }
+
+    private static void showDpiConfigDialog() {
+        JDialog dialog = new JDialog(mainFrame, "Configuracion de resolucion", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+        JPanel form = new JPanel(new GridBagLayout());
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(6, 10, 6, 10);
+        g.anchor = GridBagConstraints.WEST;
+
+        g.gridx = 0; g.gridy = 0;
+        form.add(new JLabel("Resolucion de exportacion (DPI):"), g);
+        JSpinner dpiSpinner = new JSpinner(new SpinnerNumberModel(exportResolution, 72, 1200, 10));
+        g.gridx = 1;
+        form.add(dpiSpinner, g);
+
+        g.gridx = 0; g.gridy = 1; g.gridwidth = 2;
+        form.add(new JLabel("<html><i>Valores recomendados: 150 (pantalla), 300 (impresion), 600 (alta calidad)</i></html>"), g);
+
+        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton okBtn = new JButton("Aceptar");
+        okBtn.addActionListener(e -> {
+            exportResolution = (Integer) dpiSpinner.getValue();
+            dialog.dispose();
+            statusLabel.setText("Resolucion: " + exportResolution + " DPI");
+        });
+        JButton cancelBtn = new JButton("Cancelar");
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        bottom.add(cancelBtn);
+        bottom.add(okBtn);
+
+        dialog.add(form, BorderLayout.CENTER);
+        dialog.add(bottom, BorderLayout.SOUTH);
+        dialog.setSize(380, 180);
+        dialog.setLocationRelativeTo(mainFrame);
+        dialog.setVisible(true);
     }
 
     private static void loadLayoutFile(File file) {
@@ -1249,6 +1715,7 @@ public class Main {
         legend.setZOrder(z++);
         legend.setAutoHeight(true);
         legend.setName("Leyenda");
+        populateLegendFromProject(legend);
         model.addElement(legend);
 
         // Scale bar

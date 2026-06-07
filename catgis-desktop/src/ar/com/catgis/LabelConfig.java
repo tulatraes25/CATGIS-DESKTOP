@@ -10,6 +10,7 @@ public class LabelConfig {
 
     private boolean visible = false;
     private String field;
+    private String expression;
     private String fontFamily = "SansSerif";
     private int fontSize = 10;
     private boolean bold = false;
@@ -36,6 +37,8 @@ public class LabelConfig {
     public void setVisible(boolean v) { visible = v; }
     public String getField() { return field; }
     public void setField(String f) { field = f; }
+    public String getExpression() { return expression; }
+    public void setExpression(String e) { expression = e; }
     public String getFontFamily() { return fontFamily; }
     public void setFontFamily(String f) { if (f != null) fontFamily = f; }
     public int getFontSize() { return fontSize; }
@@ -89,6 +92,7 @@ public class LabelConfig {
         LabelConfig copy = new LabelConfig();
         copy.visible = visible;
         copy.field = field;
+        copy.expression = expression;
         copy.fontFamily = fontFamily;
         copy.fontSize = fontSize;
         copy.bold = bold;
