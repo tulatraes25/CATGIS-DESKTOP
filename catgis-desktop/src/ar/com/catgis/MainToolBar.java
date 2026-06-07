@@ -10,6 +10,8 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
@@ -147,6 +149,9 @@ public class MainToolBar extends JToolBar {
         add(createLabeledButton(btnProjectCRS, "CRS"));
         add(createLabeledButton(btnCRS, "Coord"));
         add(createLabeledButton(btnModulos, "Modulos"));
+        addSeparator();
+        // Analisis
+        add(createAnalysisButton());
     }
 
     private JButton createButton(String tooltip, Icon icon) {
@@ -191,6 +196,35 @@ public class MainToolBar extends JToolBar {
         });
 
         return labeled;
+    }
+
+    private JButton createAnalysisButton() {
+        JButton btn = new JButton("Analisis") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(41, 128, 185));
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.setColor(Color.WHITE);
+                g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));
+                String text = getText();
+                FontMetrics fm = g2.getFontMetrics();
+                int tw = fm.stringWidth(text);
+                int tx = (getWidth() - tw) / 2;
+                int ty = (getHeight() + fm.getAscent() / 2) / 2;
+                g2.drawString(text, tx, ty);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(68, 44));
+        btn.setToolTipText("Consola de analisis unificada - combine capas online y locales");
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> AnalysisConsoleDialog.open());
+        return btn;
     }
 
     private Icon createOpenLayerIcon() {
