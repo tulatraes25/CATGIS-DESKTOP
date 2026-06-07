@@ -150,6 +150,9 @@ public class MainToolBar extends JToolBar {
         add(createLabeledButton(btnCRS, "Coord"));
         add(createLabeledButton(btnModulos, "Modulos"));
         addSeparator();
+        // Estilo rapido
+        add(createToggleStyleButton());
+        addSeparator();
         // Analisis
         add(createAnalysisButton());
     }
@@ -196,6 +199,40 @@ public class MainToolBar extends JToolBar {
         });
 
         return labeled;
+    }
+
+    private JButton createToggleStyleButton() {
+        JButton btn = new JButton("Estilo") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                int status = CatgisDesktopApp.quickStylePanelVisible ? 1 : 0;
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                if (status == 1) {
+                    g2.setColor(new Color(46, 204, 113));
+                } else {
+                    g2.setColor(new Color(149, 165, 166));
+                }
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+                g2.setColor(Color.WHITE);
+                g2.setFont(g2.getFont().deriveFont(Font.BOLD, 10f));
+                String text = getText();
+                FontMetrics fm = g2.getFontMetrics();
+                int tw = fm.stringWidth(text);
+                int tx = (getWidth() - tw) / 2;
+                int ty = (getHeight() + fm.getAscent() / 2) / 2;
+                g2.drawString(text, tx, ty);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(56, 44));
+        btn.setToolTipText("Panel de estilo rapido - toggle");
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> CatgisDesktopApp.toggleQuickStylePanel());
+        return btn;
     }
 
     private JButton createAnalysisButton() {

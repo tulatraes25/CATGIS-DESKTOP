@@ -36,6 +36,8 @@ public class CatgisDesktopApp extends JFrame {
     public static CatserverToolbar catserverToolbar;
     public static OnlineConnectionsToolbar onlineConnectionsToolbar;
     public static TopographyToolbar topographyToolbar;
+    public static QuickStylePanel quickStylePanel;
+    public static boolean quickStylePanelVisible = false;
     private static JLabel sidebarTitleLabel;
     private static JLabel sidebarSubtitleLabel;
     private static JLabel sidebarOrderHintLabel;
@@ -300,10 +302,22 @@ public class CatgisDesktopApp extends JFrame {
         centerContainer.setOpaque(true);
         centerContainer.setBackground(new Color(0xE8E8E8));
 
+        quickStylePanel.setVisible(false);
+        quickStylePanel.setPreferredSize(new java.awt.Dimension(260, 100));
+
+        JSplitPane mapAndStyle = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                buildMapContainer(),
+                quickStylePanel
+        );
+        mapAndStyle.setDividerSize(4);
+        mapAndStyle.setResizeWeight(1.0);
+        mapAndStyle.setOneTouchExpandable(true);
+
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
                 buildLeftSidebar(),
-                buildMapContainer()
+                mapAndStyle
         );
         splitPane.setDividerLocation(280);
         splitPane.setDividerSize(4);
@@ -566,6 +580,20 @@ public class CatgisDesktopApp extends JFrame {
 
     public static void syncProInterpretationToolbar() {
         // Pro desactivado en CATGIS Desktop base.
+    }
+
+    public static void toggleQuickStylePanel() {
+        quickStylePanelVisible = !quickStylePanelVisible;
+        if (quickStylePanel != null) {
+            quickStylePanel.setVisible(quickStylePanelVisible);
+            if (quickStylePanelVisible) {
+                quickStylePanel.setLayer(CatgisDesktopApp.layersPanel.getSelectedLayer());
+            }
+        }
+        if (getMainFrame() != null) {
+            getMainFrame().revalidate();
+            getMainFrame().repaint();
+        }
     }
 
     public static boolean confirmProjectContinuation(String actionLabel) {
