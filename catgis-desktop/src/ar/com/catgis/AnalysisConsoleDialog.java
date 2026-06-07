@@ -47,6 +47,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 import java.text.DecimalFormat;
+import org.geotools.data.simple.SimpleFeatureCollection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -399,7 +400,29 @@ public class AnalysisConsoleDialog extends JDialog {
         String rawAnalysisType = (String) analysisTypeCombo.getSelectedItem();
         final String analysisType = rawAnalysisType != null ? rawAnalysisType : "Combinacion de capas (overlay)";
 
-        // Execute in background
+        // For real spatial operations, delegate to GeoprocessingAssistantDialog
+        boolean isSpatialOp = analysisType.contains("overlay")
+                || analysisType.contains("interseccion")
+                || analysisType.contains("clip")
+                || analysisType.contains("cobertura");
+
+        if (isSpatialOp && selectedLayers.size() >= 2) {
+            // Open the geoprocessing dialog with pre-selected layers
+            Layer layerA = findLayerByName(selectedLayers.get(0));
+            Layer layerB = findLayerByName(selectedLayers.get(1));
+            if (layerA != null && layerB != null) {
+                String operation;
+                if (analysisType.contains("interseccion")) operation = GeoprocessingAssistantDialog.OP_INTERSECTION;
+                else operation = GeoprocessingAssistantDialog.OP_CLIP;
+
+                GeoprocessingAssistantDialog dialog = new GeoprocessingAssistantDialog(operation);
+                dialog.setVisible(true);
+                statusLabel.setText("Analisis espacial iniciado en ventana de geoprocesamiento.");
+                return;
+            }
+        }
+
+        // For report-based analysis, run in background
         progressBar.setIndeterminate(true);
         progressBar.setVisible(true);
         runButton.setEnabled(false);
@@ -551,6 +574,55 @@ public class AnalysisConsoleDialog extends JDialog {
     }
 
     // --- Static helper for toolbar integration ---
+
+    /**
+     * Generate a report with actual layer statistics from the project.
+     */
+    private String generateRealLayerStatistics(List<String> selectedLayers) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== ESTADISTICAS REALES DE CAPAS ===\n\n");
+
+        for (String name : selectedLayers) {
+            Layer layer = findLayerByName(name);
+            if (layer == null) continue;
+
+            sb.append("Capa: ").append(name).append("\n");
+            sb.append("  Visible: ").append(layer.isVisible() ? "Si" : "No").append("\n");
+            sb.append("  Opacidad: ").append((int)(layer.getOpacity() * 100)).append("%\n");
+            sb.append("  Escalas: ").append((int)layer.getLabelMinScale()).append(" - ")
+                    .append((int)layer.getLabelMaxScale()).append("\n");
+
+            ShapefileData data = CatgisDesktopApp.mapPanel != null
+                    ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+            if (data != null) {
+                try {
+                    SimpleFeatureCollection fc = data.getFeatureCollection();
+                    int count = fc != null ? fc.size() : 0;
+                    sb.append("  Entidades: ").append(count).append("\n");
+
+                    List<String> attrs = data.getAttributeNames();
+                    sb.append("  Atributos: ").append(attrs.size()).append(" campos\n");
+                    for (String attr : attrs.subList(0, Math.min(5, attrs.size()))) {
+                        sb.append("    - ").append(attr).append("\n");
+                    }
+                    if (attrs.size() > 5) sb.append("    ... y ").append(attrs.size() - 5).append(" mas\n");
+
+                    // Extension geografica
+                    org.locationtech.jts.geom.Envelope env = fc.getBounds();
+                    if (env != null) {
+                        sb.append("  Extension: ").append(String.format("%.4f", env.getMinX()))
+                                .append(", ").append(String.format("%.4f", env.getMinY()))
+                                .append(" a ").append(String.format("%.4f", env.getMaxX()))
+                                .append(", ").append(String.format("%.4f", env.getMaxY()))
+                                .append("\n");
+                    }
+                } catch (Exception ignored) {}
+            }
+            sb.append("\n");
+        }
+
+        return sb.toString();
+    }
 
     public static JButton createToolbarButton() {
         JButton btn = new JButton("Consola de Analisis") {
