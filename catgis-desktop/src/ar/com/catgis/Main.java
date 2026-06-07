@@ -18,6 +18,10 @@ public class Main {
 
             SplashScreenWindow splash = new SplashScreenWindow();
             splash.showFor(1200, () -> {
+                // Initialize EventBus wiring
+                ar.com.catgis.service.EventBusInitializer.init();
+                // Install global keyboard shortcuts
+                ar.com.catgis.ShortcutsDialog.installGlobalShortcutListener();
                 CatgisDesktopApp app = new CatgisDesktopApp();
                 app.setVisible(true);
                 SwingUtilities.invokeLater(() -> {

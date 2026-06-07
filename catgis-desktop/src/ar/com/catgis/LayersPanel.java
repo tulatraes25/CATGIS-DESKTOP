@@ -110,6 +110,12 @@ public class LayersPanel extends JPanel {
             if (!e.getValueIsAdjusting()) {
                 CatgisDesktopApp.syncFloatingVectorEditToolbar();
                 CatgisDesktopApp.syncProInterpretationToolbar();
+                // Emit layer selection event
+                Layer selected = getSelectedLayer();
+                if (selected != null) {
+                    ar.com.catgis.service.EventBus.emit(
+                        ar.com.catgis.service.EventBus.EventType.LAYER_SELECTED, selected);
+                }
             }
         });
 
