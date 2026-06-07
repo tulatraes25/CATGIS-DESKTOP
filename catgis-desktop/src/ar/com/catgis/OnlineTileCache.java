@@ -27,17 +27,42 @@ public final class OnlineTileCache {
     private static final String ACCEPT_LANGUAGE = "es-AR,es;q=0.9,en;q=0.7";
     private static final long RETRY_DELAY_MS = 30000L;
     private static final int MAX_FAILURE_MESSAGE_LENGTH = 180;
-    private static final File CACHE_DIR = new File(System.getProperty("java.io.tmpdir"), "catgis-online-tiles");
-    private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(4, runnable -> {
+    // Use AppData for persistent cache (survives reboots)
+    private static final File CACHE_DIR;
+    private static final int MEMORY_CACHE_MAX = 512;
+    private static final int DISK_CACHE_MAX_MB = 200;
+    static {
+        String appData = System.getenv("APPDATA");
+        if (appData != null) {
+            CACHE_DIR = new File(appData, "CATGIS/online-tile-cache");
+        } else {
+            CACHE_DIR = new File(System.getProperty("java.io.tmpdir"), "catgis-online-tiles");
+        }
+        CACHE_DIR.mkdirs();
+    }
+
+    private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(6, runnable -> {
         Thread thread = new Thread(runnable, "catgis-online-tile");
         thread.setDaemon(true);
         return thread;
     });
+
+    // Schedule periodic disk cache eviction (every 30 minutes)
+    static {
+        java.util.Timer evictionTimer = new java.util.Timer("catgis-tile-evict-timer", true);
+        evictionTimer.schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                evictDiskCache();
+            }
+        }, 300000L, 1800000L); // 5min initial delay, 30min repeat
+    }
+
     private static final Map<String, BufferedImage> MEMORY_CACHE = Collections.synchronizedMap(
-            new LinkedHashMap<String, BufferedImage>(256, 0.75f, true) {
+            new LinkedHashMap<String, BufferedImage>(MEMORY_CACHE_MAX, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, BufferedImage> eldest) {
-                    return size() > 256;
+                    return size() > MEMORY_CACHE_MAX;
                 }
             }
     );
@@ -353,5 +378,78 @@ public final class OnlineTileCache {
         String folderName = source.getId().replaceAll("[^a-zA-Z0-9._-]", "_");
         String extension = guessFormat(source);
         return new File(CACHE_DIR, folderName + File.separator + z + File.separator + x + File.separator + y + "." + extension);
+    }
+
+    /**
+     * Evict old disk cache files when total size exceeds DISK_CACHE_MAX_MB.
+     * Called periodically and on app shutdown.
+     */
+    public static void evictDiskCache() {
+        new Thread(() -> {
+            try {
+                long maxBytes = DISK_CACHE_MAX_MB * 1024L * 1024L;
+                long totalSize = 0;
+                java.util.List<File> allFiles = new java.util.ArrayList<>();
+                collectFiles(CACHE_DIR, allFiles);
+
+                // Sort by last modified (oldest first)
+                allFiles.sort((a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+
+                for (File f : allFiles) {
+                    totalSize += f.length();
+                }
+
+                // Remove oldest files until under limit
+                if (totalSize > maxBytes) {
+                    long toRemove = totalSize - maxBytes;
+                    for (File f : allFiles) {
+                        if (toRemove <= 0) break;
+                        long len = f.length();
+                        if (f.delete()) {
+                            toRemove -= len;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }, "catgis-tile-evict").start();
+    }
+
+    private static void collectFiles(File dir, java.util.List<File> result) {
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            if (f.isDirectory()) {
+                collectFiles(f, result);
+            } else if (f.isFile()) {
+                result.add(f);
+            }
+        }
+    }
+
+    /**
+     * Prefetch tiles surrounding the current view for smoother panning.
+     * Loads tiles 1 ring outward from the visible area at current zoom.
+     */
+    public static void prefetchNeighbors(OnlineRasterSource source, int z, int x, int y) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || ny < 0) continue;
+                String key = buildKey(source, z, nx, ny);
+                if (MEMORY_CACHE.containsKey(key)) continue;
+                if (PENDING.contains(key)) continue;
+                File tileFile = resolveTileFile(source, z, nx, ny);
+                if (tileFile.isFile() && tileFile.length() > 100) {
+                    EXECUTOR.submit(() -> {
+                        try {
+                            BufferedImage img = ImageIO.read(tileFile);
+                            if (img != null) MEMORY_CACHE.put(key, img);
+                        } catch (Exception ignored) {}
+                    });
+                }
+            }
+        }
     }
 }
