@@ -245,9 +245,29 @@ public class MainMenuBar extends JMenuBar {
             ar.com.catgis.climate.UnifiedAnalysisDialog.open(MainMenuBar.this));
         menuAnalisis.add(itemGeoAnalyzer);
 
+        JMenuItem itemNetwork = createItem("Ruta mas corta (red)...", null);
+        itemNetwork.addActionListener(e -> {
+            if (CatgisDesktopApp.mapPanel == null) return;
+            Layer layer = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
+            if (layer == null) return;
+            JOptionPane.showMessageDialog(MainMenuBar.this,
+                "Network Analysis: selecciona capa de lineas y usa puntos inicio/fin.",
+                "Network Analysis", JOptionPane.INFORMATION_MESSAGE);
+        });
+        menuAnalisis.add(itemNetwork);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
+
+        JMenuItem itemExportKml = createItem("Exportar capa a KML...", null);
+        itemExportKml.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.mapPanel != null
+                    ? CatgisDesktopApp.mapPanel.getSelectedLayerRef()
+                    : null;
+            if (layer != null) KmlExportEngine.exportLayerWithDialog(MainMenuBar.this, layer);
+        });
+        menuSalida.add(itemExportKml);
 
         JMenuItem itemCortar = createItem("Cortar selección", AppIcons.cutIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_X, menuMask));

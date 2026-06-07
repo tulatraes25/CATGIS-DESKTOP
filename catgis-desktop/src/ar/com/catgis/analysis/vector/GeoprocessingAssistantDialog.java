@@ -7,6 +7,7 @@ import ar.com.catgis.CRSDefinitions;
 import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.AppErrorSupport;
+import ar.com.catgis.GeometryTools;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.feature.type.AttributeDescriptor;
@@ -67,6 +68,15 @@ public class GeoprocessingAssistantDialog extends JDialog {
     public static final String OP_DIFFERENCE = "Diferencia";
     public static final String OP_SPATIAL_JOIN = "Spatial Join";
     public static final String OP_UNION = "Union geometrica";
+    public static final String OP_VORONOI = "Voronoi (Thiessen)";
+    public static final String OP_SYM_DIFF = "Diferencia simetrica";
+    public static final String OP_MULTI_BUFFER = "Buffer multiple";
+    public static final String OP_SMOOTH = "Suavizar";
+    public static final String OP_POLY_TO_LINE = "Poligonos a lineas";
+    public static final String OP_LINE_TO_POLY = "Lineas a poligonos";
+    public static final String OP_MIN_BOUNDING = "Envolvente minima";
+    public static final String OP_NEAREST = "Vecino mas cercano";
+    public static final String OP_DELAUNAY = "Triangulacion Delaunay";
 
     private static final String PARAMETER_TEXT_CARD = "text";
     private static final String PARAMETER_SPATIAL_JOIN_CARD = "spatial-join";
@@ -103,14 +113,10 @@ public class GeoprocessingAssistantDialog extends JDialog {
         setLayout(new BorderLayout(10, 10));
 
         comboOperation = new JComboBox<>(new String[]{
-                OP_BUFFER,
-                OP_DISSOLVE,
-                OP_CLIP,
-                OP_INTERSECTION,
-                OP_MERGE,
-                OP_DIFFERENCE,
-                OP_SPATIAL_JOIN,
-                OP_UNION
+                OP_BUFFER, OP_DISSOLVE, OP_CLIP, OP_INTERSECTION, OP_MERGE,
+                OP_DIFFERENCE, OP_SPATIAL_JOIN, OP_UNION, OP_VORONOI,
+                OP_SYM_DIFF, OP_MULTI_BUFFER, OP_SMOOTH, OP_POLY_TO_LINE,
+                OP_LINE_TO_POLY, OP_MIN_BOUNDING, OP_NEAREST, OP_DELAUNAY
         });
         comboLayerA = new JComboBox<>();
         comboLayerB = new JComboBox<>();
@@ -273,15 +279,25 @@ public class GeoprocessingAssistantDialog extends JDialog {
         if (OP_BUFFER.equals(operation)) {
             lblParameter.setText("Distancia:");
             parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
-            if (txtParameter.getText().isBlank()) {
-                txtParameter.setText("100");
-            }
+            if (txtParameter.getText().isBlank()) txtParameter.setText("100");
         } else if (OP_DISSOLVE.equals(operation)) {
             lblParameter.setText("Campo agrupador:");
             parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
         } else if (OP_SPATIAL_JOIN.equals(operation)) {
             lblParameter.setText("Modo:");
             parameterCardLayout.show(parameterCardPanel, PARAMETER_SPATIAL_JOIN_CARD);
+        } else if (OP_MULTI_BUFFER.equals(operation)) {
+            lblParameter.setText("Distancia anillos:");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
+            if (txtParameter.getText().isBlank()) txtParameter.setText("50");
+        } else if (OP_SMOOTH.equals(operation)) {
+            lblParameter.setText("Tolerancia:");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
+            if (txtParameter.getText().isBlank()) txtParameter.setText("1.0");
+        } else if (OP_MIN_BOUNDING.equals(operation)) {
+            lblParameter.setText("Tipo (circle/rectangle/diameter/envelope):");
+            parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
+            if (txtParameter.getText().isBlank()) txtParameter.setText("envelope");
         } else {
             lblParameter.setText("Parametro:");
             parameterCardLayout.show(parameterCardPanel, PARAMETER_TEXT_CARD);
@@ -314,37 +330,60 @@ public class GeoprocessingAssistantDialog extends JDialog {
                 || OP_MERGE.equals(operation)
                 || OP_DIFFERENCE.equals(operation)
                 || OP_SPATIAL_JOIN.equals(operation)
-                || OP_UNION.equals(operation);
+                || OP_UNION.equals(operation)
+                || OP_SYM_DIFF.equals(operation);
     }
 
     private boolean needsParameter(String operation) {
-        return OP_BUFFER.equals(operation) || OP_DISSOLVE.equals(operation) || OP_SPATIAL_JOIN.equals(operation);
+        return OP_BUFFER.equals(operation) || OP_DISSOLVE.equals(operation) || OP_SPATIAL_JOIN.equals(operation)
+                || OP_MULTI_BUFFER.equals(operation) || OP_SMOOTH.equals(operation)
+                || OP_MIN_BOUNDING.equals(operation);
     }
 
     private String resolveOperationDescription(String operation) {
-        if (OP_BUFFER.equals(operation)) {
-            return "Genera areas de influencia alrededor de cada geometria de la capa A. La salida conserva los atributos de origen y produce geometria poligonal.";
-        }
-        if (OP_DISSOLVE.equals(operation)) {
-            return "Agrega entidades por union geometrica. Si indicas un campo agrupador, crea una geometria por cada valor comun. No es lo mismo que Merge.";
-        }
-        if (OP_CLIP.equals(operation)) {
-            return "Recorta la capa A usando una mascara poligonal B. Mantiene los atributos de la capa A. No mezcla tablas.";
-        }
-        if (OP_INTERSECTION.equals(operation)) {
-            return "Calcula la interseccion entre dos capas poligonales. La salida combina atributos de A y B con prefijos para evitar ambiguedades.";
-        }
-        if (OP_MERGE.equals(operation)) {
-            return "Combina entidades de dos capas del mismo tipo geometrico en una sola capa nueva. No hace overlay ni disuelve geometria.";
-        }
-        if (OP_DIFFERENCE.equals(operation)) {
-            return "Resta una mascara poligonal B sobre la capa A. Mantiene los atributos de A y conserva el tipo geometrico cuando es posible.";
-        }
-        if (OP_SPATIAL_JOIN.equals(operation)) {
-            return "Conserva la geometria y atributos de A. Puede copiar la primera coincidencia de B o resumir multiples coincidencias de B con conteo, sumatoria, promedio, minimo, maximo y lista de valores.";
-        }
-        return "Genera una union poligonal real entre A y B, parte las geometrias donde se superponen y conserva atributos de ambas capas.";
+        return resolveDescriptionFor(operation);
     }
+
+    private String resolveVoronoiDescription() { return "Genera poligonos de Thiessen/Voronoi a partir de los centroides de la capa A. El clip se aplica al extent de la capa."; }
+    private String resolveSymDiffDescription() { return "Calcula la diferencia simetrica entre A y B: todo lo que esta en A o B pero no en ambos."; }
+    private String resolveMultiBufferDescription() { return "Genera multiples anillos de buffer concentricos. Especifica la distancia entre anillos y la cantidad."; }
+    private String resolveSmoothDescription() { return "Suaviza las geometrias de la capa A preservando la topologia mediante TopologyPreservingSimplifier."; }
+    private String resolvePolyToLineDescription() { return "Extrae los anillos exteriores e interiores de los poligonos como entidades de linea."; }
+    private String resolveLineToPolyDescription() { return "Convierte lineas que forman anillos cerrados en poligonos mediante el algoritmo Polygonizer de JTS."; }
+    private String resolveMinBoundingDescription() { return "Calcula la geometria envolvente minima: circulo, rectangulo, diametro o envelope rectangular."; }
+    private String resolveNearestDescription() { return "Calcula la distancia al vecino mas cercano entre todas las entidades y genera un reporte."; }
+    private String resolveDelaunayDescription() { return "Genera una red de triangulos de Delaunay a partir de los puntos de la capa A."; }
+
+    private String resolveDescriptionFor(String op) {
+        return switch (op) {
+            case OP_BUFFER -> resolveBufferDescription();
+            case OP_DISSOLVE -> resolveDissolveDescription();
+            case OP_CLIP -> resolveClipDescription();
+            case OP_INTERSECTION -> resolveIntersectionDescription();
+            case OP_MERGE -> resolveMergeDescription();
+            case OP_DIFFERENCE -> resolveDifferenceDescription();
+            case OP_SPATIAL_JOIN -> resolveSpatialJoinDescription();
+            case OP_VORONOI -> resolveVoronoiDescription();
+            case OP_SYM_DIFF -> resolveSymDiffDescription();
+            case OP_MULTI_BUFFER -> resolveMultiBufferDescription();
+            case OP_SMOOTH -> resolveSmoothDescription();
+            case OP_POLY_TO_LINE -> resolvePolyToLineDescription();
+            case OP_LINE_TO_POLY -> resolveLineToPolyDescription();
+            case OP_MIN_BOUNDING -> resolveMinBoundingDescription();
+            case OP_NEAREST -> resolveNearestDescription();
+            case OP_DELAUNAY -> resolveDelaunayDescription();
+            default -> resolveUnionDescription();
+        };
+    }
+
+    private String resolveBufferDescription() { return "Genera areas de influencia alrededor de cada geometria de la capa A. La salida conserva los atributos de origen y produce geometria poligonal."; }
+    private String resolveDissolveDescription() { return "Agrega entidades por union geometrica. Si indicas un campo agrupador, crea una geometria por cada valor comun. No es lo mismo que Merge."; }
+    private String resolveClipDescription() { return "Recorta la capa A usando una mascara poligonal B. Mantiene los atributos de la capa A. No mezcla tablas."; }
+    private String resolveIntersectionDescription() { return "Calcula la interseccion entre dos capas poligonales. La salida combina atributos de A y B con prefijos para evitar ambiguedades."; }
+    private String resolveMergeDescription() { return "Combina entidades de dos capas del mismo tipo geometrico en una sola capa nueva. No hace overlay ni disuelve geometria."; }
+    private String resolveDifferenceDescription() { return "Resta una mascara poligonal B sobre la capa A. Mantiene los atributos de A y conserva el tipo geometrico cuando es posible."; }
+    private String resolveSpatialJoinDescription() { return "Conserva la geometria y atributos de A. Puede copiar la primera coincidencia de B o resumir multiples coincidencias de B con conteo, sumatoria, promedio, minimo, maximo y lista de valores."; }
+    private String resolveUnionDescription() { return "Genera una union poligonal real entre A y B, parte las geometrias donde se superponen y conserva atributos de ambas capas."; }
 
     private String resolveCompatibilityMessage(String operation, LayerOption layerA, LayerOption layerB) {
         if (layerA == null) {
@@ -437,6 +476,35 @@ public class GeoprocessingAssistantDialog extends JDialog {
                     break;
                 case OP_UNION:
                     result = unionLayers(layerA, layerB, outputName);
+                    break;
+                case OP_VORONOI:
+                    result = voronoiLayer(layerA, outputName);
+                    break;
+                case OP_SYM_DIFF:
+                    result = symDiffLayers(layerA, layerB, outputName);
+                    break;
+                case OP_MULTI_BUFFER:
+                    double ringDist = parseDistance(txtParameter.getText());
+                    result = multiBufferLayer(layerA, ringDist, outputName);
+                    break;
+                case OP_SMOOTH:
+                    double smoothTol = parseDistance(txtParameter.getText());
+                    result = smoothLayer(layerA, smoothTol, outputName);
+                    break;
+                case OP_POLY_TO_LINE:
+                    result = polyToLineLayer(layerA, outputName);
+                    break;
+                case OP_LINE_TO_POLY:
+                    result = lineToPolyLayer(layerA, outputName);
+                    break;
+                case OP_MIN_BOUNDING:
+                    result = minBoundingLayer(layerA, txtParameter.getText(), outputName);
+                    break;
+                case OP_NEAREST:
+                    nearestAnalysis(layerA, outputName);
+                    return;
+                case OP_DELAUNAY:
+                    result = delaunayLayer(layerA, outputName);
                     break;
                 default:
                     throw new IllegalStateException("Operacion no soportada: " + operation);
@@ -1628,6 +1696,154 @@ public class GeoprocessingAssistantDialog extends JDialog {
             return "resultado";
         }
         return text.trim().replaceAll("[^A-Za-z0-9]+", "_").replaceAll("^_+|_+$", "");
+    }
+
+    private ShapefileData voronoiLayer(LayerOption layerA, String outputName) throws Exception {
+        List<SimpleFeature> sourceFeatures = new ArrayList<>();
+        for (SimpleFeature f : layerA.data.getFeatures()) sourceFeatures.add(f);
+        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
+        Geometry envelope = layerA.data.getEnvelope() != null ? GEOMETRY_FACTORY.toGeometry(layerA.data.getEnvelope()) : null;
+        SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
+        tb.setName(safeTypeName(outputName));
+        applyCrs(tb, targetCrs);
+        tb.add("the_geom", MultiPolygon.class);
+        SimpleFeatureType polyType = tb.buildFeatureType();
+        List<SimpleFeature> cells = GeometryTools.computeVoronoi(sourceFeatures, envelope, polyType);
+        return buildResultData(outputName, cells, polyType);
+    }
+
+    private ShapefileData symDiffLayers(LayerOption layerA, LayerOption layerB, String outputName) throws Exception {
+        ensurePolygonLayer(layerA, "Diferencia simetrica");
+        ensurePolygonLayer(layerB, "Diferencia simetrica");
+        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
+        Geometry geomA = buildUnionGeometry(layerA, targetCrs);
+        Geometry geomB = buildUnionGeometry(new LayerOption[]{layerB}, targetCrs, layerB.crsCode);
+        if (geomA == null || geomA.isEmpty() || geomB == null || geomB.isEmpty()) throw new IllegalArgumentException("Las capas no tienen geometria util.");
+        Geometry result = geomA.symDifference(geomB);
+        SimpleFeatureType resultType = buildSchemaFromSource(outputName, targetCrs, defaultGeometryBindingForFamily("POLYGON", true), layerA.data.getSchema());
+        List<SimpleFeature> features = new ArrayList<>();
+        SimpleFeatureBuilder builder = new SimpleFeatureBuilder(resultType);
+        List<Polygon> polys = new ArrayList<>();
+        collectPolygons(result, polys);
+        int idx = 1;
+        for (Polygon p : polys) {
+            if (p == null || p.isEmpty()) continue;
+            builder.set("the_geom", adaptGeometryToFeatureType(p, resultType));
+            features.add(builder.buildFeature(outputName + "." + idx++));
+        }
+        return buildResultData(outputName, features, resultType);
+    }
+
+    private ShapefileData multiBufferLayer(LayerOption layerA, double ringDist, String outputName) throws Exception {
+        int rings = 3;
+        try { if (txtParameter.getText() != null) { String[] parts = txtParameter.getText().trim().split("[\\s,;]+"); if (parts.length > 1) rings = Integer.parseInt(parts[parts.length - 1]); } } catch (Exception ignored) {}
+        String family = VectorLayerUtils.resolveGeometryFamily(layerA.data);
+        SimpleFeatureType resultType = buildSchemaFromSource(outputName, VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data), defaultGeometryBindingForFamily(family, true), layerA.data.getSchema());
+        List<SimpleFeature> features = new ArrayList<>();
+        int idx = 1;
+        for (SimpleFeature sf : layerA.data.getFeatures()) {
+            Geometry geom = geometryOf(sf);
+            if (geom == null || geom.isEmpty()) continue;
+            for (int r = 1; r <= rings; r++) {
+                double d = ringDist * r;
+                Geometry buf = geom.buffer(d);
+                if (buf != null && !buf.isEmpty()) {
+                    features.add(copyFeatureWithGeometry(resultType, sf, adaptGeometryToFeatureType(buf, resultType), outputName + "." + idx++));
+                }
+            }
+        }
+        return buildResultData(outputName, features, resultType);
+    }
+
+    private ShapefileData smoothLayer(LayerOption layerA, double tolerance, String outputName) throws Exception {
+        String family = VectorLayerUtils.resolveGeometryFamily(layerA.data);
+        SimpleFeatureType resultType = buildSchemaFromSource(outputName, VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data), defaultGeometryBindingForFamily(family, true), layerA.data.getSchema());
+        List<SimpleFeature> features = new ArrayList<>();
+        int idx = 1;
+        for (SimpleFeature sf : layerA.data.getFeatures()) {
+            Geometry geom = geometryOf(sf);
+            if (geom == null || geom.isEmpty()) continue;
+            Geometry smoothed = GeometryTools.smooth(geom, tolerance);
+            if (smoothed != null && !smoothed.isEmpty()) {
+                features.add(copyFeatureWithGeometry(resultType, sf, adaptGeometryToFeatureType(smoothed, resultType), outputName + "." + idx++));
+            }
+        }
+        return buildResultData(outputName, features, resultType);
+    }
+
+    private ShapefileData polyToLineLayer(LayerOption layerA, String outputName) throws Exception {
+        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
+        SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
+        tb.setName(safeTypeName(outputName));
+        applyCrs(tb, targetCrs);
+        tb.add("the_geom", MultiLineString.class);
+        SimpleFeatureType lineType = tb.buildFeatureType();
+        List<SimpleFeature> source = new ArrayList<>();
+        for (SimpleFeature f : layerA.data.getFeatures()) source.add(f);
+        List<SimpleFeature> lines = GeometryTools.polygonsToLines(source, lineType);
+        return buildResultData(outputName, lines, lineType);
+    }
+
+    private ShapefileData lineToPolyLayer(LayerOption layerA, String outputName) throws Exception {
+        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
+        SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
+        tb.setName(safeTypeName(outputName));
+        applyCrs(tb, targetCrs);
+        tb.add("the_geom", MultiPolygon.class);
+        SimpleFeatureType polyType = tb.buildFeatureType();
+        List<SimpleFeature> source = new ArrayList<>();
+        for (SimpleFeature f : layerA.data.getFeatures()) source.add(f);
+        List<SimpleFeature> polys = GeometryTools.linesToPolygons(source, polyType);
+        return buildResultData(outputName, polys, polyType);
+    }
+
+    private ShapefileData minBoundingLayer(LayerOption layerA, String typeText, String outputName) throws Exception {
+        String type = (typeText != null && !typeText.isBlank()) ? typeText.trim().toLowerCase(Locale.ROOT) : "envelope";
+        List<SimpleFeature> source = new ArrayList<>();
+        for (SimpleFeature f : layerA.data.getFeatures()) source.add(f);
+        Geometry bounding = GeometryTools.computeMinimumBoundingGeometry(source, type);
+        if (bounding == null) throw new IllegalArgumentException("No se pudo calcular geometria envolvente.");
+        String family = bounding instanceof Polygon || bounding instanceof MultiPolygon ? "POLYGON" : "LINE";
+        SimpleFeatureType resultType = buildSchemaFromSource(outputName, VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data), defaultGeometryBindingForFamily(family, true), null);
+        SimpleFeatureBuilder builder = new SimpleFeatureBuilder(resultType);
+        builder.set("the_geom", adaptGeometryToFeatureType(bounding, resultType));
+        return buildResultData(outputName, java.util.Collections.singletonList(builder.buildFeature(outputName + ".1")), resultType);
+    }
+
+    private void nearestAnalysis(LayerOption layerA, String outputName) throws Exception {
+        double minDist = GeometryTools.computeNearestDistance(new ArrayList<>(layerA.data.getFeatures()));
+        String crsCode = layerA.crsCode != null && !layerA.crsCode.isBlank() ? layerA.crsCode : "desconocido";
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Analisis de Vecino mas Cercano ===\n");
+        sb.append("Capa: ").append(layerA.layer.getName()).append("\n");
+        sb.append("Entidades: ").append(layerA.data.getFeatures().size()).append("\n");
+        sb.append("Distancia minima: ").append(String.format(Locale.ROOT, "%.4f", minDist)).append(" (").append(crsCode).append(")\n");
+        JOptionPane.showMessageDialog(this, sb.toString(), "Vecino mas Cercano - " + outputName, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private ShapefileData delaunayLayer(LayerOption layerA, String outputName) throws Exception {
+        String targetCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
+        SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
+        tb.setName(safeTypeName(outputName));
+        applyCrs(tb, targetCrs);
+        tb.add("the_geom", MultiLineString.class);
+        SimpleFeatureType lineType = tb.buildFeatureType();
+        List<SimpleFeature> source = new ArrayList<>();
+        for (SimpleFeature f : layerA.data.getFeatures()) source.add(f);
+        List<SimpleFeature> triangles = GeometryTools.computeDelaunay(source, lineType);
+        return buildResultData(outputName, triangles, lineType);
+    }
+
+    private Geometry buildUnionGeometry(LayerOption[] options, String targetCrs, String sourceCrs) throws Exception {
+        List<Geometry> geoms = new ArrayList<>();
+        for (LayerOption opt : options) {
+            if (opt == null || opt.data == null) continue;
+            for (SimpleFeature f : opt.data.getFeatures()) {
+                Geometry g = reprojectGeometry(geometryOf(f), sourceCrs != null ? sourceCrs : opt.crsCode, targetCrs);
+                if (g != null && !g.isEmpty()) geoms.add(g);
+            }
+        }
+        return geoms.isEmpty() ? null : UnaryUnionOp.union(geoms);
     }
 
     private static final class LayerOption {

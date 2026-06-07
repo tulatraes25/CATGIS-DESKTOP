@@ -507,6 +507,32 @@ public final class LabelExpressionEngine {
                             Object val = stack.pop();
                             stack.push(stringValue(val));
                         }
+                        case "sqrt" -> { stack.push(Math.sqrt(toDouble(stack.pop()))); }
+                        case "log" -> { stack.push(Math.log(toDouble(stack.pop()))); }
+                        case "log10" -> { stack.push(Math.log10(toDouble(stack.pop()))); }
+                        case "exp" -> { stack.push(Math.exp(toDouble(stack.pop()))); }
+                        case "sin" -> { stack.push(Math.sin(Math.toRadians(toDouble(stack.pop())))); }
+                        case "cos" -> { stack.push(Math.cos(Math.toRadians(toDouble(stack.pop())))); }
+                        case "tan" -> { stack.push(Math.tan(Math.toRadians(toDouble(stack.pop())))); }
+                        case "pow" -> { double expVal = toDouble(stack.pop()); stack.push(Math.pow(toDouble(stack.pop()), expVal)); }
+                        case "mod" -> { double divisor = toDouble(stack.pop()); stack.push(toDouble(stack.pop()) % divisor); }
+                        case "left" -> { int n = toInt(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.length() <= n ? s : s.substring(0, n)); }
+                        case "right" -> { int n = toInt(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.length() <= n ? s : s.substring(s.length() - n)); }
+                        case "len" -> { stack.push((double) stringValue(stack.pop()).length()); }
+                        case "coalesce" -> {
+                            Object b = stack.pop();
+                            Object a = stack.pop();
+                            if (a != null && !stringValue(a).isEmpty()) stack.push(a);
+                            else if (b != null && !stringValue(b).isEmpty()) stack.push(b);
+                            else stack.push("");
+                        }
+                        case "concat" -> {
+                            StringBuilder sb = new StringBuilder();
+                            for (int k = 0; k < argCount; k++) sb.insert(0, stringValue(stack.pop()));
+                            stack.push(sb.toString());
+                        }
+                        case "x" -> { stack.push(extractX(feature)); }
+                        case "y" -> { stack.push(extractY(feature)); }
                         case "area", "length", "perimeter" -> {
                             Geometry geom = extractGeometry(feature);
                             if (geom == null) {
@@ -612,6 +638,18 @@ public final class LabelExpressionEngine {
         Object defaultGeom = feature.getDefaultGeometry();
         if (defaultGeom instanceof Geometry g) return g;
         return null;
+    }
+
+    private static double extractX(SimpleFeature feature) {
+        Geometry g = extractGeometry(feature);
+        if (g != null) return g.getCoordinate().getX();
+        return 0;
+    }
+
+    private static double extractY(SimpleFeature feature) {
+        Geometry g = extractGeometry(feature);
+        if (g != null) return g.getCoordinate().getY();
+        return 0;
     }
 
     // --- Exception ---

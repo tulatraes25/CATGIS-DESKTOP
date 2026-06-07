@@ -223,4 +223,70 @@ public final class TopologyValidator {
 
         return new TopologyResult(issues.isEmpty(), issues);
     }
+
+    public static TopologyResult validateNoOverlapsWith(List<org.geotools.api.feature.simple.SimpleFeature> featuresA, List<org.geotools.api.feature.simple.SimpleFeature> featuresB) {
+        List<TopologyIssue> issues = new ArrayList<>();
+        for (int i = 0; i < featuresA.size(); i++) {
+            Geometry ga = (Geometry) featuresA.get(i).getDefaultGeometry();
+            if (ga == null) continue;
+            for (int j = 0; j < featuresB.size(); j++) {
+                Geometry gb = (Geometry) featuresB.get(j).getDefaultGeometry();
+                if (gb == null) continue;
+                try {
+                    Geometry inter = ga.intersection(gb);
+                    if (inter != null && !inter.isEmpty() && inter.getDimension() >= 1) {
+                        issues.add(new TopologyIssue("MUST_NOT_OVERLAP_WITH", "Overlap between feature " + i + " and " + j, i, inter));
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        return new TopologyResult(issues.isEmpty(), issues);
+    }
+
+    public static TopologyResult validateCoveredBy(List<org.geotools.api.feature.simple.SimpleFeature> featuresA, List<org.geotools.api.feature.simple.SimpleFeature> featuresB) {
+        List<TopologyIssue> issues = new ArrayList<>();
+        for (int i = 0; i < featuresA.size(); i++) {
+            Geometry ga = (Geometry) featuresA.get(i).getDefaultGeometry();
+            if (ga == null) continue;
+            boolean covered = false;
+            for (int j = 0; j < featuresB.size(); j++) {
+                Geometry gb = (Geometry) featuresB.get(j).getDefaultGeometry();
+                if (gb != null && gb.covers(ga)) { covered = true; break; }
+            }
+            if (!covered) issues.add(new TopologyIssue("MUST_BE_COVERED_BY", "Feature " + i + " not covered by layer B", i, ga));
+        }
+        return new TopologyResult(issues.isEmpty(), issues);
+    }
+
+    public static TopologyResult validateWithinDistance(List<org.geotools.api.feature.simple.SimpleFeature> features, double maxDistance) {
+        List<TopologyIssue> issues = new ArrayList<>();
+        for (int i = 0; i < features.size(); i++) {
+            Geometry ga = (Geometry) features.get(i).getDefaultGeometry();
+            if (ga == null) continue;
+            for (int j = i + 1; j < features.size(); j++) {
+                Geometry gb = (Geometry) features.get(j).getDefaultGeometry();
+                if (gb == null) continue;
+                if (ga.distance(gb) > maxDistance) {
+                    issues.add(new TopologyIssue("MUST_BE_WITHIN_DISTANCE", "Features " + i + " and " + j + " exceed max distance " + maxDistance, i, ga));
+                }
+            }
+        }
+        return new TopologyResult(issues.isEmpty(), issues);
+    }
+
+    public static TopologyResult validateNotTouch(List<org.geotools.api.feature.simple.SimpleFeature> features, double tolerance) {
+        List<TopologyIssue> issues = new ArrayList<>();
+        for (int i = 0; i < features.size(); i++) {
+            Geometry ga = (Geometry) features.get(i).getDefaultGeometry();
+            if (ga == null) continue;
+            for (int j = i + 1; j < features.size(); j++) {
+                Geometry gb = (Geometry) features.get(j).getDefaultGeometry();
+                if (gb == null) continue;
+                if (ga.distance(gb) < tolerance) {
+                    issues.add(new TopologyIssue("MUST_NOT_TOUCH", "Features " + i + " and " + j + " are too close (<" + tolerance + ")", i, ga));
+                }
+            }
+        }
+        return new TopologyResult(issues.isEmpty(), issues);
+    }
 }

@@ -172,4 +172,119 @@ public final class GeometryTools {
         if (geometry == null) return null;
         return org.locationtech.jts.simplify.DouglasPeuckerSimplifier.simplify(geometry, tolerance);
     }
+
+    public static Geometry smooth(Geometry geometry, double tolerance) {
+        if (geometry == null) return null;
+        return org.locationtech.jts.simplify.TopologyPreservingSimplifier.simplify(geometry, tolerance);
+    }
+
+    public static List<SimpleFeature> computeVoronoi(List<SimpleFeature> pointFeatures, Geometry envelope, SimpleFeatureType polygonType) {
+        List<SimpleFeature> result = new ArrayList<>();
+        if (pointFeatures == null || pointFeatures.isEmpty()) return result;
+        GeometryFactory gf = new GeometryFactory();
+        List<Coordinate> coords = new ArrayList<>();
+        for (SimpleFeature f : pointFeatures) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g instanceof Point) coords.add(g.getCoordinate());
+            else coords.add(g.getCentroid().getCoordinate());
+        }
+        if (coords.size() < 2) return result;
+        try {
+            org.locationtech.jts.triangulate.VoronoiDiagramBuilder voronoi = new org.locationtech.jts.triangulate.VoronoiDiagramBuilder();
+            voronoi.setSites(coords);
+            voronoi.setClipEnvelope(envelope != null ? envelope.getEnvelopeInternal() : null);
+            Geometry diagram = voronoi.getDiagram(gf);
+            SimpleFeatureBuilder builder = new SimpleFeatureBuilder(polygonType);
+            for (int i = 0; i < diagram.getNumGeometries(); i++) {
+                Geometry cell = diagram.getGeometryN(i);
+                if (cell instanceof Polygon && !cell.isEmpty()) {
+                    builder.add(cell);
+                    result.add(builder.buildFeature(null));
+                }
+            }
+        } catch (Exception ignored) {}
+        return result;
+    }
+
+    public static List<SimpleFeature> computeDelaunay(List<SimpleFeature> pointFeatures, SimpleFeatureType lineType) {
+        List<SimpleFeature> result = new ArrayList<>();
+        if (pointFeatures == null || pointFeatures.isEmpty()) return result;
+        List<Coordinate> coords = new ArrayList<>();
+        for (SimpleFeature f : pointFeatures) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g instanceof Point) coords.add(g.getCoordinate());
+            else coords.add(g.getCentroid().getCoordinate());
+        }
+        if (coords.size() < 3) return result;
+        try {
+            org.locationtech.jts.triangulate.DelaunayTriangulationBuilder delaunay = new org.locationtech.jts.triangulate.DelaunayTriangulationBuilder();
+            delaunay.setSites(coords);
+            Geometry tri = delaunay.getTriangles(new GeometryFactory());
+            SimpleFeatureBuilder builder = new SimpleFeatureBuilder(lineType);
+            for (int i = 0; i < tri.getNumGeometries(); i++) {
+                Geometry triangle = tri.getGeometryN(i);
+                if (triangle instanceof Polygon) {
+                    builder.add(triangle.getBoundary());
+                    result.add(builder.buildFeature(null));
+                }
+            }
+        } catch (Exception ignored) {}
+        return result;
+    }
+
+    public static List<SimpleFeature> polygonsToLines(List<SimpleFeature> polygonFeatures, SimpleFeatureType lineType) {
+        return extractLinesFromPolygons(polygonFeatures, lineType);
+    }
+
+    public static List<SimpleFeature> linesToPolygons(List<SimpleFeature> lineFeatures, SimpleFeatureType polygonType) {
+        List<SimpleFeature> result = new ArrayList<>();
+        org.locationtech.jts.operation.polygonize.Polygonizer polygonizer = new org.locationtech.jts.operation.polygonize.Polygonizer();
+        for (SimpleFeature f : lineFeatures) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g != null) polygonizer.add(g);
+        }
+        SimpleFeatureBuilder builder = new SimpleFeatureBuilder(polygonType);
+        for (Object obj : polygonizer.getPolygons()) {
+            if (obj instanceof Polygon poly && !poly.isEmpty()) {
+                builder.add(poly);
+                result.add(builder.buildFeature(null));
+            }
+        }
+        return result;
+    }
+
+    public static Geometry computeMinimumBoundingGeometry(List<SimpleFeature> features, String type) {
+        List<Geometry> geoms = new ArrayList<>();
+        for (SimpleFeature f : features) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g != null && !g.isEmpty()) geoms.add(g);
+        }
+        if (geoms.isEmpty()) return null;
+        try {
+            Geometry union = new GeometryFactory().createGeometryCollection(geoms.toArray(new Geometry[0]));
+            return switch (type) {
+                case "circle" -> new org.locationtech.jts.algorithm.MinimumBoundingCircle(union).getCircle();
+                case "diameter" -> new org.locationtech.jts.algorithm.MinimumDiameter(union).getDiameter();
+                case "rectangle" -> org.locationtech.jts.algorithm.MinimumAreaRectangle.getMinimumRectangle(union);
+                default -> union.getEnvelope();
+            };
+        } catch (Exception e) {
+            return new GeometryFactory().createGeometryCollection(geoms.toArray(new Geometry[0])).getEnvelope();
+        }
+    }
+
+    public static double computeNearestDistance(List<SimpleFeature> features) {
+        double minDist = Double.MAX_VALUE;
+        for (int i = 0; i < features.size(); i++) {
+            Geometry gi = (Geometry) features.get(i).getDefaultGeometry();
+            if (gi == null) continue;
+            for (int j = i + 1; j < features.size(); j++) {
+                Geometry gj = (Geometry) features.get(j).getDefaultGeometry();
+                if (gj == null) continue;
+                double dist = gi.distance(gj);
+                if (dist < minDist) minDist = dist;
+            }
+        }
+        return minDist == Double.MAX_VALUE ? 0 : minDist;
+    }
 }
