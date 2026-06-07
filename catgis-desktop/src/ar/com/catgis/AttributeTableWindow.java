@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+
+import ar.com.catgis.data.vector.ShapefileData;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
@@ -25,6 +28,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import ar.com.catgis.core.model.Layer;
 
 public class AttributeTableWindow extends JFrame {
 
@@ -1783,4 +1787,3 @@ public class AttributeTableWindow extends JFrame {
         }
     }
 }
-

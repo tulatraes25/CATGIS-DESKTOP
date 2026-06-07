@@ -1,5 +1,13 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
+import ar.com.catgis.RasterLayer;
+import ar.com.catgis.ProOceanColorPresetSupport;
+import ar.com.catgis.ProNasaOceanColorL3Support;
+import ar.com.catgis.ProMetadataSidecarSupport;
+import ar.com.catgis.ProLandsatL2Support;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.locationtech.jts.geom.Envelope;
 

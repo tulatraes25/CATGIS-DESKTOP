@@ -1,4 +1,6 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -9,6 +11,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.VectorLayerUtils;
 
 public class LayoutTemplateManager {
 
@@ -25,7 +29,7 @@ public class LayoutTemplateManager {
         java.util.List<LayoutElement> rm = new java.util.ArrayList<>(model.getElements());
         for (LayoutElement e : rm) model.removeElement(e.getId());
         internalApply(key, model);
-        ar.com.catgis.Project p = ar.com.catgis.AppContext.get().getProject();
+        ar.com.catgis.core.model.Project p = ar.com.catgis.AppContext.get().getProject();
         if (p == null) p = ar.com.catgis.CatgisDesktopApp.currentProject;
         // Auto-populate legend from project layers
         for (LayoutElement el : model.getElements()) {
@@ -34,7 +38,7 @@ public class LayoutTemplateManager {
             }
             if (el instanceof LayoutLegend && ((LayoutLegend)el).getItems().isEmpty()) {
                 if (p != null && p.getLayers() != null) {
-                    for (ar.com.catgis.Layer l : p.getLayers()) {
+                    for (ar.com.catgis.core.model.Layer l : p.getLayers()) {
                         if (l == null || !l.isVisible() || LayoutLegend.isBasemapName(l.getName())) continue;
                         java.awt.Color c = resolveColor(l);
                         LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(l.getName(), c, resolveType(l));
@@ -66,19 +70,19 @@ public class LayoutTemplateManager {
         return value != null && !value.isBlank() ? value : fallback;
     }
 
-    private static java.awt.Color resolveColor(ar.com.catgis.Layer l) {
+    private static java.awt.Color resolveColor(ar.com.catgis.core.model.Layer l) {
         if (l.getPointColor() != null && !l.getPointColor().equals(java.awt.Color.BLUE)) return l.getPointColor();
         if (l.getLineColor() != null && !l.getLineColor().equals(java.awt.Color.RED)) return l.getLineColor();
         if (l.getFillColor() != null) return l.getFillColor();
         return new java.awt.Color(0x1976D2);
     }
 
-    private static String resolveType(ar.com.catgis.Layer l) {
+    private static String resolveType(ar.com.catgis.core.model.Layer l) {
         try {
             ar.com.catgis.MapPanel mp = ar.com.catgis.CatgisDesktopApp.mapPanel;
             if (mp != null) {
-                ar.com.catgis.ShapefileData d = mp.getShapefileData(l);
-                if (d != null) { String f = ar.com.catgis.VectorLayerUtils.resolveGeometryFamily(d); if (f != null) return f; }
+                ar.com.catgis.data.vector.ShapefileData d = mp.getShapefileData(l);
+                if (d != null) { String f = ar.com.catgis.data.vector.VectorLayerUtils.resolveGeometryFamily(d); if (f != null) return f; }
             }
         } catch (Exception ignored) {}
         return "VECTOR";

@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.analysis.vector.GeoprocessingAssistantDialog;
+import ar.com.catgis.core.model.Layer;
 
 import javax.swing.JOptionPane;
 import java.util.ArrayList;

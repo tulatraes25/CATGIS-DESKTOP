@@ -1,4 +1,6 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
 
 import java.io.File;
 import java.lang.reflect.Constructor;

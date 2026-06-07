@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.core.model.Layer;
 
 import org.locationtech.jts.geom.Envelope;
 

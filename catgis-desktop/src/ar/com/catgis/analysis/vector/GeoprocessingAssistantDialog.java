@@ -1,5 +1,12 @@
-package ar.com.catgis;
+package ar.com.catgis.analysis.vector;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.VectorLayerUtils;
 
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.CRSDefinitions;
+import ar.com.catgis.CatgisLogger;
+import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.AppErrorSupport;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.feature.type.AttributeDescriptor;

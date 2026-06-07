@@ -1,4 +1,7 @@
 package ar.com.catgis.climate;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
 import ar.com.catgis.*;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;

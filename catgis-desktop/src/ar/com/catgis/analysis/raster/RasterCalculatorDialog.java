@@ -1,5 +1,12 @@
-package ar.com.catgis;
+package ar.com.catgis.analysis.raster;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.analysis.raster.RasterCalculatorEngine;
 
+import ar.com.catgis.MapPanel;
+import ar.com.catgis.Main;
+import ar.com.catgis.LayersPanel;
+import ar.com.catgis.CatgisDesktopApp;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -26,6 +33,7 @@ import java.awt.Insets;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import ar.com.catgis.data.raster.LocalRasterData;
 import java.util.List;
 import java.util.Map;
 

@@ -1,4 +1,11 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.core.model.LayerGroup;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
+
+import ar.com.catgis.core.model.Project;
 
 import javax.swing.AbstractAction;
 import javax.swing.JFileChooser;
@@ -480,4 +487,3 @@ public class SaveProjectAction extends AbstractAction {
         return normalized.isBlank() ? "-" : normalized;
     }
 }
-

@@ -15,7 +15,7 @@ import org.locationtech.jts.geom.Polygon;
 
 import java.util.Locale;
 
-final class CoordinateTransformSupport {
+public final class CoordinateTransformSupport {
 
     private static final double DEG_TO_RAD = Math.PI / 180.0;
     private static final double RAD_TO_DEG = 180.0 / Math.PI;
@@ -24,7 +24,7 @@ final class CoordinateTransformSupport {
     private CoordinateTransformSupport() {
     }
 
-    static double[] transformPoint(double x, double y, String sourceCode, String targetCode) {
+    public static double[] transformPoint(double x, double y, String sourceCode, String targetCode) {
         String source = CRSDefinitions.normalizeCode(sourceCode);
         String target = CRSDefinitions.normalizeCode(targetCode);
         if (source.isBlank() || target.isBlank()) {
@@ -41,7 +41,7 @@ final class CoordinateTransformSupport {
         return fromGeographic(geographic.lon(), geographic.lat(), target);
     }
 
-    static Envelope reprojectEnvelope(Envelope envelope, String sourceCode, String targetCode) {
+    public static Envelope reprojectEnvelope(Envelope envelope, String sourceCode, String targetCode) {
         if (envelope == null || envelope.isNull()) {
             return envelope;
         }

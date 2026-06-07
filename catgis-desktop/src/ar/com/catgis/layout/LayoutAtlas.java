@@ -1,4 +1,5 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
 
 import java.util.ArrayList;
 import java.util.List;

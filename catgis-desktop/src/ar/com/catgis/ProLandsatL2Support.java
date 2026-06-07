@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class ProLandsatL2Support {
+public final class ProLandsatL2Support {
 
     static final String FAMILY = "USGS Landsat Collection 2 Level 2";
     static final String PROVIDER = "USGS Landsat";

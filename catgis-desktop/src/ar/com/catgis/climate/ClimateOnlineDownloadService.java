@@ -1,7 +1,8 @@
 package ar.com.catgis.climate;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
 import ar.com.catgis.CRSDefinitions;
-import ar.com.catgis.RasterCoverageSupport;
 import ar.com.catgis.RasterSidecarSupport;
 import org.geotools.api.referencing.FactoryException;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;

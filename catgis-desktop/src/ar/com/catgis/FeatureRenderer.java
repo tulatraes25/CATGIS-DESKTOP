@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.renderer.LineSymbolRenderer;
+import ar.com.catgis.renderer.PolygonSymbolRenderer;
+import ar.com.catgis.core.model.Layer;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Coordinate;

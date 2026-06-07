@@ -1,4 +1,5 @@
 package ar.com.catgis.catmap;
+import ar.com.catgis.core.model.Layer;
 
 import ar.com.catgis.MapPanel;
 import ar.com.catgis.RasterLayer;

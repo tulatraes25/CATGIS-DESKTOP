@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

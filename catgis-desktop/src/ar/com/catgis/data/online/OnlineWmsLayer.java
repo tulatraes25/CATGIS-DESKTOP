@@ -1,5 +1,6 @@
-package ar.com.catgis;
+package ar.com.catgis.data.online;
 
+import ar.com.catgis.RasterLayer;
 public class OnlineWmsLayer extends RasterLayer {
     private String sourceId = "";
     private String providerName = "";

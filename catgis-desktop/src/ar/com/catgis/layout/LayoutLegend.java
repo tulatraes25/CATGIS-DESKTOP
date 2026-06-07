@@ -1,6 +1,8 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.renderer.LineSymbolRenderer;
+import ar.com.catgis.renderer.PolygonSymbolRenderer;
 
-import ar.com.catgis.Layer;
 import ar.com.catgis.PointSymbolCatalog;
 
 import java.awt.AlphaComposite;
@@ -364,14 +366,14 @@ public class LayoutLegend implements LayoutElement {
                 g.drawLine(sx + 1, ly + 2, sx + size - 1, ly + 2);
             } else {
                 g.setColor(c);
-                g.setStroke(ar.com.catgis.LineSymbolRenderer.buildStroke(lineStyle, 2.2f));
+                g.setStroke(ar.com.catgis.renderer.LineSymbolRenderer.buildStroke(lineStyle, 2.2f));
                 g.drawLine(sx + 1, ly, sx + size - 1, ly);
             }
         } else if (type.contains("POLYGON")) {
             Layer.PolygonFillStyle fillStyle = item.polygonFillStyle != null ? item.polygonFillStyle : Layer.PolygonFillStyle.SOLID;
             Paint oldPaint = g.getPaint();
             if (fillStyle != Layer.PolygonFillStyle.OUTLINE_ONLY && fillStyle != Layer.PolygonFillStyle.TRANSPARENT) {
-                g.setPaint(ar.com.catgis.PolygonSymbolRenderer.buildPaint(fillStyle, c, stroke, 10));
+                g.setPaint(ar.com.catgis.renderer.PolygonSymbolRenderer.buildPaint(fillStyle, c, stroke, 10));
                 g.fillRect(sx + 1, sy + 1, size - 2, size - 2);
                 g.setPaint(oldPaint);
             }

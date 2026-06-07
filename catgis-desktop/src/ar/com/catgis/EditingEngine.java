@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.*;

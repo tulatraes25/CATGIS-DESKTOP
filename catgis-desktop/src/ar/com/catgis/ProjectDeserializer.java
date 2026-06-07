@@ -1,9 +1,12 @@
 package ar.com.catgis;
 
+import ar.com.catgis.core.model.Project;
+
 import java.awt.Color;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import ar.com.catgis.core.model.Layer;
 
 /**
  * Deserializes a Project from .catgis text format.
@@ -181,4 +184,3 @@ public final class ProjectDeserializer {
         return Color.BLUE;
     }
 }
-

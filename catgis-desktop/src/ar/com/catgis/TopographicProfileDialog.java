@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
 
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;

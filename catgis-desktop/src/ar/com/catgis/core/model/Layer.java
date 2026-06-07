@@ -1,5 +1,15 @@
-package ar.com.catgis;
+package ar.com.catgis.core.model;
+import ar.com.catgis.core.model.LabelConfig;
+import ar.com.catgis.core.model.GradientFill;
 
+import ar.com.catgis.ProportionalSymbols;
+import ar.com.catgis.PointSymbolCatalog;
+import ar.com.catgis.GraduatedSymbology;
+import ar.com.catgis.FieldConfig;
+import ar.com.catgis.CRSDefinitions;
+import ar.com.catgis.CategorizedSymbology;
+import ar.com.catgis.CadLayerSupport;
+import ar.com.catgis.CadGeoreference;
 import java.awt.Color;
 import java.util.Collection;
 import java.util.Collections;

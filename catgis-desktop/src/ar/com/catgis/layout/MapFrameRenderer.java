@@ -1,4 +1,13 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.renderer.PolygonSymbolRenderer;
+import ar.com.catgis.renderer.LineSymbolRenderer;
+import ar.com.catgis.renderer.labels.LabelExpressionEngine;
+import ar.com.catgis.renderer.labels.LabelPlacementEngine;
+import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import ar.com.catgis.*;
 import org.geotools.api.feature.simple.SimpleFeature;
@@ -79,7 +88,7 @@ public class MapFrameRenderer {
         for (Layer layer : project.getLayers()) {
             if (layer == null || !layer.isVisible()) continue;
             if (layer instanceof ar.com.catgis.OnlineTileLayer
-                    || layer instanceof ar.com.catgis.OnlineWmsLayer
+                    || layer instanceof ar.com.catgis.data.online.OnlineWmsLayer
                     || layer instanceof ar.com.catgis.RasterLayer) {
                 hasOnlineOrRaster = true;
                 break;

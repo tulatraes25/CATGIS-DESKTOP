@@ -1,4 +1,9 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.renderer.PolygonSymbolRenderer;
+
+import ar.com.catgis.renderer.LineSymbolRenderer;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -45,6 +50,7 @@ import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
+import ar.com.catgis.core.model.Layer;
 
 public class LayerPropertiesDialog extends JDialog {
 

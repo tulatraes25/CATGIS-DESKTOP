@@ -1,5 +1,18 @@
-package ar.com.catgis;
+package ar.com.catgis.data.vector;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
 
+import ar.com.catgis.VectorLayer;
+import ar.com.catgis.ReadOnlyVectorLayerSource;
+import ar.com.catgis.RasterLayer;
+import ar.com.catgis.OpenAttributeTableAction;
+import ar.com.catgis.MapPanel;
+import ar.com.catgis.LayersPanel;
+import ar.com.catgis.FieldConfig;
+import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.CategoryStyleRule;
+import ar.com.catgis.CategorizedSymbology;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.feature.type.AttributeDescriptor;

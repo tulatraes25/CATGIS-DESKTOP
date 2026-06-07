@@ -1,5 +1,7 @@
-package ar.com.catgis;
+package ar.com.catgis.renderer;
 
+import ar.com.catgis.MapPanel;
+import ar.com.catgis.Main;
 import org.locationtech.jts.geom.Envelope;
 
 import javax.swing.Timer;

@@ -1,9 +1,12 @@
 package ar.com.catgis;
 
+import ar.com.catgis.core.model.Project;
+
 import java.awt.Color;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import ar.com.catgis.core.model.Layer;
 
 /**
  * Serializes a Project to .catgis text format.

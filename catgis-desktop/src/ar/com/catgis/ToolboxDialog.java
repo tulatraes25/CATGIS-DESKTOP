@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.service.ToolboxRegistry;
+import ar.com.catgis.service.ToolboxAlgorithm;
+import ar.com.catgis.analysis.vector.GeoprocessingAssistantDialog;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;

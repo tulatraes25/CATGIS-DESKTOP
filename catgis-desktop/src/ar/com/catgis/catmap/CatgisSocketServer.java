@@ -1,4 +1,6 @@
 package ar.com.catgis.catmap;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
 
 import ar.com.catgis.*;
 import ar.com.catgis.layout.*;

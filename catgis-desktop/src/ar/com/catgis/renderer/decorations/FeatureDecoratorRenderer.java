@@ -1,4 +1,4 @@
-package ar.com.catgis;
+package ar.com.catgis.renderer.decorations;
 
 import java.awt.BasicStroke;
 import java.awt.Color;

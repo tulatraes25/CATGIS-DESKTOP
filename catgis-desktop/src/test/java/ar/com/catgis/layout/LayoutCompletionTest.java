@@ -1,4 +1,6 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.core.model.Layer;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

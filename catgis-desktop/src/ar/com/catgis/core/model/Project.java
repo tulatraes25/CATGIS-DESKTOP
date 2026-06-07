@@ -1,5 +1,10 @@
-package ar.com.catgis;
+package ar.com.catgis.core.model;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.LayerGroup;
 
+import ar.com.catgis.CRSDefinitions;
+import ar.com.catgis.CatmapLegendItem;
+import ar.com.catgis.CatmapLayoutItem;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;

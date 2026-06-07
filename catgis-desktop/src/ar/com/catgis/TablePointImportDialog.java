@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.ShapefileData;
+
+import ar.com.catgis.core.model.Project;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -14,6 +17,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import ar.com.catgis.core.model.Layer;
 
 public class TablePointImportDialog extends JDialog {
 

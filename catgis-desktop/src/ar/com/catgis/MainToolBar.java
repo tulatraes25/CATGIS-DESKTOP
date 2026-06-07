@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.analysis.raster.RasterCalculatorDialog;
 
 import javax.swing.BorderFactory;
 import javax.swing.Icon;

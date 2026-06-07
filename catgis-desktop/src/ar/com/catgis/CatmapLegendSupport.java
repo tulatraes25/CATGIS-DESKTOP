@@ -1,4 +1,8 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.core.model.Layer;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

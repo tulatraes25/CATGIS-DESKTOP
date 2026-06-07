@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.data.online.OnlineRasterSource;
 
 import java.util.ArrayList;
 import java.util.Collections;

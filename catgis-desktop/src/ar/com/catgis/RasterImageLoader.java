@@ -1,5 +1,7 @@
 package ar.com.catgis;
 
+import ar.com.catgis.data.raster.LocalRasterData;
+
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
@@ -28,6 +30,7 @@ import org.geotools.gce.geotiff.GeoTiffReader;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.Envelope;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
 public class RasterImageLoader {
 

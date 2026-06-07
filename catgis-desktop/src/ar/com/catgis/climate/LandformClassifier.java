@@ -1,4 +1,5 @@
 package ar.com.catgis.climate;
+import ar.com.catgis.core.model.Layer;
 
 import org.locationtech.jts.geom.*;
 import java.awt.image.BufferedImage;

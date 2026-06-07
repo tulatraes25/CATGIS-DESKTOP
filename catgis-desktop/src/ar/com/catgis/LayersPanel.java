@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+
+import ar.com.catgis.core.model.Project;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
@@ -67,6 +70,18 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.LayerGroup;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.online.OnlineRasterSource;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.renderer.PolygonSymbolRenderer;
+import ar.com.catgis.renderer.LineSymbolRenderer;
+import ar.com.catgis.renderer.MapDecorationRenderer;
+import ar.com.catgis.renderer.decorations.FeatureDecoratorRenderer;
+import ar.com.catgis.renderer.labels.LabelExpressionEngine;
+import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 
 public class LayersPanel extends JPanel {
 

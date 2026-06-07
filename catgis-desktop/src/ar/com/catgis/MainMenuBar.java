@@ -1,5 +1,7 @@
 package ar.com.catgis;
 
+import ar.com.catgis.data.vector.ShapefileData;
+
 import ar.com.catgis.TopologyValidator;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -21,6 +23,7 @@ import java.awt.Toolkit;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import ar.com.catgis.core.model.Layer;
 
 public class MainMenuBar extends JMenuBar {
 
@@ -1050,4 +1053,3 @@ public class MainMenuBar extends JMenuBar {
         return new ImageIcon(img);
     }
 }
-

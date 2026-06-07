@@ -1,4 +1,8 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.core.model.Layer;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;

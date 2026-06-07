@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.data.online.OnlineRasterSource;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListCellRenderer;

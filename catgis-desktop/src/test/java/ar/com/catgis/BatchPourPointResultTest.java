@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
+import ar.com.catgis.data.vector.ShapefileData;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
@@ -23,6 +26,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import ar.com.catgis.core.model.Layer;
 
 class BatchPourPointResultTest {
 

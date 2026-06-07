@@ -1,4 +1,9 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.core.model.Project;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -161,7 +166,7 @@ public class LayoutLabel implements LayoutElement {
         if (result.contains("{project}")) {
             String projName = "";
             try {
-                ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+                ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
                 if (proj != null) {
                     String name = proj.getName();
                     if (name != null && !name.isBlank()) projName = name;
@@ -172,7 +177,7 @@ public class LayoutLabel implements LayoutElement {
         if (result.contains("{crs}")) {
             String crsText = "";
             try {
-                ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+                ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
                 if (proj != null && proj.getProjectCRS() != null) {
                     crsText = proj.getProjectCRS();
                 }

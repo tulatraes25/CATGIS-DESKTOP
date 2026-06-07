@@ -1,4 +1,8 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.core.model.Layer;
 
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;

@@ -1,4 +1,6 @@
 package ar.com.catgis;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;

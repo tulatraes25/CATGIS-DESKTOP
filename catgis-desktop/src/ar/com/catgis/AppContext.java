@@ -1,4 +1,5 @@
-package ar.com.catgis;
+package ar.com.catgis;
+import ar.com.catgis.core.model.Project;
 
 import java.awt.Component;
 

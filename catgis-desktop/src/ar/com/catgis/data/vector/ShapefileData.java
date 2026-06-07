@@ -1,5 +1,6 @@
-package ar.com.catgis;
+package ar.com.catgis.data.vector;
 
+import ar.com.catgis.AppErrorSupport;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.data.collection.ListFeatureCollection;

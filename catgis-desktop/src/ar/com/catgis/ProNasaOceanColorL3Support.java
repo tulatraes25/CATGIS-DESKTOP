@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class ProNasaOceanColorL3Support {
+public final class ProNasaOceanColorL3Support {
 
     static final String FAMILY = "NASA OceanColor L3 mapped";
     static final String FAMILY_L3B = "NASA OceanColor L3 binned";

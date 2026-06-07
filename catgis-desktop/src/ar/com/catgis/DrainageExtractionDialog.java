@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.core.model.Layer;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;

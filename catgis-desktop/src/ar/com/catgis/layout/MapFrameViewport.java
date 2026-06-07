@@ -1,13 +1,13 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import ar.com.catgis.CatgisDesktopApp;
-import ar.com.catgis.Layer;
 import ar.com.catgis.MapPanel;
 import ar.com.catgis.OnlineTileLayer;
-import ar.com.catgis.OnlineWmsLayer;
-import ar.com.catgis.Project;
-import ar.com.catgis.ShapefileData;
-import ar.com.catgis.VectorLayerUtils;
 import org.locationtech.jts.geom.Envelope;
 
 /**

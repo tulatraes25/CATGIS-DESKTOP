@@ -1,5 +1,6 @@
-package ar.com.catgis;
+package ar.com.catgis.data.raster;
 
+import ar.com.catgis.CRSDefinitions;
 import org.locationtech.jts.geom.Envelope;
 
 import java.awt.image.BufferedImage;

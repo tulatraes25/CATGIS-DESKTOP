@@ -1,4 +1,10 @@
 package ar.com.catgis;
+import ar.com.catgis.renderer.LineSymbolRenderer;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+
+import ar.com.catgis.core.model.Project;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -126,6 +132,7 @@ import ar.com.catgis.layout.LayoutCartouche;
 import ar.com.catgis.layout.LayoutGraticule;
 import ar.com.catgis.layout.QgisQptImporter;
 import ar.com.catgis.layout.RulerRenderer;
+import ar.com.catgis.core.model.Layer;
 
 public class MapLayoutComposerDialog extends JFrame {
 

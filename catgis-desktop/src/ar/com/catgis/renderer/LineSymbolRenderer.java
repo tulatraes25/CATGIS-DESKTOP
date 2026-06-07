@@ -1,4 +1,5 @@
-package ar.com.catgis;
+package ar.com.catgis.renderer;
+import ar.com.catgis.core.model.Layer;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;

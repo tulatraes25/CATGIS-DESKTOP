@@ -1,4 +1,4 @@
-package ar.com.catgis;
+package ar.com.catgis.core.model;
 
 public class LayerGroup {
 

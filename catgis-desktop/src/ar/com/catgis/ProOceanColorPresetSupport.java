@@ -3,7 +3,7 @@ package ar.com.catgis;
 import java.util.List;
 import java.util.Locale;
 
-final class ProOceanColorPresetSupport {
+public final class ProOceanColorPresetSupport {
 
     private static final List<Definition> DEFINITIONS = List.of(
             new Definition(

@@ -1,5 +1,7 @@
 package ar.com.catgis;
 
+import ar.com.catgis.core.model.Project;
+
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -24,6 +26,7 @@ import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import ar.com.catgis.core.model.Layer;
 
 public class CatgisDesktopApp extends JFrame {
 

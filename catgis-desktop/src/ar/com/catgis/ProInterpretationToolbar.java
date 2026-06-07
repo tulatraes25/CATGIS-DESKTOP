@@ -1,4 +1,9 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.ProRasterDerivedService;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;

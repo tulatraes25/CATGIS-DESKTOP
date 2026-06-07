@@ -1,4 +1,4 @@
-package ar.com.catgis;
+package ar.com.catgis.renderer.labels;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Geometry;

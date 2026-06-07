@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.ShapefileData;
 
 public record GpxImportResult(
         ShapefileData waypoints,

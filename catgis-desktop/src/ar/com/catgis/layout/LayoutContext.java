@@ -1,8 +1,9 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
 
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.MapPanel;
-import ar.com.catgis.Project;
 
 /**
  * Context for CATMAP layout operations.

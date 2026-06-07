@@ -1,4 +1,7 @@
 package ar.com.catgis.layout;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -210,7 +213,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private boolean isGeographicCRS() {
-        ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
         if (proj == null) return false;
         String crs = proj.getProjectCRS();
         if (crs == null) return false;
@@ -277,9 +280,9 @@ public class LayoutMap implements LayoutElement {
                 key = key * 31 + Double.doubleToLongBits(map.getZoomFactor());
             }
         }
-        ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
         if (proj != null && proj.getLayers() != null) {
-            for (ar.com.catgis.Layer layer : proj.getLayers()) {
+            for (ar.com.catgis.core.model.Layer layer : proj.getLayers()) {
                 if (layer == null) continue;
                 key = key * 31 + (layer.isVisible() ? 1 : 0);
                 key = key * 31 + (layer.getName() != null ? layer.getName().hashCode() : 0);
@@ -289,17 +292,17 @@ public class LayoutMap implements LayoutElement {
     }
 
     private boolean shouldPreferMainMapComposite() {
-        ar.com.catgis.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
         if (proj == null || proj.getLayers() == null) {
             return false;
         }
-        for (ar.com.catgis.Layer layer : proj.getLayers()) {
+        for (ar.com.catgis.core.model.Layer layer : proj.getLayers()) {
             if (layer == null || !layer.isVisible()) {
                 continue;
             }
             if (layer instanceof ar.com.catgis.RasterLayer
                     || layer instanceof ar.com.catgis.OnlineTileLayer
-                    || layer instanceof ar.com.catgis.OnlineWmsLayer) {
+                    || layer instanceof ar.com.catgis.data.online.OnlineWmsLayer) {
                 return true;
             }
         }

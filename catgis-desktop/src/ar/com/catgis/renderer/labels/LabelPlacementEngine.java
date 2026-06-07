@@ -1,4 +1,5 @@
-package ar.com.catgis;
+package ar.com.catgis.renderer.labels;
+import ar.com.catgis.core.model.Layer;
 
 import java.awt.Font;
 import java.awt.FontMetrics;

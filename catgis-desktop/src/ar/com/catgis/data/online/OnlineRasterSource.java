@@ -1,5 +1,8 @@
-package ar.com.catgis;
+package ar.com.catgis.data.online;
+import ar.com.catgis.core.model.Layer;
 
+import ar.com.catgis.OnlineTileLayer;
+import ar.com.catgis.OnlineServiceType;
 public class OnlineRasterSource {
 
     private final String id;

@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
 import org.locationtech.jts.geom.Envelope;
 

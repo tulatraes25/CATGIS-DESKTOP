@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.ShapefileData;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;

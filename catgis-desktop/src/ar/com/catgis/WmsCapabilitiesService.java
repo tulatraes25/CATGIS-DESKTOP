@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
 
 import org.locationtech.jts.geom.Envelope;
 import org.w3c.dom.Document;

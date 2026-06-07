@@ -1,5 +1,8 @@
-package ar.com.catgis;
+package ar.com.catgis.service;
 
+import ar.com.catgis.ToolboxParameter;
+import ar.com.catgis.ToolboxOutputType;
+import ar.com.catgis.ToolboxInputType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;

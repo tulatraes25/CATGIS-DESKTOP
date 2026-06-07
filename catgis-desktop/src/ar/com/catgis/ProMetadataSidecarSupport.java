@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class ProMetadataSidecarSupport {
+public final class ProMetadataSidecarSupport {
 
     private static final int VERSION = 1;
     private static final String EXTENSION = ".catgis-pro.json";

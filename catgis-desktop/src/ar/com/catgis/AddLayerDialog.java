@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;

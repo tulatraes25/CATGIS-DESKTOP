@@ -1,4 +1,10 @@
 package ar.com.catgis.catmap;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import ar.com.catgis.*;
 import ar.com.catgis.layout.*;
@@ -1386,7 +1392,7 @@ public class Main {
             if (name == null || name.isEmpty()) continue;
             if (LayoutLegend.isBasemapName(name)) continue;
             if (layer instanceof ar.com.catgis.OnlineTileLayer
-                || layer instanceof ar.com.catgis.OnlineWmsLayer) continue;
+                || layer instanceof ar.com.catgis.data.online.OnlineWmsLayer) continue;
 
             String gtype = resolveGeometryTypeForLegend(layer);
             Color c = resolveColorForLegend(layer);
@@ -1440,7 +1446,7 @@ public class Main {
     private static String resolveGeometryTypeForLegend(Layer layer) {
         try {
             ar.com.catgis.MapPanel map = CatgisDesktopApp.mapPanel;
-            ar.com.catgis.ShapefileData data = map != null ? map.getShapefileData(layer) : null;
+            ar.com.catgis.data.vector.ShapefileData data = map != null ? map.getShapefileData(layer) : null;
             if (data == null) return "POLYGON";
             String upper = data.getFeatureCollection().getSchema()
                 .getGeometryDescriptor().getType().getBinding().getSimpleName().toUpperCase();

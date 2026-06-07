@@ -1,4 +1,4 @@
-package ar.com.catgis;
+package ar.com.catgis.analysis.raster;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;

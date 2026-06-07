@@ -40,7 +40,7 @@ public final class RasterSidecarSupport {
         }
     }
 
-    static Metadata read(java.io.File rasterFile) {
+    public static Metadata read(java.io.File rasterFile) {
         if (rasterFile == null) {
             return null;
         }
@@ -82,7 +82,7 @@ public final class RasterSidecarSupport {
         return new java.io.File(absolutePath + EXTENSION);
     }
 
-    record Metadata(Envelope envelope, String sourceCrs, java.io.File sidecarFile) {
+    public record Metadata(Envelope envelope, String sourceCrs, java.io.File sidecarFile) {
         @Override
         public String toString() {
             return String.format(Locale.US, "%s [%s]", sidecarFile.getName(), sourceCrs);

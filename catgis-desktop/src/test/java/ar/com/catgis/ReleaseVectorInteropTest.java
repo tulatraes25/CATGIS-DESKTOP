@@ -1,4 +1,6 @@
 package ar.com.catgis;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
 
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;

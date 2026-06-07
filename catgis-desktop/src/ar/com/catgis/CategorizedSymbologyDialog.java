@@ -1,4 +1,7 @@
 package ar.com.catgis;
+import ar.com.catgis.data.vector.VectorLayerUtils;
+
+import ar.com.catgis.data.vector.ShapefileData;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 
@@ -32,6 +35,7 @@ import java.awt.Window;
 import java.awt.geom.Path2D;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import ar.com.catgis.core.model.Layer;
 
 public class CategorizedSymbologyDialog extends JDialog {
 

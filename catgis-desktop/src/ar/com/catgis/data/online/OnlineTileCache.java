@@ -1,5 +1,7 @@
-package ar.com.catgis;
+package ar.com.catgis.data.online;
+import ar.com.catgis.data.online.OnlineRasterSource;
 
+import ar.com.catgis.OnlineMapUtils;
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;

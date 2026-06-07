@@ -1,4 +1,5 @@
-package ar.com.catgis;
+package ar.com.catgis.core.model;
+import ar.com.catgis.core.model.Layer;
 
 import java.awt.Color;
 import java.awt.GradientPaint;

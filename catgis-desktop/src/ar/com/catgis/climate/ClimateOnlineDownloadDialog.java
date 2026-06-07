@@ -1,4 +1,8 @@
 package ar.com.catgis.climate;
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.core.model.Project;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
 
 import ar.com.catgis.AppErrorSupport;
 import ar.com.catgis.AppIcons;
@@ -7,9 +11,6 @@ import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.DialogKeyboardSupport;
 import ar.com.catgis.FileChooserSupport;
 import ar.com.catgis.I18n;
-import ar.com.catgis.LocalRasterData;
-import ar.com.catgis.Project;
-import ar.com.catgis.RasterCoverageSupport;
 import ar.com.catgis.RasterImageLoader;
 import ar.com.catgis.RasterLayer;
 import ar.com.catgis.WindowLayoutSupport;
