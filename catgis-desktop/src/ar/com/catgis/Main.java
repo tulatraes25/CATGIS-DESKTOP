@@ -20,7 +20,13 @@ public class Main {
             splash.showFor(1200, () -> {
                 CatgisDesktopApp app = new CatgisDesktopApp();
                 app.setVisible(true);
-                SwingUtilities.invokeLater(app::showStartupProjectCrsPromptIfNeeded);
+                SwingUtilities.invokeLater(() -> {
+                    app.showStartupProjectCrsPromptIfNeeded();
+                    // Show welcome page on first launch
+                    if (AppBranding.isShowWelcomePage() && CatgisDesktopApp.currentProject == null) {
+                        WelcomePageDialog.open();
+                    }
+                });
             });
         });
     }

@@ -28,7 +28,23 @@ public final class AppBranding {
 
     private static volatile List<Image> appIconImages;
 
+    private static boolean showWelcomePage = true;
+
     private AppBranding() {
+    }
+
+    public static String getAppVersion() {
+        Package pkg = AppBranding.class.getPackage();
+        String ver = pkg != null ? pkg.getImplementationVersion() : null;
+        return ver != null ? ver : "1.0.0";
+    }
+
+    public static boolean isShowWelcomePage() {
+        return showWelcomePage;
+    }
+
+    public static void setShowWelcomePage(boolean show) {
+        showWelcomePage = show;
     }
 
     public static Image loadSplashImage() {
