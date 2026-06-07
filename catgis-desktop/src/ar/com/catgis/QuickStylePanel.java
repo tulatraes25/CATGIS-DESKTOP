@@ -405,14 +405,14 @@ public class QuickStylePanel extends JPanel {
     }
 
     private void installLayerSelectionWatcher() {
-        javax.swing.Timer timer = new javax.swing.Timer(500, e -> {
-            if (!isShowing()) return;
-            Layer selected = CatgisDesktopApp.layersPanel != null
-                    ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
-            if (selected != currentLayer) {
-                setLayer(selected);
+        // Poll-free: wait for the panel to be shown, then use layerList's listener
+        addHierarchyListener(e -> {
+            if (isShowing() && CatgisDesktopApp.layersPanel != null) {
+                Layer selected = CatgisDesktopApp.layersPanel.getSelectedLayer();
+                if (selected != currentLayer) {
+                    setLayer(selected);
+                }
             }
         });
-        timer.start();
     }
 }

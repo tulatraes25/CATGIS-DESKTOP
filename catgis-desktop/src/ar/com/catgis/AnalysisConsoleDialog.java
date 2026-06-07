@@ -616,7 +616,9 @@ public class AnalysisConsoleDialog extends JDialog {
                                 .append(", ").append(String.format("%.4f", env.getMaxY()))
                                 .append("\n");
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                    // Skip layers with errors
+                }
             }
             sb.append("\n");
         }
