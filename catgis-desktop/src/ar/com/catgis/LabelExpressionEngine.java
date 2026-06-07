@@ -263,7 +263,18 @@ public final class LabelExpressionEngine {
                 int j = i;
                 while (j < len && Character.isWhitespace(expr.charAt(j))) j++;
                 if (j < len && expr.charAt(j) == '(') {
-                    tokens.add(new Token(TokenType.FUNCTION, ident, start));
+                    // Count top-level commas to determine arity
+                    int parenDepth = 0;
+                    int commas = 0;
+                    for (int k = j + 1; k < len; k++) {
+                        char pk = expr.charAt(k);
+                        if (pk == '(') parenDepth++;
+                        else if (pk == ')') {
+                            if (parenDepth == 0) break;
+                            parenDepth--;
+                        } else if (pk == ',' && parenDepth == 0) commas++;
+                    }
+                    tokens.add(new Token(TokenType.FUNCTION, ident, start, commas + 1));
                 } else {
                     tokens.add(new Token(TokenType.IDENTIFIER, ident, start));
                 }
@@ -523,9 +534,6 @@ public final class LabelExpressionEngine {
         if (stack.isEmpty()) return "";
         return stack.pop();
     }
-
-    // Arity is now stored in the FUNCTION token during tokenization.
-    // This method is kept for backward compatibility.
 
     // --- Helpers ---
 
