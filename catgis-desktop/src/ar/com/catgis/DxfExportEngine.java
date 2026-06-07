@@ -25,22 +25,56 @@ public final class DxfExportEngine {
         if (data == null || data.getFeatureCollection() == null) {
             throw new IllegalArgumentException("No se pudieron cargar los datos de la capa: " + layer.getName());
         }
-        export(file, data.getFeatureCollection(), layer.getName(), layer.getLineColor());
+        Color lineColor = layer.getLineColor() != null ? layer.getLineColor() : Color.BLACK;
+        Color fillColor = layer.getFillColor() != null ? layer.getFillColor() : new Color(200, 200, 200);
+        Color pointColor = layer.getPointColor() != null ? layer.getPointColor() : Color.RED;
+        export(file, data.getFeatureCollection(), layer.getName(), lineColor, fillColor, pointColor);
     }
 
     /**
-     * Export a feature collection to DXF file.
+     * Full export with per-geometry-type colors.
      */
     public static void export(File file, SimpleFeatureCollection features,
-                              String layerName, Color defaultColor) throws Exception {
+                              String layerName,
+                              Color lineColor, Color fillColor, Color pointColor) throws Exception {
         try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
                 new FileOutputStream(file), "ISO-8859-1"))) {
 
             writeHeader(pw);
             writeTables(pw, layerName);
-            writeEntities(pw, features, layerName, defaultColor);
+            writeEntities(pw, features, layerName, lineColor, fillColor, pointColor);
             writeFooter(pw);
         }
+    }
+
+    /**
+     * Overloaded export with graduated/proportional per-feature color extractor.
+     * Uses a function to extract the per-feature color (e.g., from graduated symbology).
+     */
+    public static void exportWithFeatureColors(File file, SimpleFeatureCollection features,
+                                                String layerName,
+                                                Color defaultLineColor,
+                                                Color defaultFillColor,
+                                                Color defaultPointColor,
+                                                java.util.function.Function<SimpleFeature, Color> colorExtractor) throws Exception {
+        try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
+                new FileOutputStream(file), "ISO-8859-1"))) {
+
+            writeHeader(pw);
+            writeTables(pw, layerName);
+            writeEntitiesWithFeatureColors(pw, features, layerName,
+                    defaultLineColor, defaultFillColor, defaultPointColor, colorExtractor);
+            writeFooter(pw);
+        }
+    }
+
+    /**
+     * Legacy export (single default color for all geometry types).
+     */
+    @Deprecated
+    public static void export(File file, SimpleFeatureCollection features,
+                              String layerName, Color defaultColor) throws Exception {
+        export(file, features, layerName, defaultColor, defaultColor, defaultColor);
     }
 
     private static void writeHeader(PrintWriter pw) {
@@ -130,7 +164,16 @@ public final class DxfExportEngine {
     }
 
     private static void writeEntities(PrintWriter pw, SimpleFeatureCollection features,
-                                      String layerName, Color defaultColor) throws Exception {
+                                      String layerName,
+                                      Color lineColor, Color fillColor, Color pointColor) throws Exception {
+        writeEntitiesWithFeatureColors(pw, features, layerName, lineColor, fillColor, pointColor, null);
+    }
+
+    private static void writeEntitiesWithFeatureColors(PrintWriter pw, SimpleFeatureCollection features,
+                                                        String layerName,
+                                                        Color defaultLineColor, Color defaultFillColor,
+                                                        Color defaultPointColor,
+                                                        java.util.function.Function<SimpleFeature, Color> colorExtractor) throws Exception {
         pw.println("0");
         pw.println("SECTION");
         pw.println("2");
@@ -144,33 +187,44 @@ public final class DxfExportEngine {
                 Object geomObj = f.getDefaultGeometry();
                 if (!(geomObj instanceof Geometry geom) || geom.isEmpty()) continue;
 
+                // Per-feature color override (for graduated/proportional symbology)
+                Color featureColor = colorExtractor != null ? colorExtractor.apply(f) : null;
+
                 String geomType = geom.getGeometryType().toUpperCase();
 
                 switch (geomType) {
                     case "POINT":
-                        writePoint(pw, (Point) geom, safeLayer, defaultColor);
+                        writePoint(pw, (Point) geom, safeLayer,
+                                featureColor != null ? featureColor : defaultPointColor);
                         break;
                     case "MULTIPOINT":
                         for (int i = 0; i < geom.getNumGeometries(); i++) {
-                            writePoint(pw, (Point) geom.getGeometryN(i), safeLayer, defaultColor);
+                            writePoint(pw, (Point) geom.getGeometryN(i), safeLayer,
+                                    featureColor != null ? featureColor : defaultPointColor);
                         }
                         break;
                     case "LINESTRING":
-                        writePolyline(pw, (LineString) geom, safeLayer, defaultColor, false);
+                        writePolyline(pw, (LineString) geom, safeLayer,
+                                featureColor != null ? featureColor : defaultLineColor, false);
                         break;
                     case "MULTILINESTRING":
                         MultiLineString mls = (MultiLineString) geom;
                         for (int i = 0; i < mls.getNumGeometries(); i++) {
-                            writePolyline(pw, (LineString) mls.getGeometryN(i), safeLayer, defaultColor, false);
+                            writePolyline(pw, (LineString) mls.getGeometryN(i), safeLayer,
+                                    featureColor != null ? featureColor : defaultLineColor, false);
                         }
                         break;
                     case "POLYGON":
-                        writePolygon(pw, (Polygon) geom, safeLayer, defaultColor);
+                        writePolygon(pw, (Polygon) geom, safeLayer,
+                                featureColor != null ? featureColor : defaultLineColor,
+                                featureColor != null ? featureColor : defaultFillColor);
                         break;
                     case "MULTIPOLYGON":
                         MultiPolygon mp = (MultiPolygon) geom;
                         for (int i = 0; i < mp.getNumGeometries(); i++) {
-                            writePolygon(pw, (Polygon) mp.getGeometryN(i), safeLayer, defaultColor);
+                            writePolygon(pw, (Polygon) mp.getGeometryN(i), safeLayer,
+                                    featureColor != null ? featureColor : defaultLineColor,
+                                    featureColor != null ? featureColor : defaultFillColor);
                         }
                         break;
                 }
@@ -223,14 +277,47 @@ public final class DxfExportEngine {
     }
 
     private static void writePolygon(PrintWriter pw, Polygon polygon, String layer, Color color) throws Exception {
+        writePolygon(pw, polygon, layer, color, color);
+    }
+
+    private static void writePolygon(PrintWriter pw, Polygon polygon, String layer,
+                                      Color lineColor, Color fillColor) throws Exception {
         // Exterior ring as closed polyline
         LineString shell = polygon.getExteriorRing();
-        writePolyline(pw, shell, layer, color, true);
+        writePolyline(pw, shell, layer, lineColor, true);
 
-        // Interior rings (holes)
+        // Solid fill using SOLID entity (R12 compatible)
+        Coordinate[] coords = shell.getCoordinates();
+        if (coords.length >= 3) {
+            pw.println("0");
+            pw.println("SOLID");
+            pw.println("8");
+            pw.println(layer);
+            pw.println("62");
+            pw.println(rgbToAci(fillColor));
+            // SOLID uses up to 4 corners; use first 3 for a triangle fill
+            pw.println("10");
+            pw.println(formatCoord(coords[0].x));
+            pw.println("20");
+            pw.println(formatCoord(coords[0].y));
+            pw.println("11");
+            pw.println(formatCoord(coords[1].x));
+            pw.println("21");
+            pw.println(formatCoord(coords[1].y));
+            pw.println("12");
+            pw.println(formatCoord(coords[2].x));
+            pw.println("22");
+            pw.println(formatCoord(coords[2].y));
+            pw.println("13");
+            pw.println(formatCoord(coords[2].x));
+            pw.println("23");
+            pw.println(formatCoord(coords[2].y));
+        }
+
+        // Interior rings (holes) - outline only
         for (int r = 0; r < polygon.getNumInteriorRing(); r++) {
             LineString hole = polygon.getInteriorRingN(r);
-            writePolyline(pw, hole, layer, color, true);
+            writePolyline(pw, hole, layer, lineColor, true);
         }
     }
 
