@@ -1,110 +1,146 @@
 package ar.com.catgis;
-import ar.com.catgis.data.vector.ShapefileData;
-import ar.com.catgis.core.model.Layer;
-import ar.com.catgis.core.geometry.SpatialIndex;
 
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.index.strtree.STRtree;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.MultiPolygon;
+import org.locationtech.jts.geom.Polygon;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import org.geotools.api.feature.simple.SimpleFeature;
 
-/**
- * Snapping engine for vertex/edge snapping during editing.
- * Extracted from MapPanel to reduce its responsibilities.
- */
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class SnapEngine {
 
-    private boolean snapEnabled = false;
-    private double snapTolerancePx = 10;
-    private boolean snapToVertex = true;
-    private boolean snapToEdge = true;
+    private final MapPanel panel;
 
-    // --- Getters/Setters ---
+    public SnapEngine(MapPanel panel) {
+        this.panel = panel;
+    }
 
-    public boolean isSnapEnabled() { return snapEnabled; }
-    public void setSnapEnabled(boolean enabled) { this.snapEnabled = enabled; }
-    public double getSnapTolerancePx() { return snapTolerancePx; }
-    public void setSnapTolerancePx(double tolerance) { this.snapTolerancePx = tolerance; }
-    public boolean isSnapToVertex() { return snapToVertex; }
-    public void setSnapToVertex(boolean snap) { this.snapToVertex = snap; }
-    public boolean isSnapToEdge() { return snapToEdge; }
-    public void setSnapToEdge(boolean snap) { this.snapToEdge = snap; }
+    // --- Inner class ---
 
-    /**
-     * Find the nearest snap point to the given screen coordinates.
-     * Returns the snapped coordinate, or the original if no snap found.
-     */
-    public Coordinate snap(int screenX, int screenY, List<Layer> layers,
-                           MapViewController viewController) {
-        if (!snapEnabled) return new Coordinate(viewController.screenToWorldX(screenX), viewController.screenToWorldY(screenY));
+    static class SnapTarget {
+        final Coordinate coordinate;
+        final double distance;
 
-        double worldX = viewController.screenToWorldX(screenX);
-        double worldY = viewController.screenToWorldY(screenY);
-        double toleranceWorld = snapTolerancePx / viewController.getZoomFactor();
+        SnapTarget(Coordinate coordinate, double distance) {
+            this.coordinate = coordinate;
+            this.distance = distance;
+        }
+    }
 
-        Coordinate bestSnap = null;
-        double bestDist = Double.MAX_VALUE;
+    // --- Methods moved from MapPanel ---
 
-        for (Layer layer : layers) {
-            if (layer == null || !layer.isVisible()) continue;
-            ShapefileData data = getShapefileData(layer);
-            if (data == null) continue;
+    boolean shouldExcludeSelectedFeatureFromSnap() {
+        return panel.featureEditMode
+                && MapPanel.EDIT_OP_MOVE_VERTEX.equals(panel.featureEditOperation)
+                && panel.activeEditVertexIndex >= 0;
+    }
 
-            String layerId = layer.getName() + "@" + System.identityHashCode(layer);
-            STRtree index = indexCache.computeIfAbsent(layerId, k -> buildLayerIndex(data));
-            if (index == null) continue;
+    Coordinate findNearestSnapCoordinate(int screenX, int screenY, boolean excludeSelectedFeature) {
+        if (!panel.snapEnabled) {
+            return null;
+        }
+        SnapTarget bestTarget = null;
+        Coordinate target = new Coordinate(panel.screenToWorldX(screenX), panel.screenToWorldY(screenY));
+        for (Layer layer : getSnapCandidateLayers()) {
+            if (layer == null || !panel.isLayerEffectivelyVisible(layer)) {
+                continue;
+            }
 
-            Envelope search = new Envelope(worldX - toleranceWorld, worldX + toleranceWorld, worldY - toleranceWorld, worldY + toleranceWorld);
-            for (Object obj : index.query(search)) {
-                if (obj instanceof Coordinate c) {
-                    double dist = Math.hypot(c.x - worldX, c.y - worldY);
-                    if (dist < bestDist && dist <= toleranceWorld) { bestDist = dist; bestSnap = c; }
-                } else if (obj instanceof LineSegment seg) {
-                    double t = Math.max(0, Math.min(1, ((worldX - seg.x1) * seg.dx + (worldY - seg.y1) * seg.dy) / seg.lenSq));
-                    double px = seg.x1 + t * seg.dx;
-                    double py = seg.y1 + t * seg.dy;
-                    double dist = Math.hypot(px - worldX, py - worldY);
-                    if (dist < bestDist && dist <= toleranceWorld) { bestDist = dist; bestSnap = new Coordinate(px, py); }
+            ShapefileData data = panel.getShapefileData(layer);
+            if (data == null || data.getFeatures() == null) {
+                continue;
+            }
+
+            for (SimpleFeature feature : data.getFeatures()) {
+                if (feature == null) {
+                    continue;
+                }
+                if (!panel.isFeatureVisibleInLayer(layer, feature)) {
+                    continue;
+                }
+                if (excludeSelectedFeature && layer == panel.selectedLayer && panel.sameFeatureId(feature, panel.selectedFeature != null ? panel.selectedFeature.getID() : null)) {
+                    continue;
+                }
+
+                Object geomObj = feature.getDefaultGeometry();
+                if (!(geomObj instanceof Geometry geometry)) {
+                    continue;
+                }
+
+                Geometry displayGeometry = panel.reprojectGeometryIfNeeded(layer, geometry);
+                if (displayGeometry == null || displayGeometry.isEmpty()) {
+                    continue;
+                }
+
+                SnapTarget candidate = findNearestSnapTarget(displayGeometry, target, screenX, screenY);
+                if (candidate != null && (bestTarget == null || candidate.distance < bestTarget.distance)) {
+                    bestTarget = candidate;
                 }
             }
         }
-
-        return bestSnap != null ? bestSnap : new Coordinate(worldX, worldY);
+        return bestTarget != null ? bestTarget.coordinate : null;
     }
 
-    private static final Map<String, STRtree> indexCache = new ConcurrentHashMap<>();
+    SnapTarget findNearestSnapTarget(Geometry displayGeometry, Coordinate target, int screenX, int screenY) {
+        if (displayGeometry == null || displayGeometry.isEmpty() || target == null) {
+            return null;
+        }
 
-    private STRtree buildLayerIndex(ShapefileData data) {
-        STRtree tree = new STRtree(10);
-        for (Object obj : data.getFeatures()) {
-            if (!(obj instanceof org.geotools.api.feature.simple.SimpleFeature feature)) continue;
-            Geometry geom = (Geometry) feature.getDefaultGeometry();
-            if (geom == null) continue;
-            for (Coordinate c : geom.getCoordinates()) tree.insert(new Envelope(c.x, c.x, c.y, c.y), c);
-            if (geom instanceof LineString ls && snapToEdge) {
-                Coordinate[] coords = ls.getCoordinates();
-                for (int i = 0; i < coords.length - 1; i++) {
-                    Coordinate a = coords[i], b = coords[i + 1];
-                    double dx = b.x - a.x, dy = b.y - a.y, lenSq = dx * dx + dy * dy;
-                    if (lenSq == 0) continue;
-                    Envelope segEnv = new Envelope(Math.min(a.x, b.x), Math.max(a.x, b.x), Math.min(a.y, b.y), Math.max(a.y, b.y));
-                    tree.insert(segEnv, new LineSegment(a.x, a.y, dx, dy, lenSq));
-                }
+        SnapTarget bestTarget = null;
+        for (Coordinate coordinate : displayGeometry.getCoordinates()) {
+            if (coordinate == null) {
+                continue;
+            }
+
+            int vx = panel.worldToScreenX(coordinate.x);
+            int vy = panel.worldToScreenY(coordinate.y);
+            double distance = Math.hypot(screenX - vx, screenY - vy);
+            if (distance > MapPanel.SNAP_TOLERANCE_PX) {
+                continue;
+            }
+
+            if (bestTarget == null || distance < bestTarget.distance) {
+                bestTarget = new SnapTarget(new Coordinate(coordinate), distance);
             }
         }
-        try { tree.build(); } catch (Exception ignored) {}
-        return tree;
+
+        if (displayGeometry instanceof LineString
+                || displayGeometry instanceof MultiLineString
+                || displayGeometry instanceof Polygon
+                || displayGeometry instanceof MultiPolygon) {
+            MapPanel.LineSplitProjection projection = panel.findEditableSegmentProjection(displayGeometry, target, screenX, screenY, MapPanel.SNAP_TOLERANCE_PX);
+            if (projection != null && projection.projected != null
+                    && (bestTarget == null || projection.distance < bestTarget.distance)) {
+                bestTarget = new SnapTarget(new Coordinate(projection.projected), projection.distance);
+            }
+        }
+
+        return bestTarget;
     }
 
-    private record LineSegment(double x1, double y1, double dx, double dy, double lenSq) {}
-
-    private ShapefileData getShapefileData(Layer layer) {
-        MapPanel mapPanel = AppContext.get().getMapPanel();
-        return mapPanel != null ? mapPanel.getShapefileData(layer) : null;
+    List<Layer> getSnapCandidateLayers() {
+        List<Layer> candidates = new ArrayList<>();
+        if (panel.activeVectorEditingLayer != null && panel.shapefileLayers.containsKey(panel.activeVectorEditingLayer)) {
+            candidates.add(panel.activeVectorEditingLayer);
+            return candidates;
+        }
+        if (panel.selectedLayer != null && panel.shapefileLayers.containsKey(panel.selectedLayer)) {
+            candidates.add(panel.selectedLayer);
+            return candidates;
+        }
+        for (Layer layer : panel.getRenderOrderLayers()) {
+            if (layer != null && panel.shapefileLayers.containsKey(layer) && panel.isLayerEffectivelyVisible(layer)) {
+                candidates.add(layer);
+            }
+        }
+        return candidates;
     }
 }

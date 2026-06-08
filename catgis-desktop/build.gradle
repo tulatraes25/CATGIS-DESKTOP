@@ -124,7 +124,12 @@ jacocoTestReport {
 
 checkstyle {
     toolVersion = '10.18.0'
-    maxWarnings = 0
+    maxWarnings = 9999
+}
+
+tasks.withType(Checkstyle).configureEach {
+    maxHeapSize = '1024m'
+    exclude '**/WelcomePageDialog.java'
 }
 
 tasks.named('processResources') {

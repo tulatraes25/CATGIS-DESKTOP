@@ -55,7 +55,9 @@ public final class EventBus {
         /** Selection cleared. Data: null. */
         SELECTION_CLEARED,
         /** Status message. Data: String. */
-        STATUS_MESSAGE
+        STATUS_MESSAGE,
+        /** Sync floating vector edit toolbar. Data: null. */
+        TOOLBAR_SYNC
     }
 
     /** An event with type and optional data. */

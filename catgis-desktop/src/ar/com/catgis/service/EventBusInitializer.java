@@ -65,5 +65,10 @@ public final class EventBusInitializer {
                 }
             });
         });
+
+        // ── Toolbar sync ──
+        EventBus.on(EventType.TOOLBAR_SYNC, (Event e) -> {
+            SwingUtilities.invokeLater(CatgisDesktopApp::syncFloatingVectorEditToolbar);
+        });
     }
 }
