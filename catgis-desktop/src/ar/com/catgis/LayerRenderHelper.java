@@ -39,26 +39,40 @@ public final class LayerRenderHelper {
     }
 
     /**
-     * Resolve best matching style rule: graduated takes priority over categorized.
+     * Resolve best matching style rule: rule-based > graduated > categorized.
      */
     public static CategoryStyleRule resolveBestRule(Layer layer, SimpleFeature feature, String geomType) {
         if (layer == null || feature == null) return null;
         if ("point".equals(geomType) || "multipoint".equals(geomType)) {
+            CategoryStyleRule rb = resolveRuleBased(layer.getPointRuleBasedSymbology(), feature);
+            if (rb != null) return rb;
             GraduatedRangeRule g = resolveGraduatedRule(layer.getPointGraduatedSymbology(), feature);
             if (g != null) return g;
             return resolveCategoryRule(layer.getPointCategorizedSymbology(), feature);
         }
         if ("line".equals(geomType) || "multilinestring".equals(geomType)) {
+            CategoryStyleRule rb = resolveRuleBased(layer.getLineRuleBasedSymbology(), feature);
+            if (rb != null) return rb;
             GraduatedRangeRule g = resolveGraduatedRule(layer.getLineGraduatedSymbology(), feature);
             if (g != null) return g;
             return resolveCategoryRule(layer.getLineCategorizedSymbology(), feature);
         }
         if ("polygon".equals(geomType) || "multipolygon".equals(geomType)) {
+            CategoryStyleRule rb = resolveRuleBased(layer.getPolygonRuleBasedSymbology(), feature);
+            if (rb != null) return rb;
             GraduatedRangeRule g = resolveGraduatedRule(layer.getPolygonGraduatedSymbology(), feature);
             if (g != null) return g;
             return resolveCategoryRule(layer.getPolygonCategorizedSymbology(), feature);
         }
         return null;
+    }
+
+    /**
+     * Resolve rule-based symbology.
+     */
+    public static CategoryStyleRule resolveRuleBased(RuleBasedSymbology symbology, SimpleFeature feature) {
+        if (symbology == null || !symbology.isConfigured() || feature == null) return null;
+        return symbology.resolve(feature);
     }
 
     /**

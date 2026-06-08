@@ -8,6 +8,7 @@ import ar.com.catgis.GraduatedSymbology;
 import ar.com.catgis.FieldConfig;
 import ar.com.catgis.CRSDefinitions;
 import ar.com.catgis.CategorizedSymbology;
+import ar.com.catgis.RuleBasedSymbology;
 import ar.com.catgis.CadLayerSupport;
 import ar.com.catgis.CadGeoreference;
 import java.awt.Color;
@@ -237,6 +238,9 @@ public class Layer {
     private final GraduatedSymbology lineGraduatedSymbology = new GraduatedSymbology();
     private final GraduatedSymbology polygonGraduatedSymbology = new GraduatedSymbology();
     private final ProportionalSymbols proportionalSymbols = new ProportionalSymbols();
+    private final RuleBasedSymbology pointRuleBasedSymbology = new RuleBasedSymbology();
+    private final RuleBasedSymbology lineRuleBasedSymbology = new RuleBasedSymbology();
+    private final RuleBasedSymbology polygonRuleBasedSymbology = new RuleBasedSymbology();
     private boolean heatmapEnabled = false;
     private int heatmapRadius = 30;
     private float heatmapOpacity = 0.6f;
@@ -599,6 +603,10 @@ public class Layer {
     public ProportionalSymbols getProportionalSymbols() {
         return proportionalSymbols;
     }
+
+    public RuleBasedSymbology getPointRuleBasedSymbology() { return pointRuleBasedSymbology; }
+    public RuleBasedSymbology getLineRuleBasedSymbology() { return lineRuleBasedSymbology; }
+    public RuleBasedSymbology getPolygonRuleBasedSymbology() { return polygonRuleBasedSymbology; }
 
     public boolean isHeatmapEnabled() { return heatmapEnabled; }
     public void setHeatmapEnabled(boolean e) { this.heatmapEnabled = e; }
