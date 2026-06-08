@@ -127,7 +127,8 @@ public final class LabelExpressionEngine {
 
     private enum TokenType {
         FIELD_REF, STRING_LITERAL, NUMBER, OPERATOR, COMPARATOR,
-        FUNCTION, COMMA, LPAREN, RPAREN, CONCAT, IDENTIFIER
+        FUNCTION, COMMA, LPAREN, RPAREN, CONCAT, IDENTIFIER,
+        LOGICAL_AND
     }
 
     private record Token(TokenType type, String value, int position, int arity) {
@@ -206,6 +207,17 @@ public final class LabelExpressionEngine {
                 tokens.add(new Token(TokenType.CONCAT, "||", i));
                 i += 2;
                 continue;
+            }
+
+            // 2-char logical: &&, ||
+            if (i + 1 < len) {
+                String twoChar = expr.substring(i, i + 2);
+                if (twoChar.equals("&&")) {
+                    tokens.add(new Token(TokenType.LOGICAL_AND, "&&", i));
+                    i += 2;
+                    continue;
+                }
+
             }
 
             // 2-char comparators: ==, !=, >=, <=
@@ -291,12 +303,12 @@ public final class LabelExpressionEngine {
 
     private static int getPrecedence(Token t) {
         return switch (t.value()) {
-            case "||" -> 1;
+            case "&&", "||" -> 1;
             case "==", "!=" -> 2;
             case ">", "<", ">=", "<=" -> 3;
             case "+", "-" -> 4;
             case "*", "/" -> 5;
-            default -> 0;
+            default -> 1; // CONCAT and others
         };
     }
 
@@ -318,10 +330,11 @@ public final class LabelExpressionEngine {
                     }
                     if (stack.isEmpty()) throw new ExpressionException("Misplaced comma or mismatched parentheses");
                 }
-                case OPERATOR, COMPARATOR, CONCAT -> {
+                case OPERATOR, COMPARATOR, CONCAT, LOGICAL_AND -> {
                     while (!stack.isEmpty() && (stack.peek().type() == TokenType.OPERATOR
                             || stack.peek().type() == TokenType.COMPARATOR
-                            || stack.peek().type() == TokenType.CONCAT)
+                            || stack.peek().type() == TokenType.CONCAT
+                            || stack.peek().type() == TokenType.LOGICAL_AND)
                             && getPrecedence(stack.peek()) >= getPrecedence(t)
                             && isLeftAssoc(t)) {
                         output.add(stack.pop());
@@ -397,6 +410,12 @@ public final class LabelExpressionEngine {
                     boolean result = compare(a, b, t.value());
                     stack.push(result);
                 }
+                case LOGICAL_AND -> {
+                    Object b = stack.pop();
+                    Object a = stack.pop();
+                    stack.push(toBoolean(a) && toBoolean(b));
+                }
+
                 case FUNCTION -> {
                     String func = t.value().toLowerCase();
                     int argCount = t.arity();
@@ -591,6 +610,13 @@ public final class LabelExpressionEngine {
         return (int) Math.round(toDouble(o));
     }
 
+    private static boolean toBoolean(Object o) {
+        if (o instanceof Boolean b) return b;
+        if (o instanceof Number n) return n.doubleValue() != 0;
+        if (o instanceof String s) return !s.trim().isEmpty() && !"false".equalsIgnoreCase(s.trim()) && !"0".equals(s.trim());
+        return o != null;
+    }
+
     private static String stringValue(Object o) {
         if (o == null) return "";
         if (o instanceof String s) return s;
@@ -659,3 +685,6 @@ public final class LabelExpressionEngine {
         public ExpressionException(String message, Throwable cause) { super(message, cause); }
     }
 }
+
+
+
