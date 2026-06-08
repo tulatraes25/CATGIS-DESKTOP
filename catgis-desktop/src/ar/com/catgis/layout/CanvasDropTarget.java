@@ -65,7 +65,7 @@ public class CanvasDropTarget {
                                             handler.onImageDropped(img, mmX, mmY);
                                             continue;
                                         }
-                                    } catch (Exception ex) { ex.printStackTrace(); }
+                                    } catch (Exception ex) { ar.com.catgis.CatgisLogger.warn("Canvas drop error", ex); }
                                 }
                                 handler.onFileDropped(file, mmX, mmY);
                             }
@@ -76,7 +76,7 @@ public class CanvasDropTarget {
 
                     e.dropComplete(false);
                 } catch (Exception ex) {
-                    ex.printStackTrace();
+                    ar.com.catgis.CatgisLogger.warn("Canvas drop error", ex);
                     e.dropComplete(false);
                 }
             }

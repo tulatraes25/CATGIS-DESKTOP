@@ -1,5 +1,6 @@
 package ar.com.catgis.service;
 
+import ar.com.catgis.CatgisLogger;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -103,7 +104,7 @@ public final class EventBus {
             try {
                 handler.accept(event);
             } catch (Exception e) {
-                System.err.println("[EventBus] Error in " + type + " handler: " + e.getMessage());
+                CatgisLogger.warn("[EventBus] Error in " + type + " handler", e);
             }
         }
     }

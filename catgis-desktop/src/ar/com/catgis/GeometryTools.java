@@ -159,7 +159,7 @@ public final class GeometryTools {
                         builder.add(intersection);
                         result.add(builder.buildFeature(null));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { ar.com.catgis.CatgisLogger.warn("Geometry operation failed", e); }
             }
         }
         return result;

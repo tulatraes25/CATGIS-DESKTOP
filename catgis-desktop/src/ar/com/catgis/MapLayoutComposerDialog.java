@@ -1349,7 +1349,7 @@ public class MapLayoutComposerDialog extends JFrame {
                         LayoutImage img = new LayoutImage("img-" + System.currentTimeMillis(), bi, 50, 50, w, h);
                         img.setZOrder(layoutModel.nextZ()); img.setName(fc.getSelectedFile().getName());
                         layoutModel.addElement(img); refreshElementList(); previewPanel.repaint(); }
-                        } catch (Exception ex) { ex.printStackTrace(); }
+                        } catch (Exception ex) { CatgisLogger.warn("Layout interaction error", ex); }
                     }
                 }),
                 createToolbarButton("Rectangulo", AppIcons.rectangleIcon(), "Dibujar rectangulo. Click y arrastrar en el canvas.", () -> previewPanel.startDrawing("rect")),
@@ -8954,7 +8954,7 @@ public class MapLayoutComposerDialog extends JFrame {
                             img.setZOrder(layoutModel.nextZ()); img.setName(fc.getSelectedFile().getName());
                             layoutModel.addElement(img); refreshElementList(); previewPanel.repaint();
                         }
-                    } catch (Exception ex) { ex.printStackTrace(); }
+                    } catch (Exception ex) { CatgisLogger.warn("Layout interaction error", ex); }
                 }
                 break;
             }
@@ -8972,7 +8972,7 @@ public class MapLayoutComposerDialog extends JFrame {
                         t.loadCsv(fc.getSelectedFile());
                         t.setZOrder(layoutModel.nextZ()); t.setName("Tabla " + countOfType("Tabla"));
                         layoutModel.addElement(t); refreshElementList(); previewPanel.repaint();
-                    } catch (Exception ex) { ex.printStackTrace(); }
+                    } catch (Exception ex) { CatgisLogger.warn("Layout interaction error", ex); }
                 }
                 break;
             }
@@ -9035,7 +9035,7 @@ public class MapLayoutComposerDialog extends JFrame {
             refreshAll();
             statusLabel.setText("Importado: " + fc.getSelectedFile().getName() + " (" + res.imported.size() + " elementos)");
         } catch (Exception ex) {
-            ex.printStackTrace();
+            CatgisLogger.warn("Layout import error", ex);
             javax.swing.JOptionPane.showMessageDialog(this, "Error al importar: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
     }

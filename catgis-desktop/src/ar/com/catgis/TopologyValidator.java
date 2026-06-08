@@ -56,7 +56,7 @@ public final class TopologyValidator {
 
         STRtree tree = new STRtree(10);
         for (int i = 0; i < polygons.size(); i++) tree.insert(polygons.get(i).getEnvelopeInternal(), i);
-        try { tree.build(); } catch (Exception ignored) {}
+        try { tree.build(); } catch (Exception e) { CatgisLogger.warn("STRtree build failed in validateNoGaps", e); }
 
         Set<String> checked = new LinkedHashSet<>();
         for (int i = 0; i < polygons.size(); i++) {
@@ -75,7 +75,7 @@ public final class TopologyValidator {
                     if (gap != null && !gap.isEmpty() && gap.getArea() > tolerance) {
                         issues.add(new TopologyIssue("NO_GAPS", "Gap found between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), gap));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { CatgisLogger.warn("Topology check failed for pair " + i + "," + j, e); }
             }
         }
         return new TopologyResult(issues.isEmpty(), issues);
@@ -102,7 +102,7 @@ public final class TopologyValidator {
 
         STRtree tree = new STRtree(10);
         for (int i = 0; i < polygons.size(); i++) tree.insert(polygons.get(i).getEnvelopeInternal(), i);
-        try { tree.build(); } catch (Exception ignored) {}
+        try { tree.build(); } catch (Exception e) { CatgisLogger.warn("STRtree build failed in validateNoGaps", e); }
 
         Set<String> checked = new LinkedHashSet<>();
         for (int i = 0; i < polygons.size(); i++) {
@@ -120,7 +120,7 @@ public final class TopologyValidator {
                     if (intersection != null && !intersection.isEmpty() && intersection.getArea() > 0) {
                         issues.add(new TopologyIssue("NO_OVERLAPS", "Overlap between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), intersection));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { CatgisLogger.warn("Topology check failed for pair " + i + "," + j, e); }
             }
         }
         return new TopologyResult(issues.isEmpty(), issues);
@@ -254,7 +254,7 @@ public final class TopologyValidator {
                     if (inter != null && !inter.isEmpty() && inter.getDimension() >= 1) {
                         issues.add(new TopologyIssue("MUST_NOT_OVERLAP_WITH", "Overlap between feature " + i + " and " + j, i, inter));
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { CatgisLogger.warn("Topology check failed for pair " + i + "," + j, e); }
             }
         }
         return new TopologyResult(issues.isEmpty(), issues);

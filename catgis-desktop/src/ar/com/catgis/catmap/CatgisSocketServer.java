@@ -35,14 +35,14 @@ public final class CatgisSocketServer {
         listenerThread = new Thread(() -> {
             try {
                 serverSocket = new ServerSocket(PORT, 50, InetAddress.getByName("127.0.0.1"));
-                System.out.println("[CATMAP Server] Listening on port " + PORT);
+                CatgisLogger.info("[CATMAP Server] Listening on port " + PORT);
                 while (running) {
                     Socket client = serverSocket.accept();
                     new Thread(() -> handleClient(client)).start();
                 }
             } catch (IOException e) {
                 if (running) {
-                    System.err.println("[CATMAP Server] Error: " + e.getMessage());
+                    CatgisLogger.warn("[CATMAP Server] Error", e);
                 }
             }
         }, "CATMAP-Server");
