@@ -88,6 +88,7 @@ public class LayerPropertiesDialog extends JDialog {
     private final JLabel pointGraphicPreviewLabel;
     private final JLabel pointCatalogSelectionLabel;
     private final JLabel symbologyPreviewLabel;
+    private final JButton ruleBasedBtn;
     private final JButton browsePointGraphicButton;
     private final JButton clearPointGraphicButton;
 
@@ -261,6 +262,8 @@ public class LayerPropertiesDialog extends JDialog {
         categorizedButton.addActionListener(e -> CategorizedSymbologyDialog.open(this, layer));
         JButton graduatedButton = new JButton("Simbologia graduada...");
         graduatedButton.addActionListener(e -> GraduatedSymbologyDialog.open(this, layer));
+        ruleBasedBtn = new JButton("Simbologia por reglas...");
+        ruleBasedBtn.addActionListener(e -> openRuleBasedDialog());
         JButton propSymbolBtn = new JButton("Simbolos proporcionales...");
         propSymbolBtn.addActionListener(e -> ProportionalSymbolsDialog.open(this, layer));
         JButton importSldButton = new JButton("Importar SLD...");
@@ -433,6 +436,7 @@ public class LayerPropertiesDialog extends JDialog {
         }
         JPanel styleActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         styleActions.setOpaque(false);
+        styleActions.add(ruleBasedBtn);
         styleActions.add(categorizedButton);
         styleActions.add(importSldButton);
         styleActions.add(exportSldButton);
@@ -1236,6 +1240,18 @@ public class LayerPropertiesDialog extends JDialog {
             return right == null;
         }
         return left.equals(right);
+    }
+
+    private void openRuleBasedDialog() {
+        String geomType = isPointLayer() ? "point" : isLineLayer() ? "line" : "polygon";
+        RuleBasedSymbologyDialog dialog = new RuleBasedSymbologyDialog(this, layer, geomType);
+        dialog.setVisible(true);
+    }
+
+    private String geomTypeForLayer() {
+        if (isPointLayer()) return "point";
+        if (isLineLayer()) return "line";
+        return "polygon";
     }
 
     private void importSldStyle() {

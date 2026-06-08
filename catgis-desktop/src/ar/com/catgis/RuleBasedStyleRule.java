@@ -66,6 +66,12 @@ public class RuleBasedStyleRule extends CategoryStyleRule {
         return true;
     }
 
+    // Transient parent reference for UI navigation (not serialized, not in copy)
+    private transient RuleBasedStyleRule parentRule;
+
+    void setParentRule(RuleBasedStyleRule parent) { this.parentRule = parent; }
+    public RuleBasedStyleRule getParentRule() { return parentRule; }
+
     // ─── Getters / Setters ───────────────────────────────────────────────
 
     public String getFilterExpression() {
