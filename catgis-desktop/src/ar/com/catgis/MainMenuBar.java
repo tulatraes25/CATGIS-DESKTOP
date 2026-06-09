@@ -256,6 +256,10 @@ public class MainMenuBar extends JMenuBar {
         });
         menuAnalisis.add(itemNetwork);
 
+        JMenuItem itemWhitebox = createItem("WhiteboxTools (terrain/hydro)...", null);
+        itemWhitebox.addActionListener(e -> WhiteboxToolDialog.open());
+        menuAnalisis.add(itemWhitebox);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
