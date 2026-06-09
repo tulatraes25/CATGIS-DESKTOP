@@ -174,8 +174,8 @@ public class MapPanel extends JPanel {
     private SimpleFeature copiedFeature = null;
     private final List<SimpleFeature> copiedFeatures = new ArrayList<>();
     boolean featureEditMode = false;
-    private Geometry featureEditOriginalGeometry = null;
-    private boolean featureEditDirty = false;
+    Geometry featureEditOriginalGeometry = null;
+    boolean featureEditDirty = false;
     String featureEditOperation = EDIT_OP_MOVE_VERTEX;
     final List<Coordinate> featureEditSketchCoordinates = new ArrayList<>();
     private final Deque<LayerEditSnapshot> editUndoStack = new ArrayDeque<>();
@@ -186,7 +186,7 @@ public class MapPanel extends JPanel {
     Coordinate adjacentPolygonSegmentEnd = null;
     Coordinate cadReferenceSegmentStart = null;
     Coordinate cadReferenceSegmentEnd = null;
-    private boolean cadReferenceFromStart = false;
+    boolean cadReferenceFromStart = false;
     boolean cadReferenceEndpointChosen = false;
     static final int EDIT_VERTEX_TOLERANCE_PX = 10;
     private static final int MAX_EDIT_HISTORY = 20;
@@ -202,7 +202,7 @@ public class MapPanel extends JPanel {
     static final String EDIT_OP_SHORTEN_LINE = "SHORTEN_LINE";
     static final String EDIT_OP_PARALLEL = "PARALLEL_LINE";
     static final String EDIT_OP_PERPENDICULAR = "PERPENDICULAR_LINE";
-    private static final double EDIT_SEGMENT_TOLERANCE_PX = 22.0;
+    static final double EDIT_SEGMENT_TOLERANCE_PX = 22.0;
     static final int SELECTION_BOX_DRAG_THRESHOLD_PX = 6;
     static final int SELECTION_FLASH_DURATION_MS = 420;
     static final double SNAP_TOLERANCE_PX = 14.0;
@@ -1472,7 +1472,7 @@ public class MapPanel extends JPanel {
         return !sourceFamily.isBlank() && sourceFamily.equals(targetFamily);
     }
 
-    private List<String> getSelectedFeatureIdsForLayer(Layer layer) {
+    List<String> getSelectedFeatureIdsForLayer(Layer layer) {
         if (layer == null) {
             return new ArrayList<>();
         }
@@ -1499,7 +1499,7 @@ public class MapPanel extends JPanel {
         }
     }
 
-    private void clearAdjacentPolygonState() {
+    void clearAdjacentPolygonState() {
         adjacentPolygonSegmentStart = null;
         adjacentPolygonSegmentEnd = null;
     }
@@ -2298,7 +2298,7 @@ public class MapPanel extends JPanel {
         return drawingToolManager.appendCurrentDrawingToLayer(layer);
     }
 
-    private boolean appendGeometriesToLayer(Layer layer, List<Geometry> newGeometries, String successMessage) {
+    boolean appendGeometriesToLayer(Layer layer, List<Geometry> newGeometries, String successMessage) {
         return drawingToolManager.appendGeometriesToLayer(layer, newGeometries, successMessage);
     }
 
@@ -2374,7 +2374,7 @@ public class MapPanel extends JPanel {
         return builder.buildFeature(buildNextFeatureId(existingFeatures));
     }
 
-    private SimpleFeature buildDerivedFeatureForLayer(ShapefileData targetData,
+    SimpleFeature buildDerivedFeatureForLayer(ShapefileData targetData,
                                                       Geometry geometry,
                                                       List<SimpleFeature> existingFeatures,
                                                       SimpleFeature sourceFeature) {
@@ -4653,7 +4653,7 @@ public class MapPanel extends JPanel {
         return true;
     }
 
-    private String getReadOnlyLayerMessage(Layer layer) {
+    String getReadOnlyLayerMessage(Layer layer) {
         String reason = VectorLayerUtils.getReadOnlyVectorLayerReason(layer);
         return !reason.isBlank() ? reason : "La capa seleccionada esta en modo lectura.";
     }
@@ -4958,7 +4958,7 @@ public class MapPanel extends JPanel {
         return envelope != null ? envelope.centre() : null;
     }
 
-    private void startSelectionFlash(Layer layer, SimpleFeature feature) {
+    void startSelectionFlash(Layer layer, SimpleFeature feature) {
         if (layer == null || feature == null) {
             return;
         }
@@ -5466,7 +5466,7 @@ public class MapPanel extends JPanel {
                 || EDIT_OP_PERPENDICULAR.equals(featureEditOperation);
     }
 
-    private boolean isSelectedFeatureLinear() {
+    boolean isSelectedFeatureLinear() {
         if (selectedFeature == null) {
             return false;
         }
@@ -5474,7 +5474,7 @@ public class MapPanel extends JPanel {
         return geomObj instanceof LineString || geomObj instanceof MultiLineString;
     }
 
-    private boolean isSelectedFeaturePolygonal() {
+    boolean isSelectedFeaturePolygonal() {
         if (selectedFeature == null) {
             return false;
         }
@@ -5482,7 +5482,7 @@ public class MapPanel extends JPanel {
         return geomObj instanceof Polygon || geomObj instanceof MultiPolygon;
     }
 
-    private boolean isSelectedFeatureLinearOrPolygonal() {
+    boolean isSelectedFeatureLinearOrPolygonal() {
         if (selectedFeature == null) {
             return false;
         }
@@ -5493,7 +5493,7 @@ public class MapPanel extends JPanel {
                 || geomObj instanceof MultiPolygon;
     }
 
-    private boolean ensureSelectedLineReadyForCad(String actionName) {
+    boolean ensureSelectedLineReadyForCad(String actionName) {
         if (!featureEditMode && selectedLayer != null && selectedFeature != null) {
             enableFeatureEdit(selectedLayer, selectedFeature);
         }
@@ -6291,7 +6291,7 @@ public class MapPanel extends JPanel {
         replaceSelectedFeatureWithGeometries(replacementParts, statusMessage);
     }
 
-    private boolean shouldPreserveFeatureEditOperation() {
+    boolean shouldPreserveFeatureEditOperation() {
         return EDIT_OP_ADD_VERTEX.equals(featureEditOperation)
                 || EDIT_OP_REMOVE_VERTEX.equals(featureEditOperation)
                 || EDIT_OP_JOIN_VERTEX.equals(featureEditOperation)
@@ -6480,7 +6480,7 @@ public class MapPanel extends JPanel {
         refreshEditingUi();
     }
 
-    private Envelope computeEnvelope(List<SimpleFeature> features) {
+    Envelope computeEnvelope(List<SimpleFeature> features) {
         Envelope envelope = new Envelope();
         if (features == null) {
             return envelope;
@@ -6497,7 +6497,7 @@ public class MapPanel extends JPanel {
         return envelope;
     }
 
-    private List<SimpleFeature> buildReplacementFeatures(SimpleFeature sourceFeature, List<Geometry> replacementParts) {
+    List<SimpleFeature> buildReplacementFeatures(SimpleFeature sourceFeature, List<Geometry> replacementParts) {
         List<SimpleFeature> features = new ArrayList<>();
         if (sourceFeature == null || replacementParts == null) {
             return features;
@@ -6784,7 +6784,7 @@ public class MapPanel extends JPanel {
         return null;
     }
 
-    private String resolveGeometryFamily(SimpleFeatureType featureType) {
+    String resolveGeometryFamily(SimpleFeatureType featureType) {
         if (featureType == null || featureType.getGeometryDescriptor() == null) {
             return "";
         }
@@ -6813,7 +6813,7 @@ public class MapPanel extends JPanel {
         MapGeometryUtils.offsetGeometryForPaste(geometry);
     }
 
-    private Geometry translateGeometry(Geometry geometry, double dx, double dy) {
+    Geometry translateGeometry(Geometry geometry, double dx, double dy) {
         return MapGeometryUtils.translateGeometry(geometry, dx, dy);
     }
 
@@ -6821,7 +6821,7 @@ public class MapPanel extends JPanel {
         return MapGeometryUtils.buildNextFeatureId(features);
     }
 
-    private List<Geometry> collectGeometryParts(Geometry geometry) {
+    List<Geometry> collectGeometryParts(Geometry geometry) {
         return MapGeometryUtils.collectGeometryParts(geometry);
     }
 
@@ -6864,7 +6864,7 @@ public class MapPanel extends JPanel {
         return new Coordinate(projected[0], projected[1]);
     }
 
-    private List<Coordinate> toSourceCoordinates(List<Coordinate> projectCoordinates, Layer layer) {
+    List<Coordinate> toSourceCoordinates(List<Coordinate> projectCoordinates, Layer layer) {
         List<Coordinate> out = new ArrayList<>();
         if (projectCoordinates == null) {
             return out;
@@ -6944,7 +6944,7 @@ public class MapPanel extends JPanel {
         return normalizePolygonalGeometry(buffered, factory);
     }
 
-    private Coordinate[] getEditableSegmentCoordinates(Geometry geometry, int segmentIndex) {
+    Coordinate[] getEditableSegmentCoordinates(Geometry geometry, int segmentIndex) {
         if (geometry == null || segmentIndex < 0) {
             return null;
         }
@@ -7827,7 +7827,7 @@ public class MapPanel extends JPanel {
         return new Coordinate(a.x + (t * dx), a.y + (t * dy));
     }
 
-    private void appendCoordinateIfNeeded(List<Coordinate> coordinates, Coordinate candidate, double tolerance) {
+    void appendCoordinateIfNeeded(List<Coordinate> coordinates, Coordinate candidate, double tolerance) {
         if (coordinates == null || candidate == null) {
             return;
         }
@@ -7949,19 +7949,19 @@ public class MapPanel extends JPanel {
         return null;
     }
 
-    private Polygon buildPolygonFromCoordinates(List<Coordinate> coordinates, GeometryFactory factory) {
+    Polygon buildPolygonFromCoordinates(List<Coordinate> coordinates, GeometryFactory factory) {
         return MapGeometryUtils.buildPolygonFromCoordinates(coordinates, factory);
     }
 
-    private Geometry normalizePolygonalGeometry(Geometry geometry, GeometryFactory factory) {
+    Geometry normalizePolygonalGeometry(Geometry geometry, GeometryFactory factory) {
         return MapGeometryUtils.normalizePolygonalGeometry(geometry, factory);
     }
 
-    private Geometry assemblePolygons(List<Polygon> polygons, GeometryFactory factory) {
+    Geometry assemblePolygons(List<Polygon> polygons, GeometryFactory factory) {
         return MapGeometryUtils.assemblePolygons(polygons, factory);
     }
 
-    private List<Polygon> collectPolygons(Geometry geometry) {
+    List<Polygon> collectPolygons(Geometry geometry) {
         return MapGeometryUtils.collectPolygons(geometry);
     }
 
