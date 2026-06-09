@@ -116,6 +116,8 @@ public class MapPanel extends JPanel {
 
     private final PinManager pinManager = new PinManager(this);
     private final CopyPasteHandler copyPasteHandler;
+    private final CadEngine cadEngine = new CadEngine(this);
+    private final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
     final UndoRedoManager undoRedoManager;
 
     final List<Coordinate> drawingCoordinates = new ArrayList<>();
@@ -224,24 +226,24 @@ public class MapPanel extends JPanel {
     long selectionFlashStartedAt = 0L;
     boolean topographicProfileCaptureActive = false;
     final List<Coordinate> topographicProfileCaptureCoordinates = new ArrayList<>();
-    private TopographicProfileCaptureHandler topographicProfileCaptureHandler = null;
+    TopographicProfileCaptureHandler topographicProfileCaptureHandler = null;
     boolean pointCaptureActive = false;
-    private MapPointCaptureHandler pointCaptureHandler = null;
-    private String pointCaptureStartMessage = I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
-    private String pointCaptureSuccessMessage = I18n.t("Pour point capturado.");
-    private String pointCaptureCancelMessage = I18n.t("Captura de pour point cancelada.");
+    MapPointCaptureHandler pointCaptureHandler = null;
+    String pointCaptureStartMessage = I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
+    String pointCaptureSuccessMessage = I18n.t("Pour point capturado.");
+    String pointCaptureCancelMessage = I18n.t("Captura de pour point cancelada.");
     boolean cadPlacementDragActive = false;
-    private Layer cadPlacementDragLayer = null;
-    private CadPlacementDragHandler cadPlacementDragHandler = null;
+    Layer cadPlacementDragLayer = null;
+    CadPlacementDragHandler cadPlacementDragHandler = null;
     boolean cadPlacementDragStarted = false;
-    private boolean cadPlacementDragMoved = false;
-    private double cadPlacementDragStartX = Double.NaN;
-    private double cadPlacementDragStartY = Double.NaN;
-    private double cadPlacementDragOriginalOffsetX = 0d;
-    private double cadPlacementDragOriginalOffsetY = 0d;
-    private String cadPlacementDragStartMessage = I18n.t("Arrastre CAD activo: clic izquierdo y arrastra para mover. Suelta para aplicar. Usa clic derecho o Esc para cancelar.");
-    private String cadPlacementDragSuccessMessage = I18n.t("Arrastre CAD aplicado.");
-    private String cadPlacementDragCancelMessage = I18n.t("Arrastre CAD cancelado.");
+    boolean cadPlacementDragMoved = false;
+    double cadPlacementDragStartX = Double.NaN;
+    double cadPlacementDragStartY = Double.NaN;
+    double cadPlacementDragOriginalOffsetX = 0d;
+    double cadPlacementDragOriginalOffsetY = 0d;
+    String cadPlacementDragStartMessage = I18n.t("Arrastre CAD activo: clic izquierdo y arrastra para mover. Suelta para aplicar. Usa clic derecho o Esc para cancelar.");
+    String cadPlacementDragSuccessMessage = I18n.t("Arrastre CAD aplicado.");
+    String cadPlacementDragCancelMessage = I18n.t("Arrastre CAD cancelado.");
     boolean snapEnabled = true;
     Coordinate snapPreviewCoordinate = null;
     final Timer selectionFlashTimer;
@@ -753,10 +755,7 @@ public class MapPanel extends JPanel {
     }
 
     void clearCadConstructionState() {
-        cadReferenceSegmentStart = null;
-        cadReferenceSegmentEnd = null;
-        cadReferenceFromStart = false;
-        cadReferenceEndpointChosen = false;
+        cadEngine.clearCadConstructionState();
     }
 
     boolean confirmPendingFeatureEdit(String nextActionDescription) {
@@ -1762,22 +1761,7 @@ public class MapPanel extends JPanel {
     }
 
     public void startTopographicProfileCapture(TopographicProfileCaptureHandler handler) {
-        if (handler == null) {
-            return;
-        }
-        if (isDrawingActive() || isMeasurementActive() || pointCaptureActive || cadPlacementDragActive) {
-            JOptionPane.showMessageDialog(this, I18n.t("Termina o cancela el dibujo/medicion actual antes de capturar un perfil."));
-            return;
-        }
-        topographicProfileCaptureHandler = handler;
-        topographicProfileCaptureActive = true;
-        topographicProfileCaptureCoordinates.clear();
-        requestFocusInWindow();
-        setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
-        }
-        repaint();
+        topographicProfileTool.startCapture(handler);
     }
 
     public void startCadPlacementDrag(Layer layer,
@@ -1785,240 +1769,62 @@ public class MapPanel extends JPanel {
                                       String startMessage,
                                       String successMessage,
                                       String cancelMessage) {
-        if (layer == null || !CadLayerSupport.isCadLayer(layer) || handler == null) {
-            return;
-        }
-        if (isDrawingActive() || isMeasurementActive() || pointCaptureActive || topographicProfileCaptureActive || cadPlacementDragActive) {
-            JOptionPane.showMessageDialog(this, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de arrastrar la referencia CAD."));
-            return;
-        }
-        cadPlacementDragLayer = layer;
-        cadPlacementDragHandler = handler;
-        cadPlacementDragActive = true;
-        cadPlacementDragStarted = false;
-        cadPlacementDragMoved = false;
-        cadPlacementDragStartX = Double.NaN;
-        cadPlacementDragStartY = Double.NaN;
-        cadPlacementDragOriginalOffsetX = layer.getCadOffsetX();
-        cadPlacementDragOriginalOffsetY = layer.getCadOffsetY();
-        cadPlacementDragStartMessage = startMessage != null && !startMessage.isBlank()
-                ? startMessage
-                : I18n.t("Arrastre CAD activo: clic izquierdo y arrastra para mover. Suelta para aplicar. Usa clic derecho o Esc para cancelar.");
-        cadPlacementDragSuccessMessage = successMessage != null && !successMessage.isBlank()
-                ? successMessage
-                : I18n.t("Arrastre CAD aplicado.");
-        cadPlacementDragCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
-                ? cancelMessage
-                : I18n.t("Arrastre CAD cancelado.");
-        requestFocusInWindow();
-        setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(cadPlacementDragStartMessage);
-        }
-        repaint();
+        cadEngine.startCadPlacementDrag(layer, handler, startMessage, successMessage, cancelMessage);
     }
 
     public boolean isCadPlacementDragActive() {
-        return cadPlacementDragActive;
+        return cadEngine.isCadPlacementDragActive();
     }
 
     public void cancelCadPlacementDrag() {
-        if (!cadPlacementDragActive) {
-            return;
-        }
-        Layer layer = cadPlacementDragLayer;
-        if (layer != null) {
-            layer.setCadOffsetX(cadPlacementDragOriginalOffsetX);
-            layer.setCadOffsetY(cadPlacementDragOriginalOffsetY);
-        }
-        CadPlacementDragHandler handler = cadPlacementDragHandler;
-        cadPlacementDragActive = false;
-        cadPlacementDragStarted = false;
-        cadPlacementDragMoved = false;
-        cadPlacementDragStartX = Double.NaN;
-        cadPlacementDragStartY = Double.NaN;
-        cadPlacementDragLayer = null;
-        cadPlacementDragHandler = null;
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(cadPlacementDragCancelMessage);
-        }
-        applyCursorForCurrentMode();
-        repaint();
-        if (handler != null) {
-            handler.onDragCanceled();
-        }
+        cadEngine.cancelCadPlacementDrag();
     }
 
     public void startPointCapture(MapPointCaptureHandler handler) {
-        startPointCapture(
-                handler,
-                I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar."),
-                I18n.t("Pour point capturado."),
-                I18n.t("Captura de pour point cancelada.")
-        );
+        cadEngine.startPointCapture(handler);
     }
 
     public void startPointCapture(MapPointCaptureHandler handler,
                                   String startMessage,
                                   String successMessage,
                                   String cancelMessage) {
-        if (handler == null) {
-            return;
-        }
-        if (isDrawingActive() || isMeasurementActive() || topographicProfileCaptureActive || cadPlacementDragActive) {
-            JOptionPane.showMessageDialog(this, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de capturar un punto en el mapa."));
-            return;
-        }
-        pointCaptureHandler = handler;
-        pointCaptureActive = true;
-        pointCaptureStartMessage = startMessage != null && !startMessage.isBlank()
-                ? startMessage
-                : I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
-        pointCaptureSuccessMessage = successMessage != null && !successMessage.isBlank()
-                ? successMessage
-                : I18n.t("Pour point capturado.");
-        pointCaptureCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
-                ? cancelMessage
-                : I18n.t("Captura de pour point cancelada.");
-        requestFocusInWindow();
-        setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(pointCaptureStartMessage);
-        }
-        repaint();
+        cadEngine.startPointCapture(handler, startMessage, successMessage, cancelMessage);
     }
 
     public void cancelPointCapture() {
-        MapPointCaptureHandler handler = pointCaptureHandler;
-        pointCaptureActive = false;
-        pointCaptureHandler = null;
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(pointCaptureCancelMessage);
-        }
-        repaint();
-        if (handler != null) {
-            handler.onCaptureCanceled();
-        }
+        cadEngine.cancelPointCapture();
     }
 
     public boolean isPointCaptureActive() {
-        return pointCaptureActive;
+        return cadEngine.isPointCaptureActive();
     }
 
     void finishPointCapture(Coordinate coordinate) {
-        if (!pointCaptureActive || coordinate == null) {
-            return;
-        }
-        MapPointCaptureHandler handler = pointCaptureHandler;
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
-        pointCaptureActive = false;
-        pointCaptureHandler = null;
-        repaint();
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(pointCaptureSuccessMessage);
-        }
-        if (handler != null) {
-            handler.onPointCaptured(coordinate, projectCrs);
-        }
+        cadEngine.finishPointCapture(coordinate);
     }
 
     void beginCadPlacementDrag(MouseEvent e) {
-        if (!cadPlacementDragActive || cadPlacementDragLayer == null || !SwingUtilities.isLeftMouseButton(e)) {
-            return;
-        }
-        Coordinate coordinate = resolveInteractiveCoordinate(e.getX(), e.getY(), false);
-        cadPlacementDragStarted = true;
-        cadPlacementDragMoved = false;
-        cadPlacementDragStartX = coordinate.x;
-        cadPlacementDragStartY = coordinate.y;
-        cadPlacementDragOriginalOffsetX = cadPlacementDragLayer.getCadOffsetX();
-        cadPlacementDragOriginalOffsetY = cadPlacementDragLayer.getCadOffsetY();
-        setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        cadEngine.beginCadPlacementDrag(e);
     }
 
     void updateCadPlacementDrag(MouseEvent e) {
-        if (!cadPlacementDragActive || !cadPlacementDragStarted || cadPlacementDragLayer == null) {
-            return;
-        }
-        Coordinate coordinate = resolveInteractiveCoordinate(e.getX(), e.getY(), true);
-        double dx = coordinate.x - cadPlacementDragStartX;
-        double dy = coordinate.y - cadPlacementDragStartY;
-        cadPlacementDragLayer.setCadOffsetX(cadPlacementDragOriginalOffsetX + dx);
-        cadPlacementDragLayer.setCadOffsetY(cadPlacementDragOriginalOffsetY + dy);
-        cadPlacementDragMoved = cadPlacementDragMoved || Math.abs(dx) > 1e-9 || Math.abs(dy) > 1e-9;
-        repaint();
+        cadEngine.updateCadPlacementDrag(e);
     }
 
     void finishCadPlacementDrag() {
-        if (!cadPlacementDragActive) {
-            return;
-        }
-        if (!cadPlacementDragStarted) {
-            return;
-        }
-        Layer layer = cadPlacementDragLayer;
-        CadPlacementDragHandler handler = cadPlacementDragHandler;
-        boolean moved = cadPlacementDragMoved;
-        double offsetX = layer != null ? layer.getCadOffsetX() : 0d;
-        double offsetY = layer != null ? layer.getCadOffsetY() : 0d;
-
-        cadPlacementDragActive = false;
-        cadPlacementDragStarted = false;
-        cadPlacementDragMoved = false;
-        cadPlacementDragStartX = Double.NaN;
-        cadPlacementDragStartY = Double.NaN;
-        cadPlacementDragLayer = null;
-        cadPlacementDragHandler = null;
-
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(moved ? cadPlacementDragSuccessMessage : cadPlacementDragCancelMessage);
-        }
-        applyCursorForCurrentMode();
-        repaint();
-        if (handler != null) {
-            if (moved) {
-                handler.onDragApplied(offsetX, offsetY);
-            } else {
-                handler.onDragCanceled();
-            }
-        }
+        cadEngine.finishCadPlacementDrag();
     }
 
     public void cancelTopographicProfileCapture() {
-        TopographicProfileCaptureHandler handler = topographicProfileCaptureHandler;
-        topographicProfileCaptureActive = false;
-        topographicProfileCaptureCoordinates.clear();
-        topographicProfileCaptureHandler = null;
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Captura de perfil topografico cancelada."));
-        }
-        repaint();
-        if (handler != null) {
-            handler.onCaptureCanceled();
-        }
+        topographicProfileTool.cancelCapture();
     }
 
     public boolean isTopographicProfileCaptureActive() {
-        return topographicProfileCaptureActive;
+        return topographicProfileTool.isActive();
     }
 
     void finishTopographicProfileCapture() {
-        if (!topographicProfileCaptureActive || topographicProfileCaptureCoordinates.size() < 2) {
-            return;
-        }
-        LineString line = TopographicProfileService.buildLineFromProjectCoordinates(topographicProfileCaptureCoordinates);
-        TopographicProfileCaptureHandler handler = topographicProfileCaptureHandler;
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
-        topographicProfileCaptureActive = false;
-        topographicProfileCaptureCoordinates.clear();
-        topographicProfileCaptureHandler = null;
-        repaint();
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Linea de perfil capturada."));
-        }
-        if (handler != null && line != null) {
-            handler.onLineCaptured(line, projectCrs);
-        }
+        topographicProfileTool.finishCapture();
     }
 
     public RasterStyle getOrCreateRasterStyle(Layer layer, int bandCount) {
