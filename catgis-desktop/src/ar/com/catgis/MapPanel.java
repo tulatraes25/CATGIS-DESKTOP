@@ -146,6 +146,7 @@ public class MapPanel extends JPanel {
     private final DrawingToolManager drawingToolManager;
     private final MapRenderer mapRenderer;
     private final MouseHandler mouseHandler;
+    private final KeyboardShortcutHandler keyboardShortcutHandler;
 
     // Legacy fields - kept as thin delegates to viewController
     double viewMinX = 0;
@@ -251,10 +252,11 @@ public class MapPanel extends JPanel {
         // Initialize extracted components
         drawingToolManager = new DrawingToolManager(this);
         mapRenderer = new MapRenderer(this);
+        keyboardShortcutHandler = new KeyboardShortcutHandler(this);
         viewController.setRepaintCallback(this::repaint);
         viewController.setScaleUpdateCallback(this::refreshStatusBarScale);
 
-        configureKeyboardShortcuts();
+        keyboardShortcutHandler.configureKeyboardShortcuts();
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -279,182 +281,7 @@ public class MapPanel extends JPanel {
     }
 
     private void configureKeyboardShortcuts() {
-        int shortcutMask;
-        try {
-            shortcutMask = java.awt.GraphicsEnvironment.isHeadless()
-                    ? InputEvent.CTRL_DOWN_MASK
-                    : Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-        } catch (HeadlessException ex) {
-            shortcutMask = InputEvent.CTRL_DOWN_MASK;
-        }
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "cancelSketchOrMeasurement");
-        getActionMap().put("cancelSketchOrMeasurement", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (cadPlacementDragActive) {
-                    cancelCadPlacementDrag();
-                } else if (pointCaptureActive) {
-                    cancelPointCapture();
-                } else if (topographicProfileCaptureActive) {
-                    cancelTopographicProfileCapture();
-                } else if (featureEditMode && !featureEditSketchCoordinates.isEmpty()) {
-                    featureEditSketchCoordinates.clear();
-                    repaint();
-                    showCopiedMessage("Boceto de ediciÃ³n cancelado.");
-                } else if (isDrawingActive()) {
-                    cancelCurrentDrawing();
-                    showCopiedMessage("Dibujo cancelado.");
-                } else if (isMeasurementActive()) {
-                    cancelCurrentMeasurement();
-                    showCopiedMessage("MediciÃ³n cancelada.");
-                }
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_C, shortcutMask), "copySelectedFeatures");
-        getActionMap().put("copySelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                copySelectedFeatures();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_X, shortcutMask), "cutSelectedFeatures");
-        getActionMap().put("cutSelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cutSelectedFeatures();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_V, shortcutMask), "pasteSelectedFeatures");
-        getActionMap().put("pasteSelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Layer editingLayer = getEditingLayerRef();
-                if (editingLayer == null && selectedLayer != null && !(selectedLayer instanceof RasterLayer)) {
-                    prepareLayerForEditing(selectedLayer);
-                }
-                pasteCopiedFeatures();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(
-                KeyStroke.getKeyStroke(KeyEvent.VK_V, shortcutMask | InputEvent.SHIFT_DOWN_MASK),
-                "copySelectionToEditingLayer"
-        );
-        getActionMap().put("copySelectionToEditingLayer", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                copySelectedFeaturesToEditingLayer();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "deleteSelectedFeatures");
-        getActionMap().put("deleteSelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                deleteSelectedFeatures();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, shortcutMask), "undoFeatureEdit");
-        getActionMap().put("undoFeatureEdit", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                undoFeatureEdit();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, shortcutMask), "redoFeatureEdit");
-        getActionMap().put("redoFeatureEdit", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                redoFeatureEdit();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_G, shortcutMask), "saveFeatureEditChanges");
-        getActionMap().put("saveFeatureEditChanges", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                saveFeatureEditChanges();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, shortcutMask), "finishFeatureEdit");
-        getActionMap().put("finishFeatureEdit", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                finishFeatureEdit();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_M, shortcutMask), "moveSelectedFeatures");
-        getActionMap().put("moveSelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                activateMoveFeatureMode();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_K, shortcutMask), "cutSelectedGeometry");
-        getActionMap().put("cutSelectedGeometry", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                activateCutFeatureMode();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(
-                KeyStroke.getKeyStroke(KeyEvent.VK_J, shortcutMask | InputEvent.SHIFT_DOWN_MASK),
-                "mergeSelectedFeatures"
-        );
-        getActionMap().put("mergeSelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                mergeSelectedFeatures();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(
-                KeyStroke.getKeyStroke(KeyEvent.VK_E, shortcutMask | InputEvent.SHIFT_DOWN_MASK),
-                "explodeSelectedFeatures"
-        );
-        getActionMap().put("explodeSelectedFeatures", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                explodeSelectedFeatures();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(
-                KeyStroke.getKeyStroke(KeyEvent.VK_U, shortcutMask | InputEvent.SHIFT_DOWN_MASK),
-                "joinSelectedVertices"
-        );
-        getActionMap().put("joinSelectedVertices", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                activateJoinVerticesMode();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, KeyEvent.ALT_DOWN_MASK), "zoomPreviousView");
-        getActionMap().put("zoomPreviousView", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                zoomPrevious();
-            }
-        });
-
-        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, KeyEvent.ALT_DOWN_MASK), "zoomNextView");
-        getActionMap().put("zoomNextView", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                zoomNext();
-            }
-        });
+        keyboardShortcutHandler.configureKeyboardShortcuts();
     }
 
     void rememberCurrentView() {
