@@ -268,6 +268,10 @@ public class MainMenuBar extends JMenuBar {
         itemBatch.addActionListener(e -> BatchProcessorDialog.open());
         menuAnalisis.add(itemBatch);
 
+        JMenuItem itemWcs = createItem("WCS - Descargar coberturas...", null);
+        itemWcs.addActionListener(e -> WcsDialog.open());
+        menuAnalisis.add(itemWcs);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
