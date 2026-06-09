@@ -260,6 +260,10 @@ public class MainMenuBar extends JMenuBar {
         itemWhitebox.addActionListener(e -> WhiteboxToolDialog.open());
         menuAnalisis.add(itemWhitebox);
 
+        JMenuItem itemSpectral = createItem("Indices espectrales (NDVI/NDWI)...", null);
+        itemSpectral.addActionListener(e -> SpectralIndexDialog.open());
+        menuAnalisis.add(itemSpectral);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
