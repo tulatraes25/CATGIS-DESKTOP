@@ -611,6 +611,9 @@ public final class LabelExpressionEngine {
                         case "centroid" -> { Geometry geom = extractGeometry(feature); stack.push(geom != null ? geom.getCentroid().getCoordinate().x + "," + geom.getCentroid().getCoordinate().y : "0,0"); }
                         case "centroid_x" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getCentroid().getCoordinate().x : 0.0); }
                         case "centroid_y" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getCentroid().getCoordinate().y : 0.0); }
+                        case "area" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getArea() : 0.0); }
+                        case "length" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getLength() : 0.0); }
+                        case "perimeter" -> { Geometry g = extractGeometry(feature); stack.push(g != null && g.getDimension() == 2 ? g.getBoundary().getLength() : (g != null ? g.getLength() : 0.0)); }
                         case "numcoordinates" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) g.getCoordinates().length : 0.0); }
                         case "dimension" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) g.getDimension() : -1.0); }
                         case "isvalid" -> { Geometry g = extractGeometry(feature); stack.push(g != null && g.isValid()); }

@@ -276,6 +276,10 @@ public class MainMenuBar extends JMenuBar {
         itemStac.addActionListener(e -> StacDialog.open());
         menuAnalisis.add(itemStac);
 
+        JMenuItem itemSmileML = createItem("Clasificacion ML (Smile)...", null);
+        itemSmileML.addActionListener(e -> SmileClassificationDialog.open());
+        menuAnalisis.add(itemSmileML);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
