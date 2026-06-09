@@ -68,10 +68,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
 import java.io.File;
 import java.text.DecimalFormat;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
 import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -117,6 +115,8 @@ public class MapPanel extends JPanel {
     PinMarker activePin = null;
 
     private final PinManager pinManager = new PinManager(this);
+    private final CopyPasteHandler copyPasteHandler;
+    private final UndoRedoManager undoRedoManager;
 
     final List<Coordinate> drawingCoordinates = new ArrayList<>();
     final List<Geometry> pendingDrawingSessionGeometries = new ArrayList<>();
@@ -172,15 +172,13 @@ public class MapPanel extends JPanel {
     SimpleFeature selectedFeature;
     final Map<Layer, List<String>> tableSelectionIds = new LinkedHashMap<>();
     Layer activeVectorEditingLayer = null;
-    private SimpleFeature copiedFeature = null;
-    private final List<SimpleFeature> copiedFeatures = new ArrayList<>();
+
     boolean featureEditMode = false;
     Geometry featureEditOriginalGeometry = null;
     boolean featureEditDirty = false;
     String featureEditOperation = EDIT_OP_MOVE_VERTEX;
     final List<Coordinate> featureEditSketchCoordinates = new ArrayList<>();
-    private final Deque<LayerEditSnapshot> editUndoStack = new ArrayDeque<>();
-    private final Deque<LayerEditSnapshot> editRedoStack = new ArrayDeque<>();
+
     int activeEditVertexIndex = -1;
     int joinTargetVertexIndex = -1;
     Coordinate adjacentPolygonSegmentStart = null;
@@ -190,7 +188,7 @@ public class MapPanel extends JPanel {
     boolean cadReferenceFromStart = false;
     boolean cadReferenceEndpointChosen = false;
     static final int EDIT_VERTEX_TOLERANCE_PX = 10;
-    private static final int MAX_EDIT_HISTORY = 20;
+
     static final String EDIT_OP_MOVE_VERTEX = "MOVE_VERTEX";
     static final String EDIT_OP_ADD_VERTEX = "ADD_VERTEX";
     static final String EDIT_OP_REMOVE_VERTEX = "REMOVE_VERTEX";
@@ -249,7 +247,9 @@ public class MapPanel extends JPanel {
     public MapPanel() {
         setBackground(Color.WHITE);
 
-        // Initialize extracted components
+        // Initialize extracted components (order matters - dependencies first)
+        copyPasteHandler = new CopyPasteHandler(this);
+        undoRedoManager = new UndoRedoManager(this);
         drawingToolManager = new DrawingToolManager(this);
         mapRenderer = new MapRenderer(this);
         keyboardShortcutHandler = new KeyboardShortcutHandler(this);
@@ -760,15 +760,15 @@ public class MapPanel extends JPanel {
     }
 
     public boolean canUndoFeatureEdit() {
-        return !editUndoStack.isEmpty() && getEditingLayerRef() != null;
+        return undoRedoManager.canUndo();
     }
 
     public boolean canRedoFeatureEdit() {
-        return !editRedoStack.isEmpty() && getEditingLayerRef() != null;
+        return undoRedoManager.canRedo();
     }
 
     public boolean hasCopiedFeature() {
-        return copiedFeature != null || !copiedFeatures.isEmpty();
+        return copyPasteHandler.hasCopiedFeature();
     }
 
     public boolean isSnapEnabled() {
@@ -896,8 +896,7 @@ public class MapPanel extends JPanel {
             activeEditVertexIndex = -1;
             joinTargetVertexIndex = -1;
             clearAdjacentPolygonState();
-            editUndoStack.clear();
-            editRedoStack.clear();
+            undoRedoManager.clear();
             refreshEditingUi();
             return true;
         }
@@ -973,8 +972,7 @@ public class MapPanel extends JPanel {
         activeEditVertexIndex = -1;
         joinTargetVertexIndex = -1;
         clearAdjacentPolygonState();
-        editUndoStack.clear();
-        editRedoStack.clear();
+        undoRedoManager.clear();
         if (!EDIT_OP_MOVE_FEATURE.equals(featureEditOperation)) {
             featureEditOperation = EDIT_OP_MOVE_VERTEX;
         }
@@ -1040,8 +1038,7 @@ public class MapPanel extends JPanel {
             joinTargetVertexIndex = -1;
             clearAdjacentPolygonState();
             clearCadConstructionState();
-            editUndoStack.clear();
-            editRedoStack.clear();
+            undoRedoManager.clear();
         }
         setTool("SELECT");
         refreshEditingUi();
@@ -1073,8 +1070,7 @@ public class MapPanel extends JPanel {
             featureEditDirty = false;
             featureEditOperation = EDIT_OP_MOVE_VERTEX;
             featureEditSketchCoordinates.clear();
-            editUndoStack.clear();
-            editRedoStack.clear();
+            undoRedoManager.clear();
         }
         activeEditVertexIndex = -1;
         joinTargetVertexIndex = -1;
@@ -1395,8 +1391,7 @@ public class MapPanel extends JPanel {
         if (CatgisDesktopApp.statusBar != null) {
             CatgisDesktopApp.statusBar.setMessage("Edicion finalizada.");
         }
-        editUndoStack.clear();
-        editRedoStack.clear();
+        undoRedoManager.clear();
         refreshEditingUi();
     }
 
@@ -1434,8 +1429,7 @@ public class MapPanel extends JPanel {
         clearCadConstructionState();
         featureEditOriginalGeometry = null;
         featureEditDirty = false;
-        editUndoStack.clear();
-        editRedoStack.clear();
+        undoRedoManager.clear();
         if (CatgisDesktopApp.statusBar != null) {
             CatgisDesktopApp.statusBar.setMessage("Edicion cancelada.");
         }
@@ -2337,8 +2331,7 @@ public class MapPanel extends JPanel {
             clearCadConstructionState();
             featureEditOriginalGeometry = null;
             featureEditDirty = false;
-            editUndoStack.clear();
-            editRedoStack.clear();
+            undoRedoManager.clear();
         }
 
         refreshEditingUi();
@@ -3524,8 +3517,7 @@ public class MapPanel extends JPanel {
         movingSelectedFeatures = false;
         moveSelectionLastProjectX = Double.NaN;
         moveSelectionLastProjectY = Double.NaN;
-        editUndoStack.clear();
-        editRedoStack.clear();
+        undoRedoManager.clear();
         refreshEditingUi();
     }
 
@@ -3612,214 +3604,31 @@ public class MapPanel extends JPanel {
     }
 
     public void copySelectedFeature() {
-        copySelectedFeatures();
+        copyPasteHandler.copySelectedFeature();
     }
 
     public boolean cutSelectedFeatures() {
-        if (selectedLayer == null) {
-            return false;
-        }
-
-        List<String> selectedIds = getSelectedFeatureIdsForLayer(selectedLayer);
-        if (selectedIds.isEmpty()) {
-            return false;
-        }
-
-        copySelectedFeatures();
-        boolean deleted = deleteSelectedFeatures();
-        if (deleted) {
-            showCopiedMessage(selectedIds.size() == 1 ? "Entidad cortada." : selectedIds.size() + " entidades cortadas.");
-        }
-        return deleted;
+        return copyPasteHandler.cutSelectedFeatures();
     }
 
     public void copySelectedFeatures() {
-        captureSelectedFeaturesForCopy(false);
+        copyPasteHandler.copySelectedFeatures();
     }
 
     public boolean copySelectedFeaturesToEditingLayer() {
-        if (selectedLayer == null) {
-            return false;
-        }
-
-        Layer targetLayer = getEditingLayerRef();
-        if (targetLayer == null && selectedLayer != null && !(selectedLayer instanceof RasterLayer)) {
-            prepareLayerForEditing(selectedLayer);
-            targetLayer = getEditingLayerRef();
-        }
-        if (targetLayer == null) {
-            return false;
-        }
-        if (isReadOnlyVectorLayer(targetLayer)) {
-            JOptionPane.showMessageDialog(this, getReadOnlyLayerMessage(targetLayer));
-            return false;
-        }
-
-        captureSelectedFeaturesForCopy(true);
-        if (!hasCopiedFeature()) {
-            return false;
-        }
-
-        return pasteCopiedFeatures();
+        return copyPasteHandler.copySelectedFeaturesToEditingLayer();
     }
 
     public boolean copySelectedFeaturesFromLayerToEditingLayer(Layer sourceLayer) {
-        if (sourceLayer == null || sourceLayer instanceof RasterLayer) {
-            JOptionPane.showMessageDialog(this,
-                    "Selecciona una capa vectorial con entidades seleccionadas.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        Layer targetLayer = getEditingLayerRef();
-        if (targetLayer == null) {
-            JOptionPane.showMessageDialog(this,
-                    "No hay una capa vectorial en edicion activa. Primero activa Editar vector en la capa destino.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-        if (sourceLayer == targetLayer) {
-            JOptionPane.showMessageDialog(this,
-                    "La capa seleccionada ya es la capa en edicion. Usa copiar/pegar normal para duplicar dentro de la misma capa.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-        if (isReadOnlyVectorLayer(targetLayer)) {
-            JOptionPane.showMessageDialog(this, getReadOnlyLayerMessage(targetLayer));
-            return false;
-        }
-
-        ShapefileData sourceData = getShapefileData(sourceLayer);
-        ShapefileData targetData = getShapefileData(targetLayer);
-        if (sourceData == null || sourceData.getSchema() == null || targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(this,
-                    "La capa fuente o destino no tiene esquema vectorial disponible.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        String sourceFamily = resolveGeometryFamily(sourceData.getSchema());
-        String targetFamily = resolveGeometryFamily(targetData.getSchema());
-        if (sourceFamily.isBlank() || !sourceFamily.equals(targetFamily)) {
-            JOptionPane.showMessageDialog(this,
-                    "La geometria no es compatible. Fuente: " + sourceFamily + " | Destino: " + targetFamily + ".",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        List<String> selectedIds = getSelectedFeatureIdsForLayer(sourceLayer);
-        if (selectedIds.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No hay entidades seleccionadas en la capa fuente.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        List<SimpleFeature> targetFeatures = new ArrayList<>(targetData.getFeatures());
-        List<String> pastedIds = new ArrayList<>();
-        for (SimpleFeature sourceFeature : collectSelectedFeatures(sourceData.getFeatures(), selectedIds)) {
-            SimpleFeature pasted = buildPastedFeature(sourceFeature, targetLayer, targetFeatures, false);
-            if (pasted == null) {
-                continue;
-            }
-            targetFeatures.add(pasted);
-            pastedIds.add(pasted.getID());
-        }
-
-        if (pastedIds.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No se pudieron copiar las entidades seleccionadas a la capa en edicion.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        pushUndoSnapshot(targetLayer, null);
-        replaceLayerFeatures(targetLayer, targetFeatures, pastedIds.get(0), pastedIds.size() == 1, null);
-        applyFeatureSelection(targetLayer, pastedIds, pastedIds.size() == 1, true, false,
-                pastedIds.size() == 1
-                        ? "Entidad copiada a la capa en edicion."
-                        : pastedIds.size() + " entidades copiadas a la capa en edicion.");
-        return true;
-    }
-
-    private void captureSelectedFeaturesForCopy(boolean silent) {
-        if (selectedLayer == null) {
-            return;
-        }
-
-        ShapefileData data = getShapefileData(selectedLayer);
-        List<String> selectedIds = getSelectedFeatureIdsForLayer(selectedLayer);
-        if (data == null || selectedIds.isEmpty()) {
-            return;
-        }
-
-        copiedFeatures.clear();
-        for (String featureId : selectedIds) {
-            SimpleFeature feature = findFeatureById(data.getFeatures(), featureId);
-            if (feature != null) {
-                copiedFeatures.add(cloneFeature(feature, extractFeatureGeometryCopy(feature), feature.getID()));
-            }
-        }
-        copiedFeature = copiedFeatures.isEmpty() ? null : copiedFeatures.get(0);
-        if (!silent) {
-            showCopiedMessage(copiedFeatures.size() == 1 ? "Entidad copiada." : copiedFeatures.size() + " entidades copiadas.");
-        }
-        refreshEditingUi();
+        return copyPasteHandler.copySelectedFeaturesFromLayerToEditingLayer(sourceLayer);
     }
 
     public boolean pasteCopiedFeature() {
-        return pasteCopiedFeatures();
+        return copyPasteHandler.pasteCopiedFeature();
     }
 
     public boolean pasteCopiedFeatures() {
-        Layer targetLayer = getEditingLayerRef();
-        if ((!hasCopiedFeature()) || targetLayer == null) {
-            return false;
-        }
-        if (isReadOnlyVectorLayer(targetLayer)) {
-            JOptionPane.showMessageDialog(this, getReadOnlyLayerMessage(targetLayer));
-            return false;
-        }
-
-        ShapefileData targetData = getShapefileData(targetLayer);
-        if (targetData == null) {
-            return false;
-        }
-
-        List<SimpleFeature> sources = copiedFeatures.isEmpty() && copiedFeature != null
-                ? List.of(copiedFeature)
-                : new ArrayList<>(copiedFeatures);
-        List<SimpleFeature> features = new ArrayList<>(targetData.getFeatures());
-        List<String> pastedIds = new ArrayList<>();
-        for (SimpleFeature sourceFeature : sources) {
-            SimpleFeature pasted = buildPastedFeature(sourceFeature, targetLayer, features, true);
-            if (pasted == null) {
-                continue;
-            }
-            features.add(pasted);
-            pastedIds.add(pasted.getID());
-        }
-
-        if (pastedIds.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Por ahora solo se puede pegar en una capa compatible con la estructura de los elementos copiados.",
-                    "Pegar entidades",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return false;
-        }
-
-        pushUndoSnapshot(targetLayer, null);
-        replaceLayerFeatures(targetLayer, features, pastedIds.get(0), pastedIds.size() == 1, null);
-        applyFeatureSelection(targetLayer, pastedIds, pastedIds.size() == 1, true, false,
-                pastedIds.size() == 1 ? "Entidad pegada." : pastedIds.size() + " entidades pegadas.");
-        return true;
+        return copyPasteHandler.pasteCopiedFeatures();
     }
 
     public boolean deleteSelectedFeature() {
@@ -4014,29 +3823,11 @@ public class MapPanel extends JPanel {
     }
 
     public void undoFeatureEdit() {
-        if (!canUndoFeatureEdit()) {
-            return;
-        }
-        Layer layer = getEditingLayerRef();
-        if (layer == null) {
-            return;
-        }
-
-        editRedoStack.push(captureLayerSnapshot(layer, selectedFeature != null ? selectedFeature.getID() : null));
-        restoreLayerSnapshot(editUndoStack.pop(), "Deshacer aplicado.");
+        undoRedoManager.undoFeatureEdit();
     }
 
     public void redoFeatureEdit() {
-        if (!canRedoFeatureEdit()) {
-            return;
-        }
-        Layer layer = getEditingLayerRef();
-        if (layer == null) {
-            return;
-        }
-
-        editUndoStack.push(captureLayerSnapshot(layer, selectedFeature != null ? selectedFeature.getID() : null));
-        restoreLayerSnapshot(editRedoStack.pop(), "Rehacer aplicado.");
+        undoRedoManager.redoFeatureEdit();
     }
 
     public void zoomToFeature(SimpleFeature feature, Layer layer) {
@@ -5757,83 +5548,13 @@ public class MapPanel extends JPanel {
     }
 
     void pushUndoSnapshotForSelectedLayer() {
-        if (selectedLayer == null) {
-            return;
-        }
-        pushUndoSnapshot(selectedLayer, selectedFeature != null ? selectedFeature.getID() : null);
+        undoRedoManager.pushUndoSnapshotForSelectedLayer();
     }
 
     void pushUndoSnapshot(Layer layer, String selectedFeatureId) {
-        LayerEditSnapshot snapshot = captureLayerSnapshot(layer, selectedFeatureId);
-        if (snapshot == null) {
-            return;
-        }
-        editUndoStack.push(snapshot);
-        while (editUndoStack.size() > MAX_EDIT_HISTORY) {
-            editUndoStack.removeLast();
-        }
-        editRedoStack.clear();
+        undoRedoManager.pushUndoSnapshot(layer, selectedFeatureId);
     }
 
-    private LayerEditSnapshot captureLayerSnapshot(Layer layer, String selectedFeatureId) {
-        if (layer == null) {
-            return null;
-        }
-        ShapefileData data = getShapefileData(layer);
-        if (data == null) {
-            return null;
-        }
-        return new LayerEditSnapshot(
-                layer,
-                cloneFeatureList(data.getFeatures()),
-                data.getSourceName(),
-                data.getMessage(),
-                data.getSchema(),
-                selectedFeatureId
-        );
-    }
-
-    private void restoreLayerSnapshot(LayerEditSnapshot snapshot, String statusMessage) {
-        if (snapshot == null || snapshot.layer == null) {
-            return;
-        }
-
-        ShapefileData restoredData = new ShapefileData(
-                snapshot.features,
-                computeEnvelope(snapshot.features),
-                snapshot.sourceName,
-                snapshot.features.size(),
-                snapshot.message,
-                snapshot.schema
-        );
-        addOrUpdateShapefileLayer(snapshot.layer, restoredData);
-
-        activeVectorEditingLayer = snapshot.layer;
-        selectedLayer = snapshot.layer;
-        selectedFeature = findFeatureById(restoredData.getFeatures(), snapshot.selectedFeatureId);
-        if (snapshot.selectedFeatureId != null && !snapshot.selectedFeatureId.isBlank()) {
-            tableSelectionIds.put(snapshot.layer, new ArrayList<>(List.of(snapshot.selectedFeatureId)));
-            OpenAttributeTableAction.syncSelectionFromMap(snapshot.layer, List.of(snapshot.selectedFeatureId));
-        } else {
-            tableSelectionIds.remove(snapshot.layer);
-            OpenAttributeTableAction.clearSelectionInOpenTables();
-        }
-        featureEditMode = selectedFeature != null;
-        featureEditOriginalGeometry = extractFeatureGeometryCopy(selectedFeature);
-        featureEditDirty = true;
-        featureEditSketchCoordinates.clear();
-        activeEditVertexIndex = -1;
-        joinTargetVertexIndex = -1;
-        clearAdjacentPolygonState();
-        featureEditOperation = EDIT_OP_MOVE_VERTEX;
-        snapshot.layer.setFeatureCount(restoredData.getFeatureCount());
-
-        CatgisDesktopApp.markProjectDirty();
-        if (statusMessage != null && !statusMessage.isBlank()) {
-            showCopiedMessage(statusMessage);
-        }
-        refreshEditingUi();
-    }
 
     Envelope computeEnvelope(List<SimpleFeature> features) {
         Envelope envelope = new Envelope();
@@ -5870,7 +5591,7 @@ public class MapPanel extends JPanel {
         return features;
     }
 
-    private List<SimpleFeature> cloneFeatureList(List<SimpleFeature> features) {
+    List<SimpleFeature> cloneFeatureList(List<SimpleFeature> features) {
         List<SimpleFeature> clones = new ArrayList<>();
         if (features == null) {
             return clones;
@@ -5883,7 +5604,7 @@ public class MapPanel extends JPanel {
         return clones;
     }
 
-    private SimpleFeature cloneFeature(SimpleFeature sourceFeature, Geometry geometry, String featureId) {
+    SimpleFeature cloneFeature(SimpleFeature sourceFeature, Geometry geometry, String featureId) {
         if (sourceFeature == null) {
             return null;
         }
@@ -5922,7 +5643,7 @@ public class MapPanel extends JPanel {
         return feature != null && featureId != null && featureId.equals(feature.getID());
     }
 
-    private Geometry adaptGeometryForFeatureSchema(Geometry geometry, SimpleFeatureType featureType) {
+    Geometry adaptGeometryForFeatureSchema(Geometry geometry, SimpleFeatureType featureType) {
         if (geometry == null || featureType == null || featureType.getGeometryDescriptor() == null) {
             return null;
         }
@@ -5954,52 +5675,6 @@ public class MapPanel extends JPanel {
         return geometry;
     }
 
-    private SimpleFeature buildPastedFeature(SimpleFeature sourceFeature,
-                                             Layer targetLayer,
-                                             List<SimpleFeature> existingFeatures,
-                                             boolean offsetGeometry) {
-        if (sourceFeature == null || targetLayer == null) {
-            return null;
-        }
-
-        List<SimpleFeature> targetFeatures = existingFeatures != null ? existingFeatures : new ArrayList<>();
-        ShapefileData targetData = getShapefileData(targetLayer);
-        SimpleFeatureType targetType = targetData != null ? targetData.getSchema() : null;
-        if (targetType == null && !targetFeatures.isEmpty()) {
-            targetType = targetFeatures.get(0).getFeatureType();
-        }
-        if (targetType == null) {
-            return null;
-        }
-
-        Geometry pastedGeometry = extractFeatureGeometryCopy(sourceFeature);
-        if (pastedGeometry == null) {
-            return null;
-        }
-
-        if (offsetGeometry) {
-            offsetGeometryForPaste(pastedGeometry);
-        }
-        Geometry adaptedGeometry = adaptGeometryForFeatureSchema(pastedGeometry, targetType);
-        if (adaptedGeometry == null) {
-            return null;
-        }
-
-        SimpleFeatureBuilder builder = new SimpleFeatureBuilder(targetType);
-        int attributeCount = targetType.getAttributeCount();
-        for (int i = 0; i < attributeCount; i++) {
-            String attrName = targetType.getDescriptor(i).getLocalName();
-            Object sourceValue = null;
-            if (targetType.getDescriptor(i).equals(targetType.getGeometryDescriptor())) {
-                sourceValue = adaptedGeometry;
-            } else if (sourceFeature.getFeatureType().getDescriptor(attrName) != null) {
-                sourceValue = sourceFeature.getAttribute(attrName);
-            }
-            builder.add(sourceValue);
-        }
-
-        return builder.buildFeature(buildNextFeatureId(targetFeatures));
-    }
 
     private List<SimpleFeature> collectSelectedFeatures(List<SimpleFeature> features, List<String> selectedIds) {
         List<SimpleFeature> selected = new ArrayList<>();
@@ -6164,15 +5839,12 @@ public class MapPanel extends JPanel {
         return collectGeometryParts(geometry).size();
     }
 
-    private void offsetGeometryForPaste(Geometry geometry) {
-        MapGeometryUtils.offsetGeometryForPaste(geometry);
-    }
 
     Geometry translateGeometry(Geometry geometry, double dx, double dy) {
         return MapGeometryUtils.translateGeometry(geometry, dx, dy);
     }
 
-    private String buildNextFeatureId(List<SimpleFeature> features) {
+    String buildNextFeatureId(List<SimpleFeature> features) {
         return MapGeometryUtils.buildNextFeatureId(features);
     }
 
@@ -7490,28 +7162,7 @@ public class MapPanel extends JPanel {
         }
     }
 
-    private static class LayerEditSnapshot {
-        private final Layer layer;
-        private final List<SimpleFeature> features;
-        private final String sourceName;
-        private final String message;
-        private final SimpleFeatureType schema;
-        private final String selectedFeatureId;
 
-        private LayerEditSnapshot(Layer layer,
-                                  List<SimpleFeature> features,
-                                  String sourceName,
-                                  String message,
-                                  SimpleFeatureType schema,
-                                  String selectedFeatureId) {
-            this.layer = layer;
-            this.features = features != null ? features : new ArrayList<>();
-            this.sourceName = sourceName;
-            this.message = message;
-            this.schema = schema;
-            this.selectedFeatureId = selectedFeatureId;
-        }
-    }
 
     private void drawOnlineResolutionNotice(Graphics2D g2) {
         if (!onlineResolutionNoticeVisible || onlineResolutionNotice == null || onlineResolutionNotice.isBlank()) {
