@@ -106,7 +106,7 @@ public class MapPanel extends JPanel {
     final MapDecorationRenderer mapDecorations = new MapDecorationRenderer();
     final Map<Layer, RasterStyle> rasterStyles = new LinkedHashMap<>();
     final Map<Layer, CachedRasterDisplay> rasterDisplayCache = new LinkedHashMap<>();
-    private final GeometryFactory selectionGeometryFactory = new GeometryFactory();
+    final GeometryFactory selectionGeometryFactory = new GeometryFactory();
     boolean onlineResolutionNoticeVisible = false;
     String onlineResolutionNotice = "";
 
@@ -116,7 +116,7 @@ public class MapPanel extends JPanel {
 
     private final PinManager pinManager = new PinManager(this);
     private final CopyPasteHandler copyPasteHandler;
-    private final UndoRedoManager undoRedoManager;
+    final UndoRedoManager undoRedoManager;
 
     final List<Coordinate> drawingCoordinates = new ArrayList<>();
     final List<Geometry> pendingDrawingSessionGeometries = new ArrayList<>();
@@ -138,6 +138,7 @@ public class MapPanel extends JPanel {
     // Extracted components (architecture refactoring)
     final MapViewController viewController = new MapViewController();
     private final SelectionManager selectionManager = new SelectionManager();
+    private final SelectionManager2 selectionManager2;
     private final MeasurementTool measurementTool = new MeasurementTool();
     private final FeatureRenderer featureRenderer = new FeatureRenderer(viewController);
     private final EditingEngine editingEngine = new EditingEngine();
@@ -255,6 +256,7 @@ public class MapPanel extends JPanel {
         mapRenderer = new MapRenderer(this);
         keyboardShortcutHandler = new KeyboardShortcutHandler(this);
         snapManager = new SnapManager(this);
+        selectionManager2 = new SelectionManager2(this);
         viewController.setRepaintCallback(this::repaint);
         viewController.setScaleUpdateCallback(this::refreshStatusBarScale);
 
@@ -735,23 +737,7 @@ public class MapPanel extends JPanel {
     }
 
     List<String> getSelectedFeatureIdsForLayer(Layer layer) {
-        if (layer == null) {
-            return new ArrayList<>();
-        }
-
-        LinkedHashSet<String> ids = new LinkedHashSet<>();
-        List<String> storedIds = tableSelectionIds.get(layer);
-        if (storedIds != null) {
-            for (String id : storedIds) {
-                if (id != null && !id.isBlank()) {
-                    ids.add(id);
-                }
-            }
-        }
-        if (layer == selectedLayer && selectedFeature != null && selectedFeature.getID() != null) {
-            ids.add(selectedFeature.getID());
-        }
-        return new ArrayList<>(ids);
+        return selectionManager2.getSelectedFeatureIdsForLayer(layer);
     }
 
     private void restoreFeatureEditOriginalGeometry() {
@@ -773,7 +759,7 @@ public class MapPanel extends JPanel {
         cadReferenceEndpointChosen = false;
     }
 
-    private boolean confirmPendingFeatureEdit(String nextActionDescription) {
+    boolean confirmPendingFeatureEdit(String nextActionDescription) {
         if (!hasFeatureEditChanges() || selectedFeature == null) {
             return true;
         }
@@ -811,112 +797,20 @@ public class MapPanel extends JPanel {
     }
 
     private List<String> normalizeSelectionIds(Layer layer, List<String> featureIds) {
-        List<String> normalized = new ArrayList<>();
-        if (layer == null || featureIds == null || featureIds.isEmpty()) {
-            return normalized;
-        }
-
-        ShapefileData data = getShapefileData(layer);
-        if (data == null || data.getFeatures() == null) {
-            return normalized;
-        }
-
-        LinkedHashSet<String> orderedIds = new LinkedHashSet<>(featureIds);
-        for (String featureId : orderedIds) {
-            if (findFeatureById(data.getFeatures(), featureId) != null) {
-                normalized.add(featureId);
-            }
-        }
-        return normalized;
+        return selectionManager2.normalizeSelectionIds(layer, featureIds);
     }
 
     boolean applyFeatureSelection(Layer layer,
-                                          List<String> featureIds,
-                                          boolean activateEditForSingle,
-                                          boolean syncOpenTables,
-                                          boolean promptOnDirty,
-                                          String statusMessage) {
-        if (layer == null) {
-            return false;
-        }
-
-        List<String> normalizedIds = normalizeSelectionIds(layer, featureIds);
-        if (normalizedIds.isEmpty()) {
-            if (promptOnDirty && !confirmPendingFeatureEdit("cambiar la selecciÃ³n")) {
-                return false;
-            }
-            clearSelectedFeatureInternal(syncOpenTables);
-            if (statusMessage != null && !statusMessage.isBlank()) {
-                showCopiedMessage(statusMessage);
-            }
-            return true;
-        }
-
-        ShapefileData data = getShapefileData(layer);
-        SimpleFeature primaryFeature = data != null ? findFeatureById(data.getFeatures(), normalizedIds.get(0)) : null;
-        if (activateEditForSingle && normalizedIds.size() == 1 && primaryFeature != null) {
-            enableFeatureEdit(layer, primaryFeature);
-            if (statusMessage != null && !statusMessage.isBlank()) {
-                showCopiedMessage(statusMessage);
-            }
-            return true;
-        }
-
-        if (promptOnDirty && !confirmPendingFeatureEdit("cambiar la selecciÃ³n")) {
-            return false;
-        }
-
-        selectionFlashGeometry = null;
-        selectionFlashTimer.stop();
-        tableSelectionIds.clear();
-        tableSelectionIds.put(layer, new ArrayList<>(normalizedIds));
-        selectedLayer = layer;
-        selectedFeature = primaryFeature;
-        featureEditMode = false;
-        featureEditOriginalGeometry = null;
-        featureEditDirty = false;
-        featureEditSketchCoordinates.clear();
-        activeEditVertexIndex = -1;
-        joinTargetVertexIndex = -1;
-        clearAdjacentPolygonState();
-        undoRedoManager.clear();
-        if (!EDIT_OP_MOVE_FEATURE.equals(featureEditOperation)) {
-            featureEditOperation = EDIT_OP_MOVE_VERTEX;
-        }
-
-        if (syncOpenTables) {
-            OpenAttributeTableAction.syncSelectionFromMap(layer, normalizedIds);
-        }
-        if (primaryFeature != null) {
-            startSelectionFlash(layer, primaryFeature);
-        }
-        if (statusMessage != null && !statusMessage.isBlank()) {
-            showCopiedMessage(statusMessage);
-        }
-        refreshEditingUi();
-        return true;
+                                  List<String> featureIds,
+                                  boolean activateEditForSingle,
+                                  boolean syncOpenTables,
+                                  boolean promptOnDirty,
+                                  String statusMessage) {
+        return selectionManager2.applyFeatureSelection(layer, featureIds, activateEditForSingle, syncOpenTables, promptOnDirty, statusMessage);
     }
 
     private List<String> mergeSelectionIds(Layer layer, List<String> currentIds, List<String> candidateIds, boolean toggleSingleCandidate) {
-        LinkedHashSet<String> merged = new LinkedHashSet<>();
-        if (currentIds != null) {
-            merged.addAll(currentIds);
-        }
-        if (candidateIds == null || candidateIds.isEmpty()) {
-            return new ArrayList<>(merged);
-        }
-
-        if (toggleSingleCandidate && candidateIds.size() == 1) {
-            String candidate = candidateIds.get(0);
-            if (merged.contains(candidate)) {
-                merged.remove(candidate);
-            } else {
-                merged.add(candidate);
-            }
-        } else {
-            merged.addAll(candidateIds);
-        }
-        return new ArrayList<>(merged);
+        return selectionManager2.mergeSelectionIds(layer, currentIds, candidateIds, toggleSingleCandidate);
     }
 
     public void prepareLayerForEditing(Layer layer) {
@@ -3130,335 +3024,58 @@ public class MapPanel extends JPanel {
     }
 
     void identifyFeature(int screenX, int screenY) {
-        List<IdentifyResultItem> hits = collectIdentifyResults(screenX, screenY);
-        if (activeVectorEditingLayer != null) {
-            List<IdentifyResultItem> filteredHits = new ArrayList<>();
-            for (IdentifyResultItem item : hits) {
-                if (item != null && item.getLayer() == activeVectorEditingLayer) {
-                    filteredHits.add(item);
-                }
-            }
-            hits = filteredHits;
-        }
-
-        if (hits.isEmpty()) {
-            clearSelectedFeature();
-            showCopiedMessage("No se identificÃ³ ninguna entidad.");
-            JOptionPane.showMessageDialog(this, "No se identificÃ³ ninguna entidad.");
-            repaint();
-            return;
-        }
-
-        if (hits.size() == 1) {
-            IdentifyResultItem hit = hits.get(0);
-            highlightIdentifiedFeature(hit.getLayer(), hit.getFeature());
-            showCopiedMessage("1 entidad identificada en capa: " + (hit.getLayer() != null ? hit.getLayer().getName() : "-"));
-            showFeatureInfo(hit.getFeature(), hit.getLayer());
-            return;
-        }
-
-        highlightIdentifiedFeature(hits.get(0).getLayer(), hits.get(0).getFeature());
-        showCopiedMessage(hits.size() + " entidades identificadas. ElegÃ­ una en la ventana de resultados.");
-        IdentifyResultsDialog.open(this, hits);
+        selectionManager2.identifyFeature(screenX, screenY);
     }
 
     void selectFeatureForEditing(int screenX, int screenY, boolean additiveSelection) {
-        List<IdentifyResultItem> hits = collectSelectableResults(screenX, screenY);
-
-        if (hits.isEmpty()) {
-            if (!additiveSelection) {
-                clearSelectedFeature();
-                showCopiedMessage("No se seleccionÃ³ ninguna entidad.");
-            }
-            repaint();
-            return;
-        }
-
-        IdentifyResultItem hit = hits.get(0);
-        Layer targetLayer = hit.getLayer();
-        String featureId = hit.getFeature() != null ? hit.getFeature().getID() : null;
-        if (targetLayer == null || featureId == null) {
-            return;
-        }
-
-        List<String> selectionIds = additiveSelection
-                ? mergeSelectionIds(targetLayer, getSelectedFeatureIdsForLayer(targetLayer), List.of(featureId), true)
-                : List.of(featureId);
-
-        String message = additiveSelection
-                ? (selectionIds.size() == 1
-                ? "1 entidad seleccionada."
-                : selectionIds.size() + " entidades seleccionadas.")
-                : "Entidad seleccionada para ediciÃ³n: " + targetLayer.getName();
-        applyFeatureSelection(targetLayer, selectionIds, !additiveSelection, true, true, message);
+        selectionManager2.selectFeatureForEditing(screenX, screenY, additiveSelection);
     }
 
     void selectFeatureForEditing(Rectangle selectionBounds, boolean additiveSelection) {
-        List<IdentifyResultItem> hits = collectSelectableResults(selectionBounds);
-
-        if (hits.isEmpty()) {
-            if (!additiveSelection) {
-                clearSelectedFeature();
-                showCopiedMessage("No se encontrÃ³ ninguna entidad dentro del rectÃ¡ngulo.");
-            }
-            repaint();
-            return;
-        }
-
-        Layer targetLayer = hits.get(0).getLayer();
-        List<String> selectionIds = new ArrayList<>();
-        for (IdentifyResultItem item : hits) {
-            if (item != null && item.getLayer() == targetLayer && item.getFeature() != null && item.getFeature().getID() != null) {
-                selectionIds.add(item.getFeature().getID());
-            }
-        }
-        if (additiveSelection) {
-            selectionIds = mergeSelectionIds(targetLayer, getSelectedFeatureIdsForLayer(targetLayer), selectionIds, false);
-        }
-
-        String message = selectionIds.size() == 1
-                ? "Entidad seleccionada con ventana de captura."
-                : selectionIds.size() + " entidades seleccionadas con ventana de captura.";
-        applyFeatureSelection(targetLayer, selectionIds, !additiveSelection && selectionIds.size() == 1, true, true, message);
+        selectionManager2.selectFeatureForEditing(selectionBounds, additiveSelection);
     }
 
     List<IdentifyResultItem> collectIdentifyResults(int screenX, int screenY) {
-        List<IdentifyResultItem> hits = new ArrayList<>();
-
-        double tolerancePixels = 6.0;
-        double toleranceWorld = tolerancePixels / zoomFactor;
-
-        double worldX = screenToWorldX(screenX);
-        double worldY = screenToWorldY(screenY);
-
-        Point clickPoint = new org.locationtech.jts.geom.GeometryFactory()
-                .createPoint(new Coordinate(worldX, worldY));
-
-        collectPointProbeHits(layerManager.getHitTestLayers(false), clickPoint, toleranceWorld, hits, "Error durante identificacion puntual sobre capa ");
-
-        return hits;
+        return selectionManager2.collectIdentifyResults(screenX, screenY);
     }
 
     private List<IdentifyResultItem> collectSelectableResults(int screenX, int screenY) {
-        List<IdentifyResultItem> hits = new ArrayList<>();
-
-        double tolerancePixels = 6.0;
-        double toleranceWorld = tolerancePixels / zoomFactor;
-
-        double worldX = screenToWorldX(screenX);
-        double worldY = screenToWorldY(screenY);
-
-        Point clickPoint = selectionGeometryFactory.createPoint(new Coordinate(worldX, worldY));
-
-        collectPointProbeHits(layerManager.getHitTestLayers(true), clickPoint, toleranceWorld, hits, "Error durante seleccion puntual sobre capa ");
-
-        sortSelectableHits(hits, clickPoint);
-        return hits;
+        return selectionManager2.collectSelectableResults(screenX, screenY);
     }
 
     private List<IdentifyResultItem> collectSelectableResults(Rectangle selectionBounds) {
-        List<IdentifyResultItem> hits = new ArrayList<>();
-        if (selectionBounds == null || selectionBounds.width <= 0 || selectionBounds.height <= 0) {
-            return hits;
-        }
-
-        double minWorldX = screenToWorldX(selectionBounds.x);
-        double maxWorldX = screenToWorldX(selectionBounds.x + selectionBounds.width);
-        double maxWorldY = screenToWorldY(selectionBounds.y);
-        double minWorldY = screenToWorldY(selectionBounds.y + selectionBounds.height);
-        Envelope envelope = new Envelope(
-                Math.min(minWorldX, maxWorldX),
-                Math.max(minWorldX, maxWorldX),
-                Math.min(minWorldY, maxWorldY),
-                Math.max(minWorldY, maxWorldY)
-        );
-        Geometry selectionArea = selectionGeometryFactory.toGeometry(envelope);
-
-        forEachVisibleFeatureGeometry(layerManager.getHitTestLayers(true), "Error durante seleccion por rectangulo sobre capa ", (layer, featureGeometry) -> {
-            if (featureGeometry.geometry().intersects(selectionArea) || selectionArea.contains(featureGeometry.geometry())) {
-                hits.add(new IdentifyResultItem(layer, featureGeometry.feature(), featureGeometry.geometry()));
-            }
-        });
-
-        sortSelectableHits(hits, selectionArea.getCentroid());
-        return hits;
-    }
-
-    private void collectPointProbeHits(List<Layer> layers,
-                                       Point clickPoint,
-                                       double toleranceWorld,
-                                       List<IdentifyResultItem> hits,
-                                       String failurePrefix) {
-        forEachVisibleFeatureGeometry(layers, failurePrefix, (layer, featureGeometry) -> {
-            Geometry geometry = featureGeometry.geometry();
-            boolean hit = geometry instanceof Point || geometry instanceof MultiPoint
-                    ? geometry.isWithinDistance(clickPoint, toleranceWorld)
-                    : geometry.buffer(toleranceWorld).contains(clickPoint);
-            if (hit) {
-                hits.add(new IdentifyResultItem(layer, featureGeometry.feature(), geometry));
-            }
-        });
+        return selectionManager2.collectSelectableResults(selectionBounds);
     }
 
     void forEachVisibleFeatureGeometry(List<Layer> layers,
-                                               String failurePrefix,
-                                               BiConsumer<Layer, FeatureGeometryRef> consumer) {
-        if (layers == null || consumer == null) {
-            return;
-        }
-        for (Layer layer : layers) {
-            if (!layerManager.isLayerEffectivelyVisible(layer)) {
-                continue;
-            }
-
-            ShapefileData data = shapefileLayers.get(layer);
-            if (data == null || data.getFeatureCollection() == null) {
-                continue;
-            }
-
-            try (FeatureIterator<SimpleFeature> iterator = data.getFeatureCollection().features()) {
-                while (iterator.hasNext()) {
-                    SimpleFeature feature = iterator.next();
-                    if (!isFeatureVisibleInLayer(layer, feature)) {
-                        continue;
-                    }
-                    Object geomObj = feature.getDefaultGeometry();
-                    if (!(geomObj instanceof Geometry)) {
-                        continue;
-                    }
-
-                    Geometry geometry = reprojectGeometryIfNeeded(layer, (Geometry) geomObj);
-                    if (geometry == null || geometry.isEmpty()) {
-                        continue;
-                    }
-
-                    consumer.accept(layer, new FeatureGeometryRef(feature, geometry));
-                }
-            } catch (Exception ex) {
-                AppErrorSupport.logFailure((failurePrefix != null ? failurePrefix : "Error de capa ") + layer.getName(), ex);
-            }
-        }
+                                       String failurePrefix,
+                                       BiConsumer<Layer, FeatureGeometryRef> consumer) {
+        selectionManager2.forEachVisibleFeatureGeometry(layers, failurePrefix, consumer);
     }
 
-    private void sortSelectableHits(List<IdentifyResultItem> hits, Geometry referenceGeometry) {
-        if (hits == null || hits.size() < 2 || referenceGeometry == null) {
-            return;
-        }
-        hits.sort((left, right) -> Double.compare(
-                selectableHitDistance(left, referenceGeometry),
-                selectableHitDistance(right, referenceGeometry)
-        ));
-    }
-
-    private double selectableHitDistance(IdentifyResultItem item, Geometry referenceGeometry) {
-        if (item == null || item.getGeometry() == null || referenceGeometry == null) {
-            return Double.MAX_VALUE;
-        }
-
-        double distance = item.getGeometry().distance(referenceGeometry);
-        if (selectedLayer != null
-                && selectedFeature != null
-                && item.getLayer() == selectedLayer
-                && sameFeatureId(item.getFeature(), selectedFeature)) {
-            distance += 0.000001d;
-        }
-        return distance;
-    }
 
     boolean isHitOnCurrentSelection(int screenX, int screenY) {
-        if (selectedLayer == null || !hasFeatureSelection()) {
-            return false;
-        }
-        List<String> selectedIds = getSelectedFeatureIdsForLayer(selectedLayer);
-        if (selectedIds.isEmpty()) {
-            return false;
-        }
-
-        List<IdentifyResultItem> hits = collectSelectableResults(screenX, screenY);
-        for (IdentifyResultItem hit : hits) {
-            if (hit != null
-                    && hit.getLayer() == selectedLayer
-                    && hit.getFeature() != null
-                    && selectedIds.contains(hit.getFeature().getID())) {
-                return true;
-            }
-        }
-        return false;
+        return selectionManager2.isHitOnCurrentSelection(screenX, screenY);
     }
 
     private List<Layer> getHitTestLayers(boolean preferEditingLayer) {
-        return layerManager.getHitTestLayers(preferEditingLayer);
+        return selectionManager2.getHitTestLayers(preferEditingLayer);
     }
 
     public void highlightIdentifiedFeature(Layer layer, SimpleFeature feature) {
-        selectedLayer = layer;
-        selectedFeature = feature;
-        if (layer != null && feature != null) {
-            tableSelectionIds.clear();
-            tableSelectionIds.put(layer, new ArrayList<>(List.of(feature.getID())));
-            OpenAttributeTableAction.syncSelectionFromMap(layer, List.of(feature.getID()));
-            startSelectionFlash(layer, feature);
-        }
-        CatgisDesktopApp.syncFloatingVectorEditToolbar();
-        repaint();
+        selectionManager2.highlightIdentifiedFeature(layer, feature);
     }
 
     private void clearSelectedFeatureInternal(boolean syncOpenTables) {
-        selectionFlashGeometry = null;
-        selectionFlashTimer.stop();
-        tableSelectionIds.clear();
-        if (syncOpenTables) {
-            OpenAttributeTableAction.clearSelectionInOpenTables();
-        }
-        selectedLayer = activeVectorEditingLayer;
-        selectedFeature = null;
-        featureEditMode = false;
-        featureEditOperation = EDIT_OP_MOVE_VERTEX;
-        featureEditSketchCoordinates.clear();
-        featureEditOriginalGeometry = null;
-        featureEditDirty = false;
-        activeEditVertexIndex = -1;
-        joinTargetVertexIndex = -1;
-        clearAdjacentPolygonState();
-        clearCadConstructionState();
-        movingSelectedFeatures = false;
-        moveSelectionLastProjectX = Double.NaN;
-        moveSelectionLastProjectY = Double.NaN;
-        undoRedoManager.clear();
-        refreshEditingUi();
+        selectionManager2.clearSelectedFeatureInternal(syncOpenTables);
     }
 
     public void clearSelectedFeature() {
-        if (!confirmPendingFeatureEdit("limpiar la selecciÃ³n")) {
-            return;
-        }
-        clearSelectedFeatureInternal(true);
+        selectionManager2.clearSelectedFeature();
     }
 
     public void syncSelectionFromAttributeTable(Layer layer, List<String> featureIds) {
-        if (layer == null) {
-            return;
-        }
-
-        tableSelectionIds.clear();
-        if (featureIds == null || featureIds.isEmpty()) {
-            if (!featureEditMode && layer == selectedLayer) {
-                selectedFeature = null;
-            }
-        } else {
-            tableSelectionIds.put(layer, new ArrayList<>(featureIds));
-            if (!featureEditMode) {
-                selectedLayer = layer;
-                ShapefileData data = getShapefileData(layer);
-                selectedFeature = data != null ? findFeatureById(data.getFeatures(), featureIds.get(0)) : null;
-                if (selectedFeature != null) {
-                    startSelectionFlash(layer, selectedFeature);
-                }
-            }
-        }
-
-        CatgisDesktopApp.syncFloatingVectorEditToolbar();
-        repaint();
+        selectionManager2.syncSelectionFromAttributeTable(layer, featureIds);
     }
 
     public void zoomToSelectedFeature() {
@@ -4012,26 +3629,7 @@ public class MapPanel extends JPanel {
     }
 
     void startSelectionFlash(Layer layer, SimpleFeature feature) {
-        if (layer == null || feature == null) {
-            return;
-        }
-
-        Object geomObj = feature.getDefaultGeometry();
-        if (!(geomObj instanceof Geometry)) {
-            return;
-        }
-
-        Geometry geometry = reprojectGeometryIfNeeded(layer, (Geometry) geomObj);
-        if (geometry == null || geometry.isEmpty()) {
-            return;
-        }
-
-        selectionFlashGeometry = geometry;
-        selectionFlashStartedAt = System.currentTimeMillis();
-        if (!selectionFlashTimer.isRunning()) {
-            selectionFlashTimer.start();
-        }
-        repaint();
+        selectionManager2.startSelectionFlash(layer, feature);
     }
 
     private void drawRasterLayer(Graphics2D g2, Layer layer, LocalRasterData data) {
