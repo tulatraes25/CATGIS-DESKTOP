@@ -104,6 +104,9 @@ public class OpenFileAction extends AbstractAction {
                 );
                 layerStorageFile = file;
                 layerDisplayName = file.getName();
+            } else if (lowerName.endsWith(".fgb")) {
+                data = FlatGeobufLoader.load(file);
+                layerDisplayName = file.getName();
             }
 
             if (data != null) {

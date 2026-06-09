@@ -116,6 +116,13 @@ final class LayerVectorDataSupport {
             }
             return projectAndAttach(layer, data);
         }
+        if (lowerPath.endsWith(".fgb")) {
+            data = FlatGeobufLoader.load(path);
+            if (isBlank(layer.getSourceCRS())) {
+                layer.setSourceCRS("EPSG:4326");
+            }
+            return projectAndAttach(layer, data);
+        }
 
         return null;
     }
