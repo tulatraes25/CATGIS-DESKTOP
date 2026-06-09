@@ -5557,50 +5557,7 @@ public class MapPanel extends JPanel {
     }
 
     private void drawPointClusters(Graphics2D g2) {
-        if (shapefileLayers.isEmpty()) return;
-
-        java.util.List<java.awt.geom.Point2D> allPoints = new java.util.ArrayList<>();
-        int radius = 30;
-        boolean hasClustering = false;
-
-        for (Layer layer : layerManager.getRenderOrderLayers()) {
-            if (layer == null || !layerManager.isLayerEffectivelyVisible(layer)) continue;
-            if (!layer.isClusteringEnabled()) continue;
-            hasClustering = true;
-            radius = layer.getClusterRadius();
-
-            ShapefileData data = shapefileLayers.get(layer);
-            if (data == null) continue;
-
-            try (org.geotools.feature.FeatureIterator<
-                    org.geotools.api.feature.simple.SimpleFeature> it =
-                    data.getFeatureCollection().features()) {
-                while (it.hasNext()) {
-                    org.geotools.api.feature.simple.SimpleFeature f = it.next();
-                    Object geomObj = f.getDefaultGeometry();
-                    if (geomObj instanceof org.locationtech.jts.geom.Point pt) {
-                        allPoints.add(new java.awt.geom.Point2D.Double(
-                            worldToScreenX(pt.getX()), worldToScreenY(pt.getY())));
-                    } else if (geomObj instanceof org.locationtech.jts.geom.MultiPoint mp) {
-                        for (int i = 0; i < mp.getNumGeometries(); i++) {
-                            org.locationtech.jts.geom.Geometry g = mp.getGeometryN(i);
-                            if (g instanceof org.locationtech.jts.geom.Point p) {
-                                allPoints.add(new java.awt.geom.Point2D.Double(
-                                    worldToScreenX(p.getX()), worldToScreenY(p.getY())));
-                            }
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (!hasClustering || allPoints.isEmpty()) return;
-
-        var clusters = PointClusterRenderer.clusterPoints(allPoints, radius);
-        int w = Math.max(1, getWidth());
-        int h = Math.max(1, getHeight());
-        BufferedImage clusterImg = PointClusterRenderer.renderClusters(clusters, w, h);
-        if (clusterImg != null) g2.drawImage(clusterImg, 0, 0, null);
+        OnlineLayerRenderer.drawPointClusters(this, g2);
     }
 
     /**
@@ -5647,55 +5604,7 @@ public class MapPanel extends JPanel {
     }
 
     private void drawHeatmapOverlay(Graphics2D g2) {
-        if (shapefileLayers.isEmpty()) return;
-
-        java.util.List<java.awt.geom.Point2D> allPoints = new java.util.ArrayList<>();
-        int radius = 30;
-        float opacity = 0.6f;
-        boolean hasHeatmap = false;
-
-        for (Layer layer : layerManager.getRenderOrderLayers()) {
-            if (layer == null || !layerManager.isLayerEffectivelyVisible(layer)) continue;
-            if (!layer.isHeatmapEnabled()) continue;
-            hasHeatmap = true;
-            radius = layer.getHeatmapRadius();
-            opacity = layer.getHeatmapOpacity();
-
-            ShapefileData data = shapefileLayers.get(layer);
-            if (data == null) continue;
-
-            try (org.geotools.feature.FeatureIterator<
-                    org.geotools.api.feature.simple.SimpleFeature> it =
-                    data.getFeatureCollection().features()) {
-                while (it.hasNext()) {
-                    org.geotools.api.feature.simple.SimpleFeature f = it.next();
-                    Object geomObj = f.getDefaultGeometry();
-                    if (geomObj instanceof org.locationtech.jts.geom.Point pt) {
-                        int sx = worldToScreenX(pt.getX());
-                        int sy = worldToScreenY(pt.getY());
-                        allPoints.add(new java.awt.geom.Point2D.Double(sx, sy));
-                    } else if (geomObj instanceof org.locationtech.jts.geom.MultiPoint mp) {
-                        for (int i = 0; i < mp.getNumGeometries(); i++) {
-                            org.locationtech.jts.geom.Geometry g = mp.getGeometryN(i);
-                            if (g instanceof org.locationtech.jts.geom.Point p) {
-                                int sx = worldToScreenX(p.getX());
-                                int sy = worldToScreenY(p.getY());
-                                allPoints.add(new java.awt.geom.Point2D.Double(sx, sy));
-                            }
-                        }
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (!hasHeatmap || allPoints.isEmpty()) return;
-
-        int w = Math.max(1, getWidth());
-        int h = Math.max(1, getHeight());
-        BufferedImage heatmap = HeatmapRenderer.renderHeatmap(allPoints, w, h, radius, opacity);
-        if (heatmap != null) {
-            g2.drawImage(heatmap, 0, 0, null);
-        }
+        OnlineLayerRenderer.drawHeatmapOverlay(this, g2);
     }
 
     private void drawSelectionBox(Graphics2D g2) {
@@ -5853,358 +5762,47 @@ public class MapPanel extends JPanel {
     }
 
     private void drawOnlineTileLayer(Graphics2D g2, OnlineTileLayer layer, OnlineRasterSource source) {
-        if (layer == null || source == null || getWidth() <= 0 || getHeight() <= 0) {
-            return;
-        }
-
-        String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
-        if (projectCRS == null || projectCRS.isBlank()) {
-            return;
-        }
-
-        Envelope projectView = new Envelope(
-                screenToWorldX(0),
-                screenToWorldX(getWidth()),
-                screenToWorldY(getHeight()),
-                screenToWorldY(0)
-        );
-
-        Envelope mercatorView = projectEnvelopeToMercator(projectView, projectCRS);
-        if (mercatorView == null || mercatorView.isNull()) {
-            return;
-        }
-
-        int desiredZoom = OnlineMapUtils.estimateZoom(mercatorView, getWidth(), getHeight(), source);
-        int zoom = OnlineMapUtils.chooseZoom(mercatorView, getWidth(), getHeight(), source);
-        boolean detailLimited = desiredZoom > source.getMaxZoom();
-        boolean usedFallbackTile = false;
-        int renderedTiles = 0;
-        OnlineMapUtils.TileRange range = OnlineMapUtils.calculateTileRange(mercatorView, zoom);
-        if (range.tileCount() <= 0) {
-            return;
-        }
-
-        for (int tx = range.minX; tx <= range.maxX; tx++) {
-            for (int ty = range.minY; ty <= range.maxY; ty++) {
-                Envelope tileMercator = OnlineMapUtils.tileBounds(tx, ty, zoom);
-                Envelope tileProject = reprojectEnvelopeIfNeeded(tileMercator, "EPSG:3857", projectCRS);
-                if (tileProject == null || tileProject.isNull()) {
-                    continue;
-                }
-
-                int x1 = worldToScreenX(tileProject.getMinX());
-                int y1 = worldToScreenY(tileProject.getMaxY());
-                int x2 = worldToScreenX(tileProject.getMaxX());
-                int y2 = worldToScreenY(tileProject.getMinY());
-
-                int drawX = Math.min(x1, x2);
-                int drawY = Math.min(y1, y2);
-                int drawW = Math.abs(x2 - x1);
-                int drawH = Math.abs(y2 - y1);
-
-                if (drawW <= 1 || drawH <= 1) {
-                    continue;
-                }
-
-                BufferedImage tile = OnlineTileCache.getTile(source, zoom, tx, ty, this::repaint);
-                Graphics2D copy = (Graphics2D) g2.create();
-                try {
-                    float opacity = layer.getOpacity();
-                    copy.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0.1f, Math.min(1f, opacity))));
-                    if (tile != null) {
-                        copy.drawImage(tile, drawX, drawY, drawW, drawH, null);
-                        renderedTiles++;
-                    } else {
-                        OnlineTileFallback fallback = resolveFallbackOnlineTile(source, zoom, tx, ty);
-                        if (fallback == null) {
-                            continue;
-                        }
-                        usedFallbackTile = true;
-                        renderedTiles++;
-                        copy.drawImage(
-                                fallback.image,
-                                drawX,
-                                drawY,
-                                drawX + drawW,
-                                drawY + drawH,
-                                fallback.srcX,
-                                fallback.srcY,
-                                fallback.srcX + fallback.srcW,
-                                fallback.srcY + fallback.srcH,
-                                null
-                        );
-                    }
-                } finally {
-                    copy.dispose();
-                }
-            }
-        }
-
-        if (renderedTiles <= 0) {
-            String failure = OnlineTileCache.getRecentSourceFailure(source.getId(), 120000L);
-            if (failure != null && !failure.isBlank()) {
-                onlineResolutionNoticeVisible = true;
-                onlineResolutionNotice = "No se pudieron descargar teselas de " + source.getName() + ": " + failure;
-                pushTileStatusToBar();
-            } else if (range.tileCount() > 0) {
-                onlineResolutionNoticeVisible = true;
-                onlineResolutionNotice = "Cargando teselas de " + source.getName() + "...";
-                pushTileStatusToBar();
-            }
-        } else if (detailLimited) {
-            onlineResolutionNoticeVisible = true;
-            onlineResolutionNotice = "Zoom mayor al detalle disponible en " + source.getName() + ". Se muestra la ultima resolucion util.";
-            pushTileStatusToBar();
-        } else if (usedFallbackTile && !onlineResolutionNoticeVisible) {
-            onlineResolutionNoticeVisible = true;
-            onlineResolutionNotice = "Algunas teselas no estan disponibles en este zoom. Se mantiene el ultimo detalle disponible.";
-            pushTileStatusToBar();
-        }
+        OnlineLayerRenderer.drawOnlineTileLayer(this, g2, layer, source);
     }
 
     OnlineTileFallback resolveFallbackOnlineTile(OnlineRasterSource source, int zoom, int x, int y) {
-        if (source == null) {
-            return null;
-        }
-        for (int fallbackZoom = zoom - 1; fallbackZoom >= source.getMinZoom(); fallbackZoom--) {
-            int delta = zoom - fallbackZoom;
-            int parentX = x >> delta;
-            int parentY = y >> delta;
-            BufferedImage parentTile = OnlineTileCache.getTile(source, fallbackZoom, parentX, parentY, this::repaint);
-            if (parentTile == null) {
-                continue;
-            }
-
-            int divisions = 1 << delta;
-            int childX = x - (parentX << delta);
-            int childY = y - (parentY << delta);
-            int srcX = childX * parentTile.getWidth() / divisions;
-            int srcY = childY * parentTile.getHeight() / divisions;
-            int srcW = Math.max(1, parentTile.getWidth() / divisions);
-            int srcH = Math.max(1, parentTile.getHeight() / divisions);
-
-            srcW = Math.min(srcW, parentTile.getWidth() - srcX);
-            srcH = Math.min(srcH, parentTile.getHeight() - srcY);
-            if (srcW <= 0 || srcH <= 0) {
-                continue;
-            }
-            return new OnlineTileFallback(parentTile, srcX, srcY, srcW, srcH);
-        }
-        return null;
+        return OnlineLayerRenderer.resolveFallbackOnlineTile(this, source, zoom, x, y);
     }
 
     private void drawOnlineWmsLayer(Graphics2D g2, OnlineWmsLayer layer) {
-        if (layer == null || getWidth() <= 8 || getHeight() <= 8) {
-            return;
-        }
-
-        String requestUrl = buildWmsGetMapUrl(layer);
-        if (requestUrl == null || requestUrl.isBlank()) {
-            return;
-        }
-
-        BufferedImage image = OnlineWmsImageCache.getImage(requestUrl, layer.getImageFormat(), this::repaint);
-        if (image == null) {
-            return;
-        }
-
-        Graphics2D copy = (Graphics2D) g2.create();
-        try {
-            copy.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, Math.max(0.1f, Math.min(1f, layer.getOpacity()))));
-            copy.drawImage(image, 0, 0, getWidth(), getHeight(), null);
-        } finally {
-            copy.dispose();
-        }
+        OnlineLayerRenderer.drawOnlineWmsLayer(this, g2, layer);
     }
 
     String buildWmsGetMapUrl(OnlineWmsLayer layer) {
-        String serviceUrl = layer.getServiceUrl();
-        String layerNames = layer.getLayerNames();
-        if (serviceUrl == null || serviceUrl.isBlank() || layerNames == null || layerNames.isBlank()) {
-            return null;
-        }
-
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
-        String requestCrs = layer.getRequestCrs() != null && !layer.getRequestCrs().isBlank()
-                ? layer.getRequestCrs()
-                : (projectCrs != null && !projectCrs.isBlank() ? projectCrs : "EPSG:3857");
-
-        Envelope projectView = new Envelope(
-                screenToWorldX(0),
-                screenToWorldX(getWidth()),
-                screenToWorldY(getHeight()),
-                screenToWorldY(0)
-        );
-        Envelope requestEnvelope = projectEnvelopeToCrs(projectView, projectCrs, requestCrs);
-        if (requestEnvelope == null || requestEnvelope.isNull()) {
-            return null;
-        }
-
-        String version = layer.getVersion() != null && !layer.getVersion().isBlank() ? layer.getVersion() : "1.3.0";
-        String bbox = buildWmsBbox(requestEnvelope, requestCrs, version);
-        String crsParam = version.startsWith("1.3") ? "CRS" : "SRS";
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(serviceUrl.trim());
-        sb.append(serviceUrl.contains("?") ? (serviceUrl.endsWith("?") || serviceUrl.endsWith("&") ? "" : "&") : "?");
-        sb.append("SERVICE=WMS");
-        sb.append("&REQUEST=GetMap");
-        sb.append("&VERSION=").append(urlEncode(version));
-        sb.append("&LAYERS=").append(urlEncode(layerNames));
-        sb.append("&STYLES=").append(urlEncode(layer.getStyleNames() != null ? layer.getStyleNames() : ""));
-        sb.append("&FORMAT=").append(urlEncode(layer.getImageFormat() != null && !layer.getImageFormat().isBlank() ? layer.getImageFormat() : "image/png"));
-        sb.append("&TRANSPARENT=").append(layer.isTransparent() ? "TRUE" : "FALSE");
-        sb.append("&WIDTH=").append(Math.max(64, getWidth()));
-        sb.append("&HEIGHT=").append(Math.max(64, getHeight()));
-        sb.append("&").append(crsParam).append("=").append(urlEncode(requestCrs));
-        sb.append("&BBOX=").append(urlEncode(bbox));
-        return sb.toString();
+        return OnlineLayerRenderer.buildWmsGetMapUrl(this, layer);
     }
 
     private Envelope projectEnvelopeToCrs(Envelope projectEnvelope, String sourceCrs, String targetCrs) {
-        if (projectEnvelope == null || projectEnvelope.isNull()) {
-            return null;
-        }
-        if (sourceCrs == null || sourceCrs.isBlank() || targetCrs == null || targetCrs.isBlank()) {
-            return new Envelope(projectEnvelope);
-        }
-        if (sourceCrs.equalsIgnoreCase(targetCrs)) {
-            return new Envelope(projectEnvelope);
-        }
-
-        double[][] corners = new double[][]{
-                {projectEnvelope.getMinX(), projectEnvelope.getMinY()},
-                {projectEnvelope.getMinX(), projectEnvelope.getMaxY()},
-                {projectEnvelope.getMaxX(), projectEnvelope.getMinY()},
-                {projectEnvelope.getMaxX(), projectEnvelope.getMaxY()}
-        };
-
-        Envelope transformed = null;
-        for (double[] corner : corners) {
-            double[] out = transformPoint(corner[0], corner[1], sourceCrs, targetCrs);
-            if (out == null || out.length < 2 || Double.isNaN(out[0]) || Double.isNaN(out[1])) {
-                continue;
-            }
-            if (transformed == null) {
-                transformed = new Envelope(out[0], out[0], out[1], out[1]);
-            } else {
-                transformed.expandToInclude(out[0], out[1]);
-            }
-        }
-        return transformed;
+        return OnlineLayerRenderer.projectEnvelopeToCrs(this, projectEnvelope, sourceCrs, targetCrs);
     }
 
     private String buildWmsBbox(Envelope env, String requestCrs, String version) {
-        if (env == null) {
-            return "";
-        }
-        boolean latLon130 = version != null && version.startsWith("1.3")
-                && requestCrs != null
-                && ("EPSG:4326".equalsIgnoreCase(requestCrs) || "CRS:84".equalsIgnoreCase(requestCrs));
-
-        if (latLon130 && "EPSG:4326".equalsIgnoreCase(requestCrs)) {
-            return formatNumberForRequest(env.getMinY()) + "," + formatNumberForRequest(env.getMinX()) + ","
-                    + formatNumberForRequest(env.getMaxY()) + "," + formatNumberForRequest(env.getMaxX());
-        }
-
-        return formatNumberForRequest(env.getMinX()) + "," + formatNumberForRequest(env.getMinY()) + ","
-                + formatNumberForRequest(env.getMaxX()) + "," + formatNumberForRequest(env.getMaxY());
+        return OnlineLayerRenderer.buildWmsBbox(env, requestCrs, version);
     }
 
     private String formatNumberForRequest(double value) {
-        return String.format(Locale.US, "%.8f", value);
+        return OnlineLayerRenderer.formatNumberForRequest(value);
     }
 
     private String urlEncode(String text) {
-        try {
-            return java.net.URLEncoder.encode(text != null ? text : "", java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception ex) {
-            return text != null ? text : "";
-        }
+        return OnlineLayerRenderer.urlEncode(text);
     }
 
     Envelope projectEnvelopeToMercator(Envelope projectEnvelope, String projectCRS) {
-        if (projectEnvelope == null || projectEnvelope.isNull() || projectCRS == null || projectCRS.isBlank()) {
-            return null;
-        }
-
-        double[][] corners = new double[][]{
-                {projectEnvelope.getMinX(), projectEnvelope.getMinY()},
-                {projectEnvelope.getMinX(), projectEnvelope.getMaxY()},
-                {projectEnvelope.getMaxX(), projectEnvelope.getMinY()},
-                {projectEnvelope.getMaxX(), projectEnvelope.getMaxY()}
-        };
-
-        Envelope mercator = null;
-        for (double[] corner : corners) {
-            double[] transformed = transformPoint(corner[0], corner[1], projectCRS, "EPSG:3857");
-            if (transformed == null || transformed.length < 2
-                    || Double.isNaN(transformed[0]) || Double.isNaN(transformed[1])
-                    || Double.isInfinite(transformed[0]) || Double.isInfinite(transformed[1])) {
-                continue;
-            }
-            if (mercator == null) {
-                mercator = new Envelope(transformed[0], transformed[0], transformed[1], transformed[1]);
-            } else {
-                mercator.expandToInclude(transformed[0], transformed[1]);
-            }
-        }
-
-        return OnlineMapUtils.clampToWorld(mercator);
+        return OnlineLayerRenderer.projectEnvelopeToMercator(this, projectEnvelope, projectCRS);
     }
 
     private void drawOnlineAttribution(Graphics2D g2) {
-        String attribution = buildVisibleOnlineAttribution();
-        if (attribution.isBlank()) {
-            return;
-        }
-
-        FontMetrics metrics = g2.getFontMetrics(g2.getFont().deriveFont(11f));
-        int padding = 8;
-        int textWidth = metrics.stringWidth(attribution);
-        int textHeight = metrics.getHeight();
-        int boxWidth = textWidth + padding * 2;
-        int boxHeight = textHeight + 4;
-        int x = Math.max(8, getWidth() - boxWidth - 10);
-        int y = Math.max(20, getHeight() - boxHeight - 10);
-
-        Graphics2D copy = (Graphics2D) g2.create();
-        try {
-            copy.setColor(new Color(255, 255, 255, 215));
-            copy.fillRoundRect(x, y, boxWidth, boxHeight, 10, 10);
-            copy.setColor(new Color(55, 65, 81, 235));
-            copy.drawRoundRect(x, y, boxWidth, boxHeight, 10, 10);
-            copy.setColor(new Color(31, 41, 55));
-            copy.setFont(copy.getFont().deriveFont(11f));
-            copy.drawString(attribution, x + padding, y + metrics.getAscent() + 2);
-        } finally {
-            copy.dispose();
-        }
+        OnlineLayerRenderer.drawOnlineAttribution(this, g2);
     }
 
     String buildVisibleOnlineAttribution() {
-        LinkedHashSet<String> parts = new LinkedHashSet<>();
-        for (Map.Entry<Layer, OnlineRasterSource> entry : onlineTileLayers.entrySet()) {
-            Layer layer = entry.getKey();
-            OnlineRasterSource source = entry.getValue();
-            if (layer == null || source == null || !layerManager.isLayerEffectivelyVisible(layer)) {
-                continue;
-            }
-            if (source.getAttribution() != null && !source.getAttribution().isBlank()) {
-                parts.add(source.getAttribution().trim());
-            }
-        }
-        for (Map.Entry<Layer, OnlineWmsLayer> entry : onlineWmsLayers.entrySet()) {
-            Layer layer = entry.getKey();
-            OnlineWmsLayer wms = entry.getValue();
-            if (layer == null || wms == null || !layerManager.isLayerEffectivelyVisible(layer)) {
-                continue;
-            }
-            if (wms.getAttribution() != null && !wms.getAttribution().isBlank()) {
-                parts.add(wms.getAttribution().trim());
-            }
-        }
-        return String.join(" | ", parts);
+        return OnlineLayerRenderer.buildVisibleOnlineAttribution(this);
     }
 
     private BufferedImage buildDisplayImage(LocalRasterData data, RasterStyle style) {
@@ -7174,32 +6772,11 @@ public class MapPanel extends JPanel {
     }
 
     private void drawPoint(Graphics2D g2, Point point, Color color, int size) {
-        int x = worldToScreenX(point.getX());
-        int y = worldToScreenY(point.getY());
-
-        g2.setColor(color);
-        g2.fillOval(x - size / 2, y - size / 2, size, size);
-
-        g2.setColor(Color.BLACK);
-        g2.drawOval(x - size / 2, y - size / 2, size, size);
+        OnlineLayerRenderer.drawPoint(this, g2, point, color, size);
     }
 
     private void drawLineString(Graphics2D g2, LineString line, Color color, float width) {
-        Coordinate[] coords = line.getCoordinates();
-        if (coords.length < 2) {
-            return;
-        }
-
-        Path2D path = new Path2D.Double();
-        path.moveTo(worldToScreenX(coords[0].x), worldToScreenY(coords[0].y));
-
-        for (int i = 1; i < coords.length; i++) {
-            path.lineTo(worldToScreenX(coords[i].x), worldToScreenY(coords[i].y));
-        }
-
-        g2.setColor(color);
-        g2.setStroke(new BasicStroke(width));
-        g2.draw(path);
+        OnlineLayerRenderer.drawLineString(this, g2, line, color, width);
     }
 
     private void drawPolygon(Graphics2D g2, Polygon polygon, Color fillColor, Color borderColor, float borderWidth) {
@@ -7207,54 +6784,11 @@ public class MapPanel extends JPanel {
     }
 
     private void drawPolygon(Graphics2D g2, Polygon polygon, Color fillColor, Color borderColor, float borderWidth, GradientFill gradientFill) {
-        Path2D exteriorPath = buildPathFromCoordinates(polygon.getExteriorRing().getCoordinates());
-        if (exteriorPath == null) {
-            return;
-        }
-
-        if (gradientFill != null) {
-            Rectangle2D bounds = exteriorPath.getBounds2D();
-            Paint gp = gradientFill.createPaint(bounds);
-            g2.setPaint(gp);
-        } else {
-            g2.setColor(fillColor);
-        }
-        g2.fill(exteriorPath);
-
-        for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-            Path2D holePath = buildPathFromCoordinates(polygon.getInteriorRingN(i).getCoordinates());
-            if (holePath != null) {
-                g2.setColor(getBackground());
-                g2.fill(holePath);
-            }
-        }
-
-        g2.setColor(borderColor);
-        g2.setStroke(new BasicStroke(borderWidth));
-        g2.draw(exteriorPath);
-
-        for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-            Path2D holePath = buildPathFromCoordinates(polygon.getInteriorRingN(i).getCoordinates());
-            if (holePath != null) {
-                g2.draw(holePath);
-            }
-        }
+        OnlineLayerRenderer.drawPolygon(this, g2, polygon, fillColor, borderColor, borderWidth, gradientFill);
     }
 
     Path2D buildPathFromCoordinates(Coordinate[] coords) {
-        if (coords == null || coords.length == 0) {
-            return null;
-        }
-
-        Path2D path = new Path2D.Double();
-        path.moveTo(worldToScreenX(coords[0].x), worldToScreenY(coords[0].y));
-
-        for (int i = 1; i < coords.length; i++) {
-            path.lineTo(worldToScreenX(coords[i].x), worldToScreenY(coords[i].y));
-        }
-
-        path.closePath();
-        return path;
+        return OnlineLayerRenderer.buildPathFromCoordinates(this, coords);
     }
 
     private void drawSelectedFeature(Graphics2D g2, SimpleFeature feature, Layer layer) {
@@ -10241,44 +9775,7 @@ public class MapPanel extends JPanel {
     }
 
     private void drawTemporaryGeometry(Graphics2D g2, List<Coordinate> tempCoords, String mode, Color lineColor, Color fillColor) {
-        if (tempCoords.isEmpty()) {
-            return;
-        }
-
-        if (tempCoords.size() < 2) {
-            Coordinate c = tempCoords.get(0);
-            int x = worldToScreenX(c.x);
-            int y = worldToScreenY(c.y);
-            g2.setColor(lineColor);
-            g2.fillOval(x - 4, y - 4, 8, 8);
-            return;
-        }
-
-        Path2D path = new Path2D.Double();
-        Coordinate first = tempCoords.get(0);
-        path.moveTo(worldToScreenX(first.x), worldToScreenY(first.y));
-
-        for (int i = 1; i < tempCoords.size(); i++) {
-            Coordinate c = tempCoords.get(i);
-            path.lineTo(worldToScreenX(c.x), worldToScreenY(c.y));
-        }
-
-        g2.setStroke(new BasicStroke(2f));
-        g2.setColor(lineColor);
-
-        if (("POLYGON".equalsIgnoreCase(mode) || "AREA".equalsIgnoreCase(mode)) && tempCoords.size() >= 3) {
-            g2.setColor(fillColor);
-            g2.fill(path);
-            g2.setColor(lineColor);
-        }
-
-        g2.draw(path);
-
-        for (Coordinate c : tempCoords) {
-            int x = worldToScreenX(c.x);
-            int y = worldToScreenY(c.y);
-            g2.fillOval(x - 4, y - 4, 8, 8);
-        }
+        OnlineLayerRenderer.drawTemporaryGeometry(this, g2, tempCoords, mode, lineColor, fillColor);
     }
 
     public int worldToScreenX(double worldX) {
@@ -10393,13 +9890,7 @@ public class MapPanel extends JPanel {
     }
 
     void pushTileStatusToBar() {
-        if (layoutRenderMode) {
-            return;
-        }
-        if (onlineResolutionNotice != null && !onlineResolutionNotice.isBlank()
-                && CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(onlineResolutionNotice);
-        }
+        OnlineLayerRenderer.pushTileStatusToBar(this);
     }
 
     static final class OnlineTileFallback {
