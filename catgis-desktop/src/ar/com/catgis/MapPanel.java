@@ -147,6 +147,7 @@ public class MapPanel extends JPanel {
     private final MapRenderer mapRenderer;
     private final MouseHandler mouseHandler;
     private final KeyboardShortcutHandler keyboardShortcutHandler;
+    private final SnapManager snapManager;
 
     // Legacy fields - kept as thin delegates to viewController
     double viewMinX = 0;
@@ -253,6 +254,7 @@ public class MapPanel extends JPanel {
         drawingToolManager = new DrawingToolManager(this);
         mapRenderer = new MapRenderer(this);
         keyboardShortcutHandler = new KeyboardShortcutHandler(this);
+        snapManager = new SnapManager(this);
         viewController.setRepaintCallback(this::repaint);
         viewController.setScaleUpdateCallback(this::refreshStatusBarScale);
 
@@ -435,9 +437,7 @@ public class MapPanel extends JPanel {
     }
 
     private boolean shouldExcludeSelectedFeatureFromSnap() {
-        return featureEditMode
-                && EDIT_OP_MOVE_VERTEX.equals(featureEditOperation)
-                && activeEditVertexIndex >= 0;
+        return snapManager.shouldExcludeSelectedFeatureFromSnap();
     }
 
     Coordinate resolveInteractivePreviewCoordinate() {
@@ -462,104 +462,11 @@ public class MapPanel extends JPanel {
     }
 
     private Coordinate findNearestSnapCoordinate(int screenX, int screenY, boolean excludeSelectedFeature) {
-        if (!snapEnabled) {
-            return null;
-        }
-        SnapTarget bestTarget = null;
-        Coordinate target = new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
-        for (Layer layer : getSnapCandidateLayers()) {
-            if (layer == null || !layerManager.isLayerEffectivelyVisible(layer)) {
-                continue;
-            }
-
-            ShapefileData data = getShapefileData(layer);
-            if (data == null || data.getFeatures() == null) {
-                continue;
-            }
-
-            for (SimpleFeature feature : data.getFeatures()) {
-                if (feature == null) {
-                    continue;
-                }
-                if (!isFeatureVisibleInLayer(layer, feature)) {
-                    continue;
-                }
-                if (excludeSelectedFeature && layer == selectedLayer && sameFeatureId(feature, selectedFeature != null ? selectedFeature.getID() : null)) {
-                    continue;
-                }
-
-                Object geomObj = feature.getDefaultGeometry();
-                if (!(geomObj instanceof Geometry geometry)) {
-                    continue;
-                }
-
-                Geometry displayGeometry = reprojectGeometryIfNeeded(layer, geometry);
-                if (displayGeometry == null || displayGeometry.isEmpty()) {
-                    continue;
-                }
-
-                SnapTarget candidate = findNearestSnapTarget(displayGeometry, target, screenX, screenY);
-                if (candidate != null && (bestTarget == null || candidate.distance < bestTarget.distance)) {
-                    bestTarget = candidate;
-                }
-            }
-        }
-        return bestTarget != null ? bestTarget.coordinate : null;
-    }
-
-    private SnapTarget findNearestSnapTarget(Geometry displayGeometry, Coordinate target, int screenX, int screenY) {
-        if (displayGeometry == null || displayGeometry.isEmpty() || target == null) {
-            return null;
-        }
-
-        SnapTarget bestTarget = null;
-        for (Coordinate coordinate : displayGeometry.getCoordinates()) {
-            if (coordinate == null) {
-                continue;
-            }
-
-            int vx = worldToScreenX(coordinate.x);
-            int vy = worldToScreenY(coordinate.y);
-            double distance = Math.hypot(screenX - vx, screenY - vy);
-            if (distance > SNAP_TOLERANCE_PX) {
-                continue;
-            }
-
-            if (bestTarget == null || distance < bestTarget.distance) {
-                bestTarget = new SnapTarget(new Coordinate(coordinate), distance);
-            }
-        }
-
-        if (displayGeometry instanceof LineString
-                || displayGeometry instanceof MultiLineString
-                || displayGeometry instanceof Polygon
-                || displayGeometry instanceof MultiPolygon) {
-            LineSplitProjection projection = findEditableSegmentProjection(displayGeometry, target, screenX, screenY, SNAP_TOLERANCE_PX);
-            if (projection != null && projection.projected != null
-                    && (bestTarget == null || projection.distance < bestTarget.distance)) {
-                bestTarget = new SnapTarget(new Coordinate(projection.projected), projection.distance);
-            }
-        }
-
-        return bestTarget;
+        return snapManager.findNearestSnapCoordinate(screenX, screenY, excludeSelectedFeature);
     }
 
     private List<Layer> getSnapCandidateLayers() {
-        List<Layer> candidates = new ArrayList<>();
-        if (activeVectorEditingLayer != null && shapefileLayers.containsKey(activeVectorEditingLayer)) {
-            candidates.add(activeVectorEditingLayer);
-            return candidates;
-        }
-        if (selectedLayer != null && shapefileLayers.containsKey(selectedLayer)) {
-            candidates.add(selectedLayer);
-            return candidates;
-        }
-        for (Layer layer : layerManager.getRenderOrderLayers()) {
-            if (layer != null && shapefileLayers.containsKey(layer) && layerManager.isLayerEffectivelyVisible(layer)) {
-                candidates.add(layer);
-            }
-        }
-        return candidates;
+        return snapManager.getSnapCandidateLayers();
     }
 
     Cursor resolveFeatureEditCursor() {
@@ -7127,16 +7034,6 @@ public class MapPanel extends JPanel {
         LineSplitProjection(int segmentIndex, Coordinate projected, double distance) {
             this.segmentIndex = segmentIndex;
             this.projected = projected;
-            this.distance = distance;
-        }
-    }
-
-    private static class SnapTarget {
-        private final Coordinate coordinate;
-        private final double distance;
-
-        private SnapTarget(Coordinate coordinate, double distance) {
-            this.coordinate = coordinate;
             this.distance = distance;
         }
     }
