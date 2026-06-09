@@ -264,6 +264,10 @@ public class MainMenuBar extends JMenuBar {
         itemSpectral.addActionListener(e -> SpectralIndexDialog.open());
         menuAnalisis.add(itemSpectral);
 
+        JMenuItem itemBatch = createItem("Procesamiento por lotes...", null);
+        itemBatch.addActionListener(e -> BatchProcessorDialog.open());
+        menuAnalisis.add(itemBatch);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
