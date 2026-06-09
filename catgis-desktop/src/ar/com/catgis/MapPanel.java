@@ -2309,83 +2309,19 @@ public class MapPanel extends JPanel {
     }
 
     private Geometry buildMeasurementLineInMeters(List<Coordinate> coordinates, String sourceCRSCode) {
-        try {
-            if (coordinates == null || coordinates.size() < 2) {
-                return null;
-            }
-
-            org.locationtech.jts.geom.GeometryFactory gf = new org.locationtech.jts.geom.GeometryFactory();
-            org.locationtech.jts.geom.LineString line =
-                    gf.createLineString(coordinates.toArray(new Coordinate[0]));
-
-            return reprojectGeometryToMetric(line, sourceCRSCode);
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo construir la geometria de medicion lineal", ex);
-            return null;
-        }
+        return MapMeasurementUtils.buildLineInMeters(coordinates, sourceCRSCode);
     }
 
     private Geometry buildMeasurementPolygonInMeters(List<Coordinate> coordinates, String sourceCRSCode) {
-        try {
-            Geometry polygon = DrawFeatureBuilder.buildPolygon(coordinates);
-            if (polygon == null) {
-                return null;
-            }
-
-            return reprojectGeometryToMetric(polygon, sourceCRSCode);
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo construir la geometria de medicion de area", ex);
-            return null;
-        }
+        return MapMeasurementUtils.buildPolygonInMeters(coordinates, sourceCRSCode);
     }
 
     private Geometry reprojectGeometryToMetric(Geometry geometry, String sourceCRSCode) {
-        try {
-            if (geometry == null || geometry.isEmpty()) {
-                return geometry;
-            }
-
-            String sourceCode = (sourceCRSCode != null && !sourceCRSCode.isBlank())
-                    ? sourceCRSCode
-                    : "EPSG:4326";
-
-            String targetMetricCode = chooseMetricCRSForMeasurement(sourceCode);
-
-            if (sourceCode.equalsIgnoreCase(targetMetricCode)) {
-                return geometry;
-            }
-
-            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetMetricCode, true);
-            MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-
-            return JTS.transform(geometry, transform);
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo reproyectar la geometria para medicion", ex);
-            return geometry;
-        }
+        return MapMeasurementUtils.reprojectToMetric(geometry, sourceCRSCode);
     }
 
     String chooseMetricCRSForMeasurement(String sourceCRSCode) {
-        if (sourceCRSCode == null || sourceCRSCode.isBlank()) {
-            return "EPSG:3857";
-        }
-
-        String code = sourceCRSCode.trim().toUpperCase(Locale.ROOT);
-
-        if (code.equals("EPSG:4326")) {
-            return "EPSG:3857";
-        }
-
-        if (code.startsWith("EPSG:327") || code.startsWith("EPSG:326")) {
-            return code;
-        }
-
-        if (code.startsWith("EPSG:221") || code.startsWith("EPSG:534") || code.startsWith("EPSG:248")) {
-            return code;
-        }
-
-        return "EPSG:3857";
+        return MapMeasurementUtils.chooseMetricCRS(sourceCRSCode);
     }
 
     private String formatDistance(double meters) {
@@ -5574,29 +5510,12 @@ public class MapPanel extends JPanel {
     public static void writeWorldFile(File imageFile, double viewMinX, double viewMinY,
                                        double zoomFactor, int imgWidth, int imgHeight) throws Exception {
         if (zoomFactor <= 0 || imgWidth <= 0 || imgHeight <= 0) return;
-
-        double pixelSizeX = 1.0 / zoomFactor; // world units per pixel
-        double pixelSizeY = pixelSizeX;        // square pixels
+        double pixelSizeX = 1.0 / zoomFactor;
+        double pixelSizeY = pixelSizeX;
         double upperLeftX = viewMinX;
         double upperLeftY = viewMinY + imgHeight * pixelSizeY;
-
-        // Determine world file extension based on image format
-        String name = imageFile.getName().toLowerCase();
-        String ext;
-        if (name.endsWith(".tif") || name.endsWith(".tiff")) ext = ".tfw";
-        else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) ext = ".jgw";
-        else if (name.endsWith(".png")) ext = ".pgw";
-        else ext = ".wld";
-
-        File wf = new File(imageFile.getParent(), getBaseName(imageFile.getName()) + ext);
-        try (java.io.PrintWriter pw = new java.io.PrintWriter(wf, "UTF-8")) {
-            pw.println(java.lang.String.format(java.util.Locale.US, "%.15f", pixelSizeX));
-            pw.println("0.0");
-            pw.println("0.0");
-            pw.println(java.lang.String.format(java.util.Locale.US, "%.15f", -pixelSizeY));
-            pw.println(java.lang.String.format(java.util.Locale.US, "%.15f", upperLeftX));
-            pw.println(java.lang.String.format(java.util.Locale.US, "%.15f", upperLeftY));
-        }
+        WorldFileSupport.writeWorldFile(imageFile, new WorldFileSupport.WorldFileParams(
+                pixelSizeX, 0.0, 0.0, -pixelSizeY, upperLeftX, upperLeftY));
     }
 
     private static String getBaseName(String fileName) {
