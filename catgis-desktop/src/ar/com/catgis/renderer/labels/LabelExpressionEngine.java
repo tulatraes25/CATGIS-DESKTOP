@@ -2,6 +2,9 @@ package ar.com.catgis.renderer.labels;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Point;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -552,23 +555,70 @@ public final class LabelExpressionEngine {
                         }
                         case "x" -> { stack.push(extractX(feature)); }
                         case "y" -> { stack.push(extractY(feature)); }
-                        case "area", "length", "perimeter" -> {
-                            Geometry geom = extractGeometry(feature);
-                            if (geom == null) {
-                                stack.push(0.0);
-                            } else {
-                                double result = switch (func) {
-                                    case "area" -> geom.getArea();
-                                    case "length" -> geom.getLength();
-                                    case "perimeter" -> {
-                                        if (geom.getDimension() == 2) yield geom.getBoundary().getLength();
-                                        else yield geom.getLength();
-                                    }
-                                    default -> 0.0;
-                                };
-                                stack.push(result);
-                            }
-                        }
+
+                        // === String functions (new) ===
+                        case "contains" -> { String search = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.contains(search)); }
+                        case "startswith" -> { String prefix = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.toLowerCase().startsWith(prefix.toLowerCase())); }
+                        case "endswith" -> { String suffix = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.toLowerCase().endsWith(suffix.toLowerCase())); }
+                        case "repeat" -> { int n = toInt(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.repeat(Math.max(0, Math.min(n, 1000)))); }
+                        case "reverse" -> { String s = stringValue(stack.pop()); stack.push(new StringBuilder(s).reverse().toString()); }
+                        case "capitalize" -> { String s = stringValue(stack.pop()); stack.push(s.isEmpty() ? s : s.substring(0, 1).toUpperCase() + s.substring(1)); }
+                        case "titlecase" -> { String s = stringValue(stack.pop()); stack.push(titleCase(s)); }
+                        case "pad" -> { int len = toInt(stack.pop()); String s = stringValue(stack.pop()); stack.push(padRight(s, len)); }
+                        case "strip" -> { String s = stringValue(stack.pop()); stack.push(s.strip()); }
+                        case "count" -> { String search = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push((double) countOccurrences(s, search)); }
+                        case "indexof" -> { String search = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push((double) s.indexOf(search)); }
+                        case "nvl" -> { Object def = stack.pop(); Object val = stack.pop(); stack.push(val != null && !stringValue(val).isEmpty() ? val : def); }
+                        case "nullto" -> { Object def = stack.pop(); Object val = stack.pop(); stack.push(val != null ? val : def); }
+
+                        // === Math functions (new) ===
+                        case "atan" -> { stack.push(Math.toDegrees(Math.atan(toDouble(stack.pop())))); }
+                        case "asin" -> { stack.push(Math.toDegrees(Math.asin(toDouble(stack.pop())))); }
+                        case "acos" -> { stack.push(Math.toDegrees(Math.acos(toDouble(stack.pop())))); }
+                        case "atan2" -> { double y = toDouble(stack.pop()); stack.push(Math.toDegrees(Math.atan2(toDouble(stack.pop()), y))); }
+                        case "degrees" -> { stack.push(Math.toDegrees(toDouble(stack.pop()))); }
+                        case "radians" -> { stack.push(Math.toRadians(toDouble(stack.pop()))); }
+                        case "sign" -> { stack.push(Math.signum(toDouble(stack.pop()))); }
+                        case "clamp" -> { double hi = toDouble(stack.pop()); double lo = toDouble(stack.pop()); stack.push(Math.max(lo, Math.min(hi, toDouble(stack.pop())))); }
+                        case "hypot" -> { double y = toDouble(stack.pop()); stack.push(Math.hypot(toDouble(stack.pop()), y)); }
+                        case "pi" -> { stack.push(Math.PI); }
+                        case "e" -> { stack.push(Math.E); }
+                        case "random" -> { stack.push(Math.random()); }
+                        case "ln" -> { stack.push(Math.log(toDouble(stack.pop()))); }
+
+                        // === Date functions (new) ===
+                        case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
+                        case "year" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)); }
+                        case "month" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1); }
+                        case "day" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)); }
+                        case "hour" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)); }
+                        case "minute" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.MINUTE)); }
+                        case "second" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.SECOND)); }
+                        case "weekday" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)); }
+                        case "dayofyear" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR)); }
+
+                        // === Aggregation functions (new) ===
+                        case "sum" -> { double sum = 0; for (int k = 0; k < argCount; k++) sum += toDouble(stack.pop()); stack.push(sum); }
+                        case "avg" -> { double sum = 0; for (int k = 0; k < argCount; k++) sum += toDouble(stack.pop()); stack.push(argCount > 0 ? sum / argCount : 0); }
+
+                        // === Logic functions (new) ===
+                        case "not" -> { stack.push(!toBoolean(stack.pop())); }
+                        case "isnull" -> { stack.push(stack.peek() == null); }
+                        case "isempty" -> { stack.push(stringValue(stack.peek()).isEmpty()); }
+                        case "isnumeric" -> { try { Double.parseDouble(stringValue(stack.peek())); stack.push(true); } catch (Exception e) { stack.push(false); } }
+
+                        // === Geometry functions (new) ===
+                        case "centroid" -> { Geometry geom = extractGeometry(feature); stack.push(geom != null ? geom.getCentroid().getCoordinate().x + "," + geom.getCentroid().getCoordinate().y : "0,0"); }
+                        case "centroid_x" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getCentroid().getCoordinate().x : 0.0); }
+                        case "centroid_y" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getCentroid().getCoordinate().y : 0.0); }
+                        case "numcoordinates" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) g.getCoordinates().length : 0.0); }
+                        case "dimension" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) g.getDimension() : -1.0); }
+                        case "isvalid" -> { Geometry g = extractGeometry(feature); stack.push(g != null && g.isValid()); }
+                        case "geomisempty" -> { Geometry g = extractGeometry(feature); stack.push(g == null || g.isEmpty()); }
+                        case "geometrytype" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getGeometryType() : "None"); }
+                        case "numgeometries" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) g.getNumGeometries() : 0.0); }
+                        case "distance" -> { double y2 = toDouble(stack.pop()); double x2 = toDouble(stack.pop()); Geometry ga = extractGeometry(feature); Point p = new GeometryFactory().createPoint(new Coordinate(x2, y2)); stack.push(ga != null ? ga.distance(p) : Double.MAX_VALUE); }
+
                         default ->
                             throw new ExpressionException("Unknown function: " + t.value());
                     }
@@ -676,6 +726,40 @@ public final class LabelExpressionEngine {
         Geometry g = extractGeometry(feature);
         if (g != null) return g.getCoordinate().getY();
         return 0;
+    }
+
+    private static String titleCase(String s) {
+        if (s == null || s.isEmpty()) return s;
+        StringBuilder sb = new StringBuilder();
+        boolean capitalizeNext = true;
+        for (char c : s.toCharArray()) {
+            if (Character.isWhitespace(c)) {
+                sb.append(c);
+                capitalizeNext = true;
+            } else if (capitalizeNext) {
+                sb.append(Character.toUpperCase(c));
+                capitalizeNext = false;
+            } else {
+                sb.append(Character.toLowerCase(c));
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String padRight(String s, int len) {
+        if (s == null) s = "";
+        return String.format("%-" + len + "s", s);
+    }
+
+    private static int countOccurrences(String s, String search) {
+        if (s == null || search == null || search.isEmpty()) return 0;
+        int count = 0;
+        int idx = 0;
+        while ((idx = s.indexOf(search, idx)) >= 0) {
+            count++;
+            idx += search.length();
+        }
+        return count;
     }
 
     // --- Exception ---

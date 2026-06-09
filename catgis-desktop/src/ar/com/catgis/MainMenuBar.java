@@ -272,6 +272,10 @@ public class MainMenuBar extends JMenuBar {
         itemWcs.addActionListener(e -> WcsDialog.open());
         menuAnalisis.add(itemWcs);
 
+        JMenuItem itemStac = createItem("STAC - Catalogo de assets...", null);
+        itemStac.addActionListener(e -> StacDialog.open());
+        menuAnalisis.add(itemStac);
+
         menuSalida.add(itemCompositorCartografico);
         menuSalida.add(itemSimbologiaCapa);
         menuSalida.add(itemTematicaCampo);
