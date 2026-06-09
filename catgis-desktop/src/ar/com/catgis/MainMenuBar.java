@@ -632,6 +632,11 @@ public class MainMenuBar extends JMenuBar {
         menuHerramientas.add(itemConversor);
         menuHerramientas.addSeparator();
         menuHerramientas.add(itemProjectCRS);
+
+        JMenuItem itemCustomCrs = createItem("Definir CRS personalizado...", null);
+        itemCustomCrs.addActionListener(e -> CustomCrsDialog.open());
+        menuHerramientas.add(itemCustomCrs);
+
         menuHerramientas.add(itemRenombrarProyecto);
         menuHerramientas.addSeparator();
         menuHerramientas.add(menuModulos);
