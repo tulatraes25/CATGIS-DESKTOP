@@ -310,4 +310,14 @@ public class MapGeometryUtils {
         int dot = fileName.lastIndexOf('.');
         return dot > 0 ? fileName.substring(0, dot) : fileName;
     }
+
+    public static Coordinate[] reverseCoordinates(Coordinate[] coordinates) {
+        if (coordinates == null) return null;
+        Coordinate[] reversed = new Coordinate[coordinates.length];
+        for (int i = 0; i < coordinates.length; i++) {
+            Coordinate c = coordinates[coordinates.length - 1 - i];
+            reversed[i] = c != null ? new Coordinate(c) : null;
+        }
+        return reversed;
+    }
 }

@@ -3018,15 +3018,7 @@ public class MapPanel extends JPanel {
     }
 
     static Coordinate[] reverseCoordinates(Coordinate[] coordinates) {
-        if (coordinates == null) {
-            return null;
-        }
-        Coordinate[] reversed = new Coordinate[coordinates.length];
-        for (int i = 0; i < coordinates.length; i++) {
-            Coordinate coordinate = coordinates[coordinates.length - 1 - i];
-            reversed[i] = coordinate != null ? new Coordinate(coordinate) : null;
-        }
-        return reversed;
+        return MapGeometryUtils.reverseCoordinates(coordinates);
     }
 
     SimpleFeature buildNewFeatureForLayer(ShapefileData targetData, Geometry geometry, List<SimpleFeature> existingFeatures) {
