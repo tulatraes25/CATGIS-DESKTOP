@@ -2819,138 +2819,37 @@ public class MapPanel extends JPanel {
     }
 
     private Geometry buildRectangleGeometry(List<Coordinate> coordinates) {
-        List<Coordinate> rectangleCoordinates = buildRectangleCoordinates(coordinates);
-        if (rectangleCoordinates.isEmpty()) {
-            return null;
-        }
+        List<Coordinate> rectangleCoordinates = MapGeometryUtils.buildRectangleCoordinates(coordinates);
+        if (rectangleCoordinates.isEmpty()) return null;
         return DrawFeatureBuilder.buildPolygon(rectangleCoordinates);
     }
 
     Geometry buildCircleGeometry(List<Coordinate> coordinates) {
-        if (coordinates == null || coordinates.size() < 2) {
-            return null;
-        }
-        Coordinate center = coordinates.get(0);
-        Coordinate radiusPoint = coordinates.get(coordinates.size() - 1);
-        if (center == null || radiusPoint == null) {
-            return null;
-        }
-        double radius = center.distance(radiusPoint);
-        if (!(radius > 0.0)) {
-            return null;
-        }
-        return buildCirclePolygon(center, radius);
+        return MapGeometryUtils.buildCircleFromTwoPoints(coordinates, CIRCLE_SEGMENTS);
     }
 
     Geometry buildCircleThreePointGeometry(List<Coordinate> coordinates) {
-        if (coordinates == null || coordinates.size() < 3) {
-            return null;
-        }
-        Coordinate a = coordinates.get(0);
-        Coordinate b = coordinates.get(1);
-        Coordinate c = coordinates.get(2);
-        Coordinate center = computeCircumcenter(a, b, c);
-        if (center == null) {
-            return null;
-        }
-        double radius = center.distance(a);
-        if (!(radius > 0.0)) {
-            return null;
-        }
-        return buildCirclePolygon(center, radius);
+        return MapGeometryUtils.buildCircleFromThreePoints(coordinates, CIRCLE_SEGMENTS);
     }
 
     private Geometry buildCirclePolygon(Coordinate center, double radius) {
-        if (center == null || !(radius > 0.0)) {
-            return null;
-        }
-        GeometryFactory factory = new GeometryFactory();
-        Coordinate[] shell = new Coordinate[CIRCLE_SEGMENTS + 1];
-        for (int i = 0; i < CIRCLE_SEGMENTS; i++) {
-            double angle = (Math.PI * 2.0 * i) / CIRCLE_SEGMENTS;
-            shell[i] = new Coordinate(
-                    center.x + (Math.cos(angle) * radius),
-                    center.y + (Math.sin(angle) * radius)
-            );
-        }
-        shell[CIRCLE_SEGMENTS] = new Coordinate(shell[0]);
-        return factory.createPolygon(factory.createLinearRing(shell), null);
+        return MapGeometryUtils.buildCirclePolygon(center, radius, CIRCLE_SEGMENTS);
     }
 
     private Coordinate computeCircumcenter(Coordinate a, Coordinate b, Coordinate c) {
-        if (a == null || b == null || c == null) {
-            return null;
-        }
-
-        double d = (2.0 * ((a.x * (b.y - c.y)) + (b.x * (c.y - a.y)) + (c.x * (a.y - b.y))));
-        if (Math.abs(d) < 0.0000001) {
-            return null;
-        }
-
-        double ax2ay2 = (a.x * a.x) + (a.y * a.y);
-        double bx2by2 = (b.x * b.x) + (b.y * b.y);
-        double cx2cy2 = (c.x * c.x) + (c.y * c.y);
-
-        double ux = ((ax2ay2 * (b.y - c.y)) + (bx2by2 * (c.y - a.y)) + (cx2cy2 * (a.y - b.y))) / d;
-        double uy = ((ax2ay2 * (c.x - b.x)) + (bx2by2 * (a.x - c.x)) + (cx2cy2 * (b.x - a.x))) / d;
-        return new Coordinate(ux, uy);
+        return MapGeometryUtils.computeCircumcenter(a, b, c);
     }
 
     List<Coordinate> buildRectangleCoordinates(List<Coordinate> coordinates) {
-        List<Coordinate> rectangle = new ArrayList<>();
-        if (coordinates == null || coordinates.size() < 2) {
-            return rectangle;
-        }
-
-        Coordinate first = coordinates.get(0);
-        Coordinate opposite = coordinates.get(coordinates.size() - 1);
-        if (first == null || opposite == null) {
-            return rectangle;
-        }
-        if (Math.abs(first.x - opposite.x) < 0.0000001 || Math.abs(first.y - opposite.y) < 0.0000001) {
-            return rectangle;
-        }
-
-        rectangle.add(new Coordinate(first.x, first.y));
-        rectangle.add(new Coordinate(opposite.x, first.y));
-        rectangle.add(new Coordinate(opposite.x, opposite.y));
-        rectangle.add(new Coordinate(first.x, opposite.y));
-        rectangle.add(new Coordinate(first.x, first.y));
-        return rectangle;
+        return MapGeometryUtils.buildRectangleCoordinates(coordinates);
     }
 
     Coordinate[] extractContinuableLineCoordinates(Geometry geometry) {
-        if (geometry == null || geometry.isEmpty()) {
-            return null;
-        }
-
-        if (geometry instanceof LineString lineString) {
-            return cloneCoordinates(lineString.getCoordinates());
-        }
-        if (geometry instanceof MultiLineString multiLineString) {
-            LineMerger lineMerger = new LineMerger();
-            lineMerger.add(multiLineString);
-            Collection<?> merged = lineMerger.getMergedLineStrings();
-            if (merged.size() == 1) {
-                Object mergedLine = merged.iterator().next();
-                if (mergedLine instanceof LineString lineString) {
-                    return cloneCoordinates(lineString.getCoordinates());
-                }
-            }
-            return null;
-        }
-        return null;
+        return MapGeometryUtils.extractContinuableLineCoordinates(geometry);
     }
 
     Coordinate[] cloneCoordinates(Coordinate[] coordinates) {
-        if (coordinates == null) {
-            return null;
-        }
-        Coordinate[] clones = new Coordinate[coordinates.length];
-        for (int i = 0; i < coordinates.length; i++) {
-            clones[i] = coordinates[i] != null ? new Coordinate(coordinates[i]) : null;
-        }
-        return clones;
+        return MapGeometryUtils.cloneCoordinates(coordinates);
     }
 
     static Coordinate[] reverseCoordinates(Coordinate[] coordinates) {

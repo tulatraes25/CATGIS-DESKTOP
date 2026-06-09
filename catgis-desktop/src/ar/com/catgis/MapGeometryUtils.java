@@ -320,4 +320,77 @@ public class MapGeometryUtils {
         }
         return reversed;
     }
+
+    public static Coordinate[] cloneCoordinates(Coordinate[] coordinates) {
+        if (coordinates == null) return null;
+        Coordinate[] clones = new Coordinate[coordinates.length];
+        for (int i = 0; i < coordinates.length; i++) {
+            clones[i] = coordinates[i] != null ? new Coordinate(coordinates[i]) : null;
+        }
+        return clones;
+    }
+
+    public static Coordinate computeCircumcenter(Coordinate a, Coordinate b, Coordinate c) {
+        if (a == null || b == null || c == null) return null;
+        double d = (2.0 * ((a.x * (b.y - c.y)) + (b.x * (c.y - a.y)) + (c.x * (a.y - b.y))));
+        if (Math.abs(d) < 0.0000001) return null;
+        double ax2ay2 = (a.x * a.x) + (a.y * a.y);
+        double bx2by2 = (b.x * b.x) + (b.y * b.y);
+        double cx2cy2 = (c.x * c.x) + (c.y * c.y);
+        double ux = ((ax2ay2 * (b.y - c.y)) + (bx2by2 * (c.y - a.y)) + (cx2cy2 * (a.y - b.y))) / d;
+        double uy = ((ax2ay2 * (c.x - b.x)) + (bx2by2 * (a.x - c.x)) + (cx2cy2 * (b.x - a.x))) / d;
+        return new Coordinate(ux, uy);
+    }
+
+    public static List<Coordinate> buildRectangleCoordinates(List<Coordinate> coordinates) {
+        List<Coordinate> rectangle = new ArrayList<>();
+        if (coordinates == null || coordinates.size() < 2) return rectangle;
+        Coordinate first = coordinates.get(0);
+        Coordinate opposite = coordinates.get(coordinates.size() - 1);
+        if (first == null || opposite == null) return rectangle;
+        if (Math.abs(first.x - opposite.x) < 0.0000001 || Math.abs(first.y - opposite.y) < 0.0000001) return rectangle;
+        rectangle.add(new Coordinate(first.x, first.y));
+        rectangle.add(new Coordinate(opposite.x, first.y));
+        rectangle.add(new Coordinate(opposite.x, opposite.y));
+        rectangle.add(new Coordinate(first.x, opposite.y));
+        rectangle.add(new Coordinate(first.x, first.y));
+        return rectangle;
+    }
+
+    public static Geometry buildCirclePolygon(Coordinate center, double radius, int segments) {
+        if (center == null || !(radius > 0.0)) return null;
+        GeometryFactory factory = new GeometryFactory();
+        Coordinate[] shell = new Coordinate[segments + 1];
+        for (int i = 0; i < segments; i++) {
+            double angle = (Math.PI * 2.0 * i) / segments;
+            shell[i] = new Coordinate(center.x + (Math.cos(angle) * radius), center.y + (Math.sin(angle) * radius));
+        }
+        shell[segments] = new Coordinate(shell[0]);
+        return factory.createPolygon(factory.createLinearRing(shell), null);
+    }
+
+    public static Geometry buildCircleFromTwoPoints(List<Coordinate> coordinates, int segments) {
+        if (coordinates == null || coordinates.size() < 2) return null;
+        Coordinate center = coordinates.get(0);
+        Coordinate radiusPoint = coordinates.get(coordinates.size() - 1);
+        if (center == null || radiusPoint == null) return null;
+        double radius = center.distance(radiusPoint);
+        if (!(radius > 0.0)) return null;
+        return buildCirclePolygon(center, radius, segments);
+    }
+
+    public static Geometry buildCircleFromThreePoints(List<Coordinate> coordinates, int segments) {
+        if (coordinates == null || coordinates.size() < 3) return null;
+        Coordinate center = computeCircumcenter(coordinates.get(0), coordinates.get(1), coordinates.get(2));
+        if (center == null) return null;
+        double radius = center.distance(coordinates.get(0));
+        if (!(radius > 0.0)) return null;
+        return buildCirclePolygon(center, radius, segments);
+    }
+
+    public static Coordinate[] extractContinuableLineCoordinates(Geometry geometry) {
+        if (geometry == null || geometry.isEmpty()) return null;
+        if (geometry instanceof org.locationtech.jts.geom.LineString lineString) return cloneCoordinates(lineString.getCoordinates());
+        return null;
+    }
 }
