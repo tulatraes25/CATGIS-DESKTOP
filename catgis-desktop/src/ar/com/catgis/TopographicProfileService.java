@@ -314,4 +314,59 @@ public final class TopographicProfileService {
                                 double totalDistanceMeters,
                                 int validSampleCount) {
     }
+
+    /**
+     * Generate a 3D profile with elevation data.
+     * Returns a list of 3D coordinates (x=distance, y=elevation, z=0).
+     */
+    public static List<Coordinate> generateProfile3D(ProfileResult result) {
+        if (result == null || result.samples() == null) return new ArrayList<>();
+        List<Coordinate> coords = new ArrayList<>();
+        for (ProfileSample sample : result.samples()) {
+            if (sample.valid()) {
+                coords.add(new Coordinate(sample.distanceMeters(), sample.elevation(), 0));
+            }
+        }
+        return coords;
+    }
+
+    /**
+     * Compute slope profile from elevation samples.
+     * Returns slope in degrees at each sample point.
+     */
+    public static double[] computeSlopeProfile(ProfileResult result) {
+        if (result == null || result.samples() == null || result.samples().size() < 2) return new double[0];
+        List<ProfileSample> samples = result.samples();
+        double[] slopes = new double[samples.size()];
+        for (int i = 0; i < samples.size(); i++) {
+            if (i == 0) {
+                slopes[i] = 0;
+            } else if (samples.get(i).valid() && samples.get(i - 1).valid()) {
+                double dx = samples.get(i).distanceMeters() - samples.get(i - 1).distanceMeters();
+                double dy = samples.get(i).elevation() - samples.get(i - 1).elevation();
+                slopes[i] = dx > 0 ? Math.toDegrees(Math.atan(Math.abs(dy) / dx)) : 0;
+            }
+        }
+        return slopes;
+    }
+
+    /**
+     * Compute aspect (direction) at each sample point.
+     * Returns aspect in degrees (0=N, 90=E, 180=S, 270=W).
+     */
+    public static double[] computeAspectProfile(ProfileResult result) {
+        if (result == null || result.samples() == null || result.samples().size() < 2) return new double[0];
+        List<ProfileSample> samples = result.samples();
+        double[] aspects = new double[samples.size()];
+        for (int i = 0; i < samples.size(); i++) {
+            if (i == 0 || !samples.get(i).valid() || !samples.get(i - 1).valid()) {
+                aspects[i] = 0;
+            } else {
+                double dx = samples.get(i).distanceMeters() - samples.get(i - 1).distanceMeters();
+                double dy = samples.get(i).elevation() - samples.get(i - 1).elevation();
+                aspects[i] = dx > 0 ? Math.toDegrees(Math.atan2(dy, dx)) : 0;
+            }
+        }
+        return aspects;
+    }
 }
