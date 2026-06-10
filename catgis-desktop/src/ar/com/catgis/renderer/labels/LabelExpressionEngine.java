@@ -618,6 +618,9 @@ public final class LabelExpressionEngine {
                         case "num_rings" -> { Geometry g = extractGeometry(feature); if (g instanceof Polygon p) stack.push((double) (1 + p.getNumInteriorRing())); else stack.push(0.0); }
                         case "exterior_ring" -> { Geometry g = extractGeometry(feature); if (g instanceof Polygon p) stack.push((double) p.getExteriorRing().getCoordinates().length); else stack.push(0.0); }
                         case "interior_rings" -> { Geometry g = extractGeometry(feature); if (g instanceof Polygon p) stack.push((double) p.getNumInteriorRing()); else stack.push(0.0); }
+                        case "contains_text" -> { String sub = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.contains(sub)); }
+                        case "between" -> { double hi = toDouble(stack.pop()); double lo = toDouble(stack.pop()); double v = toDouble(stack.pop()); stack.push(v >= lo && v <= hi); }
+                        case "in" -> { String vals = stringValue(stack.pop()); String v = stringValue(stack.pop()); stack.push(("," + vals + ",").contains("," + v + ",")); }
 
                         // === Date functions (existing) ===
                         case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
