@@ -63,6 +63,16 @@ final class LayerVectorDataSupport {
             return projectAndAttach(layer, data);
         }
 
+        if (layer instanceof SpatiaLiteLayer slLayer) {
+            try {
+                data = SpatiaLiteLoader.loadLayerData(slLayer);
+            } catch (Exception e) {
+                AppErrorSupport.logFailure("No se pudo cargar la capa SpatiaLite: " + slLayer.getTableName(), e);
+                return null;
+            }
+            return projectAndAttach(layer, data);
+        }
+
         String path = layer.getPath() != null ? layer.getPath().trim() : "";
         if (path.isBlank()) {
             return null;

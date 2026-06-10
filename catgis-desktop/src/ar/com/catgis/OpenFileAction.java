@@ -75,6 +75,30 @@ public class OpenFileAction extends AbstractAction {
 
             if (lowerName.endsWith(".gpkg")) {
                 return GeoPackageDataSourceAction.openGeoPackageDataSource(file, parent);
+            } else if (lowerName.endsWith(".spatialite") || lowerName.endsWith(".sl3") || lowerName.endsWith(".sl4")) {
+                // SpatiaLite: show table selection dialog
+                SpatiaLiteConnectionInfo connInfo = new SpatiaLiteConnectionInfo();
+                connInfo.setFilePath(file.getAbsolutePath());
+                try {
+                    List<SpatiaLiteFeatureTypeInfo> tables = SpatiaLiteLoader.listFeatureTypes(connInfo);
+                    if (tables.isEmpty()) {
+                        JOptionPane.showMessageDialog(parent, "No se encontraron tablas espaciales en " + file.getName(),
+                                "SpatiaLite", JOptionPane.WARNING_MESSAGE);
+                        return false;
+                    }
+                    // For now, load the first table
+                    SpatiaLiteLayer slLayer = new SpatiaLiteLayer(file.getName(), file.getAbsolutePath());
+                    slLayer.setTableName(tables.get(0).getTableName());
+                    slLayer.setVisible(true);
+                    ShapefileData slData = SpatiaLiteLoader.loadLayerData(slLayer);
+                    if (slData != null) {
+                        data = slData;
+                        layerDisplayName = file.getName();
+                    }
+                } catch (Exception ex) {
+                    AppErrorSupport.showErrorDialog(parent, "SpatiaLite", "No se pudo cargar el archivo.", ex);
+                    return false;
+                }
             } else if (lowerName.endsWith(".gpx")) {
                 return openGpxFile(file, parent, showDialogs);
             } else if (lowerName.endsWith(".shp")) {
