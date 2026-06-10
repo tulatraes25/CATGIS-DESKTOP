@@ -7,14 +7,19 @@ import java.io.*;
 
 /**
  * SLD (Styled Layer Descriptor) writer for CATGIS layers.
- * Exports basic SLD 1.1.0 styling from layer properties.
+ * Exports a basic SLD 1.1.0 template with default symbolizers.
+ * NOTE: This does NOT read the actual layer symbology - it exports
+ * a hardcoded template with PointSymbolizer, LineSymbolizer, and
+ * PolygonSymbolizer. For real SLD export, the symbology system
+ * needs to be extended to support SLD serialization.
  */
 public final class SldSupport {
 
     private SldSupport() {}
 
     /**
-     * Export a layer's basic styling to SLD format.
+     * Export a basic SLD template for the layer.
+     * This is a STUB/TEMPLATE - does NOT reflect actual layer symbology.
      */
     public static String exportToSld(Layer layer) {
         if (layer == null) return "";

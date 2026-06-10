@@ -92,36 +92,59 @@ public final class AccessibilityAnalysisEngine {
     }
 
     /**
-     * Compute accessibility statistics for a set of points.
+     * Compute accessibility statistics between specific points.
+     * Uses the points parameter to find nearest network nodes.
      */
     public static Map<String, Double> computeAccessibilityStats(
             List<SimpleFeature> lineFeatures,
             List<Coordinate> points,
             double snapTolerance) {
 
-        double[][] matrix = NetworkAnalysisEngine.allPairsShortestPaths(lineFeatures, snapTolerance);
-        int n = matrix.length;
+        // Build network graph
+        List<NetworkAnalysisEngine.NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        if (nodes.isEmpty() || points == null || points.isEmpty()) {
+            Map<String, Double> empty = new LinkedHashMap<>();
+            empty.put("total_pairs", 0.0);
+            empty.put("connected_pairs", 0.0);
+            empty.put("connectivity", 0.0);
+            return empty;
+        }
 
+        // Find nearest network node for each point
+        int[] nodeIndices = new int[points.size()];
+        for (int i = 0; i < points.size(); i++) {
+            nodeIndices[i] = findNearestNode(nodes, points.get(i));
+        }
+
+        // Compute all-pairs shortest paths
+        double[][] matrix = NetworkAnalysisEngine.allPairsShortestPaths(lineFeatures, snapTolerance);
+
+        // Compute stats only between the specified points
         double totalDistance = 0;
         double maxDistance = 0;
         double minDistance = Double.MAX_VALUE;
         int connectedPairs = 0;
+        int totalPairs = 0;
 
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                if (matrix[i][j] < Double.MAX_VALUE) {
-                    totalDistance += matrix[i][j];
-                    if (matrix[i][j] > maxDistance) maxDistance = matrix[i][j];
-                    if (matrix[i][j] < minDistance) minDistance = matrix[i][j];
+        for (int i = 0; i < nodeIndices.length; i++) {
+            for (int j = i + 1; j < nodeIndices.length; j++) {
+                totalPairs++;
+                int ni = nodeIndices[i];
+                int nj = nodeIndices[j];
+                if (ni >= 0 && nj >= 0 && ni < matrix.length && nj < matrix.length
+                        && matrix[ni][nj] < Double.MAX_VALUE) {
+                    totalDistance += matrix[ni][nj];
+                    if (matrix[ni][nj] > maxDistance) maxDistance = matrix[ni][nj];
+                    if (matrix[ni][nj] < minDistance) minDistance = matrix[ni][nj];
                     connectedPairs++;
                 }
             }
         }
 
         Map<String, Double> stats = new LinkedHashMap<>();
-        stats.put("total_pairs", (double) (n * (n - 1) / 2));
+        stats.put("total_pairs", (double) totalPairs);
         stats.put("connected_pairs", (double) connectedPairs);
-        stats.put("connectivity", connectedPairs > 0 ? (double) connectedPairs / (n * (n - 1) / 2) * 100 : 0);
+        stats.put("connectivity", totalPairs > 0 ? (double) connectedPairs / totalPairs * 100 : 0);
         stats.put("avg_distance", connectedPairs > 0 ? totalDistance / connectedPairs : 0);
         stats.put("max_distance", maxDistance);
         stats.put("min_distance", connectedPairs > 0 ? minDistance : 0);
