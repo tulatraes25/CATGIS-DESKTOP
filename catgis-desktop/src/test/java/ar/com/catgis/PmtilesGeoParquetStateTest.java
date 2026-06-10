@@ -10,8 +10,10 @@ import java.nio.file.Files;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * TC-09: PMTiles/GeoParquet state tests.
- * Ensures they show metadata and don't try to load as layers inconsistently.
+ * PMTiles/GeoParquet state tests.
+ * Tests validation logic and error handling.
+ * Testing actual PMTiles parsing requires a real .pmtiles file
+ * which is not included in the test suite.
  */
 class PmtilesGeoParquetStateTest {
 
@@ -19,30 +21,41 @@ class PmtilesGeoParquetStateTest {
     java.nio.file.Path tempDir;
 
     @Test
-    void pmtilesDetectsValidMagicBytes() throws IOException {
-        File fgtFile = tempDir.resolve("test.pmtiles").toFile();
-        // Write PMTiles magic bytes: 0x47424647 ("GBFG")
-        byte[] header = new byte[128];
-        header[0] = 0x47; // G
-        header[1] = 0x42; // B
-        header[2] = 0x46; // F
-        header[3] = 0x47; // G
-        Files.write(fgtFile.toPath(), header);
-        // PMTiles reader should be able to read the header
-        // (it may fail on invalid data, but should not crash)
-        try {
-            PmtilesReader.readHeader(fgtFile);
-        } catch (Exception e) {
-            // Expected: invalid header data, but should not be a crash
-            assertNotNull(e.getMessage());
-        }
-    }
-
-    @Test
     void pmtilesRejectsNonPmtilesFile() throws IOException {
         File txtFile = tempDir.resolve("test.pmtiles").toFile();
         Files.writeString(txtFile.toPath(), "not a pmtiles file");
         assertThrows(Exception.class, () -> PmtilesReader.readHeader(txtFile));
+    }
+
+    @Test
+    void pmtilesRejectsTooSmallFile() throws IOException {
+        File tinyFile = tempDir.resolve("tiny.pmtiles").toFile();
+        Files.write(tinyFile.toPath(), new byte[]{0x50, 0x4D}); // Only 2 bytes
+        assertThrows(Exception.class, () -> PmtilesReader.readHeader(tinyFile));
+    }
+
+    @Test
+    void pmtilesReadHeaderReturnsHeaderRecord() throws Exception {
+        // Create a minimal valid header with correct magic bytes
+        File pmtilesFile = tempDir.resolve("test.pmtiles").toFile();
+        byte[] header = new byte[128];
+        // Magic: little-endian 0x4D50 = bytes [0x50, 0x4D]
+        header[0] = 0x50;
+        header[1] = 0x4D;
+        // Set version to 3, numTiles to 5, zoomMin to 1, zoomMax to 10
+        java.nio.ByteBuffer.wrap(header).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            .putInt(4, 3)    // version
+            .putInt(12, 5)   // numTiles
+            .putInt(16, 1)   // zoomMin
+            .putInt(20, 10); // zoomMax
+        Files.write(pmtilesFile.toPath(), header);
+
+        var h = PmtilesReader.readHeader(pmtilesFile);
+        assertNotNull(h);
+        assertEquals(3, h.version());
+        assertEquals(5, h.numTiles());
+        assertEquals(1, h.zoomMin());
+        assertEquals(10, h.zoomMax());
     }
 
     @Test
@@ -61,17 +74,14 @@ class PmtilesGeoParquetStateTest {
     }
 
     @Test
-    void pmtilesGetStatsReturnsString() throws IOException {
-        File pmtilesFile = tempDir.resolve("test.pmtiles").toFile();
-        byte[] header = new byte[128];
-        header[0] = 0x47; header[1] = 0x42; header[2] = 0x46; header[3] = 0x47;
-        Files.write(pmtilesFile.toPath(), header);
-        try {
-            String stats = PmtilesReader.getStats(pmtilesFile);
-            assertNotNull(stats);
-            assertTrue(stats.contains("PMTiles"));
-        } catch (Exception e) {
-            // May fail on invalid data, that's OK
-        }
+    void geoparquetGetSummaryReturnsString() throws Exception {
+        File parquetFile = tempDir.resolve("test.parquet").toFile();
+        // Write PAR1 magic + enough data to pass size check
+        byte[] data = new byte[1024];
+        data[0] = 'P'; data[1] = 'A'; data[2] = 'R'; data[3] = '1';
+        Files.write(parquetFile.toPath(), data);
+        String summary = GeoParquetReader.getSummary(parquetFile);
+        assertNotNull(summary);
+        assertTrue(summary.contains("GeoParquet"));
     }
 }

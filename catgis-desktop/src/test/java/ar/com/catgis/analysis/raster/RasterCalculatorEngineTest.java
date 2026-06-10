@@ -26,6 +26,9 @@ class RasterCalculatorEngineTest {
         assertNotNull(result);
         assertEquals(2, result.getWidth());
         assertEquals(2, result.getHeight());
+        // Verify pixel value: (10+20)=30, clamped to byte
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(30, val);
     }
 
     @Test
@@ -38,16 +41,22 @@ class RasterCalculatorEngineTest {
         );
         BufferedImage result = RasterCalculatorEngine.evaluate(sources, "a - b");
         assertNotNull(result);
+        // (50-30)=20
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(20, val);
     }
 
     @Test
-    void evaluateWithFunction() {
+    void evaluateWithSqrt() {
         BufferedImage a = createRaster(2, 2, 64);
         List<RasterCalculatorEngine.RasterSource> sources = List.of(
                 new RasterCalculatorEngine.RasterSource(a, null, "a")
         );
         BufferedImage result = RasterCalculatorEngine.evaluate(sources, "sqrt(a)");
         assertNotNull(result);
+        // sqrt(64)=8, clamped to byte
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(8, val);
     }
 
     @Test

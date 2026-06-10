@@ -10,8 +10,10 @@ import java.nio.file.Files;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * TC-06: FlatGeobufLoader with real file.
- * Validates geometry, attributes, count and CRS handling.
+ * FlatGeobufLoader tests.
+ * Tests rejection of invalid inputs. Testing actual .fgb parsing requires
+ * a real FlatGeobuf file, which is not included in the test suite.
+ * These tests validate the loader's input validation logic.
  */
 class FlatGeobufLoaderRealTest {
 
@@ -47,6 +49,13 @@ class FlatGeobufLoaderRealTest {
     void loadNullFileThrows() {
         assertThrows(IllegalArgumentException.class, () -> {
             FlatGeobufLoader.load((File) null);
+        });
+    }
+
+    @Test
+    void loadStringPathDelegatesToFile() {
+        assertThrows(Exception.class, () -> {
+            FlatGeobufLoader.load("/nonexistent/file.fgb");
         });
     }
 }
