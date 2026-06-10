@@ -639,6 +639,9 @@ public final class LabelExpressionEngine {
                         case "line" -> { stack.push("LINESTRING()"); }
                         case "polygon" -> { stack.push("POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))"); }
                         case "make_point" -> { double y = toDouble(stack.pop()); double x = toDouble(stack.pop()); stack.push(new org.locationtech.jts.geom.GeometryFactory().createPoint(new Coordinate(x, y)).toText()); }
+                        case "num_to_str" -> { stack.push(String.valueOf(toDouble(stack.pop()))); }
+                        case "str_to_num" -> { try { stack.push(Double.parseDouble(stringValue(stack.pop()).trim())); } catch (Exception e) { stack.push(0.0); } }
+                        case "if_else" -> { Object elseVal = stack.pop(); Object thenVal = stack.pop(); Object cond = stack.pop(); boolean cr; if (cond instanceof Boolean b) cr = b; else if (cond instanceof Number n) cr = n.doubleValue() != 0; else cr = !stringValue(cond).isEmpty(); stack.push(cr ? thenVal : elseVal); }
 
                         // === Date functions (existing) ===
                         case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
