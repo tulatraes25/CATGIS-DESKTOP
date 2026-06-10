@@ -245,15 +245,8 @@ public class MainMenuBar extends JMenuBar {
             ar.com.catgis.climate.UnifiedAnalysisDialog.open(MainMenuBar.this));
         menuAnalisis.add(itemGeoAnalyzer);
 
-        JMenuItem itemNetwork = createItem("Ruta mas corta (red)...", null);
-        itemNetwork.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel == null) return;
-            Layer layer = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
-            if (layer == null) return;
-            JOptionPane.showMessageDialog(MainMenuBar.this,
-                "Network Analysis: selecciona capa de lineas y usa puntos inicio/fin.",
-                "Network Analysis", JOptionPane.INFORMATION_MESSAGE);
-        });
+        JMenuItem itemNetwork = createItem("Analisis de red...", null);
+        itemNetwork.addActionListener(e -> NetworkAnalysisDialog.open());
         menuAnalisis.add(itemNetwork);
 
         JMenuItem itemWhitebox = createItem("WhiteboxTools (terrain/hydro)...", null);
