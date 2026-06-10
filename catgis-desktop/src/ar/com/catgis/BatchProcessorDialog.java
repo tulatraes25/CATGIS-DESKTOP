@@ -72,7 +72,8 @@ public class BatchProcessorDialog extends JDialog {
                 "Copiar archivos",
                 "Calcular NDVI (B4/B3)",
                 "Calcular NDWI (B2/B4)",
-                "Calcular NBR (B4/B5)"
+                "Calcular NBR (B4/B5)",
+                "Reclasificar raster"
         });
         form.add(operationCombo, gbc);
 
@@ -195,6 +196,7 @@ public class BatchProcessorDialog extends JDialog {
                             case "Calcular NDVI (B4/B3)" -> BatchProcessor.applySpectralIndex(input, output, "NDVI", 4, 3);
                             case "Calcular NDWI (B2/B4)" -> BatchProcessor.applySpectralIndex(input, output, "NDWI", 2, 4);
                             case "Calcular NBR (B4/B5)" -> BatchProcessor.applySpectralIndex(input, output, "NBR", 4, 5);
+                            case "Reclasificar raster" -> BatchProcessor.applyReclassify(input, output, "0-128=1;128-256=2");
                             default -> throw new RuntimeException("Operacion no soportada: " + operation);
                         }
                     } catch (Exception e) {

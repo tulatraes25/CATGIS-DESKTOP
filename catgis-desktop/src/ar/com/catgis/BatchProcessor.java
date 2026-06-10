@@ -1,5 +1,6 @@
 package ar.com.catgis;
 
+import ar.com.catgis.data.vector.ShapefileData;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -83,11 +84,39 @@ public final class BatchProcessor {
         java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(input);
         if (image == null) throw new Exception("No se pudo leer: " + input.getName());
 
-        // For multiband images, extract bands from the composite
         java.awt.image.BufferedImage bandAImage = extractBand(image, bandA);
         java.awt.image.BufferedImage bandBImage = extractBand(image, bandB);
 
         java.awt.image.BufferedImage result = SpectralIndexEngine.computeIndex(bandAImage, bandBImage, indexId);
+        if (result != null) {
+            javax.imageio.ImageIO.write(result, "tif", output);
+        }
+    }
+
+    /**
+     * Apply a raster reclassification to a file.
+     */
+    public static void applyReclassify(File input, File output, String rulesJson) throws Exception {
+        java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(input);
+        if (image == null) throw new Exception("No se pudo leer: " + input.getName());
+
+        // Parse simple rules from format "from1-to1=new1;from2-to2=new2"
+        List<RasterReclassifyEngine.ReclassRule> rules = new ArrayList<>();
+        for (String ruleStr : rulesJson.split(";")) {
+            String[] parts = ruleStr.split("-");
+            if (parts.length >= 2) {
+                String[] right = parts[1].split("=");
+                if (right.length >= 2) {
+                    rules.add(new RasterReclassifyEngine.ReclassRule(
+                            Double.parseDouble(parts[0]),
+                            Double.parseDouble(right[0]),
+                            Double.parseDouble(right[1]),
+                            right.length > 2 ? right[2] : ""));
+                }
+            }
+        }
+
+        java.awt.image.BufferedImage result = RasterReclassifyEngine.reclassify(image, rules, -1, false);
         if (result != null) {
             javax.imageio.ImageIO.write(result, "tif", output);
         }
