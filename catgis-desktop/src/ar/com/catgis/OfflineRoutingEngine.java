@@ -150,6 +150,103 @@ public final class OfflineRoutingEngine {
         return new NetworkStatsResult(nodes.size(), edgeCount, totalLength, avgDegree, density);
     }
 
+    /**
+     * Compute betweenness centrality for all nodes.
+     * Higher values = more important nodes in the network.
+     */
+    public static double[] betweennessCentrality(List<org.geotools.api.feature.simple.SimpleFeature> lineFeatures,
+                                                   double snapTolerance) {
+        List<NetworkAnalysisEngine.NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        int n = nodes.size();
+        if (n == 0) return new double[0];
+
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        double[] centrality = new double[n];
+
+        for (int s = 0; s < n; s++) {
+            double[] dist = new double[n];
+            int[] prev = new int[n];
+            int[] sigma = new int[n];
+            double[] delta = new double[n];
+            boolean[] visited = new boolean[n];
+            java.util.Arrays.fill(dist, Double.MAX_VALUE);
+            java.util.Arrays.fill(prev, -1);
+            java.util.Arrays.fill(sigma, 0);
+            dist[s] = 0;
+            sigma[s] = 1;
+
+            java.util.List<Integer> stack = new java.util.ArrayList<>();
+
+            for (int iter = 0; iter < n; iter++) {
+                int u = -1;
+                double minD = Double.MAX_VALUE;
+                for (int i = 0; i < n; i++) {
+                    if (!visited[i] && dist[i] < minD) { minD = dist[i]; u = i; }
+                }
+                if (u < 0 || dist[u] == Double.MAX_VALUE) break;
+                visited[u] = true;
+                stack.add(u);
+                for (int v = 0; v < n; v++) {
+                    if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
+                    double alt = dist[u] + adj[u][v];
+                    if (alt < dist[v]) { dist[v] = alt; prev[v] = u; sigma[v] = sigma[u]; }
+                    else if (alt == dist[v]) { sigma[v] += sigma[u]; }
+                }
+            }
+
+            while (!stack.isEmpty()) {
+                int w = stack.remove(stack.size() - 1);
+                if (prev[w] >= 0 && sigma[w] > 0) {
+                    delta[prev[w]] += (1.0 + delta[w]) * sigma[prev[w]] / (double) sigma[w];
+                }
+                if (w != s) centrality[w] += delta[w];
+            }
+        }
+
+        double norm = n > 2 ? (n - 1.0) * (n - 2.0) : 1.0;
+        for (int i = 0; i < n; i++) centrality[i] /= norm;
+        return centrality;
+    }
+
+    /**
+     * Compute connectivity metrics for the network.
+     */
+    public static java.util.Map<String, Double> connectivityAnalysis(
+            List<org.geotools.api.feature.simple.SimpleFeature> lineFeatures,
+            double snapTolerance) {
+
+        double[][] matrix = allPairsShortestPaths(lineFeatures, snapTolerance);
+        int n = matrix.length;
+
+        int connectedPairs = 0;
+        double totalDistance = 0;
+        double maxDistance = 0;
+        double minDistance = Double.MAX_VALUE;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (matrix[i][j] < Double.MAX_VALUE) {
+                    connectedPairs++;
+                    totalDistance += matrix[i][j];
+                    if (matrix[i][j] > maxDistance) maxDistance = matrix[i][j];
+                    if (matrix[i][j] < minDistance) minDistance = matrix[i][j];
+                }
+            }
+        }
+
+        int totalPairs = n * (n - 1) / 2;
+        java.util.Map<String, Double> stats = new java.util.LinkedHashMap<>();
+        stats.put("total_nodes", (double) n);
+        stats.put("total_pairs", (double) totalPairs);
+        stats.put("connected_pairs", (double) connectedPairs);
+        stats.put("connectivity", totalPairs > 0 ? (double) connectedPairs / totalPairs * 100 : 0);
+        stats.put("avg_distance", connectedPairs > 0 ? totalDistance / connectedPairs : 0);
+        stats.put("max_distance", maxDistance);
+        stats.put("min_distance", connectedPairs > 0 ? minDistance : 0);
+
+        return stats;
+    }
+
     // --- Internal helpers (delegate to NetworkAnalysisEngine) ---
 
     private static List<NetworkAnalysisEngine.NetworkPoint> buildGraph(List<org.geotools.api.feature.simple.SimpleFeature> lineFeatures, double snapTolerance) {
