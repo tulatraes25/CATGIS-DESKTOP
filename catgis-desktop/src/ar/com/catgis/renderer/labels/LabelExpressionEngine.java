@@ -621,6 +621,14 @@ public final class LabelExpressionEngine {
                         case "contains_text" -> { String sub = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.contains(sub)); }
                         case "between" -> { double hi = toDouble(stack.pop()); double lo = toDouble(stack.pop()); double v = toDouble(stack.pop()); stack.push(v >= lo && v <= hi); }
                         case "in" -> { String vals = stringValue(stack.pop()); String v = stringValue(stack.pop()); stack.push(("," + vals + ",").contains("," + v + ",")); }
+                        case "datepart" -> { String part = stringValue(stack.pop()); java.util.Calendar cal = java.util.Calendar.getInstance(); double val = switch (part.toLowerCase()) { case "year" -> cal.get(java.util.Calendar.YEAR); case "month" -> cal.get(java.util.Calendar.MONTH) + 1; case "day" -> cal.get(java.util.Calendar.DAY_OF_MONTH); case "hour" -> cal.get(java.util.Calendar.HOUR_OF_DAY); case "minute" -> cal.get(java.util.Calendar.MINUTE); case "second" -> cal.get(java.util.Calendar.SECOND); case "dow" -> cal.get(java.util.Calendar.DAY_OF_WEEK); case "doy" -> cal.get(java.util.Calendar.DAY_OF_YEAR); default -> 0; }; stack.push(val); }
+                        case "concatenate" -> { StringBuilder sb = new StringBuilder(); for (int k = 0; k < argCount; k++) sb.insert(0, stringValue(stack.pop())); stack.push(sb.toString()); }
+                        case "like" -> { String pat = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.matches("(?i)" + pat.replace("%", ".*").replace("_", "."))); }
+                        case "notlike" -> { String pat = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(!s.matches("(?i)" + pat.replace("%", ".*").replace("_", "."))); }
+                        case "ifnull" -> { Object def = stack.pop(); Object val = stack.pop(); stack.push(val != null && !stringValue(val).isEmpty() ? val : def); }
+                        case "isblank" -> { stack.push(stringValue(stack.peek()).trim().isEmpty()); }
+                        case "newline" -> { stack.push("\n"); }
+                        case "tab" -> { stack.push("\t"); }
 
                         // === Date functions (existing) ===
                         case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
