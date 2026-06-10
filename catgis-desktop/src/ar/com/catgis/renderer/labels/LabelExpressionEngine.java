@@ -629,6 +629,8 @@ public final class LabelExpressionEngine {
                         case "isblank" -> { stack.push(stringValue(stack.peek()).trim().isEmpty()); }
                         case "newline" -> { stack.push("\n"); }
                         case "tab" -> { stack.push("\t"); }
+                        case "cr" -> { stack.push("\r"); }
+                        case "esc" -> { stack.push("\u001B"); }
 
                         // === Date functions (existing) ===
                         case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
