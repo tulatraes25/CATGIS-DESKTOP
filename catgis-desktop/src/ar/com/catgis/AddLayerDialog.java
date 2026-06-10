@@ -33,6 +33,8 @@ public class AddLayerDialog extends JDialog {
                 new FormatOption(I18n.t("GeoPackage"), "gpkg"),
                 new FormatOption(I18n.t("GeoJSON"), "geojson"),
                 new FormatOption(I18n.t("FlatGeobuf"), "fgb"),
+                new FormatOption(I18n.t("GeoParquet"), "parquet"),
+                new FormatOption(I18n.t("PMTiles"), "pmtiles"),
                 new FormatOption(I18n.t("GPX"), "gpx"),
                 new FormatOption(I18n.t("KML / KMZ"), "kml"),
                 new FormatOption(I18n.t("Fichero de imagen"), "image"),
@@ -160,6 +162,12 @@ public class AddLayerDialog extends JDialog {
             case "fgb":
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("FlatGeobuf (*.fgb)"), "fgb"));
                 break;
+            case "parquet":
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoParquet (*.parquet, *.geoparquet)"), "parquet", "geoparquet"));
+                break;
+            case "pmtiles":
+                chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("PMTiles (*.pmtiles)"), "pmtiles"));
+                break;
             case "kml":
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("KML / KMZ (*.kml, *.kmz)"), "kml", "kmz"));
                 break;
@@ -179,7 +187,7 @@ public class AddLayerDialog extends JDialog {
             default:
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(
                         I18n.t("Todos los archivos GIS soportados"),
-                        "shp", "gpkg", "geojson", "json", "fgb", "gpx", "kml", "kmz", "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif", "dwg", "dxf"
+                        "shp", "gpkg", "geojson", "json", "fgb", "parquet", "geoparquet", "pmtiles", "gpx", "kml", "kmz", "tif", "tiff", "img", "asc", "jpg", "jpeg", "png", "bmp", "gif", "dwg", "dxf"
                 ));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("Fichero shape (*.shp)"), "shp"));
                 chooser.addChoosableFileFilter(new FileNameExtensionFilter(I18n.t("GeoPackage (*.gpkg)"), "gpkg"));

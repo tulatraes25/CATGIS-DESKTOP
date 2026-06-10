@@ -234,7 +234,11 @@ public final class RasterCalculatorEngine {
 
                 // Check if function
                 boolean isFunc = switch (word) {
-                    case "sin","cos","sqrt","log","abs","pow","exp","floor","ceil","round","if","ndvi" -> true;
+                    case "sin","cos","tan","sqrt","log","log10","ln","abs","pow","exp",
+                         "floor","ceil","round","if","ndvi","ndwi","nbr","savi","evi",
+                         "asin","acos","atan","atan2","degrees","radians","sign",
+                         "hypot","min","max","clamp","mod","pi","e","random",
+                         "x","y" -> true;
                     default -> false;
                 };
 

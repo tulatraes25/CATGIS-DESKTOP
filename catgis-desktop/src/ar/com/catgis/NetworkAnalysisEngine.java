@@ -19,7 +19,7 @@ public final class NetworkAnalysisEngine {
         int startIdx = findNearestNode(allNodes, start);
         int endIdx = findNearestNode(allNodes, end);
         if (startIdx < 0 || endIdx < 0) return new NetworkPath(Collections.emptyList(), 0, "Punto de inicio o fin fuera de la red.");
-        double[][] adjacency = buildAdjacencyMatrix(allNodes);
+        double[][] adjacency = buildAdjacencyMatrix(lineFeatures, allNodes);
         double[] dist = new double[allNodes.size()];
         int[] prev = new int[allNodes.size()];
         boolean[] visited = new boolean[allNodes.size()];
@@ -156,17 +156,19 @@ public final class NetworkAnalysisEngine {
         double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
         double[] centrality = new double[n];
 
-        // Simplified betweenness: count shortest paths passing through each node
         for (int s = 0; s < n; s++) {
             double[] dist = new double[n];
             int[] prev = new int[n];
             int[] sigma = new int[n];
+            double[] delta = new double[n];
             boolean[] visited = new boolean[n];
             Arrays.fill(dist, Double.MAX_VALUE);
             Arrays.fill(prev, -1);
             Arrays.fill(sigma, 0);
             dist[s] = 0;
             sigma[s] = 1;
+
+            List<Integer> stack = new ArrayList<>();
 
             for (int iter = 0; iter < n; iter++) {
                 int u = -1;
@@ -176,6 +178,7 @@ public final class NetworkAnalysisEngine {
                 }
                 if (u < 0 || dist[u] == Double.MAX_VALUE) break;
                 visited[u] = true;
+                stack.add(u);
                 for (int v = 0; v < n; v++) {
                     if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
                     double alt = dist[u] + adj[u][v];
@@ -183,7 +186,21 @@ public final class NetworkAnalysisEngine {
                     else if (alt == dist[v]) { sigma[v] += sigma[u]; }
                 }
             }
+
+            // Back-propagation
+            while (!stack.isEmpty()) {
+                int w = stack.remove(stack.size() - 1);
+                if (prev[w] >= 0 && sigma[w] > 0) {
+                    delta[prev[w]] += (1.0 + delta[w]) * sigma[prev[w]] / (double) sigma[w];
+                }
+                if (w != s) centrality[w] += delta[w];
+            }
         }
+
+        // Normalize
+        double norm = n > 2 ? (n - 1.0) * (n - 2.0) : 1.0;
+        for (int i = 0; i < n; i++) centrality[i] /= norm;
+
         return centrality;
     }
 

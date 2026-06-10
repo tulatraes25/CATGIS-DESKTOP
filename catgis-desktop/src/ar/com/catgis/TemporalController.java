@@ -116,7 +116,7 @@ public class TemporalController extends JPanel {
         new Thread(() -> {
             while (playing && currentIndex < layers.size() - 1) {
                 currentIndex++;
-                timeSlider.setValue(currentIndex);
+                SwingUtilities.invokeLater(() -> timeSlider.setValue(currentIndex));
                 try { Thread.sleep(500); } catch (InterruptedException e) { break; }
             }
             playing = false;

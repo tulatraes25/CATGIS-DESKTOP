@@ -107,6 +107,29 @@ public class OpenFileAction extends AbstractAction {
             } else if (lowerName.endsWith(".fgb")) {
                 data = FlatGeobufLoader.load(file);
                 layerDisplayName = file.getName();
+            } else if (lowerName.endsWith(".pmtiles")) {
+                // PMTiles: read metadata and show info (tiles are not directly displayable as vector/raster)
+                try {
+                    var header = PmtilesReader.readHeader(file);
+                    var entries = PmtilesReader.readDirectory(file, header);
+                    String info = PmtilesReader.getStats(file);
+                    JOptionPane.showMessageDialog(parent, info, "PMTiles Info", JOptionPane.INFORMATION_MESSAGE);
+                    return false; // PMTiles is a tile archive, not directly loadable as a layer
+                } catch (Exception ex) {
+                    AppErrorSupport.showErrorDialog(parent, "PMTiles", "No se pudo leer el archivo PMTiles.", ex);
+                    return false;
+                }
+            } else if (lowerName.endsWith(".parquet") || lowerName.endsWith(".geoparquet")) {
+                // GeoParquet: read metadata and show info
+                try {
+                    var meta = GeoParquetReader.readMetadata(file);
+                    String info = GeoParquetReader.getSummary(file);
+                    JOptionPane.showMessageDialog(parent, info, "GeoParquet Info", JOptionPane.INFORMATION_MESSAGE);
+                    return false; // GeoParquet requires parquet-hadoop for full support
+                } catch (Exception ex) {
+                    AppErrorSupport.showErrorDialog(parent, "GeoParquet", "No se pudo leer el archivo GeoParquet.", ex);
+                    return false;
+                }
             }
 
             if (data != null) {
