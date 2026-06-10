@@ -631,6 +631,14 @@ public final class LabelExpressionEngine {
                         case "tab" -> { stack.push("\t"); }
                         case "cr" -> { stack.push("\r"); }
                         case "esc" -> { stack.push("\u001B"); }
+                        case "start" -> { stack.push(0.0); }
+                        case "end" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) (g.getCoordinates().length - 1) : 0.0); }
+                        case "x_at" -> { int idx = toInt(stack.pop()); Geometry g = extractGeometry(feature); if (g != null && idx >= 0 && idx < g.getCoordinates().length) stack.push(g.getCoordinates()[idx].x); else stack.push(0.0); }
+                        case "y_at" -> { int idx = toInt(stack.pop()); Geometry g = extractGeometry(feature); if (g != null && idx >= 0 && idx < g.getCoordinates().length) stack.push(g.getCoordinates()[idx].y); else stack.push(0.0); }
+                        case "point" -> { double y = toDouble(stack.pop()); double x = toDouble(stack.pop()); stack.push(new org.locationtech.jts.geom.GeometryFactory().createPoint(new Coordinate(x, y)).toText()); }
+                        case "line" -> { stack.push("LINESTRING()"); }
+                        case "polygon" -> { stack.push("POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))"); }
+                        case "make_point" -> { double y = toDouble(stack.pop()); double x = toDouble(stack.pop()); stack.push(new org.locationtech.jts.geom.GeometryFactory().createPoint(new Coordinate(x, y)).toText()); }
 
                         // === Date functions (existing) ===
                         case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
