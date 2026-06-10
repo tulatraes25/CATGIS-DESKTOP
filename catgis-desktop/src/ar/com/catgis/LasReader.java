@@ -7,9 +7,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Basic LAS/LAZ LiDAR file reader.
+ * Basic LAS LiDAR file reader.
  * Reads point cloud data from LAS format files.
- * LAZ support requires the LASzip library.
+ * NOTE: This is a SIMPLIFIED parser that reads basic header fields and
+ * point coordinates. It does NOT handle:
+ * - Scale/offset transformations (uses raw coordinate values)
+ * - Variable record lengths per point format
+ * - Variable header sizes (uses fixed 375 bytes)
+ * - LAZ compression (requires LASzip)
+ * - Waveform data
+ * - RGB color from point formats 2/3
+ *
+ * For production LiDAR processing, use PDAL or LASlib.
  */
 public final class LasReader {
 

@@ -351,10 +351,12 @@ public final class TopographicProfileService {
     }
 
     /**
-     * Compute aspect (direction) at each sample point.
-     * Returns aspect in degrees (0=N, 90=E, 180=S, 270=W).
+     * Compute slope angle at each sample point along the profile.
+     * Returns the angle of the profile curve in degrees (0=horizontal, 90=vertical).
+     * NOTE: This is NOT geographic aspect (N/E/S/W orientation). It is the angle
+     * of the elevation profile curve in the cross-section plane.
      */
-    public static double[] computeAspectProfile(ProfileResult result) {
+    public static double[] computeProfileSlopeAngle(ProfileResult result) {
         if (result == null || result.samples() == null || result.samples().size() < 2) return new double[0];
         List<ProfileSample> samples = result.samples();
         double[] aspects = new double[samples.size()];

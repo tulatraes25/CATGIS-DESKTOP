@@ -90,29 +90,40 @@ public class DataDefinedOverrides {
     }
 
     /**
-     * Serialize to string (pipe-delimited).
+     * Serialize to string (pipe-delimited, with escaping).
      */
     public String serialize() {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : overrides.entrySet()) {
             if (sb.length() > 0) sb.append(";");
-            sb.append(entry.getKey()).append("=").append(entry.getValue());
+            sb.append(escapeValue(entry.getKey())).append("=").append(escapeValue(entry.getValue()));
         }
         return sb.toString();
     }
 
     /**
      * Deserialize from string.
+     * Handles escaped values with \\; and \\= sequences.
      */
     public static DataDefinedOverrides deserialize(String data) {
         DataDefinedOverrides dd = new DataDefinedOverrides();
         if (data == null || data.isBlank()) return dd;
-        for (String pair : data.split(";")) {
-            String[] parts = pair.split("=", 2);
+        for (String pair : data.split("(?<!\\\\);")) {
+            String[] parts = pair.split("(?<!\\\\)=", 2);
             if (parts.length == 2) {
-                dd.overrides.put(parts[0], parts[1]);
+                dd.overrides.put(unescapeValue(parts[0]), unescapeValue(parts[1]));
             }
         }
         return dd;
+    }
+
+    private static String escapeValue(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace(";", "\\;").replace("=", "\\=");
+    }
+
+    private static String unescapeValue(String value) {
+        if (value == null) return "";
+        return value.replace("\\;", ";").replace("\\=", "=").replace("\\\\", "\\");
     }
 }
