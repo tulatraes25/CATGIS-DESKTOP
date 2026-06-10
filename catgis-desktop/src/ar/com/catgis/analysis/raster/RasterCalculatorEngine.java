@@ -170,6 +170,26 @@ public final class RasterCalculatorEngine {
                             double ndviVal = (nir + red) > 0 ? (nir - red) / (nir + red) : 0;
                             stack.push(ndviVal);
                         }
+                        case "ndwi" -> { double nir = stack.pop(); double green = stack.pop(); stack.push((green + nir) > 0 ? (green - nir) / (green + nir) : 0); }
+                        case "nbr" -> { double swir = stack.pop(); double nir = stack.pop(); stack.push((nir + swir) > 0 ? (nir - swir) / (nir + swir) : 0); }
+                        case "savi" -> { double red = stack.pop(); double nir = stack.pop(); stack.push(((nir - red) / (nir + red + 0.5)) * 1.5); }
+                        case "evi" -> { double blue = stack.pop(); double red = stack.pop(); double nir = stack.pop(); double denom = nir + 6*red - 7.5*blue + 1; stack.push(denom != 0 ? 2.5 * (nir - red) / denom : 0); }
+                        case "tan" -> stack.push(Math.tan(stack.pop()));
+                        case "asin" -> stack.push(Math.asin(Math.max(-1, Math.min(1, stack.pop()))));
+                        case "acos" -> stack.push(Math.acos(Math.max(-1, Math.min(1, stack.pop()))));
+                        case "atan" -> stack.push(Math.atan(stack.pop()));
+                        case "log10" -> stack.push(Math.log10(stack.pop()));
+                        case "ln" -> stack.push(Math.log(stack.pop()));
+                        case "sign" -> stack.push(Math.signum(stack.pop()));
+                        case "mod" -> { double b = stack.pop(); stack.push(stack.pop() % b); }
+                        case "min" -> { double b = stack.pop(); double a = stack.pop(); stack.push(Math.min(a, b)); }
+                        case "max" -> { double b = stack.pop(); double a = stack.pop(); stack.push(Math.max(a, b)); }
+                        case "clamp" -> { double hi = stack.pop(); double lo = stack.pop(); stack.push(Math.max(lo, Math.min(hi, stack.pop()))); }
+                        case "pi" -> stack.push(Math.PI);
+                        case "e" -> stack.push(Math.E);
+                        case "hypot" -> { double y2 = stack.pop(); stack.push(Math.hypot(stack.pop(), y2)); }
+                        case "degrees" -> stack.push(Math.toDegrees(stack.pop()));
+                        case "radians" -> stack.push(Math.toRadians(stack.pop()));
                         case "x" -> stack.push((double) x / w);
                         case "y" -> stack.push((double) y / h);
                     }
