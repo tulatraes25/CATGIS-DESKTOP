@@ -56,7 +56,8 @@ public class NetworkAnalysisDialog extends JDialog {
                 "Area de servicio",
                 "Centralidad (betweenness)",
                 "Todos los pares mas cortos",
-                "Estadisticas de red"
+                "Estadisticas de red",
+                "Analisis de conectividad"
         });
         operationCombo.addActionListener(e -> refreshUi());
         form.add(operationCombo, gbc);
@@ -191,6 +192,7 @@ public class NetworkAnalysisDialog extends JDialog {
                     case "Centralidad (betweenness)" -> computeCentrality(features);
                     case "Todos los pares mas cortos" -> computeAllPairs(features);
                     case "Estadisticas de red" -> computeStats(features);
+                    case "Analisis de conectividad" -> computeConnectivity(features);
                     default -> "Operacion no soportada.";
                 };
             }
@@ -331,6 +333,20 @@ public class NetworkAnalysisDialog extends JDialog {
         }
         if (matrix.length > show) sb.append("... (").append(matrix.length - show).append(" nodos mas)\n");
 
+        return sb.toString();
+    }
+
+    private String computeConnectivity(List<org.geotools.api.feature.simple.SimpleFeature> features) {
+        var stats = OfflineRoutingEngine.connectivityAnalysis(features, 10);
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Analisis de Conectividad ===\n\n");
+        sb.append("Nodos: ").append(stats.get("total_nodes").intValue()).append("\n");
+        sb.append("Pares totales: ").append(stats.get("total_pairs").intValue()).append("\n");
+        sb.append("Pares conectados: ").append(stats.get("connected_pairs").intValue()).append("\n");
+        sb.append(String.format("Conectividad: %.1f%%\n", stats.get("connectivity")));
+        sb.append(String.format("Distancia promedio: %.2f\n", stats.get("avg_distance")));
+        sb.append(String.format("Distancia maxima: %.2f\n", stats.get("max_distance")));
+        sb.append(String.format("Distancia minima: %.2f\n", stats.get("min_distance")));
         return sb.toString();
     }
 
