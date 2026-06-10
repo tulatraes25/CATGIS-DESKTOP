@@ -5,6 +5,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -585,8 +586,40 @@ public final class LabelExpressionEngine {
                         case "e" -> { stack.push(Math.E); }
                         case "random" -> { stack.push(Math.random()); }
                         case "ln" -> { stack.push(Math.log(toDouble(stack.pop()))); }
+                        case "variance" -> { double sum = 0; double sumSq = 0; for (int k = 0; k < argCount; k++) { double v = toDouble(stack.pop()); sum += v; sumSq += v * v; } double mean = argCount > 0 ? sum / argCount : 0; stack.push(argCount > 1 ? (sumSq / argCount) - mean * mean : 0); }
+                        case "stddev" -> { double sum = 0; double sumSq = 0; for (int k = 0; k < argCount; k++) { double v = toDouble(stack.pop()); sum += v; sumSq += v * v; } double mean = argCount > 0 ? sum / argCount : 0; stack.push(argCount > 1 ? Math.sqrt((sumSq / argCount) - mean * mean) : 0); }
+                        case "median" -> { java.util.List<Double> vals = new java.util.ArrayList<>(); for (int k = 0; k < argCount; k++) vals.add(toDouble(stack.pop())); java.util.Collections.sort(vals); stack.push(vals.get(vals.size() / 2)); }
+                        case "mode" -> { java.util.Map<Double, Integer> counts = new java.util.HashMap<>(); double mode = 0; int maxCount = 0; for (int k = 0; k < argCount; k++) { double v = toDouble(stack.pop()); int c = counts.merge(v, 1, Integer::sum); if (c > maxCount) { maxCount = c; mode = v; } } stack.push(mode); }
+                        case "range" -> { double max = -Double.MAX_VALUE; double min = Double.MAX_VALUE; for (int k = 0; k < argCount; k++) { double v = toDouble(stack.pop()); if (v > max) max = v; if (v < min) min = v; } stack.push(max - min); }
+                        case "itemcount" -> { stack.push((double) argCount); }
+                        case "translate" -> { String to = stringValue(stack.pop()); String from = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.replace(from, to)); }
+                        case "first" -> { String s = stringValue(stack.pop()); stack.push(s.isEmpty() ? "" : s.substring(0, 1)); }
+                        case "last" -> { String s = stringValue(stack.pop()); stack.push(s.isEmpty() ? "" : s.substring(s.length() - 1)); }
+                        case "mid" -> { int len = toInt(stack.pop()); int start = toInt(stack.pop()); String s = stringValue(stack.pop()); stack.push(start >= 0 && start < s.length() ? s.substring(start, Math.min(start + len, s.length())) : ""); }
+                        case "ltrim" -> { stack.push(stringValue(stack.pop()).replaceAll("^\\s+", "")); }
+                        case "rtrim" -> { stack.push(stringValue(stack.pop()).replaceAll("\\s+$", "")); }
+                        case "initcap" -> { String s = stringValue(stack.pop()); stack.push(s.isEmpty() ? s : s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase()); }
+                        case "strrepeat" -> { int n = toInt(stack.pop()); String s = stringValue(stack.pop()); StringBuilder sb = new StringBuilder(); for (int k = 0; k < n && k < 1000; k++) sb.append(s); stack.push(sb.toString()); }
+                        case "strreverse" -> { stack.push(new StringBuilder(stringValue(stack.pop())).reverse().toString()); }
+                        case "ascii" -> { String s = stringValue(stack.pop()); stack.push(s.isEmpty() ? 0.0 : (double) s.charAt(0)); }
+                        case "chr" -> { stack.push(String.valueOf((char) toInt(stack.pop()))); }
+                        case "uuid" -> { stack.push(java.util.UUID.randomUUID().toString()); }
+                        case "dateadd" -> { int days = toInt(stack.pop()); java.util.Date d = new java.util.Date(); d.setTime(d.getTime() + (long) days * 86400000L); stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd").format(d)); }
+                        case "datediff" -> { long t2 = (long) toDouble(stack.pop()); long t1 = (long) toDouble(stack.pop()); stack.push((double) (t2 - t1) / 86400000L); }
+                        case "today" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date())); }
+                        case "time" -> { stack.push(new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date())); }
+                        case "timestamp" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
+                        case "area_m" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getArea() : 0.0); }
+                        case "length_m" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getLength() : 0.0); }
+                        case "buffer" -> { double dist = toDouble(stack.pop()); Geometry g = extractGeometry(feature); stack.push(g != null ? g.buffer(dist) : null); }
+                        case "simplify" -> { double tol = toDouble(stack.pop()); Geometry g = extractGeometry(feature); stack.push(g != null ? org.locationtech.jts.simplify.DouglasPeuckerSimplifier.simplify(g, tol) : null); }
+                        case "convex_hull" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.convexHull() : null); }
+                        case "envelope" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelope().toString() : ""); }
+                        case "num_rings" -> { Geometry g = extractGeometry(feature); if (g instanceof Polygon p) stack.push((double) (1 + p.getNumInteriorRing())); else stack.push(0.0); }
+                        case "exterior_ring" -> { Geometry g = extractGeometry(feature); if (g instanceof Polygon p) stack.push((double) p.getExteriorRing().getCoordinates().length); else stack.push(0.0); }
+                        case "interior_rings" -> { Geometry g = extractGeometry(feature); if (g instanceof Polygon p) stack.push((double) p.getNumInteriorRing()); else stack.push(0.0); }
 
-                        // === Date functions (new) ===
+                        // === Date functions (existing) ===
                         case "now" -> { stack.push(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date())); }
                         case "year" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)); }
                         case "month" -> { stack.push((double) java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1); }
