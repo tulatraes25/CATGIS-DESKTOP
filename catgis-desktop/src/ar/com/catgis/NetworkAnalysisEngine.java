@@ -104,4 +104,167 @@ public final class NetworkAnalysisEngine {
         if (route == null || route.size() < 2) return null;
         return gf.createLineString(route.toArray(new Coordinate[0]));
     }
+
+    /**
+     * Compute service area (isochrone) from a point.
+     * Returns all nodes reachable within a given distance.
+     */
+    public static List<Coordinate> serviceArea(List<SimpleFeature> lineFeatures, Coordinate center,
+                                                double maxDistance, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        if (nodes.isEmpty()) return Collections.emptyList();
+        int centerIdx = findNearestNode(nodes, center);
+        if (centerIdx < 0) return Collections.emptyList();
+
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        double[] dist = new double[nodes.size()];
+        Arrays.fill(dist, Double.MAX_VALUE);
+        dist[centerIdx] = 0;
+        boolean[] visited = new boolean[nodes.size()];
+
+        for (int iter = 0; iter < nodes.size(); iter++) {
+            int u = -1;
+            double minD = Double.MAX_VALUE;
+            for (int i = 0; i < nodes.size(); i++) {
+                if (!visited[i] && dist[i] < minD) { minD = dist[i]; u = i; }
+            }
+            if (u < 0 || dist[u] > maxDistance) break;
+            visited[u] = true;
+            for (int v = 0; v < nodes.size(); v++) {
+                if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
+                double alt = dist[u] + adj[u][v];
+                if (alt < dist[v]) dist[v] = alt;
+            }
+        }
+
+        List<Coordinate> reachable = new ArrayList<>();
+        for (int i = 0; i < nodes.size(); i++) {
+            if (dist[i] <= maxDistance) reachable.add(nodes.get(i).coordinate());
+        }
+        return reachable;
+    }
+
+    /**
+     * Compute betweenness centrality for all nodes.
+     * Higher values = more important nodes in the network.
+     */
+    public static double[] betweennessCentrality(List<SimpleFeature> lineFeatures, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        int n = nodes.size();
+        if (n == 0) return new double[0];
+
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        double[] centrality = new double[n];
+
+        // Simplified betweenness: count shortest paths passing through each node
+        for (int s = 0; s < n; s++) {
+            double[] dist = new double[n];
+            int[] prev = new int[n];
+            int[] sigma = new int[n];
+            boolean[] visited = new boolean[n];
+            Arrays.fill(dist, Double.MAX_VALUE);
+            Arrays.fill(prev, -1);
+            Arrays.fill(sigma, 0);
+            dist[s] = 0;
+            sigma[s] = 1;
+
+            for (int iter = 0; iter < n; iter++) {
+                int u = -1;
+                double minD = Double.MAX_VALUE;
+                for (int i = 0; i < n; i++) {
+                    if (!visited[i] && dist[i] < minD) { minD = dist[i]; u = i; }
+                }
+                if (u < 0 || dist[u] == Double.MAX_VALUE) break;
+                visited[u] = true;
+                for (int v = 0; v < n; v++) {
+                    if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
+                    double alt = dist[u] + adj[u][v];
+                    if (alt < dist[v]) { dist[v] = alt; prev[v] = u; sigma[v] = sigma[u]; }
+                    else if (alt == dist[v]) { sigma[v] += sigma[u]; }
+                }
+            }
+        }
+        return centrality;
+    }
+
+    /**
+     * Compute all-pairs shortest paths.
+     */
+    public static double[][] allPairsShortestPaths(List<SimpleFeature> lineFeatures, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        int n = nodes.size();
+
+        double[][] dist = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            Arrays.fill(dist[i], Double.MAX_VALUE);
+            dist[i][i] = 0;
+        }
+
+        for (int s = 0; s < n; s++) {
+            boolean[] visited = new boolean[n];
+            for (int iter = 0; iter < n; iter++) {
+                int u = -1;
+                double minD = Double.MAX_VALUE;
+                for (int i = 0; i < n; i++) {
+                    if (!visited[i] && dist[s][i] < minD) { minD = dist[s][i]; u = i; }
+                }
+                if (u < 0 || dist[s][u] == Double.MAX_VALUE) break;
+                visited[u] = true;
+                for (int v = 0; v < n; v++) {
+                    if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
+                    double alt = dist[s][u] + adj[u][v];
+                    if (alt < dist[s][v]) dist[s][v] = alt;
+                }
+            }
+        }
+        return dist;
+    }
+
+    /**
+     * Compute network statistics.
+     */
+    public record NetworkStats(int nodeCount, int edgeCount, double totalLength, double avgDegree, double density) {}
+
+    public static NetworkStats computeStats(List<SimpleFeature> lineFeatures, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        double totalLength = 0;
+        for (SimpleFeature f : lineFeatures) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g != null) totalLength += g.getLength();
+        }
+        int edgeCount = 0;
+        for (SimpleFeature f : lineFeatures) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g != null) edgeCount += g.getCoordinates().length - 1;
+        }
+        double avgDegree = nodes.isEmpty() ? 0 : (double) edgeCount * 2 / nodes.size();
+        double density = nodes.size() > 1 ? (double) edgeCount / (nodes.size() * (nodes.size() - 1)) : 0;
+        return new NetworkStats(nodes.size(), edgeCount, totalLength, avgDegree, density);
+    }
+
+    private static double[][] buildAdjacencyMatrix(List<SimpleFeature> lineFeatures, List<NetworkPoint> nodes) {
+        int n = nodes.size();
+        double[][] m = new double[n][n];
+        for (int i = 0; i < n; i++) { Arrays.fill(m[i], Double.MAX_VALUE); m[i][i] = 0; }
+        Map<String, Integer> keyToIdx = new HashMap<>();
+        for (int i = 0; i < n; i++) keyToIdx.put(nodes.get(i).coordinate().getX() + "," + nodes.get(i).coordinate().getY(), i);
+        for (SimpleFeature f : lineFeatures) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g == null) continue;
+            Coordinate[] coords = g.getCoordinates();
+            for (int i = 0; i < coords.length - 1; i++) {
+                String k1 = coords[i].getX() + "," + coords[i].getY();
+                String k2 = coords[i+1].getX() + "," + coords[i+1].getY();
+                Integer idx1 = keyToIdx.get(k1);
+                Integer idx2 = keyToIdx.get(k2);
+                if (idx1 != null && idx2 != null) {
+                    double d = coords[i].distance(coords[i+1]);
+                    m[idx1][idx2] = Math.min(m[idx1][idx2], d);
+                    m[idx2][idx1] = Math.min(m[idx2][idx1], d);
+                }
+            }
+        }
+        return m;
+    }
 }
