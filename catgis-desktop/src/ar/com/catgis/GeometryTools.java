@@ -287,4 +287,50 @@ public final class GeometryTools {
         }
         return minDist == Double.MAX_VALUE ? 0 : minDist;
     }
+
+    public static Geometry computeUnion(List<SimpleFeature> features) {
+        List<Geometry> geoms = new ArrayList<>();
+        for (SimpleFeature f : features) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g != null && !g.isEmpty()) geoms.add(g);
+        }
+        if (geoms.isEmpty()) return null;
+        GeometryFactory gf = new GeometryFactory();
+        return org.locationtech.jts.operation.union.UnaryUnionOp.union(geoms);
+    }
+
+    public static Geometry computeBuffer(Geometry geometry, double distance) {
+        if (geometry == null || geometry.isEmpty()) return null;
+        return geometry.buffer(distance);
+    }
+
+    public static Geometry computeSimplify(Geometry geometry, double tolerance) {
+        if (geometry == null || geometry.isEmpty()) return null;
+        return org.locationtech.jts.simplify.DouglasPeuckerSimplifier.simplify(geometry, tolerance);
+    }
+
+    public static Geometry computeCentroid(Geometry geometry) {
+        if (geometry == null || geometry.isEmpty()) return null;
+        return geometry.getCentroid();
+    }
+
+    public static double computeArea(Geometry geometry) {
+        return geometry != null ? geometry.getArea() : 0;
+    }
+
+    public static double computeLength(Geometry geometry) {
+        return geometry != null ? geometry.getLength() : 0;
+    }
+
+    public static String computeGeometryType(Geometry geometry) {
+        return geometry != null ? geometry.getGeometryType() : "Unknown";
+    }
+
+    public static int computeNumCoordinates(Geometry geometry) {
+        return geometry != null ? geometry.getCoordinates().length : 0;
+    }
+
+    public static boolean computeIsValid(Geometry geometry) {
+        return geometry != null && geometry.isValid();
+    }
 }
