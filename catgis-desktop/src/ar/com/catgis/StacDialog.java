@@ -221,8 +221,19 @@ public class StacDialog extends JDialog {
             if (CatgisDesktopApp.currentProject == null) return false;
             String projectCRS = CatgisDesktopApp.currentProject.getProjectCRS();
 
-            ar.com.catgis.data.raster.LocalRasterData rasterData =
-                    ar.com.catgis.RasterImageLoader.loadPreview(file, projectCRS, null);
+            // Ask user for resolution
+            String[] options = {"Preview (2048px, rapido)", "Full (8192px, lento)"};
+            int choice = JOptionPane.showOptionDialog(this,
+                    "Que resolucion queres para la capa cargada?",
+                    "Resolucion", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                    null, options, options[0]);
+
+            ar.com.catgis.data.raster.LocalRasterData rasterData;
+            if (choice == 1) {
+                rasterData = ar.com.catgis.RasterImageLoader.loadReal(file, projectCRS, null);
+            } else {
+                rasterData = ar.com.catgis.RasterImageLoader.loadPreview(file, projectCRS, null);
+            }
 
             RasterLayer layer = new RasterLayer(itemName, file.getAbsolutePath());
             layer.setVisible(true);
