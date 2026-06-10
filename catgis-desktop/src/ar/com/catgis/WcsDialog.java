@@ -182,8 +182,12 @@ public class WcsDialog extends JDialog {
                     get();
                     statusLabel.setText("Descargado: " + outputFile.getName());
                     statusLabel.setForeground(new Color(0, 128, 0));
+
+                    // Load as raster layer
+                    boolean loaded = loadAsRasterLayer(outputFile, coverage.name());
+
                     JOptionPane.showMessageDialog(WcsDialog.this,
-                            "Cobertura descargada exitosamente.\n\n"
+                            "Cobertura descargada" + (loaded ? " y agregada como capa" : "") + ".\n\n"
                                     + "Archivo: " + outputFile.getAbsolutePath()
                                     + "\nTamanio: " + (outputFile.length() / 1024) + " KB",
                             "Descarga completada", JOptionPane.INFORMATION_MESSAGE);
@@ -196,5 +200,36 @@ public class WcsDialog extends JDialog {
                 }
             }
         }.execute();
+    }
+
+    private boolean loadAsRasterLayer(File file, String coverageName) {
+        try {
+            if (CatgisDesktopApp.currentProject == null) return false;
+            String projectCRS = CatgisDesktopApp.currentProject.getProjectCRS();
+
+            // Load raster data
+            ar.com.catgis.data.raster.LocalRasterData rasterData =
+                    ar.com.catgis.RasterImageLoader.loadPreview(file, projectCRS, null);
+
+            // Create layer
+            RasterLayer layer = new RasterLayer(coverageName, file.getAbsolutePath());
+            layer.setVisible(true);
+            layer.setSourceName(coverageName);
+            layer.setFeatureCount(1);
+            layer.setSourceCRS(ar.com.catgis.data.raster.RasterCoverageSupport
+                    .resolveOperationalRasterCrs(rasterData, projectCRS));
+            layer.setRasterMode(rasterData.getRasterMode());
+
+            // Register in project and map
+            CatgisDesktopApp.currentProject.addLayer(layer);
+            CatgisDesktopApp.markProjectDirty();
+            CatgisDesktopApp.layersPanel.addLayer(layer);
+            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
+            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+            return true;
+        } catch (Exception e) {
+            CatgisLogger.warn("Failed to load WCS coverage as layer", e);
+            return false;
+        }
     }
 }

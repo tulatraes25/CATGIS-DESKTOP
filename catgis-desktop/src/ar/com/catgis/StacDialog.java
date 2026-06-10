@@ -200,8 +200,13 @@ public class StacDialog extends JDialog {
                     get();
                     statusLabel.setText("Descargado: " + outputFile.getName());
                     statusLabel.setForeground(new Color(0, 128, 0));
+
+                    // Load as raster layer
+                    boolean loaded = loadAsRasterLayer(outputFile, item.id());
+
                     JOptionPane.showMessageDialog(StacDialog.this,
-                            "Asset descargado:\n" + outputFile.getAbsolutePath(),
+                            "Asset descargado" + (loaded ? " y agregado como capa" : "") + ":\n"
+                                    + outputFile.getAbsolutePath(),
                             "Exito", JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) {
                     statusLabel.setText("Error: " + e.getMessage());
@@ -209,5 +214,33 @@ public class StacDialog extends JDialog {
                 }
             }
         }.execute();
+    }
+
+    private boolean loadAsRasterLayer(File file, String itemName) {
+        try {
+            if (CatgisDesktopApp.currentProject == null) return false;
+            String projectCRS = CatgisDesktopApp.currentProject.getProjectCRS();
+
+            ar.com.catgis.data.raster.LocalRasterData rasterData =
+                    ar.com.catgis.RasterImageLoader.loadPreview(file, projectCRS, null);
+
+            RasterLayer layer = new RasterLayer(itemName, file.getAbsolutePath());
+            layer.setVisible(true);
+            layer.setSourceName(itemName);
+            layer.setFeatureCount(1);
+            layer.setSourceCRS(ar.com.catgis.data.raster.RasterCoverageSupport
+                    .resolveOperationalRasterCrs(rasterData, projectCRS));
+            layer.setRasterMode(rasterData.getRasterMode());
+
+            CatgisDesktopApp.currentProject.addLayer(layer);
+            CatgisDesktopApp.markProjectDirty();
+            CatgisDesktopApp.layersPanel.addLayer(layer);
+            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
+            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+            return true;
+        } catch (Exception e) {
+            CatgisLogger.warn("Failed to load STAC asset as layer", e);
+            return false;
+        }
     }
 }
