@@ -1,25 +1,34 @@
 package ar.com.catgis;
 
+import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.feature.type.GeometryDescriptor;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Dialog for ML classification using Smile library.
- * Allows selecting features, algorithm, and viewing results.
+ * Dialog for ML classification using real vector layer attributes.
+ * Reads numeric fields from selected layer, trains classifier, shows results.
  */
 public class SmileClassificationDialog extends JDialog {
 
-    private final JComboBox<String> algorithmCombo;
+    private final JComboBox<String> layerCombo;
     private final JComboBox<String> featureFieldCombo;
     private final JComboBox<String> labelFieldCombo;
+    private final JComboBox<String> algorithmCombo;
     private final JSlider trainTestSlider;
     private final JTextArea resultArea;
     private final JLabel statusLabel;
 
     public SmileClassificationDialog() {
-        super((Frame) null, "Clasificacion ML - Smile", false);
-        setSize(650, 500);
+        super((Frame) null, "Clasificacion ML", false);
+        setSize(650, 550);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(8, 8));
 
@@ -29,8 +38,6 @@ public class SmileClassificationDialog extends JDialog {
         JLabel title = new JLabel("Clasificacion por Machine Learning");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
         header.add(title, BorderLayout.NORTH);
-        JLabel subtitle = new JLabel("Selecciona atributos y algoritmo para clasificar features");
-        header.add(subtitle, BorderLayout.CENTER);
         add(header, BorderLayout.NORTH);
 
         // Form
@@ -41,10 +48,33 @@ public class SmileClassificationDialog extends JDialog {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Algorithm
+        // Layer
         gbc.gridy = 0; gbc.gridx = 0; gbc.weightx = 0;
-        form.add(new JLabel("Algoritmo:"), gbc);
+        form.add(new JLabel("Capa:"), gbc);
         gbc.gridx = 1; gbc.weightx = 1.0;
+        layerCombo = new JComboBox<>();
+        refreshLayers();
+        layerCombo.addActionListener(e -> refreshFields());
+        form.add(layerCombo, gbc);
+
+        // Feature field
+        gbc.gridy = 1; gbc.gridx = 0;
+        form.add(new JLabel("Campo features:"), gbc);
+        gbc.gridx = 1;
+        featureFieldCombo = new JComboBox<>();
+        form.add(featureFieldCombo, gbc);
+
+        // Label field
+        gbc.gridy = 2; gbc.gridx = 0;
+        form.add(new JLabel("Campo clase:"), gbc);
+        gbc.gridx = 1;
+        labelFieldCombo = new JComboBox<>();
+        form.add(labelFieldCombo, gbc);
+
+        // Algorithm
+        gbc.gridy = 3; gbc.gridx = 0;
+        form.add(new JLabel("Algoritmo:"), gbc);
+        gbc.gridx = 1;
         String[] algos = new String[SmileClassifierService.Algorithm.values().length];
         for (int i = 0; i < algos.length; i++) {
             algos[i] = SmileClassifierService.Algorithm.values()[i].displayName();
@@ -52,23 +82,9 @@ public class SmileClassificationDialog extends JDialog {
         algorithmCombo = new JComboBox<>(algos);
         form.add(algorithmCombo, gbc);
 
-        // Feature field
-        gbc.gridy = 1; gbc.gridx = 0;
-        form.add(new JLabel("Campo features:"), gbc);
-        gbc.gridx = 1;
-        featureFieldCombo = new JComboBox<>(new String[]{"(Selecciona capa primero)"});
-        form.add(featureFieldCombo, gbc);
-
-        // Label field
-        gbc.gridy = 2; gbc.gridx = 0;
-        form.add(new JLabel("Campo clase:"), gbc);
-        gbc.gridx = 1;
-        labelFieldCombo = new JComboBox<>(new String[]{"(Selecciona capa primero)"});
-        form.add(labelFieldCombo, gbc);
-
         // Train/test split
-        gbc.gridy = 3; gbc.gridx = 0;
-        form.add(new JLabel("Train/Test split:"), gbc);
+        gbc.gridy = 4; gbc.gridx = 0;
+        form.add(new JLabel("Train/Test:"), gbc);
         gbc.gridx = 1;
         trainTestSlider = new JSlider(50, 90, 80);
         trainTestSlider.setMajorTickSpacing(10);
@@ -93,13 +109,56 @@ public class SmileClassificationDialog extends JDialog {
         closeButton.addActionListener(e -> dispose());
         footer.add(runButton);
         footer.add(closeButton);
-        statusLabel = new JLabel("Selecciona un algoritmo y campos.");
+        statusLabel = new JLabel("Selecciona una capa y campos.");
         footer.add(statusLabel);
         add(footer, BorderLayout.SOUTH);
     }
 
     public static void open() {
         SwingUtilities.invokeLater(() -> new SmileClassificationDialog().setVisible(true));
+    }
+
+    private void refreshLayers() {
+        layerCombo.removeAllItems();
+        if (CatgisDesktopApp.mapPanel == null) return;
+        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+            ShapefileData data = ar.com.catgis.data.vector.VectorLayerUtils.ensureVectorData(layer);
+            if (data != null && data.getFeatures() != null && !data.getFeatures().isEmpty()) {
+                layerCombo.addItem(layer.getName());
+            }
+        }
+    }
+
+    private void refreshFields() {
+        featureFieldCombo.removeAllItems();
+        labelFieldCombo.removeAllItems();
+        String layerName = (String) layerCombo.getSelectedItem();
+        if (layerName == null) return;
+
+        Layer targetLayer = findLayer(layerName);
+        if (targetLayer == null) return;
+
+        ShapefileData data = ar.com.catgis.data.vector.VectorLayerUtils.ensureVectorData(targetLayer);
+        if (data == null || data.getSchema() == null) return;
+
+        for (AttributeDescriptor desc : data.getSchema().getAttributeDescriptors()) {
+            if (desc instanceof GeometryDescriptor) continue;
+            Class<?> binding = desc.getType().getBinding();
+            if (binding != null && (Number.class.isAssignableFrom(binding)
+                    || int.class.equals(binding) || double.class.equals(binding)
+                    || float.class.equals(binding) || long.class.equals(binding))) {
+                featureFieldCombo.addItem(desc.getLocalName());
+                labelFieldCombo.addItem(desc.getLocalName());
+            }
+        }
+    }
+
+    private Layer findLayer(String name) {
+        if (CatgisDesktopApp.mapPanel == null) return null;
+        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+            if (layer.getName().equals(name)) return layer;
+        }
+        return null;
     }
 
     private void runClassification() {
@@ -109,23 +168,71 @@ public class SmileClassificationDialog extends JDialog {
             return;
         }
 
-        SmileClassifierService.Algorithm algorithm =
-                SmileClassifierService.Algorithm.values()[algoIdx];
+        String layerName = (String) layerCombo.getSelectedItem();
+        String featureField = (String) featureFieldCombo.getSelectedItem();
+        String labelField = (String) labelFieldCombo.getSelectedItem();
 
-        // Generate synthetic data for demo (in production, read from raster/layer)
-        int n = 1000;
-        int numFeatures = 4;
-        double[][] features = new double[n][numFeatures];
-        int[] labels = new int[n];
-        java.util.Random rng = new java.util.Random(42);
-
-        for (int i = 0; i < n; i++) {
-            int label = rng.nextInt(3);
-            labels[i] = label;
-            for (int j = 0; j < numFeatures; j++) {
-                features[i][j] = label * 10 + rng.nextGaussian() * 3;
-            }
+        if (layerName == null || featureField == null || labelField == null) {
+            JOptionPane.showMessageDialog(this, "Selecciona capa y campos.");
+            return;
         }
+
+        if (featureField.equals(labelField)) {
+            JOptionPane.showMessageDialog(this, "El campo de features y el campo de clase deben ser diferentes.");
+            return;
+        }
+
+        Layer targetLayer = findLayer(layerName);
+        if (targetLayer == null) return;
+
+        ShapefileData data = ar.com.catgis.data.vector.VectorLayerUtils.ensureVectorData(targetLayer);
+        if (data == null || data.getFeatures() == null) return;
+
+        SmileClassifierService.Algorithm algorithm = SmileClassifierService.Algorithm.values()[algoIdx];
+
+        // Extract real data from features
+        List<SimpleFeature> features = new ArrayList<>(data.getFeatures());
+        double[][] featureMatrix = new double[features.size()][1];
+        int[] labels = new int[features.size()];
+        int validCount = 0;
+
+        for (int i = 0; i < features.size(); i++) {
+            SimpleFeature f = features.get(i);
+            Object featureVal = f.getAttribute(featureField);
+            Object labelVal = f.getAttribute(labelField);
+
+            if (featureVal == null || labelVal == null) continue;
+
+            double fv;
+            try { fv = Double.parseDouble(String.valueOf(featureVal)); }
+            catch (NumberFormatException e) { continue; }
+
+            int lv;
+            try { lv = Integer.parseInt(String.valueOf(labelVal)); }
+            catch (NumberFormatException e) {
+                // Try to map string labels to integers
+                lv = labelVal.hashCode() % 10;
+                if (lv < 0) lv = -lv;
+            }
+
+            featureMatrix[validCount] = new double[]{fv};
+            labels[validCount] = lv;
+            validCount++;
+        }
+
+        if (validCount < 10) {
+            JOptionPane.showMessageDialog(this,
+                    "Solo se pudieron extraer " + validCount + " muestras validas. Se necesitan al menos 10.",
+                    "Datos insuficientes", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Trim arrays
+        int finalValidCount = validCount;
+        double[][] finalFeatures = new double[validCount][1];
+        int[] finalLabels = new int[validCount];
+        System.arraycopy(featureMatrix, 0, finalFeatures, 0, validCount);
+        System.arraycopy(labels, 0, finalLabels, 0, validCount);
 
         statusLabel.setText("Entrenando " + algorithm.displayName() + "...");
         statusLabel.setForeground(Color.BLUE);
@@ -134,7 +241,7 @@ public class SmileClassificationDialog extends JDialog {
             @Override
             protected SmileClassifierService.ClassificationResult doInBackground() {
                 double ratio = trainTestSlider.getValue() / 100.0;
-                return SmileClassifierService.classify(features, labels, algorithm, ratio);
+                return SmileClassifierService.classify(finalFeatures, finalLabels, algorithm, ratio);
             }
 
             @Override
@@ -142,6 +249,11 @@ public class SmileClassificationDialog extends JDialog {
                 try {
                     SmileClassifierService.ClassificationResult result = get();
                     resultArea.setText("=== Resultados de Clasificacion ===\n\n");
+                    resultArea.append("Capa: " + layerName + "\n");
+                    resultArea.append("Muestras totales: " + features.size() + "\n");
+                    resultArea.append("Muestras validas: " + finalValidCount + "\n");
+                    resultArea.append("Campo features: " + featureField + "\n");
+                    resultArea.append("Campo clase: " + labelField + "\n");
                     resultArea.append("Algoritmo: " + result.algorithmUsed() + "\n");
                     resultArea.append("Tiempo entrenamiento: " + result.trainingTimeMs() + " ms\n");
                     resultArea.append("Tiempo prediccion: " + result.predictionTimeMs() + " ms\n");
@@ -149,7 +261,9 @@ public class SmileClassificationDialog extends JDialog {
                     resultArea.append("Correctas: " + result.correctCount() + "\n");
                     resultArea.append(String.format("Accuracy: %.2f%%\n", result.accuracy()));
                     resultArea.append("\nDistribucion de predicciones:\n");
-                    int[] counts = new int[5];
+                    int maxLabel = 0;
+                    for (int l : finalLabels) if (l > maxLabel) maxLabel = l;
+                    int[] counts = new int[maxLabel + 1];
                     for (int p : result.predictions()) {
                         if (p >= 0 && p < counts.length) counts[p]++;
                     }
@@ -157,9 +271,8 @@ public class SmileClassificationDialog extends JDialog {
                         resultArea.append("  Clase " + i + ": " + counts[i] + " muestras\n");
                     }
 
-                    statusLabel.setText("Clasificacion completada. Accuracy: " +
-                            String.format("%.2f%%", result.accuracy()));
-                    statusLabel.setForeground(result.accuracy() > 80 ? new Color(0, 128, 0) : Color.ORANGE);
+                    statusLabel.setText("Completado. Accuracy: " + String.format("%.2f%%", result.accuracy()));
+                    statusLabel.setForeground(result.accuracy() > 70 ? new Color(0, 128, 0) : Color.ORANGE);
                 } catch (Exception e) {
                     statusLabel.setText("Error: " + e.getMessage());
                     statusLabel.setForeground(Color.RED);
