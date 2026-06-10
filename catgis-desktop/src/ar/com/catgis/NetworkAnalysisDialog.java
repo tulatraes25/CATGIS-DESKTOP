@@ -54,6 +54,8 @@ public class NetworkAnalysisDialog extends JDialog {
                 "Ruta mas corta",
                 "Matriz de costos",
                 "Area de servicio",
+                "Centralidad (betweenness)",
+                "Todos los pares mas cortos",
                 "Estadisticas de red"
         });
         operationCombo.addActionListener(e -> refreshUi());
@@ -186,6 +188,8 @@ public class NetworkAnalysisDialog extends JDialog {
                     case "Ruta mas corta" -> computeShortestPath(features, startX, startY, endX, endY);
                     case "Matriz de costos" -> computeCostMatrix(features, startX, startY);
                     case "Area de servicio" -> computeServiceArea(features, startX, startY);
+                    case "Centralidad (betweenness)" -> computeCentrality(features);
+                    case "Todos los pares mas cortos" -> computeAllPairs(features);
                     case "Estadisticas de red" -> computeStats(features);
                     default -> "Operacion no soportada.";
                 };
@@ -278,6 +282,55 @@ public class NetworkAnalysisDialog extends JDialog {
         sb.append("Longitud total: ").append(String.format("%.2f", stats.totalLength())).append(" unidades\n");
         sb.append("Grado promedio: ").append(String.format("%.2f", stats.avgDegree())).append("\n");
         sb.append("Densidad: ").append(String.format("%.4f", stats.density())).append("\n");
+        return sb.toString();
+    }
+
+    private String computeCentrality(List<org.geotools.api.feature.simple.SimpleFeature> features) {
+        double[] centrality = NetworkAnalysisEngine.betweennessCentrality(features, 10);
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Centralidad (Betweenness) ===\n\n");
+        sb.append("Nodos: ").append(centrality.length).append("\n\n");
+        if (centrality.length == 0) {
+            sb.append("No hay nodos en la red.\n");
+        } else {
+            // Find top 10 most central nodes
+            Integer[] sorted = new Integer[centrality.length];
+            for (int i = 0; i < sorted.length; i++) sorted[i] = i;
+            java.util.Arrays.sort(sorted, (a, b) -> Double.compare(centrality[b], centrality[a]));
+
+            int showCount = Math.min(10, sorted.length);
+            sb.append("Top ").append(showCount).append(" nodos mas centrales:\n");
+            sb.append(String.format("%-6s %-12s\n", "Nodo", "Centralidad"));
+            for (int i = 0; i < showCount; i++) {
+                sb.append(String.format("%-6d %-12.6f\n", sorted[i] + 1, centrality[sorted[i]]));
+            }
+        }
+        return sb.toString();
+    }
+
+    private String computeAllPairs(List<org.geotools.api.feature.simple.SimpleFeature> features) {
+        double[][] matrix = NetworkAnalysisEngine.allPairsShortestPaths(features, 10);
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== Todos los Pares Mas Cortos ===\n\n");
+        sb.append("Nodos: ").append(matrix.length).append("\n\n");
+
+        // Show matrix (limited to 20x20)
+        int show = Math.min(20, matrix.length);
+        sb.append(String.format("%-6s", ""));
+        for (int j = 0; j < show; j++) sb.append(String.format("%-8s", String.valueOf(j + 1)));
+        if (matrix.length > show) sb.append("...");
+        sb.append("\n");
+
+        for (int i = 0; i < show; i++) {
+            sb.append(String.format("%-6s", String.valueOf(i + 1)));
+            for (int j = 0; j < show; j++) {
+                if (matrix[i][j] == Double.MAX_VALUE) sb.append(String.format("%-8s", "INF"));
+                else sb.append(String.format("%-8.1f", matrix[i][j]));
+            }
+            sb.append("\n");
+        }
+        if (matrix.length > show) sb.append("... (").append(matrix.length - show).append(" nodos mas)\n");
+
         return sb.toString();
     }
 
