@@ -3487,66 +3487,7 @@ public class MapPanel extends JPanel {
     }
 
     private BufferedImage buildDisplayImage(LocalRasterData data, RasterStyle style) {
-        BufferedImage src = data.getImage();
-        if (src == null) {
-            return null;
-        }
-
-        int width = src.getWidth();
-        int height = src.getHeight();
-        BufferedImage out = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-
-        int bands = Math.min(Math.max(1, data.getBandCount()), Math.max(1, src.getRaster().getNumBands()));
-        int[] mins = new int[bands];
-        int[] maxs = new int[bands];
-        for (int i = 0; i < bands; i++) {
-            mins[i] = Integer.MAX_VALUE;
-            maxs[i] = Integer.MIN_VALUE;
-        }
-
-        if (style.autoContrast) {
-            for (int y = 0; y < height; y++) {
-                for (int x = 0; x < width; x++) {
-                    for (int b = 0; b < bands; b++) {
-                        int sample = src.getRaster().getSample(x, y, b);
-                        if (sample < mins[b]) mins[b] = sample;
-                        if (sample > maxs[b]) maxs[b] = sample;
-                    }
-                }
-            }
-            for (int b = 0; b < bands; b++) {
-                if (mins[b] == Integer.MAX_VALUE) mins[b] = 0;
-                if (maxs[b] <= mins[b]) maxs[b] = mins[b] + 1;
-            }
-        } else {
-            for (int b = 0; b < bands; b++) { mins[b] = 0; maxs[b] = 255; }
-        }
-
-        int rb = Math.min(style.redBand, bands - 1);
-        int gb = Math.min(style.greenBand, bands - 1);
-        int bb = Math.min(style.blueBand, bands - 1);
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int r, g, b;
-                if (bands == 1) {
-                    int v = src.getRaster().getSample(x, y, 0);
-                    int vv = scaleSample(v, mins[0], maxs[0], style.autoContrast);
-                    r = g = b = vv;
-                } else {
-                    r = scaleSample(src.getRaster().getSample(x, y, rb), mins[rb], maxs[rb], style.autoContrast);
-                    g = scaleSample(src.getRaster().getSample(x, y, gb), mins[gb], maxs[gb], style.autoContrast);
-                    b = scaleSample(src.getRaster().getSample(x, y, bb), mins[bb], maxs[bb], style.autoContrast);
-                }
-                if (style.grayscale) {
-                    int gray = (r + g + b) / 3;
-                    r = g = b = gray;
-                }
-                int argb = (255 << 24) | (r << 16) | (g << 8) | b;
-                out.setRGB(x, y, argb);
-            }
-        }
-        return out;
+        return MapRenderingPipeline.buildDisplayImage(data, style);
     }
 
     BufferedImage getCachedDisplayImage(Layer layer, LocalRasterData data, RasterStyle style) {
@@ -3572,14 +3513,7 @@ public class MapPanel extends JPanel {
     }
 
     private int scaleSample(int value, int min, int max, boolean auto) {
-        if (!auto) {
-            return Math.max(0, Math.min(255, value));
-        }
-        if (max <= min) {
-            return 0;
-        }
-        double scaled = (value - min) * 255.0 / (max - min);
-        return (int) Math.max(0, Math.min(255, Math.round(scaled)));
+        return MapRenderingPipeline.scaleSample(value, min, max, auto);
     }
 
     Envelope getRasterEnvelope(Layer layer, LocalRasterData data) {
@@ -3812,20 +3746,7 @@ public class MapPanel extends JPanel {
     // moved to LayerRenderHelper for shared use
 
     private Path2D buildStarPath(double centerX, double centerY, double outerRadius, double innerRadius) {
-        Path2D path = new Path2D.Double();
-        for (int i = 0; i < 10; i++) {
-            double radius = i % 2 == 0 ? outerRadius : innerRadius;
-            double angle = Math.toRadians(-90 + (i * 36));
-            double x = centerX + Math.cos(angle) * radius;
-            double y = centerY + Math.sin(angle) * radius;
-            if (i == 0) {
-                path.moveTo(x, y);
-            } else {
-                path.lineTo(x, y);
-            }
-        }
-        path.closePath();
-        return path;
+        return MapRenderingPipeline.buildStarPath(centerX, centerY, outerRadius, innerRadius);
     }
 
     void drawPoint(Graphics2D g2, Point point, Color color, int size) {
