@@ -52,10 +52,11 @@ public final class HexagonalGrid {
                 if (g == null) continue;
                 Point p = g instanceof Point ? (Point) g : g.getCentroid();
 
-                int col = (int) Math.round((p.getX() - startX) / hexWidth);
-                int row = (int) Math.round((p.getY() - startY) / hexHeight);
-                if (col % 2 != 0 && row % 2 == 0) row--;
-                if (col % 2 == 0 && row % 2 != 0) row--;
+                // Simple grid-based assignment (no complex hex offset logic)
+                int col = (int) Math.floor((p.getX() - startX) / hexWidth);
+                int row = (int) Math.floor((p.getY() - startY) / hexHeight);
+                col = Math.max(0, Math.min(col, cols - 1));
+                row = Math.max(0, Math.min(row, rows - 1));
 
                 String key = row + "," + col;
                 countMap.merge(key, 1, Integer::sum);

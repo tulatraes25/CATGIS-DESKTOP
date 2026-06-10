@@ -64,6 +64,13 @@ public final class SpatialUtils {
 
         if (kept.size() < 3) return gf.createPolygon(hullCoords);
         Coordinate[] result = kept.toArray(new Coordinate[0]);
+        // Ensure the ring is closed
+        if (result.length > 0 && !result[0].equals(result[result.length - 1])) {
+            Coordinate[] closed = new Coordinate[result.length + 1];
+            System.arraycopy(result, 0, closed, 0, result.length);
+            closed[result.length] = new Coordinate(result[0].x, result[0].y);
+            result = closed;
+        }
         return gf.createPolygon(result);
     }
 
