@@ -192,6 +192,23 @@ public class SmileClassificationDialog extends JDialog {
 
         // Extract real data from features
         List<SimpleFeature> features = new ArrayList<>(data.getFeatures());
+
+        // First pass: enumerate unique string labels to consecutive integers
+        java.util.Map<String, Integer> labelMap = new java.util.LinkedHashMap<>();
+        int nextLabel = 0;
+        for (SimpleFeature f : features) {
+            Object labelVal = f.getAttribute(labelField);
+            if (labelVal == null) continue;
+            String labelStr = String.valueOf(labelVal).trim();
+            if (!labelMap.containsKey(labelStr)) {
+                labelMap.put(labelStr, nextLabel++);
+            }
+        }
+        if (labelMap.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No se encontraron valores validos en el campo de clase.");
+            return;
+        }
+
         double[][] featureMatrix = new double[features.size()][1];
         int[] labels = new int[features.size()];
         int validCount = 0;
@@ -208,11 +225,11 @@ public class SmileClassificationDialog extends JDialog {
             catch (NumberFormatException e) { continue; }
 
             int lv;
-            try { lv = Integer.parseInt(String.valueOf(labelVal)); }
-            catch (NumberFormatException e) {
-                // Try to map string labels to integers
-                lv = labelVal.hashCode() % 10;
-                if (lv < 0) lv = -lv;
+            String labelStr = String.valueOf(labelVal).trim();
+            if (labelMap.containsKey(labelStr)) {
+                lv = labelMap.get(labelStr);
+            } else {
+                continue; // Skip unknown labels
             }
 
             featureMatrix[validCount] = new double[]{fv};

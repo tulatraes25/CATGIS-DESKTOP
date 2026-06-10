@@ -117,14 +117,24 @@ public class TemporalController extends JPanel {
     }
 
     /**
-     * Apply visibility: show only the layer for current step, hide others.
+     * Apply visibility: show only the layer for current step among temporal layers.
+     * Non-temporal layers are left untouched.
      */
     private void applyVisibility() {
         if (CatgisDesktopApp.mapPanel == null || steps.isEmpty()) return;
         TemporalStep step = steps.get(currentStep);
         if (step == null) return;
 
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        // Collect the set of layers that are part of this temporal sequence
+        java.util.Set<Layer> temporalLayers = new java.util.HashSet<>();
+        for (TemporalStep s : steps) {
+            if (s.layerIndex() >= 0 && s.layerIndex() < CatgisDesktopApp.mapPanel.getRenderOrderLayers().size()) {
+                temporalLayers.add(CatgisDesktopApp.mapPanel.getRenderOrderLayers().get(s.layerIndex()));
+            }
+        }
+
+        // Only modify visibility for temporal layers; leave others untouched
+        for (Layer layer : temporalLayers) {
             boolean visible = false;
             for (TemporalStep s : steps) {
                 if (s.layerIndex() >= 0 && s.layerIndex() < CatgisDesktopApp.mapPanel.getRenderOrderLayers().size()) {
