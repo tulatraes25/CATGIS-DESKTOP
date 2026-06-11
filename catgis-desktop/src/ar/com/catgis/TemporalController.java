@@ -90,6 +90,7 @@ public class TemporalController extends JPanel {
         this.timeChangeListener = listener;
     }
 
+    public JSlider getTimeSlider() { return timeSlider; }
     public int getCurrentStepIndex() { return currentStep; }
     public TemporalStep getCurrentStep() {
         if (currentStep >= 0 && currentStep < steps.size()) return steps.get(currentStep);

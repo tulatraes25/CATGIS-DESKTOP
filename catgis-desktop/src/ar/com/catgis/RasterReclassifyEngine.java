@@ -13,7 +13,7 @@ public final class RasterReclassifyEngine {
         if (source == null || rules == null || rules.isEmpty()) return source;
         int w = source.getWidth();
         int h = source.getHeight();
-        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
         Raster raster = source.getRaster();
         WritableRaster out = result.getRaster();
         double[] pixel = new double[raster.getNumBands()];
@@ -35,7 +35,7 @@ public final class RasterReclassifyEngine {
                     }
                     if (!matched) outPixel[0] = noDataValue;
                 }
-                out.setPixel(x, y, outPixel);
+                out.setSample(x, y, 0, outPixel[0]);
             }
         }
         return result;

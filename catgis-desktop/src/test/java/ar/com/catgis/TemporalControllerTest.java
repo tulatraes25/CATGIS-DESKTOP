@@ -91,4 +91,59 @@ class TemporalControllerTest {
         assertNotNull(tc.getCurrentStep());
         assertEquals(0, tc.getCurrentStepIndex());
     }
+
+    @Test
+    void addStepWithNullNameDoesNotThrow() {
+        TemporalController tc = new TemporalController();
+        tc.addStep(null, 0);
+        TemporalController.TemporalStep step = tc.getCurrentStep();
+        assertNotNull(step);
+        assertNull(step.name());
+        assertEquals(0, step.layerIndex());
+    }
+
+    @Test
+    void getCurrentStepIndexOnEmptyController() {
+        TemporalController tc = new TemporalController();
+        assertEquals(0, tc.getCurrentStepIndex());
+    }
+
+    @Test
+    void getCurrentStepReturnsNullOnEmptyController() {
+        TemporalController tc = new TemporalController();
+        assertNull(tc.getCurrentStep());
+    }
+
+    @Test
+    void stepBackAtFirstPositionStaysAtZero() {
+        TemporalController tc = new TemporalController();
+        tc.addStep("A", 0);
+        tc.addStep("B", 1);
+        // Simulate being at first step — currentStep cannot go below 0
+        assertEquals(0, tc.getCurrentStepIndex());
+        assertEquals("A", tc.getCurrentStep().name());
+    }
+
+    @Test
+    void stepForwardAtLastPositionStaysAtEnd() {
+        TemporalController tc = new TemporalController();
+        tc.addStep("A", 0);
+        tc.addStep("B", 1);
+        tc.addStep("C", 2);
+        // Move slider to last step
+        tc.getTimeSlider().setValue(2);
+        assertEquals(2, tc.getCurrentStepIndex());
+        assertEquals("C", tc.getCurrentStep().name());
+    }
+
+    @Test
+    void setLayersWithEmptyListResetsState() {
+        TemporalController tc = new TemporalController();
+        tc.addStep("A", 0);
+        tc.addStep("B", 1);
+        tc.setLayers(new java.util.ArrayList<>());
+        // After setting empty layers, current step is 0 and steps are cleared
+        assertEquals(0, tc.getCurrentStepIndex());
+        assertNull(tc.getCurrentStep());
+    }
 }

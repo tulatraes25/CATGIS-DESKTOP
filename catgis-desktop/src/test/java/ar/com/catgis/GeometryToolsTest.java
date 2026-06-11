@@ -65,6 +65,8 @@ class GeometryToolsTest {
         List<SimpleFeature> points = createPoints();
         Geometry buffer = GeometryTools.computeBuffer(points, 1.0);
         assertNotNull(buffer);
+        assertTrue(buffer.getArea() > 0, "Buffer should have positive area");
+        assertTrue(buffer.getNumGeometries() > 0, "Buffer should have geometries");
     }
 
     @Test
@@ -85,6 +87,9 @@ class GeometryToolsTest {
         LineString line = GF.createLineString(coords);
         Geometry smoothed = GeometryTools.smooth(line, 1.0);
         assertNotNull(smoothed);
+        assertTrue(smoothed instanceof LineString, "Smoothed line should remain a LineString");
+        assertTrue(smoothed.getCoordinates().length >= coords.length,
+                "Smoothing should not reduce coordinate count below original");
     }
 
     @Test

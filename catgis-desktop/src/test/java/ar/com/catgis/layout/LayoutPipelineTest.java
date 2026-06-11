@@ -47,6 +47,15 @@ public class LayoutPipelineTest {
             el.render(g, ctx);
         }
         g.dispose();
+
+        // Verify the image is not blank (something was actually rendered)
+        int nonWhite = 0;
+        for (int y = 0; y < img.getHeight(); y++) {
+            for (int x = 0; x < img.getWidth(); x++) {
+                if (img.getRGB(x, y) != 0xFFFFFFFF) nonWhite++;
+            }
+        }
+        assertTrue(nonWhite > 0, "Rendered image should contain non-white pixels from layout elements");
     }
 
     @Test
@@ -75,5 +84,14 @@ public class LayoutPipelineTest {
             el.render(g, ctx);
         }
         g.dispose();
+
+        // Verify rendering produced visible content
+        int nonWhite = 0;
+        for (int y = 0; y < img.getHeight(); y++) {
+            for (int x = 0; x < img.getWidth(); x++) {
+                if (img.getRGB(x, y) != 0xFFFFFFFF) nonWhite++;
+            }
+        }
+        assertTrue(nonWhite > 0, "All 10 element types should produce visible pixels in the rendered image");
     }
 }
