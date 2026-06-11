@@ -81,15 +81,6 @@ public final class NetworkAnalysisEngine {
         return sx + "," + sy;
     }
 
-    private static double[][] buildAdjacencyMatrix(List<NetworkPoint> nodes) {
-        int n = nodes.size();
-        double[][] m = new double[n][n];
-        for (int i = 0; i < n; i++) { Arrays.fill(m[i], Double.MAX_VALUE); m[i][i] = 0; }
-        Map<String, Integer> keyToIdx = new HashMap<>();
-        for (int i = 0; i < n; i++) keyToIdx.put(nodes.get(i).coordinate().getX() + "," + nodes.get(i).coordinate().getY(), i);
-        return m;
-    }
-
     private static int findNearestNode(List<NetworkPoint> nodes, Coordinate target) {
         int best = -1;
         double bestDist = Double.MAX_VALUE;

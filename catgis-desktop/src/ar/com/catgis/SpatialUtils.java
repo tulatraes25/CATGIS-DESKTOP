@@ -5,7 +5,6 @@ import org.locationtech.jts.geom.*;
 import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 import org.locationtech.jts.triangulate.DelaunayTriangulationBuilder;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**
@@ -39,7 +38,15 @@ public final class SpatialUtils {
         });
         GeometryFactory gf = new GeometryFactory();
         Coordinate[] hullCoords = coords.toArray(new Coordinate[0]);
-        if (alpha <= 0) return gf.createPolygon(hullCoords);
+        if (alpha <= 0) {
+            if (hullCoords.length > 0 && !hullCoords[0].equals(hullCoords[hullCoords.length - 1])) {
+                Coordinate[] closed = new Coordinate[hullCoords.length + 1];
+                System.arraycopy(hullCoords, 0, closed, 0, hullCoords.length);
+                closed[hullCoords.length] = new Coordinate(hullCoords[0].x, hullCoords[0].y);
+                hullCoords = closed;
+            }
+            return gf.createPolygon(hullCoords);
+        }
         List<Coordinate> kept = new ArrayList<>();
         for (int i = 0; i < hullCoords.length; i++) {
             int next = (i + 1) % hullCoords.length;

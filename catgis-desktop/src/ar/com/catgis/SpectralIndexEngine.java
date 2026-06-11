@@ -115,13 +115,13 @@ public final class SpectralIndexEngine {
                 yield denom == 0 ? 0 : ((a - b) / denom) * 1.5;
             }
             case "EVI" -> {
-                double denom = a + 6 * b - 7.5 * b + 1;
-                yield denom == 0 ? 0 : 2.5 * (a - b) / denom;
+                double denom = a + 6 * b + 1;
+                yield denom == 0 ? 0 : Math.min(1, Math.max(-1, 2.5 * (a - b) / denom));
             }
             case "BSI" -> {
-                double num = (a + b) - (a + b);
-                double denom = (a + b) + (a + b);
-                yield denom == 0 ? 0 : num / denom;
+                double num = a - b;
+                double denom = a + b;
+                yield denom == 0 ? 0 : Math.min(1, Math.max(-1, num / denom));
             }
             case "MSAVI2" -> {
                 double inner = (2 * a + 1) * (2 * a + 1) - 8 * (a - b);
