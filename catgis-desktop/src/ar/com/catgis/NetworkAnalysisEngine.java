@@ -106,6 +106,88 @@ public final class NetworkAnalysisEngine {
     }
 
     /**
+     * Find the closest node to a given point.
+     */
+    public static int findClosestNode(List<SimpleFeature> lineFeatures, Coordinate point, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        return findNearestNode(nodes, point);
+    }
+
+    /**
+     * Find the K nearest nodes to a given point.
+     */
+    public static List<Integer> findKNearestNodes(List<SimpleFeature> lineFeatures, Coordinate point, int k, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        List<Integer> nearest = new ArrayList<>();
+        for (int i = 0; i < Math.min(k, nodes.size()); i++) {
+            double minDist = Double.MAX_VALUE;
+            int minIdx = -1;
+            for (int j = 0; j < nodes.size(); j++) {
+                if (nearest.contains(j)) continue;
+                double d = nodes.get(j).coordinate().distance(point);
+                if (d < minDist) { minDist = d; minIdx = j; }
+            }
+            if (minIdx >= 0) nearest.add(minIdx);
+        }
+        return nearest;
+    }
+
+    /**
+     * Compute nearest facility for multiple destinations.
+     * Returns the nearest node index for each destination.
+     */
+    public static List<Integer> nearestFacility(List<SimpleFeature> lineFeatures,
+                                                 List<Coordinate> facilities,
+                                                 double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        List<Integer> nearestNodes = new ArrayList<>();
+
+        for (Coordinate facility : facilities) {
+            int facilityNode = findNearestNode(nodes, facility);
+            if (facilityNode < 0) { nearestNodes.add(-1); continue; }
+
+            // Find nearest connected node from the facility
+            double minDist = Double.MAX_VALUE;
+            int nearest = -1;
+            for (int v = 0; v < nodes.size(); v++) {
+                if (v != facilityNode && adj[facilityNode][v] < Double.MAX_VALUE) {
+                    if (adj[facilityNode][v] < minDist) {
+                        minDist = adj[facilityNode][v];
+                        nearest = v;
+                    }
+                }
+            }
+            nearestNodes.add(nearest);
+        }
+        return nearestNodes;
+    }
+
+    /**
+     * Compute network efficiency (ratio of direct distances to shortest path distances).
+     */
+    public static double computeEfficiency(List<SimpleFeature> lineFeatures, double snapTolerance) {
+        double[][] matrix = allPairsShortestPaths(lineFeatures, snapTolerance);
+        int n = matrix.length;
+        double totalDirect = 0;
+        double totalPath = 0;
+
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                if (matrix[i][j] < Double.MAX_VALUE) {
+                    totalPath += matrix[i][j];
+                    // Approximate direct distance as Euclidean
+                    List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+                    if (i < nodes.size() && j < nodes.size()) {
+                        totalDirect += nodes.get(i).coordinate().distance(nodes.get(j).coordinate());
+                    }
+                }
+            }
+        }
+        return totalPath > 0 ? totalDirect / totalPath : 0;
+    }
+
+    /**
      * Compute service area (isochrone) from a point.
      * Returns all nodes reachable within a given distance.
      */
