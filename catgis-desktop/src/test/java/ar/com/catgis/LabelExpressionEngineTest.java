@@ -9,8 +9,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.LinearRing;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +26,8 @@ public class LabelExpressionEngineTest {
 
     private static GeometryFactory GF = new GeometryFactory();
     private static SimpleFeature feature;
+    private static SimpleFeature polygonFeature;
+    private static SimpleFeature lineFeature;
 
     @BeforeAll
     static void setup() {
@@ -45,6 +49,30 @@ public class LabelExpressionEngineTest {
         fb.set("status", "active");
         fb.set("geometry", GF.createPoint(new Coordinate(100, 200)));
         feature = fb.buildFeature("1");
+
+        SimpleFeatureTypeBuilder ptb = new SimpleFeatureTypeBuilder();
+        ptb.setName("poly_test");
+        ptb.add("geometry", Polygon.class);
+        ptb.add("name", String.class);
+        ptb.setDefaultGeometry("geometry");
+        SimpleFeatureBuilder pfb = new SimpleFeatureBuilder(ptb.buildFeatureType());
+        LinearRing shell = GF.createLinearRing(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(10, 0), new Coordinate(10, 10),
+                new Coordinate(0, 10), new Coordinate(0, 0)});
+        pfb.set("geometry", GF.createPolygon(shell));
+        pfb.set("name", "Square");
+        polygonFeature = pfb.buildFeature("2");
+
+        SimpleFeatureTypeBuilder ltb = new SimpleFeatureTypeBuilder();
+        ltb.setName("line_test");
+        ltb.add("geometry", LineString.class);
+        ltb.add("name", String.class);
+        ltb.setDefaultGeometry("geometry");
+        SimpleFeatureBuilder lfb = new SimpleFeatureBuilder(ltb.buildFeatureType());
+        lfb.set("geometry", GF.createLineString(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(5, 5), new Coordinate(10, 0)}));
+        lfb.set("name", "VLine");
+        lineFeature = lfb.buildFeature("3");
     }
 
     @Test
@@ -255,5 +283,264 @@ public class LabelExpressionEngineTest {
         } catch (NumberFormatException e) {
             return Double.NaN;
         }
+    }
+
+    // --- New expression function tests ---
+
+    @Test
+    public void testHaversine() {
+        double result = evalNum("haversine(0, 0, 0, 1)", feature);
+        assertTrue(result > 111000 && result < 112000,
+                "haversine(0,0,0,1) should be ~111km: " + result);
+    }
+
+    @Test
+    public void testAzimuth() {
+        double result = evalNum("azimuth(0, 0, 1, 0)", feature);
+        assertEquals(90.0, result, 1.0, "azimuth east should be ~90 degrees");
+    }
+
+    @Test
+    public void testDestpoint() {
+        String result = LabelExpressionEngine.evaluate(
+                "destpoint(0, 100000, 0, 0)", feature);
+        assertNotNull(result);
+        assertTrue(result.contains(","), "destpoint should return 'lon,lat': " + result);
+    }
+
+    @Test
+    public void testConvexHull() {
+        String result = LabelExpressionEngine.evaluate(
+                "convexhull()", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.contains("POLYGON") || result.contains("POINT"),
+                "convexhull should return geometry WKT: " + result);
+    }
+
+    @Test
+    public void testCentroidDistance() {
+        double result = evalNum("centroid_distance()", polygonFeature);
+        assertTrue(result > 0, "centroid_distance from origin should be > 0: " + result);
+    }
+
+    @Test
+    public void testBoundary() {
+        String result = LabelExpressionEngine.evaluate("boundary()", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.contains("LINESTRING") || result.contains("LINEARRING"),
+                "boundary of polygon should be linear ring: " + result);
+    }
+
+    @Test
+    public void testConvexHullArea() {
+        double result = evalNum("convex_hull_area()", polygonFeature);
+        assertEquals(100.0, result, 0.1, "10x10 square area should be 100");
+    }
+
+    @Test
+    public void testOrientedArea() {
+        double result = evalNum("oriented_area()", polygonFeature);
+        assertTrue(Math.abs(result) > 0, "oriented_area should be non-zero: " + result);
+    }
+
+    @Test
+    public void testSinAngle() {
+        double result = evalNum("sin_angle(30)", feature);
+        assertEquals(0.5, result, 0.01, "sin(30deg) = 0.5");
+    }
+
+    @Test
+    public void testCosAngle() {
+        double result = evalNum("cos_angle(60)", feature);
+        assertEquals(0.5, result, 0.01, "cos(60deg) = 0.5");
+    }
+
+    @Test
+    public void testTanAngle() {
+        double result = evalNum("tan_angle(45)", feature);
+        assertEquals(1.0, result, 0.01, "tan(45deg) = 1.0");
+    }
+
+    @Test
+    public void testSmooth() {
+        String result = LabelExpressionEngine.evaluate("smooth(1)", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.contains("POLYGON"), "smooth should return polygon WKT: " + result);
+    }
+
+    @Test
+    public void testVoronoi() {
+        String result = LabelExpressionEngine.evaluate("voronoi()", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.length() > 10, "voronoi should return non-empty WKT");
+    }
+
+    @Test
+    public void testConcaveHull() {
+        String result = LabelExpressionEngine.evaluate("concave_hull(0.5)", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.length() > 10, "concave_hull should return geometry WKT");
+    }
+
+    @Test
+    public void testIsSimple() {
+        assertEquals("true", LabelExpressionEngine.evaluate("is_simple()", polygonFeature));
+    }
+
+    @Test
+    public void testIsClosed() {
+        SimpleFeatureTypeBuilder ctb = new SimpleFeatureTypeBuilder();
+        ctb.setName("closed_line_test");
+        ctb.add("geometry", LineString.class);
+        ctb.add("name", String.class);
+        ctb.setDefaultGeometry("geometry");
+        SimpleFeatureBuilder cfb = new SimpleFeatureBuilder(ctb.buildFeatureType());
+        cfb.set("geometry", GF.createLineString(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(5, 5), new Coordinate(0, 0)}));
+        cfb.set("name", "ClosedLine");
+        SimpleFeature closedLine = cfb.buildFeature("4");
+        assertEquals("true", LabelExpressionEngine.evaluate("is_closed()", closedLine));
+        assertEquals("false", LabelExpressionEngine.evaluate("is_closed()", lineFeature));
+    }
+
+    @Test
+    public void testXMin() {
+        double result = evalNum("x_min()", polygonFeature);
+        assertEquals(0.0, result, 0.1, "x_min of 0-10 square");
+    }
+
+    @Test
+    public void testXMax() {
+        double result = evalNum("x_max()", polygonFeature);
+        assertEquals(10.0, result, 0.1, "x_max of 0-10 square");
+    }
+
+    @Test
+    public void testYMin() {
+        double result = evalNum("y_min()", polygonFeature);
+        assertEquals(0.0, result, 0.1, "y_min of 0-10 square");
+    }
+
+    @Test
+    public void testYMax() {
+        double result = evalNum("y_max()", polygonFeature);
+        assertEquals(10.0, result, 0.1, "y_max of 0-10 square");
+    }
+
+    @Test
+    public void testEnvelopeWidth() {
+        double result = evalNum("envelope_width()", polygonFeature);
+        assertEquals(10.0, result, 0.1, "width of 0-10 square");
+    }
+
+    @Test
+    public void testEnvelopeHeight() {
+        double result = evalNum("envelope_height()", polygonFeature);
+        assertEquals(10.0, result, 0.1, "height of 0-10 square");
+    }
+
+    @Test
+    public void testRelate() {
+        String result = LabelExpressionEngine.evaluate(
+                "relate(\"POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))\")", polygonFeature);
+        assertNotNull(result);
+        assertEquals(9, result.length(), "DE-9IM string should be 9 chars");
+    }
+
+    @Test
+    public void testWithinDistance() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "within_distance(1, \"POINT(1 1)\")", polygonFeature));
+        assertEquals("false", LabelExpressionEngine.evaluate(
+                "within_distance(0.1, \"POINT(100 100)\")", polygonFeature));
+    }
+
+    @Test
+    public void testOverlaps() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "overlaps(\"POLYGON((5 5, 15 5, 15 15, 5 15, 5 5))\")", polygonFeature));
+    }
+
+    @Test
+    public void testTouches() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "touches(\"POLYGON((10 0, 20 0, 20 10, 10 10, 10 0))\")", polygonFeature));
+    }
+
+    @Test
+    public void testCrosses() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "crosses(\"LINESTRING(-1 5, 11 5)\")", polygonFeature));
+    }
+
+    @Test
+    public void testDisjoint() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "disjoint(\"POLYGON((50 50, 60 50, 60 60, 50 60, 50 50))\")", polygonFeature));
+    }
+
+    @Test
+    public void testGeomContains() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "geom_contains(\"POINT(5 5)\")", polygonFeature));
+        assertEquals("false", LabelExpressionEngine.evaluate(
+                "geom_contains(\"POINT(50 50)\")", polygonFeature));
+    }
+
+    @Test
+    public void testIntersects() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "intersects(\"POLYGON((1 1, 9 1, 9 9, 1 9, 1 1))\")", polygonFeature));
+        assertEquals("false", LabelExpressionEngine.evaluate(
+                "intersects(\"POLYGON((50 50, 60 50, 60 60, 50 60, 50 50))\")", polygonFeature));
+    }
+
+    @Test
+    public void testIntersection() {
+        String result = LabelExpressionEngine.evaluate(
+                "intersection(\"POLYGON((1 1, 9 1, 9 9, 1 9, 1 1))\")", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.contains("POLYGON") || result.contains("GEOMETRYCOLLECTION"),
+                "intersection should return geometry: " + result);
+    }
+
+    @Test
+    public void testUnionGeom() {
+        String result = LabelExpressionEngine.evaluate(
+                "union_geom(\"POLYGON((1 1, 9 1, 9 9, 1 9, 1 1))\")", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.length() > 10, "union_geom should return non-empty WKT");
+    }
+
+    @Test
+    public void testDifference() {
+        String result = LabelExpressionEngine.evaluate(
+                "difference(\"POLYGON((1 1, 9 1, 9 9, 1 9, 1 1))\")", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.contains("POLYGON") || result.contains("GEOMETRYCOLLECTION"),
+                "difference should return geometry: " + result);
+    }
+
+    @Test
+    public void testClip() {
+        String result = LabelExpressionEngine.evaluate(
+                "clip(\"POLYGON((1 1, 9 1, 9 9, 1 9, 1 1))\")", polygonFeature);
+        assertNotNull(result);
+        assertTrue(result.length() > 10, "clip should return non-empty WKT");
+    }
+
+    @Test
+    public void testEqualsExact() {
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "equals_exact(0.01, \"POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))\")", polygonFeature));
+        assertEquals("false", LabelExpressionEngine.evaluate(
+                "equals_exact(0.01, \"POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))\")", polygonFeature));
+    }
+
+    @Test
+    public void testWktRelationalOnNullGeometry() {
+        String result = LabelExpressionEngine.evaluate(
+                "intersects(\"POINT(0 0)\")", feature);
+        assertNotNull(result);
     }
 }
