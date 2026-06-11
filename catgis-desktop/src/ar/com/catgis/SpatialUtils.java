@@ -107,26 +107,19 @@ public final class SpatialUtils {
     }
 
     public static boolean pointInPolygon(Coordinate point, Polygon polygon) {
+        if (point == null || polygon == null) return false;
         return polygon.contains(GF.createPoint(point));
     }
 
     public static Coordinate nearestPointOnGeometry(Coordinate target, Geometry geometry) {
-        if (geometry == null) return null;
-        Coordinate[] coords = geometry.getCoordinates();
-        if (coords.length == 0) return null;
-        Coordinate nearest = coords[0];
-        double minDist = target.distance(nearest);
-        for (int i = 1; i < coords.length; i++) {
-            double d = target.distance(coords[i]);
-            if (d < minDist) { minDist = d; nearest = coords[i]; }
-        }
-        return nearest;
+        if (target == null || geometry == null || geometry.isEmpty()) return null;
+        Coordinate[] nearest = org.locationtech.jts.operation.distance.DistanceOp.nearestPoints(GF.createPoint(target), geometry);
+        return nearest != null && nearest.length >= 2 ? nearest[1] : null;
     }
 
     public static double nearestDistance(Coordinate target, Geometry geometry) {
-        if (geometry == null) return Double.MAX_VALUE;
-        Point p = GF.createPoint(target);
-        return geometry.distance(p);
+        if (target == null || geometry == null || geometry.isEmpty()) return Double.MAX_VALUE;
+        return geometry.distance(GF.createPoint(target));
     }
 
     public static Geometry simplify(Geometry geometry, double tolerance) {
@@ -141,7 +134,7 @@ public final class SpatialUtils {
 
     public static Geometry bufferWithSegments(Geometry geometry, double distance, int segments) {
         if (geometry == null) return null;
-        return geometry.buffer(distance, segments);
+        return geometry.buffer(distance, Math.max(1, segments));
     }
 
     public static Geometry centroid(Geometry geometry) {

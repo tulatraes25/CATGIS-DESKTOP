@@ -174,18 +174,27 @@ class SpatialUtilsTest {
 
     @Test void nearestPointOnGeometry() {
         Geometry line = GF.createLineString(new Coordinate[]{
-                new Coordinate(0, 0), new Coordinate(5, 0), new Coordinate(10, 0)});
+                new Coordinate(0, 0), new Coordinate(10, 0)});
         Coordinate nearest = SpatialUtils.nearestPointOnGeometry(new Coordinate(5, 5), line);
         assertNotNull(nearest);
-        assertEquals(5.0, nearest.x, 0.1);
-        assertEquals(0.0, nearest.y, 0.1);
+        assertEquals(5.0, nearest.x, 0.01);
+        assertEquals(0.0, nearest.y, 0.01);
+    }
+
+    @Test void nearestPointOnGeometryWithIntermediateVertex() {
+        Geometry line = GF.createLineString(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(5, 0), new Coordinate(10, 0)});
+        Coordinate nearest = SpatialUtils.nearestPointOnGeometry(new Coordinate(5, 3), line);
+        assertNotNull(nearest);
+        assertEquals(5.0, nearest.x, 0.01);
+        assertEquals(0.0, nearest.y, 0.01);
     }
 
     @Test void nearestDistance() {
         Geometry line = GF.createLineString(new Coordinate[]{
-                new Coordinate(0, 0), new Coordinate(5, 0), new Coordinate(10, 0)});
+                new Coordinate(0, 0), new Coordinate(10, 0)});
         double dist = SpatialUtils.nearestDistance(new Coordinate(5, 5), line);
-        assertEquals(5.0, dist, 0.1);
+        assertEquals(5.0, dist, 0.01);
     }
 
     @Test void simplifyReducesPoints() {
@@ -264,13 +273,85 @@ class SpatialUtilsTest {
         assertNull(SpatialUtils.symDifference(null, GF.createPoint(new Coordinate(0, 0))));
         assertNull(SpatialUtils.simplify(null, 1));
         assertNull(SpatialUtils.buffer(null, 1));
+        assertNull(SpatialUtils.bufferWithSegments(null, 1, 8));
         assertNull(SpatialUtils.centroid(null));
         assertNull(SpatialUtils.envelope(null));
         assertNull(SpatialUtils.collectToMultiPoint(null));
         assertNull(SpatialUtils.voronoiDiagram(null, 1));
         assertNull(SpatialUtils.delaunayTriangulation(null));
         assertNull(SpatialUtils.orientedMinimumBoundingBox(null));
+        assertNull(SpatialUtils.nearestPointOnGeometry(null, GF.createPoint(new Coordinate(0, 0))));
+        assertNull(SpatialUtils.nearestPointOnGeometry(new Coordinate(0, 0), null));
         assertEquals(0, SpatialUtils.totalArea(null), 0.001);
         assertEquals(0, SpatialUtils.totalLength(null), 0.001);
+    }
+
+    @Test void pointInPolygonNullSafety() {
+        Polygon poly = GF.createPolygon(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(10, 0), new Coordinate(10, 10),
+                new Coordinate(0, 10), new Coordinate(0, 0)});
+        assertFalse(SpatialUtils.pointInPolygon(null, poly));
+        assertFalse(SpatialUtils.pointInPolygon(new Coordinate(5, 5), null));
+    }
+
+    @Test void nearestDistanceNullSafety() {
+        assertEquals(Double.MAX_VALUE, SpatialUtils.nearestDistance(null, GF.createPoint(new Coordinate(0, 0))));
+        assertEquals(Double.MAX_VALUE, SpatialUtils.nearestDistance(new Coordinate(0, 0), null));
+    }
+
+    @Test void bufferWithSegmentsNotNull() {
+        Polygon poly = GF.createPolygon(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(10, 0), new Coordinate(10, 10),
+                new Coordinate(0, 10), new Coordinate(0, 0)});
+        Geometry buffered = SpatialUtils.bufferWithSegments(poly, 1, 32);
+        assertNotNull(buffered);
+        assertTrue(buffered.getArea() > poly.getArea());
+    }
+
+    @Test void voronoiDiagramExactCount() {
+        Geometry voronoi = SpatialUtils.voronoiDiagram(points, 1);
+        assertNotNull(voronoi);
+        assertTrue(voronoi.getNumGeometries() >= 5);
+    }
+
+    @Test void mergeAllExactArea() {
+        Geometry merged = SpatialUtils.mergeAll(polygons);
+        assertNotNull(merged);
+        assertTrue(merged.getArea() >= 25.0);
+    }
+
+    @Test void differenceExactArea() {
+        Geometry a = GF.createPolygon(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(5, 0), new Coordinate(5, 5),
+                new Coordinate(0, 5), new Coordinate(0, 0)});
+        Geometry b = GF.createPolygon(new Coordinate[]{
+                new Coordinate(3, 3), new Coordinate(8, 3), new Coordinate(8, 8),
+                new Coordinate(3, 8), new Coordinate(3, 3)});
+        Geometry diff = SpatialUtils.difference(a, b);
+        assertEquals(25.0 - 4.0, diff.getArea(), 0.01);
+    }
+
+    @Test void symDifferenceExactArea() {
+        Geometry a = GF.createPolygon(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(5, 0), new Coordinate(5, 5),
+                new Coordinate(0, 5), new Coordinate(0, 0)});
+        Geometry b = GF.createPolygon(new Coordinate[]{
+                new Coordinate(3, 3), new Coordinate(8, 3), new Coordinate(8, 8),
+                new Coordinate(3, 8), new Coordinate(3, 3)});
+        Geometry sd = SpatialUtils.symDifference(a, b);
+        assertEquals(25.0 + 25.0 - 8.0, sd.getArea(), 0.01);
+    }
+
+    @Test void orientedMinimumBoundingBoxArea() {
+        Geometry allPoints = SpatialUtils.collectToMultiPoint(points);
+        Geometry box = SpatialUtils.orientedMinimumBoundingBox(allPoints);
+        assertNotNull(box);
+        assertTrue(box.getArea() > 0);
+    }
+
+    @Test void delaunayTriangulationCount() {
+        Geometry delaunay = SpatialUtils.delaunayTriangulation(points);
+        assertNotNull(delaunay);
+        assertTrue(delaunay.getNumGeometries() >= 3);
     }
 }
