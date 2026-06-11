@@ -103,15 +103,15 @@ class MapRenderer {
 
         drawPendingDrawingSessionGeometries(g2);
 
-        if ("CONTINUE_LINE".equalsIgnoreCase(map.drawingMode) && !map.drawingContinuationEndpointChosen) {
+        if ("CONTINUE_LINE".equalsIgnoreCase(map.drawingToolManager.drawingMode) && !map.drawingToolManager.drawingContinuationEndpointChosen) {
             drawContinuationEndpointHints(g2);
             return;
         }
 
         Coordinate previewCoordinate = map.resolveInteractivePreviewCoordinate();
 
-        if ("POINT".equalsIgnoreCase(map.drawingMode) || "MULTIPOINT".equalsIgnoreCase(map.drawingMode)) {
-            for (Coordinate c : map.drawingCoordinates) {
+        if ("POINT".equalsIgnoreCase(map.drawingToolManager.drawingMode) || "MULTIPOINT".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
+            for (Coordinate c : map.drawingToolManager.drawingCoordinates) {
                 int x = map.worldToScreenX(c.x);
                 int y = map.worldToScreenY(c.y);
                 g2.setColor(Color.MAGENTA);
@@ -131,13 +131,13 @@ class MapRenderer {
             return;
         }
 
-        List<Coordinate> tempCoords = new ArrayList<>(map.drawingCoordinates);
+        List<Coordinate> tempCoords = new ArrayList<>(map.drawingToolManager.drawingCoordinates);
         if (previewCoordinate != null) {
             tempCoords.add(new Coordinate(previewCoordinate));
         }
 
-        if ("CIRCLE".equalsIgnoreCase(map.drawingMode) || "CIRCLE_3P".equalsIgnoreCase(map.drawingMode)) {
-            Geometry previewGeometry = "CIRCLE".equalsIgnoreCase(map.drawingMode)
+        if ("CIRCLE".equalsIgnoreCase(map.drawingToolManager.drawingMode) || "CIRCLE_3P".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
+            Geometry previewGeometry = "CIRCLE".equalsIgnoreCase(map.drawingToolManager.drawingMode)
                     ? map.buildCircleGeometry(tempCoords)
                     : map.buildCircleThreePointGeometry(tempCoords);
             if (previewGeometry != null) {
@@ -146,7 +146,7 @@ class MapRenderer {
             }
         }
 
-        if ("RECTANGLE".equalsIgnoreCase(map.drawingMode)) {
+        if ("RECTANGLE".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
             tempCoords = map.buildRectangleCoordinates(tempCoords);
         }
 
@@ -157,7 +157,7 @@ class MapRenderer {
         drawTemporaryGeometry(
                 g2,
                 tempCoords,
-                "RECTANGLE".equalsIgnoreCase(map.drawingMode) ? "POLYGON" : map.drawingMode,
+                "RECTANGLE".equalsIgnoreCase(map.drawingToolManager.drawingMode) ? "POLYGON" : map.drawingToolManager.drawingMode,
                 Color.MAGENTA,
                 new Color(255, 0, 255, 40)
         );
@@ -166,13 +166,13 @@ class MapRenderer {
     // ── 3. drawPendingDrawingSessionGeometries ──────────────────────────────
 
     void drawPendingDrawingSessionGeometries(Graphics2D g2) {
-        if (map.pendingDrawingSessionGeometries.isEmpty()) {
+        if (map.drawingToolManager.pendingDrawingSessionGeometries.isEmpty()) {
             return;
         }
 
         Graphics2D copy = (Graphics2D) g2.create();
         try {
-            for (Geometry geometry : map.pendingDrawingSessionGeometries) {
+            for (Geometry geometry : map.drawingToolManager.pendingDrawingSessionGeometries) {
                 drawPendingDrawingGeometry(copy, geometry);
             }
         } finally {
@@ -238,17 +238,17 @@ class MapRenderer {
     // ── 5. drawContinuationEndpointHints ────────────────────────────────────
 
     void drawContinuationEndpointHints(Graphics2D g2) {
-        if (!"CONTINUE_LINE".equalsIgnoreCase(map.drawingMode)
-                || map.drawingContinuationBaseCoordinates == null
-                || map.drawingContinuationBaseCoordinates.length < 2
-                || map.drawingContinuationLayer == null) {
+        if (!"CONTINUE_LINE".equalsIgnoreCase(map.drawingToolManager.drawingMode)
+                || map.drawingToolManager.drawingContinuationBaseCoordinates == null
+                || map.drawingToolManager.drawingContinuationBaseCoordinates.length < 2
+                || map.drawingToolManager.drawingContinuationLayer == null) {
             return;
         }
 
-        Coordinate start = map.toProjectCoordinate(map.drawingContinuationBaseCoordinates[0], map.drawingContinuationLayer);
+        Coordinate start = map.toProjectCoordinate(map.drawingToolManager.drawingContinuationBaseCoordinates[0], map.drawingToolManager.drawingContinuationLayer);
         Coordinate end = map.toProjectCoordinate(
-                map.drawingContinuationBaseCoordinates[map.drawingContinuationBaseCoordinates.length - 1],
-                map.drawingContinuationLayer
+                map.drawingToolManager.drawingContinuationBaseCoordinates[map.drawingToolManager.drawingContinuationBaseCoordinates.length - 1],
+                map.drawingToolManager.drawingContinuationLayer
         );
         if (start == null || end == null) {
             return;
@@ -533,12 +533,13 @@ class MapRenderer {
     // ── 15. drawSnapPreview ─────────────────────────────────────────────────
 
     void drawSnapPreview(Graphics2D g2) {
-        if (!map.snapEnabled || map.snapPreviewCoordinate == null || !(map.isDrawingActive() || map.isMeasurementActive() || map.featureEditMode)) {
+        Coordinate snapCoord = map.snapManager.getSnapPreviewCoordinate();
+        if (!map.snapManager.isSnapEnabled() || snapCoord == null || !(map.isDrawingActive() || map.isMeasurementActive() || map.featureEditMode)) {
             return;
         }
 
-        int x = map.worldToScreenX(map.snapPreviewCoordinate.x);
-        int y = map.worldToScreenY(map.snapPreviewCoordinate.y);
+        int x = map.worldToScreenX(snapCoord.x);
+        int y = map.worldToScreenY(snapCoord.y);
         Graphics2D copy = (Graphics2D) g2.create();
         try {
             copy.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

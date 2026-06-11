@@ -110,8 +110,7 @@ class MouseHandler extends MouseAdapter {
 
         if ("MOVE".equalsIgnoreCase(map.currentTool)) {
             map.dragging = true;
-            map.dragStartViewMinX = map.viewMinX;
-            map.dragStartViewMinY = map.viewMinY;
+            map.captureViewDragStart();
             map.lastMouseX = e.getX();
             map.lastMouseY = e.getY();
             map.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
@@ -259,8 +258,7 @@ class MouseHandler extends MouseAdapter {
         int dx = e.getX() - map.lastMouseX;
         int dy = e.getY() - map.lastMouseY;
 
-        map.viewMinX -= dx / map.zoomFactor;
-        map.viewMinY += dy / map.zoomFactor;
+        map.shiftViewByPixels(dx, dy);
 
         map.lastMouseX = e.getX();
         map.lastMouseY = e.getY();
@@ -333,7 +331,7 @@ class MouseHandler extends MouseAdapter {
     public void mouseExited(MouseEvent e) {
         map.hoverWorldX = Double.NaN;
         map.hoverWorldY = Double.NaN;
-        map.snapPreviewCoordinate = null;
+        map.snapManager.setSnapPreviewCoordinate(null);
         if (CatgisDesktopApp.statusBar != null) {
             CatgisDesktopApp.statusBar.clearCoordinates();
         }
@@ -401,15 +399,15 @@ class MouseHandler extends MouseAdapter {
         if (map.isDrawingActive() && SwingUtilities.isLeftMouseButton(e)) {
             Coordinate c = map.resolveInteractiveCoordinate(e.getX(), e.getY(), false);
 
-            if ("POINT".equalsIgnoreCase(map.drawingMode) || "MULTIPOINT".equalsIgnoreCase(map.drawingMode)) {
-                map.drawingCoordinates.add(c);
+            if ("POINT".equalsIgnoreCase(map.drawingToolManager.drawingMode) || "MULTIPOINT".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
+                map.drawingToolManager.drawingCoordinates.add(c);
                 map.repaint();
                 return;
             }
 
-            if ("CIRCLE".equalsIgnoreCase(map.drawingMode)) {
+            if ("CIRCLE".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
                 map.appendDrawingCoordinateIfNeeded(c);
-                if (map.drawingCoordinates.size() >= 2) {
+                if (map.drawingToolManager.drawingCoordinates.size() >= 2) {
                     map.finishCurrentDrawing();
                 } else {
                     map.repaint();
@@ -417,9 +415,9 @@ class MouseHandler extends MouseAdapter {
                 return;
             }
 
-            if ("CIRCLE_3P".equalsIgnoreCase(map.drawingMode)) {
+            if ("CIRCLE_3P".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
                 map.appendDrawingCoordinateIfNeeded(c);
-                if (map.drawingCoordinates.size() >= 3) {
+                if (map.drawingToolManager.drawingCoordinates.size() >= 3) {
                     map.finishCurrentDrawing();
                 } else {
                     map.repaint();
@@ -427,14 +425,14 @@ class MouseHandler extends MouseAdapter {
                 return;
             }
 
-            if ("CONTINUE_LINE".equalsIgnoreCase(map.drawingMode) && !map.drawingContinuationEndpointChosen) {
+            if ("CONTINUE_LINE".equalsIgnoreCase(map.drawingToolManager.drawingMode) && !map.drawingToolManager.drawingContinuationEndpointChosen) {
                 map.chooseContinuationEndpoint(e.getX(), e.getY());
                 return;
             }
 
-            if ("RECTANGLE".equalsIgnoreCase(map.drawingMode)) {
+            if ("RECTANGLE".equalsIgnoreCase(map.drawingToolManager.drawingMode)) {
                 map.appendDrawingCoordinateIfNeeded(c);
-                if (map.drawingCoordinates.size() >= 2) {
+                if (map.drawingToolManager.drawingCoordinates.size() >= 2) {
                     map.finishCurrentDrawing();
                 } else {
                     map.repaint();
@@ -444,7 +442,7 @@ class MouseHandler extends MouseAdapter {
 
             if (e.getClickCount() >= 2) {
                 map.appendDrawingCoordinateIfNeeded(c);
-                if (!map.drawingCoordinates.isEmpty()) {
+                if (!map.drawingToolManager.drawingCoordinates.isEmpty()) {
                     map.finishCurrentDrawing();
                 }
                 return;

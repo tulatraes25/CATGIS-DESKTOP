@@ -116,8 +116,7 @@ public class MapInteractionHandler extends MouseAdapter {
 
         if ("MOVE".equalsIgnoreCase(panel.currentTool)) {
             panel.dragging = true;
-            panel.dragStartViewMinX = panel.viewController.getViewMinX();
-            panel.dragStartViewMinY = panel.viewMinY;
+            panel.captureViewDragStart();
             panel.lastMouseX = e.getX();
             panel.lastMouseY = e.getY();
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
@@ -339,7 +338,7 @@ public class MapInteractionHandler extends MouseAdapter {
     public void mouseExited(MouseEvent e) {
         panel.hoverWorldX = Double.NaN;
         panel.hoverWorldY = Double.NaN;
-        panel.snapPreviewCoordinate = null;
+        panel.snapManager.setSnapPreviewCoordinate(null);
         if (CatgisDesktopApp.statusBar != null) {
             CatgisDesktopApp.statusBar.clearCoordinates();
         }
@@ -407,15 +406,15 @@ public class MapInteractionHandler extends MouseAdapter {
         if (panel.isDrawingActive() && SwingUtilities.isLeftMouseButton(e)) {
             Coordinate c = panel.resolveInteractiveCoordinate(e.getX(), e.getY(), false);
 
-            if ("POINT".equalsIgnoreCase(panel.drawingMode) || "MULTIPOINT".equalsIgnoreCase(panel.drawingMode)) {
-                panel.drawingCoordinates.add(c);
+            if ("POINT".equalsIgnoreCase(panel.drawingToolManager.drawingMode) || "MULTIPOINT".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+                panel.drawingToolManager.drawingCoordinates.add(c);
                 panel.repaint();
                 return;
             }
 
-            if ("CIRCLE".equalsIgnoreCase(panel.drawingMode)) {
+            if ("CIRCLE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
                 panel.appendDrawingCoordinateIfNeeded(c);
-                if (panel.drawingCoordinates.size() >= 2) {
+                if (panel.drawingToolManager.drawingCoordinates.size() >= 2) {
                     panel.finishCurrentDrawing();
                 } else {
                     panel.repaint();
@@ -423,9 +422,9 @@ public class MapInteractionHandler extends MouseAdapter {
                 return;
             }
 
-            if ("CIRCLE_3P".equalsIgnoreCase(panel.drawingMode)) {
+            if ("CIRCLE_3P".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
                 panel.appendDrawingCoordinateIfNeeded(c);
-                if (panel.drawingCoordinates.size() >= 3) {
+                if (panel.drawingToolManager.drawingCoordinates.size() >= 3) {
                     panel.finishCurrentDrawing();
                 } else {
                     panel.repaint();
@@ -433,14 +432,14 @@ public class MapInteractionHandler extends MouseAdapter {
                 return;
             }
 
-            if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingMode) && !panel.drawingContinuationEndpointChosen) {
+            if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingToolManager.drawingMode) && !panel.drawingToolManager.drawingContinuationEndpointChosen) {
                 panel.chooseContinuationEndpoint(e.getX(), e.getY());
                 return;
             }
 
-            if ("RECTANGLE".equalsIgnoreCase(panel.drawingMode)) {
+            if ("RECTANGLE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
                 panel.appendDrawingCoordinateIfNeeded(c);
-                if (panel.drawingCoordinates.size() >= 2) {
+                if (panel.drawingToolManager.drawingCoordinates.size() >= 2) {
                     panel.finishCurrentDrawing();
                 } else {
                     panel.repaint();
@@ -450,7 +449,7 @@ public class MapInteractionHandler extends MouseAdapter {
 
             if (e.getClickCount() >= 2) {
                 panel.appendDrawingCoordinateIfNeeded(c);
-                if (!panel.drawingCoordinates.isEmpty()) {
+                if (!panel.drawingToolManager.drawingCoordinates.isEmpty()) {
                     panel.finishCurrentDrawing();
                 }
                 return;

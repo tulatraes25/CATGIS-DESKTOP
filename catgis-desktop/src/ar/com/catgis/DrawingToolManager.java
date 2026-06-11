@@ -21,16 +21,27 @@ class DrawingToolManager {
 
     private final MapPanel map;
 
+    final List<Coordinate> drawingCoordinates = new ArrayList<>();
+    final List<Geometry> pendingDrawingSessionGeometries = new ArrayList<>();
+    String drawingMode = null;
+    Layer drawingSessionLayer = null;
+    boolean drawingSessionDirty = false;
+    Layer drawingContinuationLayer = null;
+    String drawingContinuationFeatureId = null;
+    Coordinate[] drawingContinuationBaseCoordinates = null;
+    boolean drawingContinuationFromStart = false;
+    boolean drawingContinuationEndpointChosen = false;
+
     DrawingToolManager(MapPanel map) {
         this.map = map;
     }
 
     public void enableDrawPointMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "POINT";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "POINT";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.setTool("DRAW");
         map.showCopiedMessage("Modo dibujo puntos activo. Hacé varios clics. Clic derecho para terminar y Escape para cancelar.");
         map.repaint();
@@ -38,10 +49,10 @@ class DrawingToolManager {
 
     public void enableDrawMultiPointMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "MULTIPOINT";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "MULTIPOINT";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.setTool("DRAW");
         map.showCopiedMessage("Modo dibujo multipunto activo. Hacé varios clics. Clic derecho para terminar y Escape para cancelar.");
         map.repaint();
@@ -49,10 +60,10 @@ class DrawingToolManager {
 
     public void enableDrawLineMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "LINE";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "LINE";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.setTool("DRAW");
         map.showCopiedMessage("Modo dibujo línea activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         map.repaint();
@@ -75,19 +86,19 @@ class DrawingToolManager {
         }
 
         map.cancelCurrentMeasurement();
-        map.drawingMode = "CONTINUE_LINE";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationBaseCoordinates = cloneCoordinates(baseCoordinates);
-        map.drawingContinuationFromStart = false;
-        map.drawingContinuationEndpointChosen = false;
+        drawingMode = "CONTINUE_LINE";
+        drawingCoordinates.clear();
+        drawingContinuationBaseCoordinates = cloneCoordinates(baseCoordinates);
+        drawingContinuationFromStart = false;
+        drawingContinuationEndpointChosen = false;
         for (Coordinate coordinate : baseCoordinates) {
             if (coordinate != null) {
-                map.drawingCoordinates.add(new Coordinate(coordinate));
+                drawingCoordinates.add(new Coordinate(coordinate));
             }
         }
-        map.drawingContinuationLayer = map.selectedLayer;
-        map.drawingContinuationFeatureId = map.selectedFeature.getID();
-        map.drawingSessionLayer = map.selectedLayer;
+        drawingContinuationLayer = map.selectedLayer;
+        drawingContinuationFeatureId = map.selectedFeature.getID();
+        drawingSessionLayer = map.selectedLayer;
         map.setTool("DRAW");
         map.showCopiedMessage("Continuación de línea activa. Agregá vértices y terminá con doble clic o clic derecho.");
         map.repaint();
@@ -95,10 +106,10 @@ class DrawingToolManager {
 
     public void enableDrawRectangleMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "RECTANGLE";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "RECTANGLE";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.setTool("DRAW");
         map.showCopiedMessage("Modo rectángulo activo. Marcá la primera esquina y luego la opuesta.");
         map.repaint();
@@ -106,10 +117,10 @@ class DrawingToolManager {
 
     public void enableDrawCircleMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "CIRCLE";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "CIRCLE";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.clearCadConstructionState();
         map.setTool("DRAW");
         map.showCopiedMessage("Modo circulo activo. Marca el centro y despues un punto del radio.");
@@ -118,10 +129,10 @@ class DrawingToolManager {
 
     public void enableDrawCircleThreePointMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "CIRCLE_3P";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "CIRCLE_3P";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.clearCadConstructionState();
         map.setTool("DRAW");
         map.showCopiedMessage("Modo circulo por 3 puntos activo. Marca tres puntos sobre la circunferencia.");
@@ -130,26 +141,26 @@ class DrawingToolManager {
 
     public void enableDrawPolygonMode() {
         map.cancelCurrentMeasurement();
-        map.drawingMode = "POLYGON";
-        map.drawingCoordinates.clear();
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
+        drawingMode = "POLYGON";
+        drawingCoordinates.clear();
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
         map.setTool("DRAW");
         map.showCopiedMessage("Modo dibujo polígono activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         map.repaint();
     }
 
     public void cancelCurrentDrawing() {
-        map.drawingMode = null;
-        map.drawingCoordinates.clear();
-        map.pendingDrawingSessionGeometries.clear();
-        map.drawingSessionLayer = null;
-        map.drawingSessionDirty = false;
-        map.drawingContinuationLayer = null;
-        map.drawingContinuationFeatureId = null;
-        map.drawingContinuationBaseCoordinates = null;
-        map.drawingContinuationFromStart = false;
-        map.drawingContinuationEndpointChosen = false;
+        drawingMode = null;
+        drawingCoordinates.clear();
+        pendingDrawingSessionGeometries.clear();
+        drawingSessionLayer = null;
+        drawingSessionDirty = false;
+        drawingContinuationLayer = null;
+        drawingContinuationFeatureId = null;
+        drawingContinuationBaseCoordinates = null;
+        drawingContinuationFromStart = false;
+        drawingContinuationEndpointChosen = false;
         map.clearCadConstructionState();
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
         map.repaint();
@@ -161,7 +172,7 @@ class DrawingToolManager {
         }
 
         try {
-            if ("CONTINUE_LINE".equalsIgnoreCase(map.drawingMode)) {
+            if ("CONTINUE_LINE".equalsIgnoreCase(drawingMode)) {
                 Geometry continuationGeometry = buildContinuationLineGeometry();
                 if (continuationGeometry == null) {
                     JOptionPane.showMessageDialog(map, "Para continuar la línea necesitás agregar al menos un vértice nuevo.");
@@ -178,9 +189,9 @@ class DrawingToolManager {
                 if (sessionGeometries.isEmpty()) {
                     return;
                 }
-                map.pendingDrawingSessionGeometries.addAll(sessionGeometries);
-                map.drawingSessionDirty = true;
-                map.drawingCoordinates.clear();
+                pendingDrawingSessionGeometries.addAll(sessionGeometries);
+                drawingSessionDirty = true;
+                drawingCoordinates.clear();
                 CatgisDesktopApp.syncFloatingVectorEditToolbar();
                 map.repaint();
                 map.showCopiedMessage(sessionGeometries.size() == 1
@@ -201,33 +212,33 @@ class DrawingToolManager {
                     return;
                 }
 
-                targetLayer = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(map.drawingMode), map);
+                targetLayer = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(drawingMode), map);
                 if (targetLayer == null) {
                     map.showCopiedMessage("El dibujo sigue activo hasta que completes la capa destino o lo canceles.");
                     return;
                 }
             }
 
-            if (!map.pendingDrawingSessionGeometries.isEmpty()) {
+            if (!pendingDrawingSessionGeometries.isEmpty()) {
                 if (!appendGeometriesToLayer(
                         targetLayer,
-                        new ArrayList<>(map.pendingDrawingSessionGeometries),
-                        map.pendingDrawingSessionGeometries.size() == 1
+                        new ArrayList<>(pendingDrawingSessionGeometries),
+                        pendingDrawingSessionGeometries.size() == 1
                                 ? "Entidad pendiente agregada a la capa."
-                                : map.pendingDrawingSessionGeometries.size() + " entidades pendientes agregadas a la capa."
+                                : pendingDrawingSessionGeometries.size() + " entidades pendientes agregadas a la capa."
                 )) {
                     return;
                 }
-                map.pendingDrawingSessionGeometries.clear();
+                pendingDrawingSessionGeometries.clear();
             }
 
             if (!appendCurrentDrawingToLayer(targetLayer)) {
                 return;
             }
 
-            map.drawingSessionLayer = targetLayer;
-            map.drawingSessionDirty = true;
-            map.drawingCoordinates.clear();
+            drawingSessionLayer = targetLayer;
+            drawingSessionDirty = true;
+            drawingCoordinates.clear();
             CatgisDesktopApp.syncFloatingVectorEditToolbar();
             map.repaint();
         } catch (Exception ex) {
@@ -241,11 +252,11 @@ class DrawingToolManager {
             return;
         }
 
-        boolean hasPendingCurrentGeometry = !map.drawingCoordinates.isEmpty();
-        if ("CONTINUE_LINE".equalsIgnoreCase(map.drawingMode)) {
-            hasPendingCurrentGeometry = map.drawingContinuationEndpointChosen
-                    && map.drawingContinuationBaseCoordinates != null
-                    && map.drawingCoordinates.size() > map.drawingContinuationBaseCoordinates.length;
+        boolean hasPendingCurrentGeometry = !drawingCoordinates.isEmpty();
+        if ("CONTINUE_LINE".equalsIgnoreCase(drawingMode)) {
+            hasPendingCurrentGeometry = drawingContinuationEndpointChosen
+                    && drawingContinuationBaseCoordinates != null
+                    && drawingCoordinates.size() > drawingContinuationBaseCoordinates.length;
         }
 
         if (hasPendingCurrentGeometry) {
@@ -261,16 +272,16 @@ class DrawingToolManager {
             }
             if (closeCurrent == JOptionPane.YES_OPTION) {
                 finishCurrentDrawing();
-                if (!map.drawingCoordinates.isEmpty()) {
+                if (!drawingCoordinates.isEmpty()) {
                     return;
                 }
             } else {
-                map.drawingCoordinates.clear();
+                drawingCoordinates.clear();
             }
         }
 
-        Layer layerToSave = map.drawingSessionLayer != null ? map.drawingSessionLayer : resolveDrawingTargetLayer();
-        if (!map.pendingDrawingSessionGeometries.isEmpty() && layerToSave == null) {
+        Layer layerToSave = drawingSessionLayer != null ? drawingSessionLayer : resolveDrawingTargetLayer();
+        if (!pendingDrawingSessionGeometries.isEmpty() && layerToSave == null) {
             int choice = JOptionPane.showConfirmDialog(
                     map,
                     "No hay una capa vectorial compatible todavia.\n\nQueres crearla ahora para guardar las entidades dibujadas?",
@@ -281,27 +292,27 @@ class DrawingToolManager {
             if (choice != JOptionPane.YES_OPTION) {
                 return;
             }
-            layerToSave = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(map.drawingMode), map);
+            layerToSave = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(drawingMode), map);
             if (layerToSave == null) {
                 return;
             }
         }
 
-        if (!map.pendingDrawingSessionGeometries.isEmpty()) {
+        if (!pendingDrawingSessionGeometries.isEmpty()) {
             if (!appendGeometriesToLayer(
                     layerToSave,
-                    new ArrayList<>(map.pendingDrawingSessionGeometries),
-                    map.pendingDrawingSessionGeometries.size() == 1
+                    new ArrayList<>(pendingDrawingSessionGeometries),
+                    pendingDrawingSessionGeometries.size() == 1
                             ? "Entidad de la sesion agregada a la capa."
-                            : map.pendingDrawingSessionGeometries.size() + " entidades de la sesion agregadas a la capa."
+                            : pendingDrawingSessionGeometries.size() + " entidades de la sesion agregadas a la capa."
             )) {
                 return;
             }
-            map.drawingSessionLayer = layerToSave;
-            map.pendingDrawingSessionGeometries.clear();
+            drawingSessionLayer = layerToSave;
+            pendingDrawingSessionGeometries.clear();
         }
 
-        if (map.drawingSessionDirty && layerToSave != null) {
+        if (drawingSessionDirty && layerToSave != null) {
             int saveChoice = JOptionPane.showConfirmDialog(
                     map,
                     "Queres guardar ahora la capa vectorial?\n\n" + layerToSave.getName(),
@@ -325,21 +336,21 @@ class DrawingToolManager {
         if (coordinate == null) {
             return;
         }
-        if (map.drawingCoordinates.isEmpty() || !map.drawingCoordinates.get(map.drawingCoordinates.size() - 1).equals2D(coordinate)) {
-            map.drawingCoordinates.add(coordinate);
+        if (drawingCoordinates.isEmpty() || !drawingCoordinates.get(drawingCoordinates.size() - 1).equals2D(coordinate)) {
+            drawingCoordinates.add(coordinate);
         }
     }
 
     Layer resolveDrawingTargetLayer() {
-        if (isCompatibleDrawingTarget(map.drawingSessionLayer, map.drawingMode)) {
-            return map.drawingSessionLayer;
+        if (isCompatibleDrawingTarget(drawingSessionLayer, drawingMode)) {
+            return drawingSessionLayer;
         }
 
-        if (isCompatibleDrawingTarget(map.activeVectorEditingLayer, map.drawingMode)) {
+        if (isCompatibleDrawingTarget(map.activeVectorEditingLayer, drawingMode)) {
             return map.activeVectorEditingLayer;
         }
 
-        if (map.selectedLayer != null && isCompatibleDrawingTarget(map.selectedLayer, map.drawingMode)) {
+        if (map.selectedLayer != null && isCompatibleDrawingTarget(map.selectedLayer, drawingMode)) {
             return map.selectedLayer;
         }
 
@@ -461,29 +472,29 @@ class DrawingToolManager {
                 ? targetType.getGeometryDescriptor().getType().getBinding()
                 : null;
 
-        if ("POINT".equalsIgnoreCase(map.drawingMode) || "MULTIPOINT".equalsIgnoreCase(map.drawingMode)) {
-            if (map.drawingCoordinates.isEmpty()) {
+        if ("POINT".equalsIgnoreCase(drawingMode) || "MULTIPOINT".equalsIgnoreCase(drawingMode)) {
+            if (drawingCoordinates.isEmpty()) {
                 JOptionPane.showMessageDialog(map, "Para crear puntos necesitás hacer clic en el mapa.");
                 return geometries;
             }
 
             GeometryFactory gf = new GeometryFactory();
             if (geometryBinding != null && MultiPoint.class.isAssignableFrom(geometryBinding)) {
-                Point[] points = new Point[map.drawingCoordinates.size()];
-                for (int i = 0; i < map.drawingCoordinates.size(); i++) {
-                    points[i] = gf.createPoint(new Coordinate(map.drawingCoordinates.get(i)));
+                Point[] points = new Point[drawingCoordinates.size()];
+                for (int i = 0; i < drawingCoordinates.size(); i++) {
+                    points[i] = gf.createPoint(new Coordinate(drawingCoordinates.get(i)));
                 }
                 geometries.add(gf.createMultiPoint(points));
             } else {
-                for (Coordinate coordinate : map.drawingCoordinates) {
+                for (Coordinate coordinate : drawingCoordinates) {
                     geometries.add(DrawFeatureBuilder.buildPoint(coordinate));
                 }
             }
             return geometries;
         }
 
-        if ("LINE".equalsIgnoreCase(map.drawingMode)) {
-            Geometry geometry = DrawFeatureBuilder.buildLine(map.drawingCoordinates);
+        if ("LINE".equalsIgnoreCase(drawingMode)) {
+            Geometry geometry = DrawFeatureBuilder.buildLine(drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(map, "Para una línea necesitás al menos 2 vértices.");
                 return geometries;
@@ -492,8 +503,8 @@ class DrawingToolManager {
             return geometries;
         }
 
-        if ("RECTANGLE".equalsIgnoreCase(map.drawingMode)) {
-            Geometry geometry = buildRectangleGeometry(map.drawingCoordinates);
+        if ("RECTANGLE".equalsIgnoreCase(drawingMode)) {
+            Geometry geometry = buildRectangleGeometry(drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(map, "Para un rectángulo necesitás marcar dos esquinas opuestas.");
                 return geometries;
@@ -502,8 +513,8 @@ class DrawingToolManager {
             return geometries;
         }
 
-        if ("POLYGON".equalsIgnoreCase(map.drawingMode)) {
-            Geometry geometry = DrawFeatureBuilder.buildPolygon(map.drawingCoordinates);
+        if ("POLYGON".equalsIgnoreCase(drawingMode)) {
+            Geometry geometry = DrawFeatureBuilder.buildPolygon(drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(map, "Para un polígono necesitás al menos 3 vértices.");
                 return geometries;
@@ -511,8 +522,8 @@ class DrawingToolManager {
             geometries.add(geometry);
         }
 
-        if ("CIRCLE".equalsIgnoreCase(map.drawingMode)) {
-            Geometry geometry = buildCircleGeometry(map.drawingCoordinates);
+        if ("CIRCLE".equalsIgnoreCase(drawingMode)) {
+            Geometry geometry = buildCircleGeometry(drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(map, "Para un circulo necesitas marcar centro y radio.");
                 return geometries;
@@ -521,8 +532,8 @@ class DrawingToolManager {
             return geometries;
         }
 
-        if ("CIRCLE_3P".equalsIgnoreCase(map.drawingMode)) {
-            Geometry geometry = buildCircleThreePointGeometry(map.drawingCoordinates);
+        if ("CIRCLE_3P".equalsIgnoreCase(drawingMode)) {
+            Geometry geometry = buildCircleThreePointGeometry(drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(map, "No se pudo construir el circulo con esos tres puntos.");
                 return geometries;
@@ -535,15 +546,15 @@ class DrawingToolManager {
     }
 
     void chooseContinuationEndpoint(int screenX, int screenY) {
-        if (map.drawingContinuationBaseCoordinates == null || map.drawingContinuationBaseCoordinates.length < 2 || map.drawingContinuationLayer == null) {
+        if (drawingContinuationBaseCoordinates == null || drawingContinuationBaseCoordinates.length < 2 || drawingContinuationLayer == null) {
             map.showCopiedMessage("No se encontro una linea base valida para continuar.");
             return;
         }
 
-        Coordinate start = map.toProjectCoordinate(map.drawingContinuationBaseCoordinates[0], map.drawingContinuationLayer);
+        Coordinate start = map.toProjectCoordinate(drawingContinuationBaseCoordinates[0], drawingContinuationLayer);
         Coordinate end = map.toProjectCoordinate(
-                map.drawingContinuationBaseCoordinates[map.drawingContinuationBaseCoordinates.length - 1],
-                map.drawingContinuationLayer
+                drawingContinuationBaseCoordinates[drawingContinuationBaseCoordinates.length - 1],
+                drawingContinuationLayer
         );
         if (start == null || end == null) {
             map.showCopiedMessage("No se pudieron ubicar los extremos de la linea seleccionada.");
@@ -563,44 +574,44 @@ class DrawingToolManager {
             return;
         }
 
-        map.drawingCoordinates.clear();
-        map.drawingContinuationFromStart = startDistance <= endDistance;
-        Coordinate[] oriented = map.drawingContinuationFromStart
-                ? MapGeometryUtils.reverseCoordinates(map.drawingContinuationBaseCoordinates)
-                : cloneCoordinates(map.drawingContinuationBaseCoordinates);
+        drawingCoordinates.clear();
+        drawingContinuationFromStart = startDistance <= endDistance;
+        Coordinate[] oriented = drawingContinuationFromStart
+                ? MapGeometryUtils.reverseCoordinates(drawingContinuationBaseCoordinates)
+                : cloneCoordinates(drawingContinuationBaseCoordinates);
         for (Coordinate coordinate : oriented) {
             if (coordinate != null) {
-                map.drawingCoordinates.add(new Coordinate(coordinate));
+                drawingCoordinates.add(new Coordinate(coordinate));
             }
         }
-        map.drawingContinuationEndpointChosen = true;
-        map.showCopiedMessage(map.drawingContinuationFromStart
+        drawingContinuationEndpointChosen = true;
+        map.showCopiedMessage(drawingContinuationFromStart
                 ? "Extremo inicial seleccionado. Ahora agrega los nuevos vertices y termina con doble clic."
                 : "Extremo final seleccionado. Ahora agrega los nuevos vertices y termina con doble clic.");
         map.repaint();
     }
 
     Geometry buildContinuationLineGeometry() {
-        if (map.drawingContinuationBaseCoordinates == null
-                || !map.drawingContinuationEndpointChosen
-                || map.drawingCoordinates.size() <= map.drawingContinuationBaseCoordinates.length
-                || map.drawingContinuationLayer == null
-                || map.drawingContinuationFeatureId == null) {
+        if (drawingContinuationBaseCoordinates == null
+                || !drawingContinuationEndpointChosen
+                || drawingCoordinates.size() <= drawingContinuationBaseCoordinates.length
+                || drawingContinuationLayer == null
+                || drawingContinuationFeatureId == null) {
             return null;
         }
 
-        if (map.selectedLayer != map.drawingContinuationLayer || !map.sameFeatureId(map.selectedFeature, map.drawingContinuationFeatureId)) {
-            ShapefileData data = map.getShapefileData(map.drawingContinuationLayer);
-            map.selectedLayer = map.drawingContinuationLayer;
-            map.selectedFeature = data != null ? map.findFeatureById(data.getFeatures(), map.drawingContinuationFeatureId) : null;
+        if (map.selectedLayer != drawingContinuationLayer || !map.sameFeatureId(map.selectedFeature, drawingContinuationFeatureId)) {
+            ShapefileData data = map.getShapefileData(drawingContinuationLayer);
+            map.selectedLayer = drawingContinuationLayer;
+            map.selectedFeature = data != null ? map.findFeatureById(data.getFeatures(), drawingContinuationFeatureId) : null;
         }
 
         if (map.selectedFeature == null) {
             return null;
         }
 
-        Coordinate[] oriented = cloneCoordinates(map.drawingCoordinates.toArray(new Coordinate[0]));
-        if (map.drawingContinuationFromStart) {
+        Coordinate[] oriented = cloneCoordinates(drawingCoordinates.toArray(new Coordinate[0]));
+        if (drawingContinuationFromStart) {
             oriented = MapGeometryUtils.reverseCoordinates(oriented);
         }
         oriented = MapGeometryUtils.collapseDuplicateLineCoordinates(oriented);

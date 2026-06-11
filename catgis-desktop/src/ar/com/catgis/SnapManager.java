@@ -15,10 +15,31 @@ import java.util.List;
 
 class SnapManager {
 
-    private final MapPanel map;
+    private final SnapContext ctx;
+    private boolean snapEnabled = true;
+    private Coordinate snapPreviewCoordinate = null;
 
-    SnapManager(MapPanel map) {
-        this.map = map;
+    SnapManager(SnapContext ctx) {
+        this.ctx = ctx;
+    }
+
+    boolean isSnapEnabled() {
+        return snapEnabled;
+    }
+
+    void setSnapEnabled(boolean enabled) {
+        this.snapEnabled = enabled;
+        if (!enabled) {
+            snapPreviewCoordinate = null;
+        }
+    }
+
+    Coordinate getSnapPreviewCoordinate() {
+        return snapPreviewCoordinate;
+    }
+
+    void setSnapPreviewCoordinate(Coordinate coordinate) {
+        this.snapPreviewCoordinate = coordinate;
     }
 
     static class SnapTarget {
@@ -32,23 +53,23 @@ class SnapManager {
     }
 
     boolean shouldExcludeSelectedFeatureFromSnap() {
-        return map.featureEditMode
-                && MapPanel.EDIT_OP_MOVE_VERTEX.equals(map.featureEditOperation)
-                && map.activeEditVertexIndex >= 0;
+        return ctx.isFeatureEditMode()
+                && ctx.isMoveVertexEditOp()
+                && ctx.getActiveEditVertexIndex() >= 0;
     }
 
     Coordinate findNearestSnapCoordinate(int screenX, int screenY, boolean excludeSelectedFeature) {
-        if (!map.snapEnabled) {
+        if (!snapEnabled) {
             return null;
         }
         SnapTarget bestTarget = null;
-        Coordinate target = new Coordinate(map.screenToWorldX(screenX), map.screenToWorldY(screenY));
+        Coordinate target = new Coordinate(ctx.screenToWorldX(screenX), ctx.screenToWorldY(screenY));
         for (Layer layer : getSnapCandidateLayers()) {
-            if (layer == null || !map.layerManager.isLayerEffectivelyVisible(layer)) {
+            if (layer == null || !ctx.isLayerEffectivelyVisible(layer)) {
                 continue;
             }
 
-            ShapefileData data = map.getShapefileData(layer);
+            ShapefileData data = ctx.getShapefileData(layer);
             if (data == null || data.getFeatures() == null) {
                 continue;
             }
@@ -57,11 +78,11 @@ class SnapManager {
                 if (feature == null) {
                     continue;
                 }
-                if (!map.isFeatureVisibleInLayer(layer, feature)) {
+                if (!ctx.isFeatureVisibleInLayer(layer, feature)) {
                     continue;
                 }
-                if (excludeSelectedFeature && layer == map.selectedLayer
-                        && map.sameFeatureId(feature, map.selectedFeature != null ? map.selectedFeature.getID() : null)) {
+                if (excludeSelectedFeature && layer == ctx.getSelectedLayer()
+                        && ctx.sameFeatureId(feature, ctx.getSelectedFeatureId())) {
                     continue;
                 }
 
@@ -70,7 +91,7 @@ class SnapManager {
                     continue;
                 }
 
-                Geometry displayGeometry = map.reprojectGeometryIfNeeded(layer, geometry);
+                Geometry displayGeometry = ctx.reprojectGeometryIfNeeded(layer, geometry);
                 if (displayGeometry == null || displayGeometry.isEmpty()) {
                     continue;
                 }
@@ -95,8 +116,8 @@ class SnapManager {
                 continue;
             }
 
-            int vx = map.worldToScreenX(coordinate.x);
-            int vy = map.worldToScreenY(coordinate.y);
+            int vx = ctx.worldToScreenX(coordinate.x);
+            int vy = ctx.worldToScreenY(coordinate.y);
             double distance = Math.hypot(screenX - vx, screenY - vy);
             if (distance > MapPanel.SNAP_TOLERANCE_PX) {
                 continue;
@@ -111,7 +132,7 @@ class SnapManager {
                 || displayGeometry instanceof MultiLineString
                 || displayGeometry instanceof Polygon
                 || displayGeometry instanceof MultiPolygon) {
-            MapPanel.LineSplitProjection projection = map.findEditableSegmentProjection(
+            MapPanel.LineSplitProjection projection = ctx.findEditableSegmentProjection(
                     displayGeometry, target, screenX, screenY, MapPanel.SNAP_TOLERANCE_PX);
             if (projection != null && projection.projected != null
                     && (bestTarget == null || projection.distance < bestTarget.distance)) {
@@ -124,16 +145,18 @@ class SnapManager {
 
     List<Layer> getSnapCandidateLayers() {
         List<Layer> candidates = new ArrayList<>();
-        if (map.activeVectorEditingLayer != null && map.shapefileLayers.containsKey(map.activeVectorEditingLayer)) {
-            candidates.add(map.activeVectorEditingLayer);
+        Layer activeEditing = ctx.getActiveVectorEditingLayer();
+        if (activeEditing != null && ctx.hasShapefileLayer(activeEditing)) {
+            candidates.add(activeEditing);
             return candidates;
         }
-        if (map.selectedLayer != null && map.shapefileLayers.containsKey(map.selectedLayer)) {
-            candidates.add(map.selectedLayer);
+        Layer selected = ctx.getSelectedLayer();
+        if (selected != null && ctx.hasShapefileLayer(selected)) {
+            candidates.add(selected);
             return candidates;
         }
-        for (Layer layer : map.getRenderOrderLayers()) {
-            if (layer != null && map.shapefileLayers.containsKey(layer) && map.isLayerEffectivelyVisible(layer)) {
+        for (Layer layer : ctx.getRenderOrderLayers()) {
+            if (layer != null && ctx.hasShapefileLayer(layer) && ctx.isLayerEffectivelyVisible(layer)) {
                 candidates.add(layer);
             }
         }

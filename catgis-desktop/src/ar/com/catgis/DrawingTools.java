@@ -37,16 +37,16 @@ public class DrawingTools {
     }
 
     public void cancelCurrentDrawing() {
-        panel.drawingMode = null;
-        panel.drawingCoordinates.clear();
-        panel.pendingDrawingSessionGeometries.clear();
-        panel.drawingSessionLayer = null;
-        panel.drawingSessionDirty = false;
-        panel.drawingContinuationLayer = null;
-        panel.drawingContinuationFeatureId = null;
-        panel.drawingContinuationBaseCoordinates = null;
-        panel.drawingContinuationFromStart = false;
-        panel.drawingContinuationEndpointChosen = false;
+        panel.drawingToolManager.drawingMode = null;
+        panel.drawingToolManager.drawingCoordinates.clear();
+        panel.drawingToolManager.pendingDrawingSessionGeometries.clear();
+        panel.drawingToolManager.drawingSessionLayer = null;
+        panel.drawingToolManager.drawingSessionDirty = false;
+        panel.drawingToolManager.drawingContinuationLayer = null;
+        panel.drawingToolManager.drawingContinuationFeatureId = null;
+        panel.drawingToolManager.drawingContinuationBaseCoordinates = null;
+        panel.drawingToolManager.drawingContinuationFromStart = false;
+        panel.drawingToolManager.drawingContinuationEndpointChosen = false;
         panel.clearCadConstructionState();
         EventBus.emit(EventBus.EventType.TOOLBAR_SYNC);
         panel.repaint();
@@ -199,7 +199,7 @@ public class DrawingTools {
         }
 
         try {
-            if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingMode)) {
+            if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
                 Geometry continuationGeometry = buildContinuationLineGeometry();
                 if (continuationGeometry == null) {
                     JOptionPane.showMessageDialog(panel, "Para continuar la l\u00EDnea necesit\u00E1s agregar al menos un v\u00E9rtice nuevo.");
@@ -216,9 +216,9 @@ public class DrawingTools {
                 if (sessionGeometries.isEmpty()) {
                     return;
                 }
-                panel.pendingDrawingSessionGeometries.addAll(sessionGeometries);
-                panel.drawingSessionDirty = true;
-                panel.drawingCoordinates.clear();
+                panel.drawingToolManager.pendingDrawingSessionGeometries.addAll(sessionGeometries);
+                panel.drawingToolManager.drawingSessionDirty = true;
+                panel.drawingToolManager.drawingCoordinates.clear();
                 EventBus.emit(EventBus.EventType.TOOLBAR_SYNC);
                 panel.repaint();
                 panel.showCopiedMessage(sessionGeometries.size() == 1
@@ -239,33 +239,33 @@ public class DrawingTools {
                     return;
                 }
 
-                targetLayer = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(panel.drawingMode), panel);
+                targetLayer = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(panel.drawingToolManager.drawingMode), panel);
                 if (targetLayer == null) {
                     panel.showCopiedMessage("El dibujo sigue activo hasta que completes la capa destino o lo canceles.");
                     return;
                 }
             }
 
-            if (!panel.pendingDrawingSessionGeometries.isEmpty()) {
+            if (!panel.drawingToolManager.pendingDrawingSessionGeometries.isEmpty()) {
                 if (!appendGeometriesToLayer(
                         targetLayer,
-                        new ArrayList<>(panel.pendingDrawingSessionGeometries),
-                        panel.pendingDrawingSessionGeometries.size() == 1
+                        new ArrayList<>(panel.drawingToolManager.pendingDrawingSessionGeometries),
+                        panel.drawingToolManager.pendingDrawingSessionGeometries.size() == 1
                                 ? "Entidad pendiente agregada a la capa."
-                                : panel.pendingDrawingSessionGeometries.size() + " entidades pendientes agregadas a la capa."
+                                : panel.drawingToolManager.pendingDrawingSessionGeometries.size() + " entidades pendientes agregadas a la capa."
                 )) {
                     return;
                 }
-                panel.pendingDrawingSessionGeometries.clear();
+                panel.drawingToolManager.pendingDrawingSessionGeometries.clear();
             }
 
             if (!appendCurrentDrawingToLayer(targetLayer)) {
                 return;
             }
 
-            panel.drawingSessionLayer = targetLayer;
-            panel.drawingSessionDirty = true;
-            panel.drawingCoordinates.clear();
+            panel.drawingToolManager.drawingSessionLayer = targetLayer;
+            panel.drawingToolManager.drawingSessionDirty = true;
+            panel.drawingToolManager.drawingCoordinates.clear();
             EventBus.emit(EventBus.EventType.TOOLBAR_SYNC);
             panel.repaint();
         } catch (Exception ex) {
@@ -279,11 +279,11 @@ public class DrawingTools {
             return;
         }
 
-        boolean hasPendingCurrentGeometry = !panel.drawingCoordinates.isEmpty();
-        if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingMode)) {
-            hasPendingCurrentGeometry = panel.drawingContinuationEndpointChosen
-                    && panel.drawingContinuationBaseCoordinates != null
-                    && panel.drawingCoordinates.size() > panel.drawingContinuationBaseCoordinates.length;
+        boolean hasPendingCurrentGeometry = !panel.drawingToolManager.drawingCoordinates.isEmpty();
+        if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            hasPendingCurrentGeometry = panel.drawingToolManager.drawingContinuationEndpointChosen
+                    && panel.drawingToolManager.drawingContinuationBaseCoordinates != null
+                    && panel.drawingToolManager.drawingCoordinates.size() > panel.drawingToolManager.drawingContinuationBaseCoordinates.length;
         }
 
         if (hasPendingCurrentGeometry) {
@@ -299,16 +299,16 @@ public class DrawingTools {
             }
             if (closeCurrent == JOptionPane.YES_OPTION) {
                 finishCurrentDrawing();
-                if (!panel.drawingCoordinates.isEmpty()) {
+                if (!panel.drawingToolManager.drawingCoordinates.isEmpty()) {
                     return;
                 }
             } else {
-                panel.drawingCoordinates.clear();
+                panel.drawingToolManager.drawingCoordinates.clear();
             }
         }
 
-        Layer layerToSave = panel.drawingSessionLayer != null ? panel.drawingSessionLayer : resolveDrawingTargetLayer();
-        if (!panel.pendingDrawingSessionGeometries.isEmpty() && layerToSave == null) {
+        Layer layerToSave = panel.drawingToolManager.drawingSessionLayer != null ? panel.drawingToolManager.drawingSessionLayer : resolveDrawingTargetLayer();
+        if (!panel.drawingToolManager.pendingDrawingSessionGeometries.isEmpty() && layerToSave == null) {
             int choice = JOptionPane.showConfirmDialog(
                     panel,
                     "No hay una capa vectorial compatible todavia.\n\nQueres crearla ahora para guardar las entidades dibujadas?",
@@ -319,27 +319,27 @@ public class DrawingTools {
             if (choice != JOptionPane.YES_OPTION) {
                 return;
             }
-            layerToSave = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(panel.drawingMode), panel);
+            layerToSave = NewVectorLayerAction.createNewVectorLayer(resolveDrawingGeometryFamily(panel.drawingToolManager.drawingMode), panel);
             if (layerToSave == null) {
                 return;
             }
         }
 
-        if (!panel.pendingDrawingSessionGeometries.isEmpty()) {
+        if (!panel.drawingToolManager.pendingDrawingSessionGeometries.isEmpty()) {
             if (!appendGeometriesToLayer(
                     layerToSave,
-                    new ArrayList<>(panel.pendingDrawingSessionGeometries),
-                    panel.pendingDrawingSessionGeometries.size() == 1
+                    new ArrayList<>(panel.drawingToolManager.pendingDrawingSessionGeometries),
+                    panel.drawingToolManager.pendingDrawingSessionGeometries.size() == 1
                             ? "Entidad de la sesion agregada a la capa."
-                            : panel.pendingDrawingSessionGeometries.size() + " entidades de la sesion agregadas a la capa."
+                            : panel.drawingToolManager.pendingDrawingSessionGeometries.size() + " entidades de la sesion agregadas a la capa."
             )) {
                 return;
             }
-            panel.drawingSessionLayer = layerToSave;
-            panel.pendingDrawingSessionGeometries.clear();
+            panel.drawingToolManager.drawingSessionLayer = layerToSave;
+            panel.drawingToolManager.pendingDrawingSessionGeometries.clear();
         }
 
-        if (panel.drawingSessionDirty && layerToSave != null) {
+        if (panel.drawingToolManager.drawingSessionDirty && layerToSave != null) {
             int saveChoice = JOptionPane.showConfirmDialog(
                     panel,
                     "Queres guardar ahora la capa vectorial?\n\n" + layerToSave.getName(),
@@ -384,15 +384,15 @@ public class DrawingTools {
     }
 
     private Layer resolveDrawingTargetLayer() {
-        if (isCompatibleDrawingTarget(panel.drawingSessionLayer, panel.drawingMode)) {
-            return panel.drawingSessionLayer;
+        if (isCompatibleDrawingTarget(panel.drawingToolManager.drawingSessionLayer, panel.drawingToolManager.drawingMode)) {
+            return panel.drawingToolManager.drawingSessionLayer;
         }
 
-        if (isCompatibleDrawingTarget(panel.activeVectorEditingLayer, panel.drawingMode)) {
+        if (isCompatibleDrawingTarget(panel.activeVectorEditingLayer, panel.drawingToolManager.drawingMode)) {
             return panel.activeVectorEditingLayer;
         }
 
-        if (panel.selectedLayer != null && isCompatibleDrawingTarget(panel.selectedLayer, panel.drawingMode)) {
+        if (panel.selectedLayer != null && isCompatibleDrawingTarget(panel.selectedLayer, panel.drawingToolManager.drawingMode)) {
             return panel.selectedLayer;
         }
 
@@ -514,29 +514,29 @@ public class DrawingTools {
                 ? targetType.getGeometryDescriptor().getType().getBinding()
                 : null;
 
-        if ("POINT".equalsIgnoreCase(panel.drawingMode) || "MULTIPOINT".equalsIgnoreCase(panel.drawingMode)) {
-            if (panel.drawingCoordinates.isEmpty()) {
+        if ("POINT".equalsIgnoreCase(panel.drawingToolManager.drawingMode) || "MULTIPOINT".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            if (panel.drawingToolManager.drawingCoordinates.isEmpty()) {
                 JOptionPane.showMessageDialog(panel, "Para crear puntos necesit\u00E1s hacer clic en el mapa.");
                 return geometries;
             }
 
             GeometryFactory gf = new GeometryFactory();
             if (geometryBinding != null && MultiPoint.class.isAssignableFrom(geometryBinding)) {
-                Point[] points = new Point[panel.drawingCoordinates.size()];
-                for (int i = 0; i < panel.drawingCoordinates.size(); i++) {
-                    points[i] = gf.createPoint(new Coordinate(panel.drawingCoordinates.get(i)));
+                Point[] points = new Point[panel.drawingToolManager.drawingCoordinates.size()];
+                for (int i = 0; i < panel.drawingToolManager.drawingCoordinates.size(); i++) {
+                    points[i] = gf.createPoint(new Coordinate(panel.drawingToolManager.drawingCoordinates.get(i)));
                 }
                 geometries.add(gf.createMultiPoint(points));
             } else {
-                for (Coordinate coordinate : panel.drawingCoordinates) {
+                for (Coordinate coordinate : panel.drawingToolManager.drawingCoordinates) {
                     geometries.add(DrawFeatureBuilder.buildPoint(coordinate));
                 }
             }
             return geometries;
         }
 
-        if ("LINE".equalsIgnoreCase(panel.drawingMode)) {
-            Geometry geometry = DrawFeatureBuilder.buildLine(panel.drawingCoordinates);
+        if ("LINE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            Geometry geometry = DrawFeatureBuilder.buildLine(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(panel, "Para una l\u00EDnea necesit\u00E1s al menos 2 v\u00E9rtices.");
                 return geometries;
@@ -545,8 +545,8 @@ public class DrawingTools {
             return geometries;
         }
 
-        if ("RECTANGLE".equalsIgnoreCase(panel.drawingMode)) {
-            Geometry geometry = buildRectangleGeometry(panel.drawingCoordinates);
+        if ("RECTANGLE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            Geometry geometry = buildRectangleGeometry(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(panel, "Para un rect\u00E1ngulo necesit\u00E1s marcar dos esquinas opuestas.");
                 return geometries;
@@ -555,8 +555,8 @@ public class DrawingTools {
             return geometries;
         }
 
-        if ("POLYGON".equalsIgnoreCase(panel.drawingMode)) {
-            Geometry geometry = DrawFeatureBuilder.buildPolygon(panel.drawingCoordinates);
+        if ("POLYGON".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            Geometry geometry = DrawFeatureBuilder.buildPolygon(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(panel, "Para un pol\u00EDgono necesit\u00E1s al menos 3 v\u00E9rtices.");
                 return geometries;
@@ -564,8 +564,8 @@ public class DrawingTools {
             geometries.add(geometry);
         }
 
-        if ("CIRCLE".equalsIgnoreCase(panel.drawingMode)) {
-            Geometry geometry = buildCircleGeometry(panel.drawingCoordinates);
+        if ("CIRCLE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            Geometry geometry = buildCircleGeometry(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(panel, "Para un circulo necesitas marcar centro y radio.");
                 return geometries;
@@ -574,8 +574,8 @@ public class DrawingTools {
             return geometries;
         }
 
-        if ("CIRCLE_3P".equalsIgnoreCase(panel.drawingMode)) {
-            Geometry geometry = buildCircleThreePointGeometry(panel.drawingCoordinates);
+        if ("CIRCLE_3P".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
+            Geometry geometry = buildCircleThreePointGeometry(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
                 JOptionPane.showMessageDialog(panel, "No se pudo construir el circulo con esos tres puntos.");
                 return geometries;
@@ -588,15 +588,15 @@ public class DrawingTools {
     }
 
     void chooseContinuationEndpoint(int screenX, int screenY) {
-        if (panel.drawingContinuationBaseCoordinates == null || panel.drawingContinuationBaseCoordinates.length < 2 || panel.drawingContinuationLayer == null) {
+        if (panel.drawingToolManager.drawingContinuationBaseCoordinates == null || panel.drawingToolManager.drawingContinuationBaseCoordinates.length < 2 || panel.drawingToolManager.drawingContinuationLayer == null) {
             panel.showCopiedMessage("No se encontro una linea base valida para continuar.");
             return;
         }
 
-        Coordinate start = panel.toProjectCoordinate(panel.drawingContinuationBaseCoordinates[0], panel.drawingContinuationLayer);
+        Coordinate start = panel.toProjectCoordinate(panel.drawingToolManager.drawingContinuationBaseCoordinates[0], panel.drawingToolManager.drawingContinuationLayer);
         Coordinate end = panel.toProjectCoordinate(
-                panel.drawingContinuationBaseCoordinates[panel.drawingContinuationBaseCoordinates.length - 1],
-                panel.drawingContinuationLayer
+                panel.drawingToolManager.drawingContinuationBaseCoordinates[panel.drawingToolManager.drawingContinuationBaseCoordinates.length - 1],
+                panel.drawingToolManager.drawingContinuationLayer
         );
         if (start == null || end == null) {
             panel.showCopiedMessage("No se pudieron ubicar los extremos de la linea seleccionada.");
@@ -616,44 +616,44 @@ public class DrawingTools {
             return;
         }
 
-        panel.drawingCoordinates.clear();
-        panel.drawingContinuationFromStart = startDistance <= endDistance;
-        Coordinate[] oriented = panel.drawingContinuationFromStart
-                ? panel.reverseCoordinates(panel.drawingContinuationBaseCoordinates)
-                : panel.cloneCoordinates(panel.drawingContinuationBaseCoordinates);
+        panel.drawingToolManager.drawingCoordinates.clear();
+        panel.drawingToolManager.drawingContinuationFromStart = startDistance <= endDistance;
+        Coordinate[] oriented = panel.drawingToolManager.drawingContinuationFromStart
+                ? panel.reverseCoordinates(panel.drawingToolManager.drawingContinuationBaseCoordinates)
+                : panel.cloneCoordinates(panel.drawingToolManager.drawingContinuationBaseCoordinates);
         for (Coordinate coordinate : oriented) {
             if (coordinate != null) {
-                panel.drawingCoordinates.add(new Coordinate(coordinate));
+                panel.drawingToolManager.drawingCoordinates.add(new Coordinate(coordinate));
             }
         }
-        panel.drawingContinuationEndpointChosen = true;
-        panel.showCopiedMessage(panel.drawingContinuationFromStart
+        panel.drawingToolManager.drawingContinuationEndpointChosen = true;
+        panel.showCopiedMessage(panel.drawingToolManager.drawingContinuationFromStart
                 ? "Extremo inicial seleccionado. Ahora agrega los nuevos vertices y termina con doble clic."
                 : "Extremo final seleccionado. Ahora agrega los nuevos vertices y termina con doble clic.");
         panel.repaint();
     }
 
     private Geometry buildContinuationLineGeometry() {
-        if (panel.drawingContinuationBaseCoordinates == null
-                || !panel.drawingContinuationEndpointChosen
-                || panel.drawingCoordinates.size() <= panel.drawingContinuationBaseCoordinates.length
-                || panel.drawingContinuationLayer == null
-                || panel.drawingContinuationFeatureId == null) {
+        if (panel.drawingToolManager.drawingContinuationBaseCoordinates == null
+                || !panel.drawingToolManager.drawingContinuationEndpointChosen
+                || panel.drawingToolManager.drawingCoordinates.size() <= panel.drawingToolManager.drawingContinuationBaseCoordinates.length
+                || panel.drawingToolManager.drawingContinuationLayer == null
+                || panel.drawingToolManager.drawingContinuationFeatureId == null) {
             return null;
         }
 
-        if (panel.selectedLayer != panel.drawingContinuationLayer || !panel.sameFeatureId(panel.selectedFeature, panel.drawingContinuationFeatureId)) {
-            ShapefileData data = panel.getShapefileData(panel.drawingContinuationLayer);
-            panel.selectedLayer = panel.drawingContinuationLayer;
-            panel.selectedFeature = data != null ? panel.findFeatureById(data.getFeatures(), panel.drawingContinuationFeatureId) : null;
+        if (panel.selectedLayer != panel.drawingToolManager.drawingContinuationLayer || !panel.sameFeatureId(panel.selectedFeature, panel.drawingToolManager.drawingContinuationFeatureId)) {
+            ShapefileData data = panel.getShapefileData(panel.drawingToolManager.drawingContinuationLayer);
+            panel.selectedLayer = panel.drawingToolManager.drawingContinuationLayer;
+            panel.selectedFeature = data != null ? panel.findFeatureById(data.getFeatures(), panel.drawingToolManager.drawingContinuationFeatureId) : null;
         }
 
         if (panel.selectedFeature == null) {
             return null;
         }
 
-        Coordinate[] oriented = panel.cloneCoordinates(panel.drawingCoordinates.toArray(new Coordinate[0]));
-        if (panel.drawingContinuationFromStart) {
+        Coordinate[] oriented = panel.cloneCoordinates(panel.drawingToolManager.drawingCoordinates.toArray(new Coordinate[0]));
+        if (panel.drawingToolManager.drawingContinuationFromStart) {
             oriented = panel.reverseCoordinates(oriented);
         }
         oriented = panel.collapseDuplicateLineCoordinates(oriented);

@@ -35,7 +35,7 @@ public class MapPopupHandler {
         if (panel.isDrawingActive()) {
             JPopupMenu popupMenu = new JPopupMenu();
 
-            if (!panel.drawingCoordinates.isEmpty()) {
+            if (!panel.drawingToolManager.drawingCoordinates.isEmpty()) {
                 JMenuItem finishEntityItem = new JMenuItem("Cerrar entidad actual");
                 finishEntityItem.addActionListener(ev -> panel.finishCurrentDrawing());
                 popupMenu.add(finishEntityItem);

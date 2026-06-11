@@ -93,7 +93,7 @@ import ar.com.catgis.renderer.MapDecorationRenderer;
 import ar.com.catgis.renderer.labels.LabelExpressionEngine;
 import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 
-public class MapPanel extends JPanel {
+public class MapPanel extends JPanel implements SnapContext {
 
     final Map<Layer, ShapefileData> shapefileLayers = new LinkedHashMap<>();
     final Map<Layer, LocalRasterData> rasterLayers = new LinkedHashMap<>();
@@ -120,17 +120,6 @@ public class MapPanel extends JPanel {
     private final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
     final UndoRedoManager undoRedoManager;
 
-    final List<Coordinate> drawingCoordinates = new ArrayList<>();
-    final List<Geometry> pendingDrawingSessionGeometries = new ArrayList<>();
-    String drawingMode = null;
-    Layer drawingSessionLayer = null;
-    boolean drawingSessionDirty = false;
-    Layer drawingContinuationLayer = null;
-    String drawingContinuationFeatureId = null;
-    Coordinate[] drawingContinuationBaseCoordinates = null;
-    boolean drawingContinuationFromStart = false;
-    boolean drawingContinuationEndpointChosen = false;
-
     final List<Coordinate> measurementCoordinates = new ArrayList<>();
     String measurementMode = null;
 
@@ -146,11 +135,11 @@ public class MapPanel extends JPanel {
     private final EditingEngine editingEngine = new EditingEngine();
     final LayerManager layerManager = new LayerManager(this);
     private final MapUtilities utilities = new MapUtilities(this);
-    private final DrawingToolManager drawingToolManager;
+    final DrawingToolManager drawingToolManager;
     private final MapRenderer mapRenderer;
     private final MouseHandler mouseHandler;
     private final KeyboardShortcutHandler keyboardShortcutHandler;
-    private final SnapManager snapManager;
+    final SnapManager snapManager;
 
     // Legacy fields - kept as thin delegates to viewController
     double viewMinX = 0;
@@ -244,8 +233,6 @@ public class MapPanel extends JPanel {
     String cadPlacementDragStartMessage = I18n.t("Arrastre CAD activo: clic izquierdo y arrastra para mover. Suelta para aplicar. Usa clic derecho o Esc para cancelar.");
     String cadPlacementDragSuccessMessage = I18n.t("Arrastre CAD aplicado.");
     String cadPlacementDragCancelMessage = I18n.t("Arrastre CAD cancelado.");
-    boolean snapEnabled = true;
-    Coordinate snapPreviewCoordinate = null;
     final Timer selectionFlashTimer;
 
     public MapPanel() {
@@ -390,8 +377,7 @@ public class MapPanel extends JPanel {
     void beginTemporaryMiddlePan(MouseEvent e) {
         temporaryMiddlePanActive = true;
         temporaryMiddlePanMoved = false;
-        dragStartViewMinX = viewMinX;
-        dragStartViewMinY = viewMinY;
+        captureViewDragStart();
         lastMouseX = e.getX();
         lastMouseY = e.getY();
         setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
@@ -433,10 +419,10 @@ public class MapPanel extends JPanel {
         hoverWorldX = screenToWorldX(screenX);
         hoverWorldY = screenToWorldY(screenY);
 
-        if (snapEnabled && (isDrawingActive() || isMeasurementActive() || featureEditMode)) {
-            snapPreviewCoordinate = findNearestSnapCoordinate(screenX, screenY, shouldExcludeSelectedFeatureFromSnap());
+        if (snapManager.isSnapEnabled() && (isDrawingActive() || isMeasurementActive() || featureEditMode)) {
+            snapManager.setSnapPreviewCoordinate(findNearestSnapCoordinate(screenX, screenY, shouldExcludeSelectedFeatureFromSnap()));
         } else {
-            snapPreviewCoordinate = null;
+            snapManager.setSnapPreviewCoordinate(null);
         }
     }
 
@@ -445,8 +431,9 @@ public class MapPanel extends JPanel {
     }
 
     Coordinate resolveInteractivePreviewCoordinate() {
-        if (snapPreviewCoordinate != null) {
-            return new Coordinate(snapPreviewCoordinate);
+        Coordinate preview = snapManager.getSnapPreviewCoordinate();
+        if (preview != null) {
+            return new Coordinate(preview);
         }
         if (Double.isNaN(hoverWorldX) || Double.isNaN(hoverWorldY)) {
             return null;
@@ -455,7 +442,7 @@ public class MapPanel extends JPanel {
     }
 
     Coordinate resolveInteractiveCoordinate(int screenX, int screenY, boolean excludeSelectedFeature) {
-        if (!snapEnabled) {
+        if (!snapManager.isSnapEnabled()) {
             return new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
         }
         Coordinate snapped = findNearestSnapCoordinate(screenX, screenY, excludeSelectedFeature);
@@ -658,7 +645,7 @@ public class MapPanel extends JPanel {
         return layer != null && layer == activeVectorEditingLayer;
     }
 
-    public boolean isFeatureEditMode() {
+    @Override public boolean isFeatureEditMode() {
         return featureEditMode;
     }
 
@@ -683,19 +670,17 @@ public class MapPanel extends JPanel {
     }
 
     public boolean isSnapEnabled() {
-        return snapEnabled;
+        return snapManager.isSnapEnabled();
     }
 
     public void setSnapEnabled(boolean snapEnabled) {
-        this.snapEnabled = snapEnabled;
-        if (!snapEnabled) {
-            snapPreviewCoordinate = null;
-        } else if (!Double.isNaN(hoverWorldX) && !Double.isNaN(hoverWorldY)) {
-            snapPreviewCoordinate = findNearestSnapCoordinate(
+        snapManager.setSnapEnabled(snapEnabled);
+        if (snapEnabled && !Double.isNaN(hoverWorldX) && !Double.isNaN(hoverWorldY)) {
+            snapManager.setSnapPreviewCoordinate(findNearestSnapCoordinate(
                     worldToScreenX(hoverWorldX),
                     worldToScreenY(hoverWorldY),
                     shouldExcludeSelectedFeatureFromSnap()
-            );
+            ));
         }
         repaint();
         refreshEditingUi();
@@ -1563,11 +1548,11 @@ public class MapPanel extends JPanel {
     }
 
     public boolean isDrawingActive() {
-        return drawingMode != null && !drawingMode.isBlank();
+        return drawingToolManager.drawingMode != null && !drawingToolManager.drawingMode.isBlank();
     }
 
     public String getDrawingMode() {
-        return drawingMode;
+        return drawingToolManager.drawingMode;
     }
 
     public void zoomIn() {
@@ -1923,7 +1908,7 @@ public class MapPanel extends JPanel {
             selectedFeature = null;
         }
 
-        if (drawingSessionLayer == layer || drawingContinuationLayer == layer) {
+        if (drawingToolManager.drawingSessionLayer == layer || drawingToolManager.drawingContinuationLayer == layer) {
             cancelCurrentDrawing();
         }
 
@@ -1988,6 +1973,14 @@ public class MapPanel extends JPanel {
     public FeatureRenderer getFeatureRenderer() { return featureRenderer; }
     public EditingEngine getEditingEngine() { return editingEngine; }
 
+    // --- SnapContext implementation ---
+    @Override public boolean isMoveVertexEditOp() { return EDIT_OP_MOVE_VERTEX.equals(featureEditOperation); }
+    @Override public int getActiveEditVertexIndex() { return activeEditVertexIndex; }
+    @Override public Layer getSelectedLayer() { return selectedLayer; }
+    @Override public String getSelectedFeatureId() { return selectedFeature != null ? selectedFeature.getID() : null; }
+    @Override public Layer getActiveVectorEditingLayer() { return activeVectorEditingLayer; }
+    @Override public boolean hasShapefileLayer(Layer layer) { return layer != null && shapefileLayers.containsKey(layer); }
+
     // --- Sync methods ---
     private void syncViewFromController() {
         viewMinX = viewController.getViewMinX();
@@ -2002,6 +1995,20 @@ public class MapPanel extends JPanel {
         viewController.setViewMinY(viewMinY);
         viewController.setZoomFactor(zoomFactor);
         viewController.setPanelSize(getWidth(), getHeight());
+    }
+
+    void shiftViewByPixels(int dx, int dy) {
+        if (dx != 0 || dy != 0) {
+            double zf = viewController.getZoomFactor();
+            viewMinX -= dx / zf;
+            viewMinY += dy / zf;
+            syncViewToController();
+        }
+    }
+
+    void captureViewDragStart() {
+        dragStartViewMinX = viewController.getViewMinX();
+        dragStartViewMinY = viewController.getViewMinY();
     }
 
     public Envelope getCurrentViewEnvelope() {
@@ -2207,11 +2214,11 @@ public class MapPanel extends JPanel {
         JOptionPane.showMessageDialog(this, sb.toString(), "InformaciÃ³n de capa", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    boolean isFeatureVisibleInLayer(Layer layer, SimpleFeature feature) {
+    @Override public boolean isFeatureVisibleInLayer(Layer layer, SimpleFeature feature) {
         return CadLayerSupport.isCadFeatureVisible(layer, feature);
     }
 
-    Geometry reprojectGeometryIfNeeded(Layer layer, Geometry geometry) {
+    @Override public Geometry reprojectGeometryIfNeeded(Layer layer, Geometry geometry) {
         if (geometry == null || geometry.isEmpty()) {
             return geometry;
         }
@@ -2265,7 +2272,7 @@ public class MapPanel extends JPanel {
         if (isDrawingActive()) {
             JPopupMenu popupMenu = new JPopupMenu();
 
-            if (!drawingCoordinates.isEmpty()) {
+            if (!drawingToolManager.drawingCoordinates.isEmpty()) {
                 JMenuItem finishEntityItem = new JMenuItem("Cerrar entidad actual");
                 finishEntityItem.addActionListener(ev -> finishCurrentDrawing());
                 popupMenu.add(finishEntityItem);
@@ -3403,7 +3410,7 @@ public class MapPanel extends JPanel {
         return layerManager.getRenderOrderLayers();
     }
 
-    public boolean isLayerEffectivelyVisible(Layer layer) {
+    @Override public boolean isLayerEffectivelyVisible(Layer layer) {
         return layerManager.isLayerEffectivelyVisible(layer);
     }
 
@@ -4871,7 +4878,7 @@ public class MapPanel extends JPanel {
         return feature != null && otherFeature != null && sameFeatureId(feature, otherFeature.getID());
     }
 
-    boolean sameFeatureId(SimpleFeature feature, String featureId) {
+    @Override public boolean sameFeatureId(SimpleFeature feature, String featureId) {
         return feature != null && featureId != null && featureId.equals(feature.getID());
     }
 
@@ -5449,7 +5456,8 @@ public class MapPanel extends JPanel {
         return -1;
     }
 
-    LineSplitProjection findEditableSegmentProjection(Geometry geometry, Coordinate target, int screenX, int screenY, double maxDistancePx) {
+    @Override
+    public LineSplitProjection findEditableSegmentProjection(Geometry geometry, Coordinate target, int screenX, int screenY, double maxDistancePx) {
         if (geometry == null || target == null) {
             return null;
         }
@@ -6343,11 +6351,11 @@ public class MapPanel extends JPanel {
         return (int) Math.round(getHeight() - ((worldY - viewMinY) * zoomFactor));
     }
 
-    double screenToWorldX(int screenX) {
+    @Override public double screenToWorldX(int screenX) {
         return viewMinX + (screenX / zoomFactor);
     }
 
-    double screenToWorldY(int screenY) {
+    @Override public double screenToWorldY(int screenY) {
         return viewMinY + ((getHeight() - screenY) / zoomFactor);
     }
 
