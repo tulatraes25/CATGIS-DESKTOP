@@ -302,7 +302,7 @@ public class RasterImageLoader {
             tmp.delete();
         }
 
-        String gdalTranslate = findExecutable("gdal_translate.exe", "gdal_translate");
+        String gdalTranslate = GdalSupport.resolve("gdal_translate.exe");
         ProcessBuilder pb = new ProcessBuilder(
                 gdalTranslate,
                 "-of", "GTiff",
@@ -346,7 +346,7 @@ public class RasterImageLoader {
 
     private static void buildOverviewsIfPossible(File tif) {
         try {
-            String gdalAddo = findExecutable("gdaladdo.exe", "gdaladdo");
+            String gdalAddo = GdalSupport.resolve("gdaladdo.exe");
             ProcessBuilder pb = new ProcessBuilder(
                     gdalAddo,
                     "-r", "average",
@@ -359,18 +359,6 @@ public class RasterImageLoader {
             p.waitFor();
         } catch (Exception ignored) {
         }
-    }
-
-    private static String findExecutable(String exeName, String fallback) {
-        File osgeo = new File("C:\\OSGeo4W\\bin\\" + exeName);
-        if (osgeo.exists()) {
-            return osgeo.getAbsolutePath();
-        }
-        File osgeo64 = new File("C:\\OSGeo4W64\\bin\\" + exeName);
-        if (osgeo64.exists()) {
-            return osgeo64.getAbsolutePath();
-        }
-        return fallback;
     }
 
     private static String buildCacheKey(File file) throws IOException {

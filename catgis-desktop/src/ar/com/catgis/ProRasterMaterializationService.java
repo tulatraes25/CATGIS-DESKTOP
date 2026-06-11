@@ -19,7 +19,12 @@ final class ProRasterMaterializationService {
     }
 
     static boolean isMaterializationSupported() {
-        return resolveGdalTranslateExecutable() != null;
+        try {
+            GdalSupport.resolve("gdal_translate.exe");
+            return true;
+        } catch (GdalSupport.GdalNotAvailableException e) {
+            return false;
+        }
     }
 
     static MaterializedRaster materialize(ProDatasetOpenService.Entry entry) throws IOException {
@@ -46,10 +51,7 @@ final class ProRasterMaterializationService {
             throw new IOException("La variable Pro no tiene una expresion fuente materializable.");
         }
 
-        String executable = resolveGdalTranslateExecutable();
-        if (executable == null) {
-            throw new IOException("No se encontro gdal_translate para materializar variables Pro.");
-        }
+        String executable = GdalSupport.resolve("gdal_translate.exe");
         if (!CACHE_DIR.exists() && !CACHE_DIR.mkdirs() && !CACHE_DIR.exists()) {
             throw new IOException("No se pudo crear el cache Pro: " + CACHE_DIR.getAbsolutePath());
         }
@@ -264,34 +266,6 @@ final class ProRasterMaterializationService {
     private static void cleanupTempFile(File tempFile) {
         if (tempFile != null && tempFile.exists()) {
             tempFile.delete();
-        }
-    }
-
-    private static String resolveGdalTranslateExecutable() {
-        File osgeo = new File("C:\\OSGeo4W\\bin\\gdal_translate.exe");
-        if (osgeo.exists()) {
-            return osgeo.getAbsolutePath();
-        }
-        File osgeo64 = new File("C:\\OSGeo4W64\\bin\\gdal_translate.exe");
-        if (osgeo64.exists()) {
-            return osgeo64.getAbsolutePath();
-        }
-        return commandExists("gdal_translate") ? "gdal_translate" : null;
-    }
-
-    private static boolean commandExists(String command) {
-        Process process = null;
-        try {
-            String probe = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("windows") ? "where" : "which";
-            process = new ProcessBuilder(probe, command).start();
-            int code = process.waitFor();
-            return code == 0;
-        } catch (Exception ex) {
-            return false;
-        } finally {
-            if (process != null) {
-                process.destroy();
-            }
         }
     }
 

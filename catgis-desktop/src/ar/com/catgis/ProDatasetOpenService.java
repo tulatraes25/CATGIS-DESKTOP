@@ -462,7 +462,7 @@ final class ProDatasetOpenService {
         if (file == null || !file.exists()) {
             return "";
         }
-        String executable = findGdalExecutable("gdalinfo.exe", "gdalinfo");
+        String executable = GdalSupport.resolve("gdalinfo.exe");
         Process process = null;
         try {
             ProcessBuilder builder = new ProcessBuilder(executable, "-mdd", "all", file.getAbsolutePath());
@@ -485,18 +485,6 @@ final class ProDatasetOpenService {
                 process.destroy();
             }
         }
-    }
-
-    private static String findGdalExecutable(String exeName, String fallback) {
-        File osgeo = new File("C:\\OSGeo4W\\bin\\" + exeName);
-        if (osgeo.exists()) {
-            return osgeo.getAbsolutePath();
-        }
-        File osgeo64 = new File("C:\\OSGeo4W64\\bin\\" + exeName);
-        if (osgeo64.exists()) {
-            return osgeo64.getAbsolutePath();
-        }
-        return fallback;
     }
 
     private static ProDatasetDescriptor copyDataset(ProDatasetDescriptor source) {
