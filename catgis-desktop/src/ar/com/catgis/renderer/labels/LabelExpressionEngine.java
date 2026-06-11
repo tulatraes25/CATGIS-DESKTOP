@@ -640,7 +640,7 @@ public final class LabelExpressionEngine {
                         case "cbrt" -> { stack.push(Math.cbrt(toDouble(stack.pop()))); }
                         case "to_degrees" -> { stack.push(Math.toDegrees(toDouble(stack.pop()))); }
                         case "to_radians" -> { stack.push(Math.toRadians(toDouble(stack.pop()))); }
-                        case "lerp" -> { double b2 = toDouble(stack.pop()); double a2 = toDouble(stack.pop()); double t2 = toDouble(stack.pop()); stack.push(a2 + t2 * (b2 - a2)); }
+                        case "lerp" -> { double t2 = toDouble(stack.pop()); double b2 = toDouble(stack.pop()); double a2 = toDouble(stack.pop()); stack.push(a2 + t2 * (b2 - a2)); }
                         case "concatenate" -> { StringBuilder sb = new StringBuilder(); for (int k = 0; k < argCount; k++) sb.insert(0, stringValue(stack.pop())); stack.push(sb.toString()); }
                         case "like" -> { String pat = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.matches("(?i)" + pat.replace("%", ".*").replace("_", "."))); }
                         case "notlike" -> { String pat = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(!s.matches("(?i)" + pat.replace("%", ".*").replace("_", "."))); }

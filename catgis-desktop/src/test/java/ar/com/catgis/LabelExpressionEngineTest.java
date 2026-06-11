@@ -543,4 +543,53 @@ public class LabelExpressionEngineTest {
                 "intersects(\"POINT(0 0)\")", feature);
         assertNotNull(result);
     }
+
+    @Test
+    public void testAbsVal() {
+        assertEquals("5", LabelExpressionEngine.evaluate("str(abs_val(-5))", feature));
+        assertEquals("5", LabelExpressionEngine.evaluate("str(abs_val(5))", feature));
+    }
+
+    @Test
+    public void testSignum() {
+        assertEquals("-1", LabelExpressionEngine.evaluate("str(signum(-3))", feature));
+        assertEquals("1", LabelExpressionEngine.evaluate("str(signum(3))", feature));
+        assertEquals("0", LabelExpressionEngine.evaluate("str(signum(0))", feature));
+    }
+
+    @Test
+    public void testExp2() {
+        double result = evalNum("exp2(3)", feature);
+        assertEquals(8.0, result, 0.01);
+    }
+
+    @Test
+    public void testLog2() {
+        double result = evalNum("log2(8)", feature);
+        assertEquals(3.0, result, 0.01);
+    }
+
+    @Test
+    public void testCbrt() {
+        double result = evalNum("cbrt(27)", feature);
+        assertEquals(3.0, result, 0.01);
+    }
+
+    @Test
+    public void testToDegrees() {
+        double result = evalNum("to_degrees(3.14159)", feature);
+        assertEquals(180.0, result, 1.0);
+    }
+
+    @Test
+    public void testToRadians() {
+        double result = evalNum("to_radians(180)", feature);
+        assertEquals(Math.PI, result, 0.01);
+    }
+
+    @Test
+    public void testLerp() {
+        double result = evalNum("lerp(0, 10, 0.5)", feature);
+        assertEquals(5.0, result, 0.01);
+    }
 }
