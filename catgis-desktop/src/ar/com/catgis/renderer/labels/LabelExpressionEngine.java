@@ -6,6 +6,8 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.LinearRing;
+import org.locationtech.jts.geom.LineString;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -695,6 +697,42 @@ public final class LabelExpressionEngine {
                         case "geometrytype" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getGeometryType() : "None"); }
                         case "numgeometries" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? (double) g.getNumGeometries() : 0.0); }
                         case "distance" -> { double y2 = toDouble(stack.pop()); double x2 = toDouble(stack.pop()); Geometry ga = extractGeometry(feature); Point p = new GeometryFactory().createPoint(new Coordinate(x2, y2)); stack.push(ga != null ? ga.distance(p) : Double.MAX_VALUE); }
+                        case "haversine" -> { double lon2 = Math.toRadians(toDouble(stack.pop())); double lat2 = Math.toRadians(toDouble(stack.pop())); double lon1 = Math.toRadians(toDouble(stack.pop())); double lat1 = Math.toRadians(toDouble(stack.pop())); double dLat = lat2 - lat1; double dLon = lon2 - lon1; double a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)*Math.sin(dLon/2); stack.push(6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); }
+                        case "azimuth" -> { double lon2 = toDouble(stack.pop()); double lat2 = toDouble(stack.pop()); double lon1 = toDouble(stack.pop()); double lat1 = toDouble(stack.pop()); double dLon = Math.toRadians(lon2 - lon1); double y = Math.sin(dLon) * Math.cos(Math.toRadians(lat2)); double x = Math.cos(Math.toRadians(lat1)) * Math.sin(Math.toRadians(lat2)) - Math.sin(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * Math.cos(dLon); stack.push((Math.toDegrees(Math.atan2(y, x)) + 360) % 360); }
+                        case "destpoint" -> { double bearing = Math.toRadians(toDouble(stack.pop())); double dist = toDouble(stack.pop()); double lon1 = Math.toRadians(toDouble(stack.pop())); double lat1 = Math.toRadians(toDouble(stack.pop())); double lat2 = Math.asin(Math.sin(lat1)*Math.cos(dist/6371000) + Math.cos(lat1)*Math.sin(dist/6371000)*Math.cos(bearing)); double lon2 = lon1 + Math.atan2(Math.sin(bearing)*Math.sin(dist/6371000)*Math.cos(lat1), Math.cos(dist/6371000) - Math.sin(lat1)*Math.sin(lat2)); stack.push(Math.toDegrees(lon2) + "," + Math.toDegrees(lat2)); }
+                        case "convexhull" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.convexHull().toText() : ""); }
+                        case "centroid_distance" -> { Geometry g = extractGeometry(feature); if (g == null) stack.push(0.0); else { Point c = g.getCentroid(); stack.push(Math.sqrt(c.getX()*c.getX() + c.getY()*c.getY())); } }
+                        case "boundary" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getBoundary().toText() : ""); }
+                        case "convex_hull_area" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.convexHull().getArea() : 0.0); }
+                        case "oriented_area" -> { Geometry g = extractGeometry(feature); if (g == null || !(g instanceof Polygon)) stack.push(0.0); else { LinearRing shell = (LinearRing) ((Polygon) g).getExteriorRing(); double area = 0; Coordinate[] c = shell.getCoordinates(); for (int k = 0; k < c.length-1; k++) area += (c[k].x * c[k+1].y - c[k+1].x * c[k].y); stack.push(area / 2.0); } }
+                        case "sin_angle" -> { stack.push(Math.sin(Math.toRadians(toDouble(stack.pop())))); }
+                        case "cos_angle" -> { stack.push(Math.cos(Math.toRadians(toDouble(stack.pop())))); }
+                        case "tan_angle" -> { stack.push(Math.tan(Math.toRadians(toDouble(stack.pop())))); }
+                        case "smooth" -> { int iterations = Math.max(1, Math.min(10, toInt(stack.pop()))); Geometry g = extractGeometry(feature); if (g == null) stack.push(""); else { Geometry result = g; for (int k = 0; k < iterations; k++) result = result.buffer(0, 8); stack.push(result.toText()); } }
+                        case "voronoi" -> { Geometry g = extractGeometry(feature); if (g == null) stack.push(""); else { org.locationtech.jts.triangulate.VoronoiDiagramBuilder vdB = new org.locationtech.jts.triangulate.VoronoiDiagramBuilder(); vdB.setSites(g); stack.push(vdB.getDiagram(new GeometryFactory()).toText()); } }
+                        case "concave_hull" -> { double ratio = Math.max(0.01, Math.min(1.0, toDouble(stack.pop()))); Geometry g = extractGeometry(feature); if (g == null) stack.push(""); else { double buf = g.convexHull().getEnvelopeInternal().getWidth() * (1.0 - ratio) * -0.5; stack.push(g.convexHull().buffer(buf, 8).toText()); } }
+                        case "is_simple" -> { Geometry g = extractGeometry(feature); stack.push(g != null && g.isSimple()); }
+                        case "is_closed" -> { Geometry g = extractGeometry(feature); stack.push(g != null && g instanceof LineString && ((LineString) g).isClosed()); }
+                        case "x_min" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelopeInternal().getMinX() : 0.0); }
+                        case "x_max" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelopeInternal().getMaxX() : 0.0); }
+                        case "y_min" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelopeInternal().getMinY() : 0.0); }
+                        case "y_max" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelopeInternal().getMaxY() : 0.0); }
+                        case "envelope_width" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelopeInternal().getWidth() : 0.0); }
+                        case "envelope_height" -> { Geometry g = extractGeometry(feature); stack.push(g != null ? g.getEnvelopeInternal().getHeight() : 0.0); }
+                        case "equals_exact" -> { double tol2 = toDouble(stack.pop()); Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.equalsExact(g2, tol2)); }
+                        case "relate" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null ? g.relate(g2).toString() : "FF*FF****"); }
+                        case "within_distance" -> { double dist = toDouble(stack.pop()); Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.isWithinDistance(g2, dist)); }
+                        case "overlaps" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.overlaps(g2)); }
+                        case "touches" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.touches(g2)); }
+                        case "crosses" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.crosses(g2)); }
+                        case "disjoint" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g == null || g2 == null || g.disjoint(g2)); }
+                        case "geom_contains" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.contains(g2)); }
+                        case "intersects" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null && g.intersects(g2)); }
+                        case "intersection" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null ? g.intersection(g2).toText() : ""); }
+                        case "union_geom" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null ? g.union(g2).toText() : g != null ? g.toText() : g2 != null ? g2.toText() : ""); }
+                        case "difference" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null ? g.difference(g2).toText() : g != null ? g.toText() : ""); }
+                        case "symmetric_difference" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null ? g.symDifference(g2).toText() : g != null ? g.toText() : ""); }
+                        case "clip" -> { Geometry g2 = parseWkt(stringValue(stack.pop())); Geometry g = extractGeometry(feature); stack.push(g != null && g2 != null ? g.intersection(g2).toText() : ""); }
 
                         default ->
                             throw new ExpressionException("Unknown function: " + t.value());
@@ -717,6 +755,12 @@ public final class LabelExpressionEngine {
                 && !expr.contains("||")
                 && !expr.contains("+")
                 && !expr.contains("(");
+    }
+
+    private static org.locationtech.jts.io.WKTReader wktReader = new org.locationtech.jts.io.WKTReader();
+
+    private static Geometry parseWkt(String wkt) {
+        try { return wktReader.read(wkt); } catch (Exception e) { return null; }
     }
 
     private static Number parseNumber(String s) {
