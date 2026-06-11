@@ -24,6 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReleaseVectorOperationsTest {
 
+    private static final String LAYER_OPTION_CLASS =
+            "ar.com.catgis.analysis.vector.GeoprocessingAssistantDialog$LayerOption";
+
     @Test
     void keepsSpatialJoinSummaryAndUnionOverlayUsable() throws Exception {
         Layer layerA = ReleaseTestSupport.buildVectorLayer("Lotes", null, "EPSG:4326");
@@ -42,7 +45,7 @@ class ReleaseVectorOperationsTest {
         Object unionOptionA = buildLayerOption(layerUnionA, unionLeft, "POLYGON", "EPSG:4326");
         Object unionOptionB = buildLayerOption(layerUnionB, unionRight, "POLYGON", "EPSG:4326");
 
-        Class<?> optionClass = Class.forName("ar.com.catgis.GeoprocessingAssistantDialog$LayerOption");
+        Class<?> optionClass = Class.forName(LAYER_OPTION_CLASS);
         Method spatialJoinMethod = GeoprocessingAssistantDialog.class.getDeclaredMethod(
                 "spatialJoin",
                 optionClass,
@@ -92,7 +95,7 @@ class ReleaseVectorOperationsTest {
     }
 
     private static Object buildLayerOption(Layer layer, ShapefileData data, String family, String crsCode) throws Exception {
-        Class<?> optionClass = Class.forName("ar.com.catgis.GeoprocessingAssistantDialog$LayerOption");
+        Class<?> optionClass = Class.forName(LAYER_OPTION_CLASS);
         Constructor<?> constructor = optionClass.getDeclaredConstructor(Layer.class, ShapefileData.class, String.class, String.class);
         constructor.setAccessible(true);
         return constructor.newInstance(layer, data, family, crsCode);

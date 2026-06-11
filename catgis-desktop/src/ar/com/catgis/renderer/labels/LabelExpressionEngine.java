@@ -631,6 +631,14 @@ public final class LabelExpressionEngine {
                         case "format_date" -> { String fmt = stringValue(stack.pop()); stack.push(new java.text.SimpleDateFormat(fmt).format(new java.util.Date())); }
                         case "parse_date" -> { try { String s = stringValue(stack.pop()); java.util.Date d = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(s); stack.push((double) d.getTime()); } catch (Exception e) { stack.push(0.0); } }
                         case "timestamp_ms" -> { stack.push((double) System.currentTimeMillis()); }
+                        case "abs_val" -> { stack.push(Math.abs(toDouble(stack.pop()))); }
+                        case "signum" -> { stack.push((double) Math.signum(toDouble(stack.pop()))); }
+                        case "exp2" -> { stack.push(Math.pow(2, toDouble(stack.pop()))); }
+                        case "log2" -> { stack.push(Math.log(toDouble(stack.pop())) / Math.log(2)); }
+                        case "cbrt" -> { stack.push(Math.cbrt(toDouble(stack.pop()))); }
+                        case "to_degrees" -> { stack.push(Math.toDegrees(toDouble(stack.pop()))); }
+                        case "to_radians" -> { stack.push(Math.toRadians(toDouble(stack.pop()))); }
+                        case "lerp" -> { double b2 = toDouble(stack.pop()); double a2 = toDouble(stack.pop()); double t2 = toDouble(stack.pop()); stack.push(a2 + t2 * (b2 - a2)); }
                         case "concatenate" -> { StringBuilder sb = new StringBuilder(); for (int k = 0; k < argCount; k++) sb.insert(0, stringValue(stack.pop())); stack.push(sb.toString()); }
                         case "like" -> { String pat = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.matches("(?i)" + pat.replace("%", ".*").replace("_", "."))); }
                         case "notlike" -> { String pat = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(!s.matches("(?i)" + pat.replace("%", ".*").replace("_", "."))); }

@@ -366,4 +366,130 @@ public final class NetworkAnalysisEngine {
         }
         return m;
     }
+
+    public record SpanningResult(List<int[]> edges, double totalWeight, String warnings) {}
+
+    public static SpanningResult minimumSpanningTree(List<SimpleFeature> lineFeatures, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        if (nodes.size() < 2) return new SpanningResult(Collections.emptyList(), 0, "Menos de 2 nodos.");
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        int n = nodes.size();
+        boolean[] inTree = new boolean[n];
+        double[] minEdge = new double[n];
+        int[] parent = new int[n];
+        Arrays.fill(minEdge, Double.MAX_VALUE);
+        Arrays.fill(parent, -1);
+        minEdge[0] = 0;
+        List<int[]> result = new ArrayList<>();
+        double total = 0;
+        for (int iter = 0; iter < n; iter++) {
+            int u = -1;
+            for (int v = 0; v < n; v++) {
+                if (!inTree[v] && (u < 0 || minEdge[v] < minEdge[u])) u = v;
+            }
+            if (u < 0 || minEdge[u] == Double.MAX_VALUE) break;
+            inTree[u] = true;
+            if (parent[u] >= 0) {
+                result.add(new int[]{parent[u], u});
+                total += minEdge[u];
+            }
+            for (int v = 0; v < n; v++) {
+                if (!inTree[v] && adj[u][v] < minEdge[v]) {
+                    minEdge[v] = adj[u][v];
+                    parent[v] = u;
+                }
+            }
+        }
+        String warning = result.size() < n - 1 ? "Red desconectada: MST cubre " + result.size() + " de " + (n - 1) + " aristas." : "";
+        return new SpanningResult(result, total, warning);
+    }
+
+    public record FlowResult(Map<String, Double> flowValues, double maxFlow, String warnings) {}
+
+    public static FlowResult maxFlow(List<SimpleFeature> lineFeatures, Coordinate source, Coordinate sink, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        if (nodes.isEmpty()) return new FlowResult(Collections.emptyMap(), 0, "Sin nodos.");
+        int srcIdx = findNearestNode(nodes, source);
+        int snkIdx = findNearestNode(nodes, sink);
+        if (srcIdx < 0 || snkIdx < 0) return new FlowResult(Collections.emptyMap(), 0, "Punto fuera de la red.");
+        double[][] capacity = buildAdjacencyMatrix(lineFeatures, nodes);
+        for (int i = 0; i < nodes.size(); i++)
+            for (int j = 0; j < nodes.size(); j++)
+                if (capacity[i][j] == Double.MAX_VALUE) capacity[i][j] = 0;
+        int n = nodes.size();
+        double[][] residual = new double[n][n];
+        for (int i = 0; i < n; i++) System.arraycopy(capacity[i], 0, residual[i], 0, n);
+        double totalFlow = 0;
+        while (true) {
+            int[] parent = new int[n];
+            Arrays.fill(parent, -1);
+            parent[srcIdx] = srcIdx;
+            Queue<Integer> queue = new LinkedList<>();
+            queue.add(srcIdx);
+            while (!queue.isEmpty() && parent[snkIdx] < 0) {
+                int u = queue.poll();
+                for (int v = 0; v < n; v++) {
+                    if (parent[v] < 0 && residual[u][v] > 0) {
+                        parent[v] = u;
+                        queue.add(v);
+                    }
+                }
+            }
+            if (parent[snkIdx] < 0) break;
+            double pathFlow = Double.MAX_VALUE;
+            for (int v = snkIdx; v != srcIdx; v = parent[v])
+                pathFlow = Math.min(pathFlow, residual[parent[v]][v]);
+            for (int v = snkIdx; v != srcIdx; v = parent[v]) {
+                residual[parent[v]][v] -= pathFlow;
+                residual[v][parent[v]] += pathFlow;
+            }
+            totalFlow += pathFlow;
+        }
+        Map<String, Double> flows = new HashMap<>();
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+                if (capacity[i][j] > 0 && residual[i][j] < capacity[i][j])
+                    flows.put(i + "->" + j, capacity[i][j] - residual[i][j]);
+        return new FlowResult(flows, totalFlow, "");
+    }
+
+    public record EulerResult(boolean hasEulerianCycle, boolean hasEulerianPath, List<Integer> circuit, String warnings) {}
+
+    public static EulerResult eulerianCircuit(List<SimpleFeature> lineFeatures, double snapTolerance) {
+        List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
+        if (nodes.isEmpty()) return new EulerResult(false, false, Collections.emptyList(), "Sin nodos.");
+        double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        int n = nodes.size();
+        int oddCount = 0;
+        int oddVertex = -1;
+        int edges = 0;
+        for (int i = 0; i < n; i++) {
+            int degree = 0;
+            for (int j = 0; j < n; j++)
+                if (i != j && adj[i][j] > 0 && adj[i][j] < Double.MAX_VALUE) { degree++; edges++; }
+            if (degree % 2 != 0) { oddCount++; oddVertex = i; }
+        }
+        edges /= 2;
+        if (oddCount > 2) return new EulerResult(false, false, Collections.emptyList(), "Grafo no euleriano (nodos impares: " + oddCount + ").");
+        if (edges == 0) return new EulerResult(false, false, Collections.emptyList(), "Sin aristas.");
+        boolean hasCycle = oddCount == 0;
+        boolean hasPath = oddCount == 2;
+        List<Integer> circuit = new ArrayList<>();
+        if (hasCycle || hasPath) {
+            int start = hasPath ? oddVertex : 0;
+            boolean[][] used = new boolean[n][n];
+            Deque<Integer> stack = new ArrayDeque<>();
+            stack.push(start);
+            while (!stack.isEmpty()) {
+                int v = stack.peek();
+                int u = -1;
+                for (int w = 0; w < n; w++)
+                    if (!used[v][w] && adj[v][w] > 0 && adj[v][w] < Double.MAX_VALUE) { u = w; break; }
+                if (u >= 0) { used[v][u] = true; used[u][v] = true; stack.push(u); }
+                else circuit.add(stack.pop());
+            }
+            Collections.reverse(circuit);
+        }
+        return new EulerResult(hasCycle, hasPath, circuit, hasCycle ? "Ciclo euleriano encontrado." : hasPath ? "Camino euleriano encontrado." : "No euleriano.");
+    }
 }

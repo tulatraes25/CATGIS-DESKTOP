@@ -153,6 +153,13 @@ public final class OfflineRoutingEngine {
     /**
      * Compute betweenness centrality for all nodes.
      * Higher values = more important nodes in the network.
+     *
+     * NOTE: This is a simplified Brandes algorithm implementation.
+     * It uses a single predecessor per node for back-propagation.
+     * For networks with multiple equal-cost shortest paths, the
+     * results may be approximate. For rigorous betweenness centrality,
+     * a full Brandes implementation with all-pairs shortest paths
+     * and proper path counting would be needed.
      */
     public static double[] betweennessCentrality(List<org.geotools.api.feature.simple.SimpleFeature> lineFeatures,
                                                    double snapTolerance) {

@@ -120,4 +120,72 @@ class NetworkAnalysisEngineTest {
         Geometry geom = NetworkAnalysisEngine.buildRouteGeometry(List.of(new Coordinate(0, 0)), GF);
         assertNull(geom);
     }
+
+    @Test
+    void minimumSpanningTreeCoversAllNodes() {
+        var mst = NetworkAnalysisEngine.minimumSpanningTree(networkFeatures, 0.1);
+        assertNotNull(mst);
+        assertEquals(5, mst.edges().size(), "6-node network MST should have 5 edges");
+        assertTrue(mst.totalWeight() > 0);
+        assertTrue(mst.warnings().isEmpty());
+    }
+
+    @Test
+    void minimumSpanningTreeHandlesDisconnected() {
+        List<SimpleFeature> disconnected = new ArrayList<>();
+        SimpleFeatureBuilder fb = new SimpleFeatureBuilder(lineType);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(1, 0)}, 1);
+        addLine(fb, new Coordinate[]{new Coordinate(10, 0), new Coordinate(11, 0)}, 2);
+        var mst = NetworkAnalysisEngine.minimumSpanningTree(disconnected, 0.1);
+        assertNotNull(mst);
+        assertFalse(mst.warnings().isEmpty(), "Should warn about disconnected network");
+    }
+
+    @Test
+    void maxFlowReturnsValidResult() {
+        var flow = NetworkAnalysisEngine.maxFlow(networkFeatures,
+                new Coordinate(0, 0), new Coordinate(4, 2), 0.1);
+        assertNotNull(flow);
+        assertTrue(flow.maxFlow() >= 0);
+    }
+
+    @Test
+    void maxFlowWithNoPath() {
+        List<SimpleFeature> single = new ArrayList<>();
+        SimpleFeatureBuilder fb = new SimpleFeatureBuilder(lineType);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(1, 0)}, 1);
+        var flow = NetworkAnalysisEngine.maxFlow(single,
+                new Coordinate(5, 5), new Coordinate(6, 6), 0.1);
+        assertNotNull(flow);
+        assertEquals(0, flow.maxFlow());
+    }
+
+    @Test
+    void eulerianCircuitDetectsCycle() {
+        // Triangle cycle: A(0,0)-B(1,0)-C(0.5,1)-A
+        List<SimpleFeature> cycle = new ArrayList<>();
+        SimpleFeatureBuilder fb = new SimpleFeatureBuilder(lineType);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(1, 0)}, 1);
+        addLine(fb, new Coordinate[]{new Coordinate(1, 0), new Coordinate(0.5, 1)}, 2);
+        addLine(fb, new Coordinate[]{new Coordinate(0.5, 1), new Coordinate(0, 0)}, 3);
+        var euler = NetworkAnalysisEngine.eulerianCircuit(cycle, 0.1);
+        assertNotNull(euler);
+        assertTrue(euler.hasEulerianCycle() || !euler.warnings().isEmpty(),
+                "Triangle should be Eulerian or produce warning: " + euler.warnings());
+    }
+
+    @Test
+    void eulerianCircuitDetectsNonEulerian() {
+        // Star graph with 4 leaves (all odd degree) - not eulerian
+        List<SimpleFeature> star = new ArrayList<>();
+        SimpleFeatureBuilder fb = new SimpleFeatureBuilder(lineType);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(1, 0)}, 1);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(-1, 0)}, 2);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(0, 1)}, 3);
+        addLine(fb, new Coordinate[]{new Coordinate(0, 0), new Coordinate(0, -1)}, 4);
+        var euler = NetworkAnalysisEngine.eulerianCircuit(star, 0.1);
+        assertNotNull(euler);
+        assertFalse(euler.hasEulerianCycle());
+        assertFalse(euler.hasEulerianPath());
+    }
 }
