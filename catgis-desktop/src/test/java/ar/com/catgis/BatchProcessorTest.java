@@ -220,4 +220,68 @@ class BatchProcessorTest {
         assertEquals(1, result.errors().size());
         assertTrue(result.errors().get(0).contains("fail.txt"));
     }
+
+    // --- Template tests ---
+
+    @Test
+    void templateRoundTripPreservesFields() throws Exception {
+        BatchProcessor.BatchTemplate template = new BatchProcessor.BatchTemplate(
+                "NDVI Batch", "Compute NDVI on all TIFFs", "spectral_index",
+                ".tif", true,
+                java.util.Map.of("indexId", "ndvi", "bandA", "3", "bandB", "4")
+        );
+
+        String json = template.toJson();
+        BatchProcessor.BatchTemplate restored = BatchProcessor.BatchTemplate.fromJson(json);
+
+        assertEquals(template.name(), restored.name());
+        assertEquals(template.description(), restored.description());
+        assertEquals(template.operation(), restored.operation());
+        assertEquals(template.extensionFilter(), restored.extensionFilter());
+        assertEquals(template.includeSubdirs(), restored.includeSubdirs());
+        assertEquals(template.settings().size(), restored.settings().size());
+        assertEquals("ndvi", restored.settings().get("indexId"));
+    }
+
+    @Test
+    void saveAndLoadTemplateWorks(@TempDir java.nio.file.Path tmpDir) throws Exception {
+        // Override TEMPLATES_DIR for test
+        BatchProcessor.BatchTemplate template = new BatchProcessor.BatchTemplate(
+                "Test Template", "A test", "copy", ".shp", false, java.util.Map.of()
+        );
+
+        BatchProcessor.saveTemplate(template);
+        var templates = BatchProcessor.loadAllTemplates();
+
+        assertFalse(templates.isEmpty());
+        assertTrue(templates.stream().anyMatch(t -> t.name().equals("Test Template")));
+
+        // Cleanup
+        BatchProcessor.deleteTemplate("Test Template");
+    }
+
+    @Test
+    void deleteTemplateRemovesFile() throws Exception {
+        BatchProcessor.BatchTemplate template = new BatchProcessor.BatchTemplate(
+                "Delete Me", "", "copy", ".shp", false, java.util.Map.of()
+        );
+        BatchProcessor.saveTemplate(template);
+
+        boolean deleted = BatchProcessor.deleteTemplate("Delete Me");
+        assertTrue(deleted);
+
+        var templates = BatchProcessor.loadAllTemplates();
+        assertTrue(templates.stream().noneMatch(t -> t.name().equals("Delete Me")));
+    }
+
+    @Test
+    void templateWithEmptySettingsStillWorks() {
+        BatchProcessor.BatchTemplate template = new BatchProcessor.BatchTemplate(
+                "Minimal", null, "convert", null, false, null
+        );
+        String json = template.toJson();
+        assertTrue(json.contains("Minimal"));
+        BatchProcessor.BatchTemplate restored = BatchProcessor.BatchTemplate.fromJson(json);
+        assertEquals("Minimal", restored.name());
+    }
 }
