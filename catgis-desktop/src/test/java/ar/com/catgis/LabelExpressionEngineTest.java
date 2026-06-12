@@ -592,4 +592,66 @@ public class LabelExpressionEngineTest {
         double result = evalNum("lerp(0, 10, 0.5)", feature);
         assertEquals(5.0, result, 0.01);
     }
+
+    // --- Phase 0: regex, timezone, cot/sec/csc ---
+
+    @Test
+    public void testRegexMatch() {
+        // Simple literal match (no backslash); subject first, pattern second
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "regex_match(\"hello\", \"hello\")", feature));
+        assertEquals("false", LabelExpressionEngine.evaluate(
+                "regex_match(\"hello\", \"world\")", feature));
+    }
+
+    @Test
+    public void testRegexMatchDigits() {
+        // regex_match(subject, pattern) — subject first
+        assertEquals("true", LabelExpressionEngine.evaluate(
+                "regex_match(\"123-4567\", \"[0-9]{3}-[0-9]{4}\")", feature));
+        assertEquals("false", LabelExpressionEngine.evaluate(
+                "regex_match(\"abc-defg\", \"[0-9]{3}-[0-9]{4}\")", feature));
+    }
+
+    @Test
+    public void testRegexReplace() {
+        // regex_replace(subject, pattern, replacement) — subject first
+        // replaceAll replaces ALL matches, so [0-9]{3} matches both 123 and 456
+        assertEquals("XXX-XXX7", LabelExpressionEngine.evaluate(
+                "regex_replace(\"123-4567\", \"[0-9]{3}\", \"XXX\")", feature));
+        assertEquals("hello world", LabelExpressionEngine.evaluate(
+                "regex_replace(\"hello   world\", \" +\", \" \")", feature));
+    }
+
+    @Test
+    public void testCot() {
+        double result = evalNum("cot(45)", feature);
+        assertEquals(1.0, result, 0.01);
+    }
+
+    @Test
+    public void testSec() {
+        double result = evalNum("sec(60)", feature);
+        assertEquals(2.0, result, 0.01);
+    }
+
+    @Test
+    public void testCsc() {
+        double result = evalNum("csc(30)", feature);
+        assertEquals(2.0, result, 0.01);
+    }
+
+    @Test
+    public void testTimezoneOffset() {
+        double result = evalNum("timezone_offset()", feature);
+        // offset is platform-dependent; just verify it returns a finite value
+        assertTrue(Double.isFinite(result), "timezone_offset should return a finite number");
+    }
+
+    @Test
+    public void testTimezoneName() {
+        String result = LabelExpressionEngine.evaluate("timezone_name()", feature);
+        assertNotNull(result);
+        assertFalse(result.isEmpty(), "timezone_name should return a non-empty string");
+    }
 }

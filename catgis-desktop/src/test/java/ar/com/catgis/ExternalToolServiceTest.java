@@ -34,5 +34,6 @@ class ExternalToolServiceTest {
     void executeReturnsEmptyOutputForInvalidCommand() {
         var result = ExternalToolService.execute("nonexistent_command_12345");
         assertNotNull(result.output());
+        assertEquals("", result.output().trim());
     }
 }

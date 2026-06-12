@@ -28,6 +28,7 @@ class ScriptEngineTest {
         ScriptEngine.ScriptResult result = ScriptEngine.executeCode("print('hello')");
         assertNotNull(result);
         assertNotNull(result.output());
+        assertTrue(result.output().contains("hello"), "Output should contain 'hello'");
     }
 
     @Test
@@ -51,15 +52,17 @@ class ScriptEngineTest {
         File script = tempDir.resolve("test.py").toFile();
         Files.writeString(script.toPath(), "print('Hello from CATGIS')");
         ScriptEngine.ScriptResult result = ScriptEngine.executeScript(script);
-        // Script may or may not succeed depending on Python version/config
         assertNotNull(result);
         assertNotNull(result.output());
+        assertTrue(result.success(), "Script should succeed when Python is available");
+        assertTrue(result.output().contains("Hello from CATGIS"), "Output should contain the printed text");
     }
 
     @Test
     void executeCodeWithSyntaxError() {
         ScriptEngine.ScriptResult result = ScriptEngine.executeCode("def bad(");
         assertNotNull(result);
-        // Should either fail or produce error output
+        assertFalse(result.success(), "Syntax error should cause failure");
+        assertFalse(result.output().isEmpty(), "Error output should be present");
     }
 }

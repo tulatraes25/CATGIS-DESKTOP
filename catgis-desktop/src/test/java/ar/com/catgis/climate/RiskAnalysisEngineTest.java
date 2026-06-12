@@ -44,6 +44,10 @@ public class RiskAnalysisEngineTest {
 
         assertNotNull(result);
         assertNotNull(result.riskMap());
+        assertEquals(size, result.width(), "Width should match");
+        assertEquals(size, result.height(), "Height should match");
+        assertEquals(RiskAnalysisEngine.Scenario.FLOOD.spanish(), result.scenarioName());
+        assertTrue(result.warnings().size() >= 0, "Warnings list should exist");
     }
 
     @Test

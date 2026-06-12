@@ -539,6 +539,9 @@ public final class LabelExpressionEngine {
                         case "sin" -> { stack.push(Math.sin(Math.toRadians(toDouble(stack.pop())))); }
                         case "cos" -> { stack.push(Math.cos(Math.toRadians(toDouble(stack.pop())))); }
                         case "tan" -> { stack.push(Math.tan(Math.toRadians(toDouble(stack.pop())))); }
+                        case "cot" -> { stack.push(1.0 / Math.tan(Math.toRadians(toDouble(stack.pop())))); }
+                        case "sec" -> { stack.push(1.0 / Math.cos(Math.toRadians(toDouble(stack.pop())))); }
+                        case "csc" -> { stack.push(1.0 / Math.sin(Math.toRadians(toDouble(stack.pop())))); }
                         case "pow" -> { double expVal = toDouble(stack.pop()); stack.push(Math.pow(toDouble(stack.pop()), expVal)); }
                         case "mod" -> { double divisor = toDouble(stack.pop()); stack.push(toDouble(stack.pop()) % divisor); }
                         case "left" -> { int n = toInt(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.length() <= n ? s : s.substring(0, n)); }
@@ -571,6 +574,8 @@ public final class LabelExpressionEngine {
                         case "strip" -> { String s = stringValue(stack.pop()); stack.push(s.strip()); }
                         case "count" -> { String search = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push((double) countOccurrences(s, search)); }
                         case "indexof" -> { String search = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push((double) s.indexOf(search)); }
+                        case "regex_match" -> { String pattern = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.matches(pattern)); }
+                        case "regex_replace" -> { String replacement = stringValue(stack.pop()); String pattern = stringValue(stack.pop()); String s = stringValue(stack.pop()); stack.push(s.replaceAll(pattern, replacement)); }
                         case "nvl" -> { Object def = stack.pop(); Object val = stack.pop(); stack.push(val != null && !stringValue(val).isEmpty() ? val : def); }
                         case "nullto" -> { Object def = stack.pop(); Object val = stack.pop(); stack.push(val != null ? val : def); }
 
@@ -633,6 +638,8 @@ public final class LabelExpressionEngine {
                         case "format_date" -> { String fmt = stringValue(stack.pop()); stack.push(new java.text.SimpleDateFormat(fmt).format(new java.util.Date())); }
                         case "parse_date" -> { try { String s = stringValue(stack.pop()); java.util.Date d = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(s); stack.push((double) d.getTime()); } catch (Exception e) { stack.push(0.0); } }
                         case "timestamp_ms" -> { stack.push((double) System.currentTimeMillis()); }
+                        case "timezone_offset" -> { stack.push((double) java.util.TimeZone.getDefault().getRawOffset() / 3600000.0); }
+                        case "timezone_name" -> { stack.push(java.util.TimeZone.getDefault().getDisplayName()); }
                         case "abs_val" -> { stack.push(Math.abs(toDouble(stack.pop()))); }
                         case "signum" -> { stack.push((double) Math.signum(toDouble(stack.pop()))); }
                         case "exp2" -> { stack.push(Math.pow(2, toDouble(stack.pop()))); }
