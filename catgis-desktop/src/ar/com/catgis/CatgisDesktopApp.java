@@ -30,8 +30,20 @@ import ar.com.catgis.core.model.Layer;
 
 public class CatgisDesktopApp extends JFrame {
 
+    /**
+     * @deprecated Use {@code AppContext.get().getMapPanel()} instead.
+     */
+    @Deprecated
     public static volatile MapPanel mapPanel;
+    /**
+     * @deprecated Use {@code AppContext.get().getLayersPanel()} instead (once available).
+     */
+    @Deprecated
     public static volatile LayersPanel layersPanel;
+    /**
+     * @deprecated Use {@code AppContext.get().getStatusBar()} instead.
+     */
+    @Deprecated
     public static volatile StatusBar statusBar;
 
     /**
@@ -666,6 +678,10 @@ public class CatgisDesktopApp extends JFrame {
         });
     }
 
+    /**
+     * @deprecated Use {@code AppContext.get().getMainFrame()} instead.
+     */
+    @Deprecated
     public static java.awt.Window getMainFrameSafe() {
         java.awt.Window[] windows = JFrame.getWindows();
         for (java.awt.Window window : windows) {
@@ -676,6 +692,10 @@ public class CatgisDesktopApp extends JFrame {
         return null;
     }
 
+    /**
+     * @deprecated Use {@code AppContext.get().getMainFrame()} instead.
+     */
+    @Deprecated
     public static JFrame getMainFrame() {
         java.awt.Window[] windows = JFrame.getWindows();
         for (java.awt.Window window : windows) {
