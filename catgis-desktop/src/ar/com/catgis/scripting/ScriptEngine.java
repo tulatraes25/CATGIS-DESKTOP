@@ -1,5 +1,7 @@
 package ar.com.catgis.scripting;
 
+import ar.com.catgis.CatgisLogger;
+
 import ar.com.catgis.*;
 
 import java.io.*;
@@ -81,7 +83,7 @@ public final class ScriptEngine {
                     while ((line = br.readLine()) != null) {
                         output.append(line).append("\n");
                     }
-                } catch (IOException ignored) {}
+                } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
             });
             reader.start();
 
@@ -194,7 +196,7 @@ public final class ScriptEngine {
                         cachedPythonPath = venvPython.getAbsolutePath();
                         return cachedPythonPath;
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
             }
         }
 
@@ -209,7 +211,7 @@ public final class ScriptEngine {
                     cachedPythonPath = cmd;
                     return cachedPythonPath;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
         }
 
         return null;
@@ -224,8 +226,7 @@ public final class ScriptEngine {
                             CatgisDesktopApp.currentProject.getProjectFile().getAbsolutePath());
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
     }
 
     /**

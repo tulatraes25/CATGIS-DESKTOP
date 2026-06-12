@@ -1,5 +1,7 @@
 package ar.com.catgis.renderer.labels;
 
+import ar.com.catgis.CatgisLogger;
+
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -99,7 +101,7 @@ public final class LabelExpressionEngine {
         Object result = evaluateRaw(expression, feature);
         if (result instanceof Number n) return n.doubleValue();
         if (result instanceof String s) {
-            try { return Double.parseDouble(s.trim()); } catch (NumberFormatException ignored) {}
+            try { return Double.parseDouble(s.trim()); } catch (Exception ignored) { CatgisLogger.warn("LabelExpressionEngine: operation failed", ignored); }
         }
         return Double.NaN;
     }
@@ -778,7 +780,7 @@ public final class LabelExpressionEngine {
     private static double toDouble(Object o) {
         if (o instanceof Number n) return n.doubleValue();
         if (o instanceof String s) {
-            try { return Double.parseDouble(s.trim()); } catch (NumberFormatException ignored) {}
+            try { return Double.parseDouble(s.trim()); } catch (Exception ignored) { CatgisLogger.warn("LabelExpressionEngine: operation failed", ignored); }
         }
         if (o instanceof Boolean b) return b ? 1.0 : 0.0;
         return 0.0;

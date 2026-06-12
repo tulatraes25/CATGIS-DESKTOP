@@ -233,7 +233,7 @@ public final class GeoprocessingService {
         try {
             String n = CRSDefinitions.normalizeCode(crsCode);
             if (!n.isBlank()) b.setCRS(CRSDefinitions.decode(n, true));
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("GeoprocessingService: operation failed", ignored); }
     }
 
     private static AttributeDescriptor findAttribute(SimpleFeatureType type, String name) {

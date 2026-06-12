@@ -23,7 +23,7 @@ public final class LayerRenderHelper {
             if (v == null) return null;
             double value = Double.parseDouble(String.valueOf(v));
             return symbology.getRuleForValue(value);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("LayerRenderHelper: operation failed", ignored); }
         return null;
     }
 
@@ -86,7 +86,7 @@ public final class LayerRenderHelper {
             if (v == null) return Math.max(4, defaultSize);
             double value = Double.parseDouble(String.valueOf(v));
             return Math.max(4, ps.getSizeForValue(value));
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("LayerRenderHelper: operation failed", ignored); }
         return Math.max(4, defaultSize);
     }
 

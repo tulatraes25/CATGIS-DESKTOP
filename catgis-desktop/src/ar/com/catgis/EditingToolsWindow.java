@@ -278,7 +278,7 @@ public class EditingToolsWindow extends JDialog {
 
     private void updateStatusBar(String msg) {
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(msg);
+            AppContext.setStatusMessage(msg);
         }
     }
 }

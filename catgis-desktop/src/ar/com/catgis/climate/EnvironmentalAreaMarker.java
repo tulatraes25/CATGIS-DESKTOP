@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 
 import ar.com.catgis.*;
@@ -67,7 +69,7 @@ public final class EnvironmentalAreaMarker {
         if (val instanceof String) {
             try {
                 return AreaType.valueOf((String) val);
-            } catch (IllegalArgumentException ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("EnvironmentalAreaMarker: operation failed", ignored); }
         }
         return null;
     }

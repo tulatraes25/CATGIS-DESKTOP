@@ -1,4 +1,6 @@
 package ar.com.catgis.data.raster;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.raster.LocalRasterData;
 
@@ -97,8 +99,7 @@ public final class RasterCoverageSupport {
             if (reader != null) {
                 try {
                     reader.dispose();
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
             }
         }
     }
@@ -353,8 +354,7 @@ public final class RasterCoverageSupport {
                         if (Integer.parseInt(numberAttribute.getNodeValue()) == fieldNumber) {
                             return node;
                         }
-                    } catch (NumberFormatException ignored) {
-                    }
+                    } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
                 }
             }
         }
@@ -377,8 +377,7 @@ public final class RasterCoverageSupport {
             if (valueAttribute != null) {
                 try {
                     values.add(Double.parseDouble(valueAttribute.getNodeValue()));
-                } catch (NumberFormatException ignored) {
-                }
+                } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
             }
         }
         for (Node child = node.getFirstChild(); child != null; child = child.getNextSibling()) {
@@ -434,13 +433,11 @@ public final class RasterCoverageSupport {
         CoordinateReferenceSystem crs = null;
         try {
             crs = coverage.getCoordinateReferenceSystem2D();
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
         if (crs == null) {
             try {
                 crs = coverage.getCoordinateReferenceSystem();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
         }
         if (crs == null) {
             return "";
@@ -452,8 +449,7 @@ public final class RasterCoverageSupport {
             if (!normalized.isBlank()) {
                 return normalized;
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
 
         try {
             String identifier = crs.getName() != null ? crs.getName().toString() : "";
@@ -573,8 +569,7 @@ public final class RasterCoverageSupport {
                         coverage.getEnvelope2D().getMaxY()
                 );
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterCoverageSupport: operation failed", ignored); }
         return null;
     }
 

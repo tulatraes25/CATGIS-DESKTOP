@@ -1,4 +1,6 @@
 package ar.com.catgis.core.model;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.LabelConfig;
 import ar.com.catgis.core.model.GradientFill;
 
@@ -459,7 +461,7 @@ public class Layer {
         labelOffsetX = labelConfig.getOffsetX();
         labelOffsetY = labelConfig.getOffsetY();
         labelPlacement = labelConfig.getPlacement();
-        try { labelPlacementMode = LabelPlacementMode.fromValue(labelConfig.getPlacementMode()); } catch (Exception ignored) {}
+        try { labelPlacementMode = LabelPlacementMode.fromValue(labelConfig.getPlacementMode()); } catch (Exception ignored) { CatgisLogger.warn("Layer: operation failed", ignored); }
         labelPriority = labelConfig.getPriority();
         labelCollisionAvoid = labelConfig.isCollisionAvoid();
         labelBackgroundEnabled = labelConfig.isBackgroundEnabled();

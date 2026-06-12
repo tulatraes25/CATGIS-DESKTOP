@@ -161,11 +161,9 @@ public final class BatchProcessor {
                 try {
                     String json = Files.readString(f.toPath());
                     templates.add(BatchTemplate.fromJson(json));
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) { CatgisLogger.warn("BatchProcessor: operation failed", ignored); }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("BatchProcessor: operation failed", ignored); }
         return templates;
     }
 

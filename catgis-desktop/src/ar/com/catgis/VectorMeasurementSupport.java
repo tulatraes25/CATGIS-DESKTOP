@@ -36,8 +36,7 @@ final class VectorMeasurementSupport {
             if (metricGeometry != null && !metricGeometry.isEmpty()) {
                 return Math.abs(metricGeometry.getArea());
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("VectorMeasurementSupport: operation failed", ignored); }
 
         return Math.abs(geometry.getArea());
     }
@@ -78,8 +77,7 @@ final class VectorMeasurementSupport {
             if (metricGeometry != null && !metricGeometry.isEmpty()) {
                 return Math.abs(metricGeometry.getLength());
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("VectorMeasurementSupport: operation failed", ignored); }
 
         return Math.abs(geometry.getLength());
     }

@@ -110,8 +110,7 @@ public final class ModuleRegistry {
         for (Runnable listener : LISTENERS) {
             try {
                 listener.run();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ModuleRegistry: operation failed", ignored); }
         }
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
     }

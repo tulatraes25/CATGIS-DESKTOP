@@ -333,7 +333,7 @@ public class CoordinateConverterDialog extends JDialog {
         }
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Resultado copiado al portapapeles.");
+            AppContext.setStatusMessage("Resultado copiado al portapapeles.");
         }
     }
 

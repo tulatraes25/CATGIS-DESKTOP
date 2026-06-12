@@ -144,7 +144,7 @@ public final class PostgisWriteService {
                 );
             }
             if (result != null && CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Cambios guardados en PostGIS: " + result.layer().getTableName());
+                AppContext.setStatusMessage("Cambios guardados en PostGIS: " + result.layer().getTableName());
             }
             return result != null;
         } catch (Exception ex) {
@@ -422,8 +422,7 @@ public final class PostgisWriteService {
             if (Boolean.class.isAssignableFrom(targetBinding) || boolean.class.isAssignableFrom(targetBinding)) {
                 return "true".equalsIgnoreCase(text) || "1".equals(text) || "si".equalsIgnoreCase(text);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("PostgisWriteService: operation failed", ignored); }
         return String.class.isAssignableFrom(targetBinding) ? text : null;
     }
 

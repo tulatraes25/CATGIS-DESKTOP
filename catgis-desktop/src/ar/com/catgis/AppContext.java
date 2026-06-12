@@ -84,4 +84,53 @@ public final class AppContext {
             sb.setMessage(message);
         }
     }
+
+    public static void clearStatusCoordinates() {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.clearCoordinates();
+        }
+    }
+
+    public static void setStatusScaleText(String text) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.setScaleText(text);
+        }
+    }
+
+    public static void setStatusScaleToolTip(String tooltip) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.setScaleToolTip(tooltip);
+        }
+    }
+
+    public static void forceStatusScaleText(String text) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.forceScaleText(text);
+        }
+    }
+
+    public static void setStatusProjectCoordinates(String text) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.setProjectCoordinates(text);
+        }
+    }
+
+    public static void setStatusGeographicCoordinates(String text) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.setGeographicCoordinates(text);
+        }
+    }
+
+    public static void setStatusGeographicDms(String text) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.setGeographicDms(text);
+        }
+    }
 }

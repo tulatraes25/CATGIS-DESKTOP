@@ -135,8 +135,7 @@ public final class I18n {
             if (baseDir != null) {
                 return baseDir.resolve(INSTALL_DEFAULTS_FILE);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("I18n: operation failed", ignored); }
 
         return null;
     }

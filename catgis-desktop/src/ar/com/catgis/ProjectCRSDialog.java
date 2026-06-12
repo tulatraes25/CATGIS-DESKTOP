@@ -21,7 +21,7 @@ public class ProjectCRSDialog {
             CatgisDesktopApp.markProjectDirty();
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
+                AppContext.setStatusMessage(
                         "CRS del proyecto: " + CRSDefinitions.getLabelForCode(code)
                 );
             }

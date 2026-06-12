@@ -177,6 +177,12 @@ public final class DwgImportSupport {
             }
         }
 
+        // Check CATGIS_ODA environment variable first
+        String envOda = System.getenv("CATGIS_ODA");
+        if (envOda != null && !envOda.isBlank()) {
+            candidates.add(new File(envOda).getAbsolutePath());
+        }
+
         String[] commonPaths = {
                 "C:\\CATGIS\\tools\\oda\\app\\ODAFileConverter.exe",
                 "C:\\CATGIS\\tools\\oda\\ODAFileConverter.exe",

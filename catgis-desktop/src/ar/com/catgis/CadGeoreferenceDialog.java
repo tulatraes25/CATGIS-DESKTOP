@@ -382,8 +382,7 @@ public class CadGeoreferenceDialog extends JDialog {
             CadGeoreferenceSupport.Result preview = computeResultFromFields();
             residualSummaryLabel.setText("Residual: " + preview.summary());
             residualSummaryLabel.setForeground(new Color(21, 128, 61));
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("CadGeoreferenceDialog: operation failed", ignored); }
     }
 
     private void computeAndClose() {

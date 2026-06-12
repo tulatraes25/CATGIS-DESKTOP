@@ -1222,8 +1222,7 @@ public final class TerrainHydrologyAnalysisService {
         if (sourceCrsCode != null && !sourceCrsCode.isBlank()) {
             try {
                 builder.setCRS(CRSDefinitions.decode(sourceCrsCode, true));
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("TerrainHydrologyAnalysisService: operation failed", ignored); }
         }
         builder.add("the_geom", Geometry.class);
         for (int i = 0; i + 1 < attributes.length; i += 2) {
@@ -1238,8 +1237,7 @@ public final class TerrainHydrologyAnalysisService {
         if (sourceCrsCode != null && !sourceCrsCode.isBlank()) {
             try {
                 builder.setCRS(CRSDefinitions.decode(sourceCrsCode, true));
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("TerrainHydrologyAnalysisService: operation failed", ignored); }
         }
         builder.add("the_geom", Point.class);
         for (int i = 0; i + 1 < attributes.length; i += 2) {
@@ -1254,8 +1252,7 @@ public final class TerrainHydrologyAnalysisService {
         if (sourceCrsCode != null && !sourceCrsCode.isBlank()) {
             try {
                 builder.setCRS(CRSDefinitions.decode(sourceCrsCode, true));
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("TerrainHydrologyAnalysisService: operation failed", ignored); }
         }
         builder.add("the_geom", LineString.class);
         for (int i = 0; i + 1 < attributes.length; i += 2) {

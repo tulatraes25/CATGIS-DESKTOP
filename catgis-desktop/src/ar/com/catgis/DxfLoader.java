@@ -461,8 +461,7 @@ public final class DxfLoader {
                 if (polygon != null && !polygon.isEmpty()) {
                     return polygon;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("DxfLoader: operation failed", ignored); }
             try {
                 return GEOMETRY_FACTORY.createLineString(shell);
             } catch (Exception ignored) {

@@ -295,7 +295,7 @@ public class AddWfsDialog extends JDialog {
                     CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(loaded.layer, loaded.data);
                     CatgisDesktopApp.markProjectDirty();
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage("Capa WFS agregada en modo lectura: " + loaded.layer.getName());
+                        AppContext.setStatusMessage("Capa WFS agregada en modo lectura: " + loaded.layer.getName());
                     }
                     dispose();
                 } catch (Exception ex) {

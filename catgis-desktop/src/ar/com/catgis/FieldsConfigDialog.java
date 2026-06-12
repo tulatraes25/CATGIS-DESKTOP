@@ -231,7 +231,7 @@ public class FieldsConfigDialog extends JDialog {
         }
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Configuración de campos actualizada: " + layer.getName());
+            AppContext.setStatusMessage("Configuración de campos actualizada: " + layer.getName());
         }
 
         dispose();

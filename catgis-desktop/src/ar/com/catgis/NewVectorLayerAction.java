@@ -102,7 +102,7 @@ public class NewVectorLayerAction extends AbstractAction {
             }
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Nueva capa vectorial creada: " + layer.getName());
+                AppContext.setStatusMessage("Nueva capa vectorial creada: " + layer.getName());
             }
 
             return layer;

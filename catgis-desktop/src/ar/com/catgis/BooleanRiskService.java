@@ -556,8 +556,7 @@ public final class BooleanRiskService {
             try {
                 CoordinateReferenceSystem crs = CRSDefinitions.decode(sourceCrsCode, true);
                 builder.setCRS(crs);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("BooleanRiskService: operation failed", ignored); }
         }
         builder.add("the_geom", Geometry.class);
         for (int i = 0; i + 1 < attributes.length; i += 2) {
@@ -669,8 +668,7 @@ public final class BooleanRiskService {
             if (values instanceof double[] array) {
                 return array;
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("BooleanRiskService: operation failed", ignored); }
         return new double[0];
     }
 

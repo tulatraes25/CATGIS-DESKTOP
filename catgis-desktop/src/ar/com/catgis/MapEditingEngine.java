@@ -1241,7 +1241,7 @@ class MapEditingEngine {
             map.startSelectionFlash(map.selectedLayer, map.selectedFeature);
         }
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Poligono adyacente creado. Elegi otro borde o cambia de herramienta.");
+            AppContext.setStatusMessage("Poligono adyacente creado. Elegi otro borde o cambia de herramienta.");
         }
         map.refreshEditingUi();
         return true;

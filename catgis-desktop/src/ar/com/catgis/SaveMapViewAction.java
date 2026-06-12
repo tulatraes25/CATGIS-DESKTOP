@@ -67,7 +67,7 @@ public class SaveMapViewAction extends AbstractAction {
             ImageIO.write(image, format, file);
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Vista guardada: " + file.getName());
+                AppContext.setStatusMessage("Vista guardada: " + file.getName());
             }
 
             JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),

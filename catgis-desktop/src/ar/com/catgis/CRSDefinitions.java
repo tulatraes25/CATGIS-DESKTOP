@@ -314,7 +314,7 @@ public class CRSDefinitions {
             if (crs != null && crs.getName() != null) {
                 return crs.getName().toString();
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) { CatgisLogger.warn("CRSDefinitions: operation failed", ignored); }
         return "No disponible";
     }
 
@@ -327,7 +327,7 @@ public class CRSDefinitions {
             if (datum != null && datum.getName() != null) {
                 return datum.getName().toString();
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) { CatgisLogger.warn("CRSDefinitions: operation failed", ignored); }
         return "No disponible";
     }
 

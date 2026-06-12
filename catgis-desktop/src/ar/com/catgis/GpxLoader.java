@@ -60,8 +60,7 @@ public final class GpxLoader {
         factory.setNamespaceAware(true);
         try {
             factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("GpxLoader: operation failed", ignored); }
         return factory.newDocumentBuilder().parse(file);
     }
 
@@ -325,7 +324,6 @@ public final class GpxLoader {
     private static void applyCrs(SimpleFeatureTypeBuilder builder, String crsCode) {
         try {
             builder.setCRS(CRSDefinitions.decode(crsCode, true));
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("GpxLoader: operation failed", ignored); }
     }
 }

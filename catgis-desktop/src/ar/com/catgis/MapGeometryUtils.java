@@ -273,8 +273,7 @@ public class MapGeometryUtils {
                 if (!digits.isEmpty()) {
                     try {
                         maxSuffix = Math.max(maxSuffix, Long.parseLong(digits));
-                    } catch (NumberFormatException ignored) {
-                    }
+                    } catch (Exception ignored) { CatgisLogger.warn("MapGeometryUtils: operation failed", ignored); }
                 }
             }
         }

@@ -52,7 +52,7 @@ public final class OnlineBaseMapAction {
                 }
             }
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Mapa base activo: " + existing.getName());
+                AppContext.setStatusMessage("Mapa base activo: " + existing.getName());
             }
             CatgisDesktopApp.markProjectDirty();
             return true;
@@ -73,7 +73,7 @@ public final class OnlineBaseMapAction {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Mapa base online agregado: " + layer.getName());
+            AppContext.setStatusMessage("Mapa base online agregado: " + layer.getName());
         }
         return true;
     }

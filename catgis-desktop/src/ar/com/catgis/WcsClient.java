@@ -92,7 +92,7 @@ public final class WcsClient {
             List<Double> resolution = new ArrayList<>();
             String resX = extractXmlTag(block, "resolution");
             if (resX != null) {
-                try { resolution.add(Double.parseDouble(resX)); } catch (NumberFormatException ignored) {}
+                try { resolution.add(Double.parseDouble(resX)); } catch (Exception ignored) { CatgisLogger.warn("WcsClient: operation failed", ignored); }
             }
 
             if (name != null && !name.isEmpty()) {
@@ -254,12 +254,12 @@ public final class WcsClient {
             throw new Exception("HTTP " + responseCode + " from WCS server");
         }
 
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) sb.append(line).append("\n");
-        reader.close();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line).append("\n");
+        }
         conn.disconnect();
         return sb.toString();
     }

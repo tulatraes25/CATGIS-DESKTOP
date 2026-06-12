@@ -333,7 +333,7 @@ class MouseHandler extends MouseAdapter {
         map.hoverWorldY = Double.NaN;
         map.snapManager.setSnapPreviewCoordinate(null);
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.clearCoordinates();
+            AppContext.clearStatusCoordinates();
         }
         map.repaint();
     }
@@ -378,9 +378,9 @@ class MouseHandler extends MouseAdapter {
                 map.topographicProfileCaptureCoordinates.add(coordinate);
                 if (CatgisDesktopApp.statusBar != null) {
                     if (map.topographicProfileCaptureCoordinates.size() == 1) {
-                        CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico: agrega otro punto para comenzar el trazado."));
+                        AppContext.setStatusMessage(I18n.t("Perfil topografico: agrega otro punto para comenzar el trazado."));
                     } else {
-                        CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico: agrega mas vertices o clic derecho para terminar el trazado."));
+                        AppContext.setStatusMessage(I18n.t("Perfil topografico: agrega mas vertices o clic derecho para terminar el trazado."));
                     }
                 }
                 map.repaint();

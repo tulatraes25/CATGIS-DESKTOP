@@ -71,8 +71,7 @@ public final class PostgisLoader {
                 if (!generic.isEmpty()) {
                     return generic;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("PostgisLoader: operation failed", ignored); }
         }
         return List.of();
     }
@@ -190,8 +189,7 @@ public final class PostgisLoader {
                 if (bounds != null && !bounds.isEmpty()) {
                     envelope = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("PostgisLoader: operation failed", ignored); }
 
             try (FeatureIterator<SimpleFeature> it = featureCollection.features()) {
                 while (it.hasNext()) {
@@ -328,8 +326,7 @@ public final class PostgisLoader {
         }
         try {
             statement.setQueryTimeout(20);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("PostgisLoader: operation failed", ignored); }
     }
 
     private static List<PostgisFeatureTypeInfo> listFeatureTypesFromCatalogView(PostgisConnectionInfo info) throws Exception {

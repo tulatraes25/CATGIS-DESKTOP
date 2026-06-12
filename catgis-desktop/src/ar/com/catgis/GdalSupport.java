@@ -8,8 +8,16 @@ import java.io.File;
  */
 final class GdalSupport {
 
-    private static final File OSGEO4W = new File("C:\\OSGeo4W\\bin");
-    private static final File OSGEO4W64 = new File("C:\\OSGeo4W64\\bin");
+    private static final File OSGEO4W = resolveOsgeoPath("CATGIS_OSGEO4W", "C:\\OSGeo4W\\bin");
+    private static final File OSGEO4W64 = resolveOsgeoPath("CATGIS_OSGEO4W64", "C:\\OSGeo4W64\\bin");
+
+    private static File resolveOsgeoPath(String envVar, String defaultPath) {
+        String env = System.getenv(envVar);
+        if (env != null && !env.isBlank()) {
+            return new File(env);
+        }
+        return new File(defaultPath);
+    }
 
     private GdalSupport() {
     }

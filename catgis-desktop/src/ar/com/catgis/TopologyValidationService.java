@@ -216,8 +216,7 @@ public final class TopologyValidationService {
                         nearestSegmentDistance = distanceToLine;
                         nearestSegmentFeatureId = feature.getID();
                     }
-                } catch (TopologyException ignored) {
-                }
+                } catch (Exception ignored) { CatgisLogger.warn("TopologyValidationService: operation failed", ignored); }
             }
 
             if (options.isNearMissEndpoints()

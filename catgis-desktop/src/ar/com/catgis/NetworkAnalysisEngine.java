@@ -218,63 +218,94 @@ public final class NetworkAnalysisEngine {
     }
 
     /**
-     * Compute betweenness centrality for all nodes.
-     * Higher values = more important nodes in the network.
+     * Compute betweenness centrality using Brandes algorithm.
+     * O(VE + V² log V) for weighted graphs.
      */
+    @SuppressWarnings("unchecked")
     public static double[] betweennessCentrality(List<SimpleFeature> lineFeatures, double snapTolerance) {
         List<NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
         int n = nodes.size();
         if (n == 0) return new double[0];
 
+        // Build adjacency list for O(E) edge traversal
+        List<List<Edge>> adjList = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) adjList.add(new ArrayList<>());
         double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
+        for (int u = 0; u < n; u++) {
+            for (int v = 0; v < n; v++) {
+                if (adj[u][v] < Double.MAX_VALUE && u != v) {
+                    adjList.get(u).add(new Edge(v, adj[u][v]));
+                }
+            }
+        }
+
         double[] centrality = new double[n];
 
         for (int s = 0; s < n; s++) {
+            // Brandes: single-source shortest paths with Dijkstra + priority queue
             double[] dist = new double[n];
-            int[] prev = new int[n];
             int[] sigma = new int[n];
-            double[] delta = new double[n];
-            boolean[] visited = new boolean[n];
+            List<Integer>[] predecessors = new List[n];
+            java.util.PriorityQueue<NodeDist> pq = new java.util.PriorityQueue<>();
+
             Arrays.fill(dist, Double.MAX_VALUE);
-            Arrays.fill(prev, -1);
-            Arrays.fill(sigma, 0);
+            for (int i = 0; i < n; i++) predecessors[i] = new ArrayList<>();
             dist[s] = 0;
             sigma[s] = 1;
+            pq.add(new NodeDist(s, 0));
 
-            List<Integer> stack = new ArrayList<>();
+            while (!pq.isEmpty()) {
+                NodeDist nd = pq.poll();
+                int u = nd.node;
+                if (nd.dist > dist[u]) continue; // stale entry
 
-            for (int iter = 0; iter < n; iter++) {
-                int u = -1;
-                double minD = Double.MAX_VALUE;
-                for (int i = 0; i < n; i++) {
-                    if (!visited[i] && dist[i] < minD) { minD = dist[i]; u = i; }
-                }
-                if (u < 0 || dist[u] == Double.MAX_VALUE) break;
-                visited[u] = true;
-                stack.add(u);
-                for (int v = 0; v < n; v++) {
-                    if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
-                    double alt = dist[u] + adj[u][v];
-                    if (alt < dist[v]) { dist[v] = alt; prev[v] = u; sigma[v] = sigma[u]; }
-                    else if (alt == dist[v]) { sigma[v] += sigma[u]; }
+                for (Edge e : adjList.get(u)) {
+                    int v = e.to;
+                    double alt = dist[u] + e.weight;
+                    if (alt < dist[v] - 1e-10) {
+                        dist[v] = alt;
+                        sigma[v] = sigma[u];
+                        predecessors[v].clear();
+                        predecessors[v].add(u);
+                        pq.add(new NodeDist(v, alt));
+                    } else if (Math.abs(alt - dist[v]) < 1e-10) {
+                        sigma[v] += sigma[u];
+                        predecessors[v].add(u);
+                    }
                 }
             }
 
-            // Back-propagation
-            while (!stack.isEmpty()) {
-                int w = stack.remove(stack.size() - 1);
-                if (prev[w] >= 0 && sigma[w] > 0) {
-                    delta[prev[w]] += (1.0 + delta[w]) * sigma[prev[w]] / (double) sigma[w];
+            // Back-propagation in reverse BFS order (by distance)
+            double[] delta = new double[n];
+            List<Integer> stack = new ArrayList<>();
+            for (int v = 0; v < n; v++) {
+                if (dist[v] < Double.MAX_VALUE) stack.add(v);
+            }
+            stack.sort((a, b) -> Double.compare(dist[b], dist[a])); // descending
+
+            for (int w : stack) {
+                for (int v : predecessors[w]) {
+                    if (sigma[w] > 0 && sigma[v] > 0) {
+                        delta[v] += (sigma[v] / (double) sigma[w]) * (1.0 + delta[w]);
+                    }
                 }
                 if (w != s) centrality[w] += delta[w];
             }
         }
 
-        // Normalize
-        double norm = n > 2 ? (n - 1.0) * (n - 2.0) : 1.0;
-        for (int i = 0; i < n; i++) centrality[i] /= norm;
+        // Normalize for directed graphs: 1 / ((n-1)(n-2))
+        double norm = n > 2 ? 1.0 / ((n - 1.0) * (n - 2.0)) : 1.0;
+        for (int i = 0; i < n; i++) centrality[i] *= norm;
 
         return centrality;
+    }
+
+    /** Lightweight edge for adjacency lists. */
+    private record Edge(int to, double weight) {}
+
+    /** Node-distance pair for priority queue. */
+    private record NodeDist(int node, double dist) implements Comparable<NodeDist> {
+        @Override public int compareTo(NodeDist o) { return Double.compare(dist, o.dist); }
     }
 
     /**

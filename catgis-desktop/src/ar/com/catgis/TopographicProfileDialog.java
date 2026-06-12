@@ -270,7 +270,7 @@ public class TopographicProfileDialog extends JDialog {
         statsLabel.setText(I18n.t("Genera un perfil para ver distancia, elevacion minima y maxima."));
         lineSummaryLabel.setText(I18n.t("Capturando polilinea en el mapa..."));
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
+            AppContext.setStatusMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
         }
         CatgisDesktopApp.mapPanel.startTopographicProfileCapture(new MapPanel.TopographicProfileCaptureHandler() {
             @Override
@@ -365,7 +365,7 @@ public class TopographicProfileDialog extends JDialog {
                     exportButton.setEnabled(true);
                     addToLayoutButton.setEnabled(true);
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico generado para ") + rasterLayer.getName());
+                        AppContext.setStatusMessage(I18n.t("Perfil topografico generado para ") + rasterLayer.getName());
                     }
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(
@@ -434,7 +434,7 @@ public class TopographicProfileDialog extends JDialog {
             FileChooserSupport.rememberFile("export-topographic-profile", output);
             FileChooserSupport.rememberFile("export-topographic-profile-layout", output);
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico exportado: ") + output.getName());
+                AppContext.setStatusMessage(I18n.t("Perfil topografico exportado: ") + output.getName());
             }
             if (openComposerAfterExport) {
                 if (CatgisDesktopApp.currentProject != null) {

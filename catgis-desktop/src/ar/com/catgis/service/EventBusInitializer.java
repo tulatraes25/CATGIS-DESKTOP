@@ -49,7 +49,7 @@ public final class EventBusInitializer {
             String msg = e.getData();
             SwingUtilities.invokeLater(() -> {
                 if (CatgisDesktopApp.statusBar != null) {
-                    CatgisDesktopApp.statusBar.setMessage(msg);
+                    AppContext.setStatusMessage(msg);
                 }
             });
         });

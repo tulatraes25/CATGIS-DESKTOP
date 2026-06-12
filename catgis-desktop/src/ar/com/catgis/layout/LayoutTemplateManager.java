@@ -1,4 +1,6 @@
 package ar.com.catgis.layout;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 
@@ -84,7 +86,7 @@ public class LayoutTemplateManager {
                 ar.com.catgis.data.vector.ShapefileData d = mp.getShapefileData(l);
                 if (d != null) { String f = ar.com.catgis.data.vector.VectorLayerUtils.resolveGeometryFamily(d); if (f != null) return f; }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("LayoutTemplateManager: operation failed", ignored); }
         return "VECTOR";
     }
 

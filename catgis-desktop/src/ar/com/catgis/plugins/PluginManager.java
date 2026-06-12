@@ -1,5 +1,7 @@
 package ar.com.catgis.plugins;
 
+import ar.com.catgis.CatgisLogger;
+
 import ar.com.catgis.MapPanel;
 
 import javax.swing.*;
@@ -135,12 +137,12 @@ public final class PluginManager {
             for (URL url : jarUrls) {
                 try {
                     instantiatePlugin(url);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
             }
 
             // Close old loader
             if (oldLoader != null) {
-                try { oldLoader.close(); } catch (Exception ignored) {}
+                try { oldLoader.close(); } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
             }
         }
     }
@@ -156,7 +158,7 @@ public final class PluginManager {
                     plugin.onEnable();
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
     }
 
     private static void unloadPlugin(String jarName) {
@@ -225,7 +227,7 @@ public final class PluginManager {
      */
     public static void shutdown() {
         for (CatgisPlugin p : activePlugins) {
-            try { p.onDisable(); } catch (Exception ignored) {}
+            try { p.onDisable(); } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
         }
         activePlugins.clear();
         loadedPlugins.clear();

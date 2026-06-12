@@ -81,8 +81,7 @@ public class ShapefileLoader {
 
             try {
                 envelope = featureCollection.getBounds();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ShapefileLoader: operation failed", ignored); }
 
             if ((envelope == null || envelope.isNull()) && !features.isEmpty()) {
                 for (SimpleFeature feature : features) {
@@ -114,8 +113,7 @@ public class ShapefileLoader {
             if (store != null) {
                 try {
                     store.dispose();
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) { CatgisLogger.warn("ShapefileLoader: operation failed", ignored); }
             }
         }
     }
@@ -138,8 +136,7 @@ public class ShapefileLoader {
             if (store != null) {
                 try {
                     store.dispose();
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) { CatgisLogger.warn("ShapefileLoader: operation failed", ignored); }
             }
         }
     }

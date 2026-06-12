@@ -159,7 +159,7 @@ public final class StacClient {
         int ctxIdx = json.indexOf("\"context\":");
         if (ctxIdx > 0) {
             String matched = extractJsonStringRaw(json, "matched", ctxIdx);
-            try { totalMatched = Integer.parseInt(matched); } catch (NumberFormatException ignored) {}
+            try { totalMatched = Integer.parseInt(matched); } catch (Exception ignored) { CatgisLogger.warn("StacClient: operation failed", ignored); }
         }
 
         // Check for next page link
@@ -375,12 +375,12 @@ public final class StacClient {
         int responseCode = conn.getResponseCode();
         if (responseCode != 200) throw new Exception("HTTP " + responseCode);
 
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) sb.append(line);
-        reader.close();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line);
+        }
         conn.disconnect();
         return sb.toString();
     }
@@ -403,12 +403,12 @@ public final class StacClient {
         int responseCode = conn.getResponseCode();
         if (responseCode != 200) throw new Exception("HTTP " + responseCode);
 
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) sb.append(line);
-        reader.close();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) sb.append(line);
+        }
         conn.disconnect();
         return sb.toString();
     }

@@ -483,7 +483,7 @@ public class BasinFromOutletDialog extends JDialog {
 
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(result.statusMessage());
+            AppContext.setStatusMessage(result.statusMessage());
         }
     }
 
@@ -496,8 +496,7 @@ public class BasinFromOutletDialog extends JDialog {
             if (ExportVectorLayerAction.saveLayerDataToFile(layer, data, outputFile, this, false)) {
                 layer.setPath(outputFile.getAbsolutePath());
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("BasinFromOutletDialog: operation failed", ignored); }
     }
 
     private File buildManagedOutputFile(Layer layer) {

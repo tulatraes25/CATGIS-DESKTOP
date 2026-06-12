@@ -1736,7 +1736,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
 
     private ShapefileData multiBufferLayer(LayerOption layerA, double ringDist, String outputName) throws Exception {
         int rings = 3;
-        try { if (txtParameter.getText() != null) { String[] parts = txtParameter.getText().trim().split("[\\s,;]+"); if (parts.length > 1) rings = Integer.parseInt(parts[parts.length - 1]); } } catch (Exception ignored) {}
+        try { if (txtParameter.getText() != null) { String[] parts = txtParameter.getText().trim().split("[\\s,;]+"); if (parts.length > 1) rings = Integer.parseInt(parts[parts.length - 1]); } } catch (Exception ignored) { CatgisLogger.warn("GeoprocessingAssistantDialog: operation failed", ignored); }
         String family = VectorLayerUtils.resolveGeometryFamily(layerA.data);
         SimpleFeatureType resultType = buildSchemaFromSource(outputName, VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data), defaultGeometryBindingForFamily(family, true), layerA.data.getSchema());
         List<SimpleFeature> features = new ArrayList<>();

@@ -395,7 +395,7 @@ public final class OnlineLayerRenderer {
         }
         if (panel.onlineResolutionNotice != null && !panel.onlineResolutionNotice.isBlank()
                 && CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(panel.onlineResolutionNotice);
+            AppContext.setStatusMessage(panel.onlineResolutionNotice);
         }
     }
 
@@ -563,7 +563,7 @@ public final class OnlineLayerRenderer {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("OnlineLayerRenderer: operation failed", ignored); }
         }
 
         if (!hasHeatmap || allPoints.isEmpty()) return;
@@ -611,7 +611,7 @@ public final class OnlineLayerRenderer {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("OnlineLayerRenderer: operation failed", ignored); }
         }
 
         if (!hasClustering || allPoints.isEmpty()) return;

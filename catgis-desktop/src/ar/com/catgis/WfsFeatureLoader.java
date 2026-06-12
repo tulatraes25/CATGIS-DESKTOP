@@ -69,8 +69,7 @@ public final class WfsFeatureLoader {
                 if (bounds != null && !bounds.isEmpty()) {
                     envelope = new Envelope(bounds.getMinX(), bounds.getMaxX(), bounds.getMinY(), bounds.getMaxY());
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("WfsFeatureLoader: operation failed", ignored); }
 
             try (FeatureIterator<SimpleFeature> it = featureCollection.features()) {
                 while (it.hasNext()) {

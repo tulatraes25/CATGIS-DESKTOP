@@ -416,8 +416,7 @@ public final class TopographyWorkflowSupport {
                     return projected;
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("TopographyWorkflowSupport: operation failed", ignored); }
 
         return null;
     }

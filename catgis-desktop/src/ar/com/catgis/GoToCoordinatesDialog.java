@@ -257,7 +257,7 @@ public class GoToCoordinatesDialog extends JDialog {
         CatgisDesktopApp.mapPanel.repaint();
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(String.format("Mapa centrado en X: %.3f  Y: %.3f", x, y));
+            AppContext.setStatusMessage(String.format("Mapa centrado en X: %.3f  Y: %.3f", x, y));
         }
     }
 }

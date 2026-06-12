@@ -351,9 +351,9 @@ public class FloodScenarioDialog extends JDialog {
                         ? I18n.format("Escenario preliminar de inundacion generado: {0} ha potencialmente afectadas.",
                         String.format(Locale.US, "%.2f", lastResult.affectedAreaSquareMeters() / 10000d))
                         : I18n.t("Escenario preliminar de inundacion generado.");
-                CatgisDesktopApp.statusBar.setMessage(areaText);
+                AppContext.setStatusMessage(areaText);
             } else {
-                CatgisDesktopApp.statusBar.setMessage(I18n.t("Escenarios preliminares de inundacion generados: ") + batchResult.results().size());
+                AppContext.setStatusMessage(I18n.t("Escenarios preliminares de inundacion generados: ") + batchResult.results().size());
             }
         }
         if (batchResult.results().size() > 1 || !batchResult.exportedFiles().isEmpty()) {

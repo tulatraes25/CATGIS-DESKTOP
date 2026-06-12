@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 
 import ar.com.catgis.*;
@@ -31,7 +33,7 @@ public class ClimateVisualizationDialog extends JDialog {
         if (!varType.isEmpty()) {
             try {
                 selectedVariable = ClimateColormaps.ClimateVariable.valueOf(varType);
-            } catch (IllegalArgumentException ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("ClimateVisualizationDialog: operation failed", ignored); }
         }
 
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -191,7 +193,7 @@ public class ClimateVisualizationDialog extends JDialog {
         mapPanel.repaint();
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     "Simbología climática aplicada: " + selectedVariable + " | " + layer.getName());
         }
         dispose();

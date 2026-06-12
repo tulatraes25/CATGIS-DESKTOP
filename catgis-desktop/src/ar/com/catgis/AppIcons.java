@@ -22,7 +22,7 @@ public final class AppIcons {
     private static Icon legacy(String name) { return loadSvg("icons/" + name + ".svg", TB); }
 
     private static Icon loadSvg(String path, int size) {
-        try { return new FlatSVGIcon(path, size, size); } catch (Throwable ignored) {}
+        try { return new FlatSVGIcon(path, size, size); } catch (Exception ignored) { CatgisLogger.warn("AppIcons: operation failed", ignored); }
         URL url = AppIcons.class.getResource("/" + path);
         if (url != null) return new ImageIcon(new ImageIcon(url).getImage().getScaledInstance(size, size, Image.SCALE_SMOOTH));
         return new ImageIcon(new java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB));

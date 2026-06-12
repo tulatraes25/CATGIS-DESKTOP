@@ -235,7 +235,7 @@ public class GraduatedSymbologyDialog extends JDialog {
                 if (v != null) {
                     try {
                         values.add(Double.parseDouble(String.valueOf(v)));
-                    } catch (NumberFormatException ignored) {}
+                    } catch (Exception ignored) { CatgisLogger.warn("GraduatedSymbologyDialog: operation failed", ignored); }
                 }
             }
         } catch (Exception ex) {

@@ -368,7 +368,7 @@ public class OnlineDemDownloadDialog extends JDialog {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("DEM online incorporado: ") + layer.getName());
+            AppContext.setStatusMessage(I18n.t("DEM online incorporado: ") + layer.getName());
         }
     }
 

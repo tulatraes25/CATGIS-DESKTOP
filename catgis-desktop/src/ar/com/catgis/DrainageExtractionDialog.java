@@ -239,7 +239,7 @@ public class DrainageExtractionDialog extends JDialog {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Escorrentias generadas: ") + result.layer().getName());
+            AppContext.setStatusMessage(I18n.t("Escorrentias generadas: ") + result.layer().getName());
         }
     }
 

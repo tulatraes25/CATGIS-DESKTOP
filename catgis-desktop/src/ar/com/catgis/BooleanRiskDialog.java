@@ -381,7 +381,7 @@ public class BooleanRiskDialog extends JDialog {
                     + " | "
                     + request.logicMode()
                     : I18n.t("Riesgo booleano preliminar sin positivos: revisa umbrales, area y capas seleccionadas.");
-            CatgisDesktopApp.statusBar.setMessage(message);
+            AppContext.setStatusMessage(message);
         }
     }
 
@@ -710,8 +710,7 @@ public class BooleanRiskDialog extends JDialog {
                     return demEnvelope.intersects(soilInDemCrs);
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("BooleanRiskDialog: operation failed", ignored); }
         return layersIntersectInProjectView(demLayer, soilLayer);
     }
 

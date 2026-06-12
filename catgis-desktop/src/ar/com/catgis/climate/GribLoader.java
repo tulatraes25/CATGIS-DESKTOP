@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.raster.LocalRasterData;
@@ -250,7 +252,7 @@ public final class GribLoader {
         try {
             var id = org.geotools.referencing.CRS.lookupIdentifier(crs, false);
             if (id != null) crsCode = id;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("GribLoader: operation failed", ignored); }
 
         String layerName = varName + " - " + file.getName();
         RasterLayer layer = new RasterLayer(layerName, file.getAbsolutePath());
@@ -292,7 +294,7 @@ public final class GribLoader {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("GRIB cargado: " + layer.getName());
+            AppContext.setStatusMessage("GRIB cargado: " + layer.getName());
         }
 
         return layer;

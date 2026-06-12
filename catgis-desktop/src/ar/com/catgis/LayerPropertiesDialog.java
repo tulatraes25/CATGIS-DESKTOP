@@ -1071,7 +1071,7 @@ public class LayerPropertiesDialog extends JDialog {
             CatgisDesktopApp.mapPanel.repaint();
         }
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.format("Propiedades actualizadas: {0}", layer.getName()));
+            AppContext.setStatusMessage(I18n.format("Propiedades actualizadas: {0}", layer.getName()));
         }
         return true;
     }
@@ -1281,7 +1281,7 @@ public class LayerPropertiesDialog extends JDialog {
                 CatgisDesktopApp.mapPanel.repaint();
             }
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Estilo SLD importado: " + layer.getName());
+                AppContext.setStatusMessage("Estilo SLD importado: " + layer.getName());
             }
             JOptionPane.showMessageDialog(
                     this,
@@ -1324,7 +1324,7 @@ public class LayerPropertiesDialog extends JDialog {
             LayerSldStyleIO.exportStyle(snapshot, file, data);
             FileChooserSupport.rememberSelection("layer-style-sld-export", chooser);
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Estilo SLD exportado: " + file.getName());
+                AppContext.setStatusMessage("Estilo SLD exportado: " + file.getName());
             }
             JOptionPane.showMessageDialog(
                     this,

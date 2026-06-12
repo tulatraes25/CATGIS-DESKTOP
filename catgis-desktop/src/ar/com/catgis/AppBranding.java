@@ -86,8 +86,7 @@ public final class AppBranding {
             if (!images.isEmpty()) {
                 taskbar.setIconImage(images.get(images.size() - 1));
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("AppBranding: operation failed", ignored); }
     }
 
     public static List<Image> getApplicationIconImages() {

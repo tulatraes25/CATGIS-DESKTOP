@@ -374,8 +374,7 @@ public final class ProNasaOceanColorL3Support {
             }
             try {
                 return Double.parseDouble(raw);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ProNasaOceanColorL3Support: operation failed", ignored); }
         }
         return null;
     }
@@ -481,15 +480,13 @@ public final class ProNasaOceanColorL3Support {
             try {
                 LocalDate date = LocalDate.parse(value, DateTimeFormatter.BASIC_ISO_DATE);
                 return (endOfPeriod ? date.atTime(23, 59, 59) : date.atStartOfDay()).atOffset(ZoneOffset.UTC).toString();
-            } catch (DateTimeParseException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ProNasaOceanColorL3Support: operation failed", ignored); }
         }
         if (value.length() == 15 && value.charAt(8) == 'T') {
             try {
                 LocalDateTime dateTime = LocalDateTime.parse(value, DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss"));
                 return dateTime.atOffset(ZoneOffset.UTC).toString();
-            } catch (DateTimeParseException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ProNasaOceanColorL3Support: operation failed", ignored); }
         }
         return value;
     }
@@ -515,8 +512,7 @@ public final class ProNasaOceanColorL3Support {
                 int second = Integer.parseInt(value.substring(11, 13));
                 return date.atTime(hour, minute, second).atOffset(ZoneOffset.UTC).toString();
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("ProNasaOceanColorL3Support: operation failed", ignored); }
         return value;
     }
 

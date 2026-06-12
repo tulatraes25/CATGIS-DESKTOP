@@ -1,5 +1,7 @@
 package ar.com.catgis.layout;
 
+import ar.com.catgis.CatgisLogger;
+
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;

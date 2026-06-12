@@ -6,6 +6,7 @@ import org.locationtech.jts.triangulate.VoronoiDiagramBuilder;
 import org.locationtech.jts.triangulate.DelaunayTriangulationBuilder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Spatial utilities: concave hull, bounding circle, bounding rectangle,
@@ -17,8 +18,14 @@ public final class SpatialUtils {
 
     private SpatialUtils() {}
 
+    /**
+     * Compute concave hull using Delaunay-based alpha shape.
+     * Alpha controls the level of detail: smaller = tighter, larger = closer to convex hull.
+     * Uses JTS DelaunayTriangulationBuilder and filters edges by circumradius.
+     */
     public static Geometry concaveHull(List<SimpleFeature> points, double alpha) {
         if (points == null || points.size() < 3) return null;
+
         List<Coordinate> coords = new ArrayList<>();
         for (SimpleFeature f : points) {
             Geometry g = (Geometry) f.getDefaultGeometry();
@@ -26,42 +33,89 @@ public final class SpatialUtils {
             else if (g != null) coords.add(g.getCentroid().getCoordinate());
         }
         if (coords.size() < 3) return null;
-        double cx = 0, cy = 0;
-        for (Coordinate c : coords) { cx += c.x; cy += c.y; }
-        cx /= coords.size();
-        cy /= coords.size();
-        final double fcx = cx, fcy = cy;
-        coords.sort((a, b) -> {
-            double angleA = Math.atan2(a.y - fcy, a.x - fcx);
-            double angleB = Math.atan2(b.y - fcy, b.x - fcx);
-            return Double.compare(angleA, angleB);
-        });
+
+        // Remove duplicates for Delaunay
+        coords = new ArrayList<>(new java.util.LinkedHashSet<>(coords));
+        if (coords.size() < 3) return null;
+
         GeometryFactory gf = new GeometryFactory();
-        Coordinate[] hullCoords = coords.toArray(new Coordinate[0]);
-        if (alpha <= 0) {
-            if (hullCoords.length > 0 && !hullCoords[0].equals(hullCoords[hullCoords.length - 1])) {
-                Coordinate[] closed = new Coordinate[hullCoords.length + 1];
-                System.arraycopy(hullCoords, 0, closed, 0, hullCoords.length);
-                closed[hullCoords.length] = new Coordinate(hullCoords[0].x, hullCoords[0].y);
-                hullCoords = closed;
+
+        // Build Delaunay triangulation
+        org.locationtech.jts.triangulate.DelaunayTriangulationBuilder dtb =
+                new org.locationtech.jts.triangulate.DelaunayTriangulationBuilder();
+        dtb.setSites(coords);
+        dtb.setTolerance(0);
+        GeometryCollection triangles = (GeometryCollection) dtb.getTriangles(gf);
+        if (triangles == null || triangles.getNumGeometries() == 0) {
+            // Fallback: convex hull
+            return gf.createMultiPointFromCoords(coords.toArray(new Coordinate[0])).convexHull();
+        }
+
+        // Collect boundary edges with their circumradii
+        Map<String, Double> edgeRadii = new java.util.HashMap<>();
+        for (int i = 0; i < triangles.getNumGeometries(); i++) {
+            Polygon tri = (Polygon) triangles.getGeometryN(i);
+            Coordinate[] verts = tri.getExteriorRing().getCoordinates(); // 4 coords (closed)
+            double circumradius = circumradius(verts[0], verts[1], verts[2]);
+
+            for (int j = 0; j < 3; j++) {
+                Coordinate a = verts[j];
+                Coordinate b = verts[j + 1];
+                String key = edgeKey(a, b);
+                // Keep the smallest circumradius for each edge
+                edgeRadii.merge(key, circumradius, Math::min);
             }
-            return gf.createPolygon(hullCoords);
         }
-        List<Coordinate> kept = new ArrayList<>();
-        for (int i = 0; i < hullCoords.length; i++) {
-            int next = (i + 1) % hullCoords.length;
-            double dist = hullCoords[i].distance(hullCoords[next]);
-            if (dist <= alpha * 2) kept.add(hullCoords[i]);
+
+        // Filter edges: keep edges where circumradius <= alpha
+        List<org.locationtech.jts.geom.LineSegment> keptEdges = new ArrayList<>();
+        for (var entry : edgeRadii.entrySet()) {
+            if (entry.getValue() <= alpha || alpha <= 0) {
+                String[] parts = entry.getKey().split(":");
+                Coordinate a = new Coordinate(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]));
+                Coordinate b = new Coordinate(Double.parseDouble(parts[2]), Double.parseDouble(parts[3]));
+                keptEdges.add(new org.locationtech.jts.geom.LineSegment(a, b));
+            }
         }
-        if (kept.size() < 3) return gf.createPolygon(hullCoords);
-        Coordinate[] result = kept.toArray(new Coordinate[0]);
-        if (result.length > 0 && !result[0].equals(result[result.length - 1])) {
-            Coordinate[] closed = new Coordinate[result.length + 1];
-            System.arraycopy(result, 0, closed, 0, result.length);
-            closed[result.length] = new Coordinate(result[0].x, result[0].y);
-            result = closed;
+
+        // Dissolve edges into polygon boundary
+        List<Geometry> edgeLines = new ArrayList<>();
+        for (var seg : keptEdges) {
+            edgeLines.add(gf.createLineString(new Coordinate[]{seg.p0, seg.p1}));
         }
-        return gf.createPolygon(result);
+        if (edgeLines.isEmpty()) {
+            return gf.createMultiPointFromCoords(coords.toArray(new Coordinate[0])).convexHull();
+        }
+
+        Geometry merged = gf.createMultiLineString(edgeLines.toArray(new LineString[0])).union();
+        if (merged instanceof Polygon p) return p;
+
+        // Try to polygonize
+        org.locationtech.jts.operation.polygonize.Polygonizer polygonizer =
+                new org.locationtech.jts.operation.polygonize.Polygonizer();
+        polygonizer.add(merged);
+        @SuppressWarnings("unchecked")
+        java.util.Collection<Polygon> polygons = polygonizer.getPolygons();
+        if (!polygons.isEmpty()) return polygons.iterator().next();
+        return merged.convexHull();
+    }
+
+    private static double circumradius(Coordinate a, Coordinate b, Coordinate c) {
+        double ab = a.distance(b);
+        double bc = b.distance(c);
+        double ca = c.distance(a);
+        if (ab < 1e-10 || bc < 1e-10 || ca < 1e-10) return Double.MAX_VALUE;
+        double s = (ab + bc + ca) / 2;
+        double area = Math.sqrt(Math.max(0, s * (s - ab) * (s - bc) * (s - ca)));
+        if (area < 1e-10) return Double.MAX_VALUE;
+        return (ab * bc * ca) / (4 * area);
+    }
+
+    private static String edgeKey(Coordinate a, Coordinate b) {
+        if (a.compareTo(b) < 0) {
+            return a.x + ":" + a.y + ":" + b.x + ":" + b.y;
+        }
+        return b.x + ":" + b.y + ":" + a.x + ":" + a.y;
     }
 
     public static Geometry boundingCircle(List<SimpleFeature> points) {

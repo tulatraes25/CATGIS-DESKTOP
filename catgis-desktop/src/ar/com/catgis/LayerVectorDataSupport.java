@@ -230,8 +230,7 @@ final class LayerVectorDataSupport {
                 if (result instanceof ShapefileData shapefileData) {
                     return shapefileData;
                 }
-            } catch (NoSuchMethodException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayerVectorDataSupport: operation failed", ignored); }
         }
 
         for (String methodName : methodNames) {
@@ -241,8 +240,7 @@ final class LayerVectorDataSupport {
                 if (result instanceof ShapefileData shapefileData) {
                     return shapefileData;
                 }
-            } catch (NoSuchMethodException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayerVectorDataSupport: operation failed", ignored); }
         }
 
         throw new RuntimeException(

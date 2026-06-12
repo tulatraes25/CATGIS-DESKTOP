@@ -318,7 +318,7 @@ public class OnlineSoilDownloadDialog extends JDialog {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Mapa de suelos incorporado: ") + layer.getName());
+            AppContext.setStatusMessage(I18n.t("Mapa de suelos incorporado: ") + layer.getName());
         }
     }
 

@@ -146,8 +146,7 @@ public final class TopographicProfileService {
             if (isProjectedMetric(sourceCrs)) {
                 return normalizeCode(sourceCode, "EPSG:3857");
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("TopographicProfileService: operation failed", ignored); }
         return "EPSG:3857";
     }
 

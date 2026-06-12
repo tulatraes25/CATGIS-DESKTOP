@@ -91,6 +91,29 @@ public final class SpectralIndexEngine {
     }
 
     /**
+     * Compute a 3-band spectral index (e.g., proper EVI with NIR, RED, BLUE).
+     */
+    public static BufferedImage computeIndex3(BufferedImage bandA, BufferedImage bandB,
+                                               BufferedImage bandC, String indexId) {
+        if (bandA == null || bandB == null || bandC == null) return null;
+        int w = Math.min(Math.min(bandA.getWidth(), bandB.getWidth()), bandC.getWidth());
+        int h = Math.min(Math.min(bandA.getHeight(), bandB.getHeight()), bandC.getHeight());
+        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+        double[] outPixel = new double[1];
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                double a = bandA.getRaster().getSample(x, y, 0);
+                double b = bandB.getRaster().getSample(x, y, 0);
+                double c = bandC.getRaster().getSample(x, y, 0);
+                double val = computePixel3(a, b, c, indexId);
+                outPixel[0] = normalizeToByte(val, indexId);
+                result.getRaster().setPixel(x, y, outPixel);
+            }
+        }
+        return result;
+    }
+
+    /**
      * Compute NDVI from Red and NIR bands.
      */
     public static BufferedImage computeNDVI(BufferedImage redBand, BufferedImage nirBand) {
@@ -132,6 +155,23 @@ public final class SpectralIndexEngine {
                 yield inner < 0 ? 0 : Math.sqrt(inner);
             }
             default -> 0;
+        };
+    }
+
+    /**
+     * Compute pixel value for 3-band indices.
+     * @param a band A pixel value
+     * @param b band B pixel value
+     * @param c band C pixel value
+     * @param indexId index identifier
+     */
+    private static double computePixel3(double a, double b, double c, String indexId) {
+        return switch (indexId) {
+            case "EVI3" -> { // 3-band EVI: 2.5 * (NIR - RED) / (NIR + 6*RED - 7.5*BLUE + 1)
+                double denom = a + 6 * b - 7.5 * c + 1;
+                yield denom == 0 ? 0 : Math.min(1, Math.max(-1, 2.5 * (a - b) / denom));
+            }
+            default -> computePixel(a, b, indexId);
         };
     }
 

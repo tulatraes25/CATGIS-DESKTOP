@@ -316,7 +316,7 @@ public class MapPanel extends JPanel implements SnapContext {
         viewController.zoomPrevious();
         syncViewFromController();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Vista anterior restaurada.");
+            AppContext.setStatusMessage("Vista anterior restaurada.");
         }
     }
 
@@ -325,7 +325,7 @@ public class MapPanel extends JPanel implements SnapContext {
         viewController.zoomNext();
         syncViewFromController();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Vista siguiente restaurada.");
+            AppContext.setStatusMessage("Vista siguiente restaurada.");
         }
     }
 
@@ -828,7 +828,7 @@ public class MapPanel extends JPanel implements SnapContext {
         setTool("SELECT");
         refreshEditingUi();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Capa lista para edicion: " + layer.getName() + ". Selecciona una entidad con la flecha.");
+            AppContext.setStatusMessage("Capa lista para edicion: " + layer.getName() + ". Selecciona una entidad con la flecha.");
         }
     }
 
@@ -863,7 +863,7 @@ public class MapPanel extends JPanel implements SnapContext {
         clearCadConstructionState();
         setTool("SELECT");
         if (featureEditMode && CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Edicion activa en rojo. Arrastra o modifica los vertices de la entidad seleccionada.");
+            AppContext.setStatusMessage("Edicion activa en rojo. Arrastra o modifica los vertices de la entidad seleccionada.");
         }
         if (featureEditMode) {
             startSelectionFlash(layer, feature);
@@ -1174,7 +1174,7 @@ public class MapPanel extends JPanel implements SnapContext {
         featureEditOriginalGeometry = null;
         featureEditDirty = false;
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Edicion finalizada.");
+            AppContext.setStatusMessage("Edicion finalizada.");
         }
         undoRedoManager.clear();
         refreshEditingUi();
@@ -1193,7 +1193,7 @@ public class MapPanel extends JPanel implements SnapContext {
         clearCadConstructionState();
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Cambios geomÃ©tricos guardados en la sesiÃ³n del proyecto.");
+            AppContext.setStatusMessage("Cambios geomÃ©tricos guardados en la sesiÃ³n del proyecto.");
         }
         refreshEditingUi();
         return true;
@@ -1216,7 +1216,7 @@ public class MapPanel extends JPanel implements SnapContext {
         featureEditDirty = false;
         undoRedoManager.clear();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Edicion cancelada.");
+            AppContext.setStatusMessage("Edicion cancelada.");
         }
         refreshEditingUi();
     }
@@ -1596,8 +1596,8 @@ public class MapPanel extends JPanel implements SnapContext {
         rememberCurrentView();
         if (CatgisDesktopApp.statusBar != null) {
             String scaleText = formatScaleDenominator(targetDenominator);
-            CatgisDesktopApp.statusBar.forceScaleText(scaleText);
-            CatgisDesktopApp.statusBar.setMessage("Escala de vista ajustada a " + scaleText + ".");
+            AppContext.forceStatusScaleText(scaleText);
+            AppContext.setStatusMessage("Escala de vista ajustada a " + scaleText + ".");
         }
     }
 
@@ -1606,8 +1606,8 @@ public class MapPanel extends JPanel implements SnapContext {
             return;
         }
         double denominator = getCurrentScaleDenominator();
-        CatgisDesktopApp.statusBar.setScaleText(formatScaleDenominator(denominator));
-        CatgisDesktopApp.statusBar.setScaleToolTip(buildScaleTooltip(denominator));
+        AppContext.setStatusScaleText(formatScaleDenominator(denominator));
+        AppContext.setStatusScaleToolTip(buildScaleTooltip(denominator));
     }
 
     public double getCurrentScaleDenominator() {
@@ -2422,7 +2422,7 @@ public class MapPanel extends JPanel implements SnapContext {
         editItem.addActionListener(ev -> {
             enableFeatureEdit(layer, feature);
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Edicion vectorial lista para: " + layer.getName());
+                AppContext.setStatusMessage("Edicion vectorial lista para: " + layer.getName());
             }
             CatgisDesktopApp.syncFloatingVectorEditToolbar();
         });
@@ -2545,7 +2545,7 @@ public class MapPanel extends JPanel implements SnapContext {
             projectText += "   [" + projectCRS + "]";
         }
 
-        CatgisDesktopApp.statusBar.setProjectCoordinates(projectText);
+        AppContext.setStatusProjectCoordinates(projectText);
 
         String geographicText = "Lat/Long: Lon: -   Lat: -";
         String dmsText = "DMS: Lon: -   Lat: -";
@@ -2561,8 +2561,8 @@ public class MapPanel extends JPanel implements SnapContext {
                     + "   Lat: " + toDms(geographic[1], true);
         }
 
-        CatgisDesktopApp.statusBar.setGeographicCoordinates(geographicText);
-        CatgisDesktopApp.statusBar.setGeographicDms(dmsText);
+        AppContext.setStatusGeographicCoordinates(geographicText);
+        AppContext.setStatusGeographicDms(dmsText);
 
         // Update map decorations cursor coordinate
         if (mapDecorations != null) {
@@ -2703,7 +2703,7 @@ public class MapPanel extends JPanel implements SnapContext {
             repaint();
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Zoom a todas las capas aplicado.");
+                AppContext.setStatusMessage("Zoom a todas las capas aplicado.");
             }
         });
     }
@@ -5376,7 +5376,7 @@ public class MapPanel extends JPanel implements SnapContext {
             startSelectionFlash(selectedLayer, selectedFeature);
         }
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Poligono adyacente creado. Elegi otro borde o cambia de herramienta.");
+            AppContext.setStatusMessage("Poligono adyacente creado. Elegi otro borde o cambia de herramienta.");
         }
         refreshEditingUi();
         return true;

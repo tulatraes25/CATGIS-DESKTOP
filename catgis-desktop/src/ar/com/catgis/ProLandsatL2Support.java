@@ -278,8 +278,7 @@ public final class ProLandsatL2Support {
                     values.put(key, value);
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("ProLandsatL2Support: operation failed", ignored); }
         return values;
     }
 

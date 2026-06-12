@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.raster.RasterCoverageSupport;
 
@@ -154,8 +156,7 @@ public final class ClimateOnlineDownloadService {
         } finally {
             try {
                 tempFile.delete();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ClimateOnlineDownloadService: operation failed", ignored); }
         }
 
         RasterSidecarSupport.write(outputFile, normalizedBbox, dataset.getSourceCrsCode());
@@ -318,8 +319,7 @@ public final class ClimateOnlineDownloadService {
                             sum += val;
                             count++;
                         }
-                    } catch (NumberFormatException ignored) {
-                    }
+                    } catch (Exception ignored) { CatgisLogger.warn("ClimateOnlineDownloadService: operation failed", ignored); }
                 }
             }
 

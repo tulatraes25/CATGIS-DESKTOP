@@ -1,4 +1,6 @@
 package ar.com.catgis.layout;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.vector.ShapefileData;
@@ -472,7 +474,7 @@ public class MapFrameRenderer {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("MapFrameRenderer: operation failed", ignored); }
         }
 
         if (!hasClustering || allPoints.isEmpty()) return;
@@ -519,7 +521,7 @@ public class MapFrameRenderer {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("MapFrameRenderer: operation failed", ignored); }
         }
 
         if (!hasHeatmap || allPoints.isEmpty()) return;

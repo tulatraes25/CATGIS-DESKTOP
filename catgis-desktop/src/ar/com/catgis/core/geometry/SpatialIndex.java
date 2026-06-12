@@ -1,5 +1,7 @@
 package ar.com.catgis.core.geometry;
 
+import ar.com.catgis.CatgisLogger;
+
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.index.strtree.STRtree;

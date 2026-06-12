@@ -139,7 +139,7 @@ public class RasterDisplaySettingsDialog extends JDialog {
                 if (mapPanel != null) mapPanel.repaint();
             }
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Visualizacion actualizada: " + layer.getName());
+                AppContext.setStatusMessage("Visualizacion actualizada: " + layer.getName());
             }
         });
 

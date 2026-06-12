@@ -34,7 +34,7 @@ public class TopographicProfileTool {
         panel.requestFocusInWindow();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
+            AppContext.setStatusMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
         }
         panel.repaint();
     }
@@ -45,7 +45,7 @@ public class TopographicProfileTool {
         panel.topographicProfileCaptureCoordinates.clear();
         panel.topographicProfileCaptureHandler = null;
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Captura de perfil topografico cancelada."));
+            AppContext.setStatusMessage(I18n.t("Captura de perfil topografico cancelada."));
         }
         panel.repaint();
         if (handler != null) {
@@ -65,7 +65,7 @@ public class TopographicProfileTool {
         panel.topographicProfileCaptureHandler = null;
         panel.repaint();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Linea de perfil capturada."));
+            AppContext.setStatusMessage(I18n.t("Linea de perfil capturada."));
         }
         if (handler != null && line != null) {
             handler.onLineCaptured(line, projectCrs);

@@ -144,8 +144,7 @@ public class RasterImageLoader {
                 if (direct != null) {
                     return direct;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
             File cacheTif = getOrCreateImgCache(file, displaySize, mode);
             return loadWithGeoToolsSafe(cacheTif, displaySize, file.getAbsolutePath(), mode, projectCRS, forcedSourceCRS);
@@ -263,8 +262,7 @@ public class RasterImageLoader {
                 if (reader != null) {
                     reader.dispose();
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
         }
     }
 
@@ -357,8 +355,7 @@ public class RasterImageLoader {
             Process p = pb.start();
             readAll(p.getInputStream());
             p.waitFor();
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
     }
 
     private static String buildCacheKey(File file) throws IOException {
@@ -511,8 +508,7 @@ public class RasterImageLoader {
 
                 return new Envelope(minX, maxX, minY, maxY);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
         return new Envelope(0, raw.getWidth(), 0, raw.getHeight());
     }
@@ -522,22 +518,19 @@ public class RasterImageLoader {
 
         try {
             crs = coverage != null ? coverage.getCoordinateReferenceSystem2D() : null;
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
         try {
             if (crs == null && coverage != null) {
                 crs = coverage.getCoordinateReferenceSystem();
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
         try {
             if (crs == null && reader != null) {
                 crs = reader.getCoordinateReferenceSystem();
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
         if (crs == null) {
             return "";
@@ -548,16 +541,14 @@ public class RasterImageLoader {
             if (isResolvableCode(code)) {
                 return CRSDefinitions.normalizeCode(code);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
         try {
             String code = crs.getName() != null ? crs.getName().toString() : "";
             if (isResolvableCode(code)) {
                 return CRSDefinitions.normalizeCode(code);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
 
         return "";
     }

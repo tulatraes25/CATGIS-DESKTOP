@@ -266,7 +266,7 @@ class ProOpenDatasetDialog extends JDialog {
         BatchProgressDialog progressDialog = createBatchProgressDialog(openableEntries.size(), () -> {
             cancellationToken.requestCancel();
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Aviso: cancelacion solicitada para el job Pro.");
+                AppContext.setStatusMessage("Aviso: cancelacion solicitada para el job Pro.");
             }
         });
         SwingWorker<ProOpenBatchCoordinator.BatchResult, ProOpenBatchCoordinator.ProgressSnapshot> worker = new SwingWorker<>() {
@@ -288,7 +288,7 @@ class ProOpenDatasetDialog extends JDialog {
                 ProOpenBatchCoordinator.ProgressSnapshot snapshot = chunks.get(chunks.size() - 1);
                 progressDialog.update(snapshot);
                 if (CatgisDesktopApp.statusBar != null) {
-                    CatgisDesktopApp.statusBar.setMessage(
+                    AppContext.setStatusMessage(
                             snapshot.cancelRequested()
                                     ? "Aviso: " + snapshot.message()
                                     : snapshot.message()
@@ -345,7 +345,7 @@ class ProOpenDatasetDialog extends JDialog {
             }
         }
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     result.canceled()
                             ? "Aviso: job Pro cancelado. Variables abiertas: " + committed.size()
                             : committed.isEmpty()

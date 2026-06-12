@@ -155,7 +155,7 @@ public class SaveProjectAction extends AbstractAction {
             FileChooserSupport.rememberFile("project-open", file);
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Proyecto guardado: " + file.getAbsolutePath());
+                AppContext.setStatusMessage("Proyecto guardado: " + file.getAbsolutePath());
             }
 
             if (showDialogs) {

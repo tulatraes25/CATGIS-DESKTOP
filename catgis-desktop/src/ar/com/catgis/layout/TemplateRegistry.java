@@ -1,5 +1,7 @@
 package ar.com.catgis.layout;
 
+import ar.com.catgis.CatgisLogger;
+
 import java.util.*;
 
 /**
@@ -25,9 +27,9 @@ public final class TemplateRegistry {
         public String getLabel() { return label; }
     }
 
-    public static final List<Entry> ALL = new ArrayList<>();
-    private static final Map<String, Entry> BY_KEY = new LinkedHashMap<>();
-    private static final Map<Category, List<Entry>> BY_CATEGORY = new LinkedHashMap<>();
+    public static final List<Entry> ALL = java.util.Collections.synchronizedList(new ArrayList<>());
+    private static final Map<String, Entry> BY_KEY = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
+    private static final Map<Category, List<Entry>> BY_CATEGORY = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
 
     public static void register(String key, String displayName, Category category) {
         Entry e = new Entry(key, displayName, category);
@@ -45,7 +47,7 @@ public final class TemplateRegistry {
     private static volatile boolean loaded = false;
     private static void ensureLoaded() {
         if (!loaded) {
-            try { Class.forName("ar.com.catgis.layout.TemplateCatalog"); } catch (Exception ignored) {}
+            try { Class.forName("ar.com.catgis.layout.TemplateCatalog"); } catch (Exception ignored) { CatgisLogger.warn("TemplateRegistry: operation failed", ignored); }
             loaded = true;
         }
     }

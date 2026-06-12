@@ -66,10 +66,10 @@ public final class LayerSymbologyCodec {
             if (c1 != null) r.setPrimaryColor(c1);
             if (c2 != null) r.setSecondaryColor(c2);
             r.setLineStyle(Layer.LineSymbolStyle.fromValue(f[3]));
-            if (f.length >= 6) { try { r.setLineWidth(Float.parseFloat(f[4])); } catch (Exception ignored) {} }
+            if (f.length >= 6) { try { r.setLineWidth(Float.parseFloat(f[4])); } catch (Exception ignored) { CatgisLogger.warn("LayerSymbologyCodec: operation failed", ignored); } }
             r.setPolygonFillStyle(Layer.PolygonFillStyle.fromValue(f[5]));
             if (f.length >= 7) r.setPointSymbolStyle(Layer.PointSymbolStyle.fromValue(f[6]));
-            if (f.length >= 8) { try { r.setPointSize(Integer.parseInt(f[7])); } catch (Exception ignored) {} }
+            if (f.length >= 8) { try { r.setPointSize(Integer.parseInt(f[7])); } catch (Exception ignored) { CatgisLogger.warn("LayerSymbologyCodec: operation failed", ignored); } }
         }
         return s;
     }
@@ -105,7 +105,7 @@ public final class LayerSymbologyCodec {
         s.setFieldName(decode(p[0]));
         s.setLegendTitle(decode(p[1]));
         s.setLegendSubtitle(decode(p[2]));
-        if (p.length >= 4) { try { s.setNumClasses(Integer.parseInt(p[3])); } catch (Exception ignored) {} }
+        if (p.length >= 4) { try { s.setNumClasses(Integer.parseInt(p[3])); } catch (Exception ignored) { CatgisLogger.warn("LayerSymbologyCodec: operation failed", ignored); } }
         if (p.length < 5 || p[4].isBlank()) return s;
         for (String rp : p[4].split(";")) {
             String[] f = rp.split(">", -1);
@@ -118,12 +118,12 @@ public final class LayerSymbologyCodec {
                 if (c1 != null) r.setPrimaryColor(c1);
                 if (c2 != null) r.setSecondaryColor(c2);
                 if (f.length >= 6) r.setLineStyle(Layer.LineSymbolStyle.fromValue(f[5]));
-                if (f.length >= 7) { try { r.setLineWidth(Float.parseFloat(f[6])); } catch (Exception ignored) {} }
+                if (f.length >= 7) { try { r.setLineWidth(Float.parseFloat(f[6])); } catch (Exception ignored) { CatgisLogger.warn("LayerSymbologyCodec: operation failed", ignored); } }
                 if (f.length >= 8) r.setPolygonFillStyle(Layer.PolygonFillStyle.fromValue(f[7]));
                 if (f.length >= 9) r.setPointSymbolStyle(Layer.PointSymbolStyle.fromValue(f[8]));
-                if (f.length >= 10) { try { r.setPointSize(Integer.parseInt(f[9])); } catch (Exception ignored) {} }
+                if (f.length >= 10) { try { r.setPointSize(Integer.parseInt(f[9])); } catch (Exception ignored) { CatgisLogger.warn("LayerSymbologyCodec: operation failed", ignored); } }
                 s.getRules().add(r);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("LayerSymbologyCodec: operation failed", ignored); }
         }
         return s;
     }

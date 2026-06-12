@@ -152,7 +152,7 @@ public class FeatureRenderer {
                 Object v = feature.getAttribute(fieldName);
                 if (v != null) value = v.toString();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("FeatureRenderer: operation failed", ignored); }
         if (value == null) return null;
         for (CategoryStyleRule rule : symbology.getRules().values()) {
             if (value.equals(rule.getValue())) return rule;

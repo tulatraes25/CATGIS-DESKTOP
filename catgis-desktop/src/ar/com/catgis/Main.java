@@ -69,12 +69,10 @@ public class Main {
             Object laf = themeClass.getDeclaredConstructor().newInstance();
             UIManager.setLookAndFeel((javax.swing.LookAndFeel) laf);
             return;
-        } catch (Throwable ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); }
 
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); }
     }
 }

@@ -199,8 +199,7 @@ public final class WmsCapabilitiesService {
                 double south = Double.parseDouble(text(ex, "southBoundLatitude"));
                 double north = Double.parseDouble(text(ex, "northBoundLatitude"));
                 return new Envelope(west, east, south, north);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("WmsCapabilitiesService: operation failed", ignored); }
         }
 
         Element latLon = child(layerElement, "LatLonBoundingBox");

@@ -361,8 +361,7 @@ public final class DrainageExtractionService {
             if (values instanceof double[] array) {
                 return array;
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("DrainageExtractionService: operation failed", ignored); }
         return new double[0];
     }
 
@@ -1385,8 +1384,7 @@ public final class DrainageExtractionService {
         if (sourceCrsCode != null && !sourceCrsCode.isBlank()) {
             try {
                 builder.setCRS(CRSDefinitions.decode(sourceCrsCode, true));
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("DrainageExtractionService: operation failed", ignored); }
         }
         builder.add("the_geom", LineString.class);
         builder.add("drain_id", Integer.class);
@@ -1417,8 +1415,7 @@ public final class DrainageExtractionService {
             if (sourceCrs instanceof ProjectedCRS) {
                 return normalizeCode(CRS.toSRS(sourceCrs, true), "EPSG:3857");
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("DrainageExtractionService: operation failed", ignored); }
         return "EPSG:3857";
     }
 

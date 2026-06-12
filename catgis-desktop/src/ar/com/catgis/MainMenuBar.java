@@ -753,7 +753,7 @@ public class MainMenuBar extends JMenuBar {
                 }
                 br.close();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("MainMenuBar: operation failed", ignored); }
         if (recentFiles.isEmpty()) {
             JMenuItem empty = new JMenuItem("(vacio)");
             empty.setEnabled(false);
@@ -797,7 +797,7 @@ public class MainMenuBar extends JMenuBar {
             java.io.PrintWriter pw = new java.io.PrintWriter(recentFile);
             for (String path : recentFiles) pw.println(path);
             pw.close();
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("MainMenuBar: operation failed", ignored); }
     }
 
     private JMenuItem createItem(String text, Icon icon) {

@@ -276,8 +276,7 @@ public class TablePointImportDialog extends JDialog {
                 double y = parseCoordinate(yText);
                 xs.add(x);
                 ys.add(y);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("TablePointImportDialog: operation failed", ignored); }
 
             if (xs.size() >= 50) {
                 break;

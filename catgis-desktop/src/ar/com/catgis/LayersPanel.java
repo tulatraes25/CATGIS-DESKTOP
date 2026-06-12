@@ -243,11 +243,11 @@ public class LayersPanel extends JPanel {
 
                     if (CatgisDesktopApp.statusBar != null) {
                         if (selectedGroup != null) {
-                            CatgisDesktopApp.statusBar.setMessage(
+                            AppContext.setStatusMessage(
                                     "Grupo " + (selectedGroup.isVisible() ? "visible" : "oculto") + ": " + selectedGroup.getName()
                             );
                         } else {
-                            CatgisDesktopApp.statusBar.setMessage(
+                            AppContext.setStatusMessage(
                                     "Capa " + (selectedLayer.isVisible() ? "visible" : "oculta") + ": " + selectedLayer.getName()
                             );
                         }
@@ -537,7 +537,7 @@ public class LayersPanel extends JPanel {
 
     private void showQuickInterpretationWarning(String message) {
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(message);
+            AppContext.setStatusMessage(message);
         }
         JOptionPane.showMessageDialog(
                 this,
@@ -1489,7 +1489,7 @@ public class LayersPanel extends JPanel {
         EditingToolsWindow.showWindow();
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     "Editando capa: " + layer.getName()
             );
         }
@@ -1581,7 +1581,7 @@ public class LayersPanel extends JPanel {
         CatgisDesktopApp.mapPanel.resetView();
         CatgisDesktopApp.mapPanel.repaint();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Ajuste CAD actualizado: " + layer.getName() + " -> " + CadPlacementSupport.buildPlacementSummary(layer));
+            AppContext.setStatusMessage("Ajuste CAD actualizado: " + layer.getName() + " -> " + CadPlacementSupport.buildPlacementSummary(layer));
         }
     }
 
@@ -1602,7 +1602,7 @@ public class LayersPanel extends JPanel {
         }
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     "CRS de capa actualizado: " + layer.getName() + " -> " + CadLayerSupport.formatSourceCrsLabel(code)
             );
         }
@@ -1926,9 +1926,9 @@ public class LayersPanel extends JPanel {
 
         if (CatgisDesktopApp.statusBar != null) {
             if (orderedLayers.size() == 1) {
-                CatgisDesktopApp.statusBar.setMessage(I18n.format("Capa quitada: {0}", orderedLayers.get(0).getName()));
+                AppContext.setStatusMessage(I18n.format("Capa quitada: {0}", orderedLayers.get(0).getName()));
             } else {
-                CatgisDesktopApp.statusBar.setMessage(I18n.format("{0} capas quitadas del proyecto.", orderedLayers.size()));
+                AppContext.setStatusMessage(I18n.format("{0} capas quitadas del proyecto.", orderedLayers.size()));
             }
         }
     }
@@ -2073,7 +2073,7 @@ public class LayersPanel extends JPanel {
                     : "Proyecto CATGIS";
             File saved = ProRasterReportService.exportMarkdownReport(rasterLayer, rasterData, projectName, outputFile);
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Ficha raster exportada: " + saved.getName());
+                AppContext.setStatusMessage("Ficha raster exportada: " + saved.getName());
             }
             JOptionPane.showMessageDialog(
                     CatgisDesktopApp.getMainFrameSafe(),
@@ -2271,8 +2271,7 @@ public class LayersPanel extends JPanel {
             Constructor<?> ctor = dialogClass.getConstructor(java.awt.Component.class, Layer.class);
             ctor.newInstance(this, layer);
             return;
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
         JOptionPane.showMessageDialog(
                 this,
                 "No se pudo abrir el dialogo de ajustes de visualizacion.",
@@ -2299,29 +2298,24 @@ public class LayersPanel extends JPanel {
                 ctor = dialogClass.getConstructor(java.awt.Component.class, Layer.class);
                 ctor.newInstance(this, layer);
                 return;
-            } catch (NoSuchMethodException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
             try {
                 ctor = dialogClass.getConstructor(Layer.class);
                 ctor.newInstance(layer);
                 return;
-            } catch (NoSuchMethodException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
             Method openMethod = null;
             try {
                 openMethod = dialogClass.getMethod("open", java.awt.Component.class, Layer.class);
                 openMethod.invoke(null, this, layer);
                 return;
-            } catch (NoSuchMethodException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
             try {
                 openMethod = dialogClass.getMethod("open", Layer.class);
                 openMethod.invoke(null, layer);
                 return;
-            } catch (NoSuchMethodException ignored) {
-            }
-        } catch (Exception ignored) {
-        }
+            } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
+        } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
 
         JOptionPane.showMessageDialog(
                 this,
@@ -2351,8 +2345,7 @@ public class LayersPanel extends JPanel {
                 if (value instanceof String) {
                     return (String) value;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
         }
         return RasterImageLoader.MODE_PREVIEW;
     }
@@ -2391,7 +2384,7 @@ public class LayersPanel extends JPanel {
         String currentMode = getRasterMode(layer);
         if (!forceReload && currentMode != null && currentMode.equalsIgnoreCase(mode)) {
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
+                AppContext.setStatusMessage(
                         "La capa ya esta en modo " + getRasterModeLabel(currentMode) + ": " + layer.getName()
                 );
             }
@@ -2459,7 +2452,7 @@ public class LayersPanel extends JPanel {
                     String msg = "Raster recargado en modo " + getRasterModeLabel(data.getRasterMode()) + ": " + layer.getName();
 
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage(msg);
+                        AppContext.setStatusMessage(msg);
                     }
 
                     JOptionPane.showMessageDialog(
@@ -2531,7 +2524,7 @@ public class LayersPanel extends JPanel {
                             + layer.getName()
                             + "\nClasificacion metodologica: " + methodology;
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage(message.replace('\n', ' '));
+                        AppContext.setStatusMessage(message.replace('\n', ' '));
                     }
                     JOptionPane.showMessageDialog(
                             LayersPanel.this,
@@ -2615,7 +2608,7 @@ public class LayersPanel extends JPanel {
                             + "\nClasificacion metodologica: "
                             + ProOceanColorPresetSupport.methodologyLabel(layer.getProMaturityLevel());
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage(message.replace('\n', ' '));
+                        AppContext.setStatusMessage(message.replace('\n', ' '));
                     }
                     JOptionPane.showMessageDialog(
                             LayersPanel.this,
@@ -2718,8 +2711,7 @@ public class LayersPanel extends JPanel {
             try {
                 Method m = CatgisDesktopApp.mapPanel.getClass().getMethod(name, Layer.class);
                 return m.invoke(CatgisDesktopApp.mapPanel, layer);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
         }
         return null;
     }
@@ -2741,8 +2733,7 @@ public class LayersPanel extends JPanel {
                 }
                 sb.append(label).append(text).append(suffix).append("\n");
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
     }
 
     private void appendEnvelopeIfPresent(StringBuilder sb, Object target) {
@@ -2761,8 +2752,7 @@ public class LayersPanel extends JPanel {
                     .append(formatNumber(minY)).append("] - [")
                     .append(formatNumber(maxX)).append(", ")
                     .append(formatNumber(maxY)).append("]\n");
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
     }
 
     private void showOnlineTileInfo(OnlineTileLayer layer) {

@@ -224,8 +224,7 @@ public class CsvDataSourceDialog extends JDialog {
             try {
                 xs.add(Double.parseDouble(row.getOrDefault(xField, "").replace(',', '.')));
                 ys.add(Double.parseDouble(row.getOrDefault(yField, "").replace(',', '.')));
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("CsvDataSourceDialog: operation failed", ignored); }
             if (xs.size() >= 20) {
                 break;
             }

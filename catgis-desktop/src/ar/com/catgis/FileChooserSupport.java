@@ -176,8 +176,7 @@ public final class FileChooserSupport {
                 if (displayName != null && !displayName.isBlank()) {
                     return displayName;
                 }
-            } catch (RuntimeException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("FileChooserSupport: operation failed", ignored); }
             String name = file.getName();
             return name == null || name.isBlank() ? file.getPath() : name;
         }
@@ -192,8 +191,7 @@ public final class FileChooserSupport {
                 if (description != null && !description.isBlank()) {
                     return description;
                 }
-            } catch (RuntimeException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("FileChooserSupport: operation failed", ignored); }
             return file.isDirectory() ? "Carpeta" : "Archivo";
         }
 
@@ -207,8 +205,7 @@ public final class FileChooserSupport {
                 if (icon != null) {
                     return icon;
                 }
-            } catch (RuntimeException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("FileChooserSupport: operation failed", ignored); }
             return UIManager.getIcon(file != null && file.isDirectory() ? "FileView.directoryIcon" : "FileView.fileIcon");
         }
 
@@ -300,7 +297,7 @@ public final class FileChooserSupport {
                 return home;
             }
             File current = new File(".").getAbsoluteFile();
-            return current.isDirectory() ? current : new File("C:\\");
+            return current.isDirectory() ? current : File.listRoots()[0];
         }
     }
 }

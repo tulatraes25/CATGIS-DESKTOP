@@ -1,4 +1,6 @@
 package ar.com.catgis.data.online;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.data.online.OnlineRasterSource;
 
 import ar.com.catgis.OnlineMapUtils;
@@ -103,8 +105,7 @@ public final class OnlineTileCache {
                     MEMORY_CACHE.put(key, image);
                     return image;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
         }
 
         Long retryAfter = RETRY_AFTER.get(key);
@@ -368,8 +369,7 @@ public final class OnlineTileCache {
             if (tileFile != null && tileFile.isFile()) {
                 tileFile.delete();
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
     }
 
     private static String buildKey(OnlineRasterSource source, int z, int x, int y) {
@@ -412,7 +412,7 @@ public final class OnlineTileCache {
                         }
                     }
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
         }, "catgis-tile-evict").start();
     }
 
@@ -448,7 +448,7 @@ public final class OnlineTileCache {
                         try {
                             BufferedImage img = ImageIO.read(tileFile);
                             if (img != null) MEMORY_CACHE.put(key, img);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
                     });
                 }
             }

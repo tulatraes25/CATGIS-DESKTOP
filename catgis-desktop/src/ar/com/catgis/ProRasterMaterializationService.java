@@ -241,8 +241,7 @@ final class ProRasterMaterializationService {
                         output.write(buffer, 0, read);
                     }
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("ProRasterMaterializationService: operation failed", ignored); }
         }, "catgis-pro-gdal-output");
         collector.setDaemon(true);
         collector.start();

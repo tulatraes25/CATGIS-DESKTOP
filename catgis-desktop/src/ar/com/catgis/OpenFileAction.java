@@ -185,7 +185,7 @@ public class OpenFileAction extends AbstractAction {
                 }
                 addVectorLayer(layer, data);
                 if (CatgisDesktopApp.statusBar != null) {
-                    CatgisDesktopApp.statusBar.setMessage("Capa agregada: " + layer.getName());
+                    AppContext.setStatusMessage("Capa agregada: " + layer.getName());
                 }
                 if (showDialogs) {
                     JOptionPane.showMessageDialog(
@@ -203,7 +203,7 @@ public class OpenFileAction extends AbstractAction {
                 RasterLayer climateLayer = NetCdfLoader.loadNetCdfFile(file, parent);
                 if (climateLayer != null) {
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage("Datos climáticos NetCDF agregados: " + climateLayer.getName());
+                        AppContext.setStatusMessage("Datos climáticos NetCDF agregados: " + climateLayer.getName());
                     }
                     return true;
                 }
@@ -214,7 +214,7 @@ public class OpenFileAction extends AbstractAction {
                 RasterLayer gribLayer = GribLoader.loadGribFile(file, parent);
                 if (gribLayer != null) {
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage("Datos GRIB agregados: " + gribLayer.getName());
+                        AppContext.setStatusMessage("Datos GRIB agregados: " + gribLayer.getName());
                     }
                     return true;
                 }
@@ -310,7 +310,7 @@ public class OpenFileAction extends AbstractAction {
         }
 
         if (loadedCount > 0 && CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     loadedCount == 1
                             ? "Archivo agregado por arrastre."
                             : loadedCount + " archivos agregados por arrastre."
@@ -351,7 +351,7 @@ public class OpenFileAction extends AbstractAction {
             addGpxLayer(file, result, GpxLayer.ContentKind.ROUTES, loadedSummaries);
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("GPX agregado: " + file.getName());
+                AppContext.setStatusMessage("GPX agregado: " + file.getName());
             }
             if (showDialogs) {
                 JOptionPane.showMessageDialog(
@@ -472,7 +472,7 @@ public class OpenFileAction extends AbstractAction {
             RasterLayer layer = commitPreparedProRaster(prepared);
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
+                AppContext.setStatusMessage(
                         "Variable Pro agregada: " + layer.getName() + " | " + entry.methodologyLabel()
                 );
             }
@@ -577,7 +577,7 @@ public class OpenFileAction extends AbstractAction {
             CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
             CatgisDesktopApp.mapPanel.zoomToLayer(layer);
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
+                AppContext.setStatusMessage(
                         (demMode ? I18n.t("DEM local agregado: ") : "Raster agregado en vista rapida: ") + layer.getName()
                 );
             }

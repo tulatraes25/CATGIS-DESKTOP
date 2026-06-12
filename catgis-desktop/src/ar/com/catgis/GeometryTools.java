@@ -202,7 +202,7 @@ public final class GeometryTools {
                     result.add(builder.buildFeature(null));
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("GeometryTools: operation failed", ignored); }
         return result;
     }
 
@@ -228,7 +228,7 @@ public final class GeometryTools {
                     result.add(builder.buildFeature(null));
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("GeometryTools: operation failed", ignored); }
         return result;
     }
 

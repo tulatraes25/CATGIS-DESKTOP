@@ -33,7 +33,25 @@ public class CatgisDesktopApp extends JFrame {
     public static volatile MapPanel mapPanel;
     public static volatile LayersPanel layersPanel;
     public static volatile StatusBar statusBar;
+
+    /**
+     * @deprecated Use {@link #getProject()} or {@link AppContext#getProject()} instead.
+     * This field delegates to AppContext for centralized state management.
+     */
+    @Deprecated
     public static volatile Project currentProject;
+
+    /** Get current project, backed by AppContext. */
+    public static Project getProject() {
+        Project ctx = AppContext.get().getProject();
+        return ctx != null ? ctx : currentProject;
+    }
+
+    /** Set current project, synced to AppContext. */
+    public static void setProject(Project p) {
+        currentProject = p;
+        AppContext.get().setProject(p);
+    }
     public static volatile FloatingVectorEditToolbar floatingVectorEditToolbar;
     public static volatile CartographyToolbar cartographyToolbar;
     public static volatile CatserverToolbar catserverToolbar;
@@ -455,6 +473,7 @@ public class CatgisDesktopApp extends JFrame {
 
         if (currentProject == null) {
             currentProject = new Project(I18n.t("Proyecto actual"));
+            AppContext.get().setProject(currentProject);
         }
 
         String fallbackCode = currentProject.getProjectCRS();
@@ -562,6 +581,7 @@ public class CatgisDesktopApp extends JFrame {
     public static void renameCurrentProject() {
         if (currentProject == null) {
             currentProject = new Project(I18n.t("Proyecto actual"));
+            AppContext.get().setProject(currentProject);
         }
 
         String currentName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");

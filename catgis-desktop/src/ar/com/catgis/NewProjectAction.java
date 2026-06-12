@@ -39,7 +39,7 @@ public class NewProjectAction extends AbstractAction {
         CatgisDesktopApp.markProjectClean();
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     "Nuevo proyecto creado | CRS: " + CRSDefinitions.getLabelForCode(project.getProjectCRS())
             );
         }

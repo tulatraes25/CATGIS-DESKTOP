@@ -1,5 +1,7 @@
 package ar.com.catgis.sld;
 
+import ar.com.catgis.CatgisLogger;
+
 import ar.com.catgis.CategoryStyleRule;
 import ar.com.catgis.RuleBasedSymbology;
 import ar.com.catgis.core.model.Layer;
@@ -228,7 +230,7 @@ public final class SldSupport {
         if (hex != null && hex.startsWith("#")) {
             try {
                 return Color.decode(hex);
-            } catch (NumberFormatException ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("SldSupport: operation failed", ignored); }
         }
         return null;
     }
@@ -250,7 +252,7 @@ public final class SldSupport {
             val = extractXmlContent(xml, paramName);
         }
         if (val != null) {
-            try { return Float.parseFloat(val); } catch (NumberFormatException ignored) {}
+            try { return Float.parseFloat(val); } catch (Exception ignored) { CatgisLogger.warn("SldSupport: operation failed", ignored); }
         }
         return defaultVal;
     }

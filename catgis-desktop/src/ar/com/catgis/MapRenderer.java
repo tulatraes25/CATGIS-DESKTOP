@@ -638,7 +638,7 @@ class MapRenderer {
             try {
                 org.locationtech.jts.geom.Point ip = geometry.getInteriorPoint();
                 if (ip != null) drawLabelForFeature(g2, layer, feature, map.worldToScreenX(ip.getX()), map.worldToScreenY(ip.getY()));
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("MapRenderer: operation failed", ignored); }
             return;
         }
 

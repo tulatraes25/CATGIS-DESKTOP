@@ -15,12 +15,13 @@ public final class LineSymbolRenderer {
 
     // Cache for BasicStroke objects to avoid per-feature allocation
     private static final int STROKE_CACHE_MAX = 128;
-    private static final Map<Long, BasicStroke> strokeCache = new LinkedHashMap<>(STROKE_CACHE_MAX, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, BasicStroke> eldest) {
-            return size() > STROKE_CACHE_MAX;
-        }
-    };
+    private static final Map<Long, BasicStroke> strokeCache = java.util.Collections.synchronizedMap(
+            new LinkedHashMap<>(STROKE_CACHE_MAX, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<Long, BasicStroke> eldest) {
+                    return size() > STROKE_CACHE_MAX;
+                }
+            });
 
     /** Preview icon for combo boxes */
     public static BufferedImage buildPreview(Layer.LineSymbolStyle style, Color color, int width, int height) {

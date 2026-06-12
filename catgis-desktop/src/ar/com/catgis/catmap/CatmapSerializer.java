@@ -1,5 +1,7 @@
 package ar.com.catgis.catmap;
 
+import ar.com.catgis.CatgisLogger;
+
 import ar.com.catgis.layout.*;
 
 import java.awt.*;
@@ -293,7 +295,7 @@ public final class CatmapSerializer {
                             byte[] bytes = Base64.getDecoder().decode(data);
                             BufferedImage bi = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
                             if (bi != null) img.setImage(bi);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) { CatgisLogger.warn("CatmapSerializer: operation failed", ignored); }
                     }
                 }
             } else if (part.startsWith("FIELD_")) {
@@ -335,7 +337,7 @@ public final class CatmapSerializer {
                         Integer.parseInt(parts[2].trim())
                 );
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("CatmapSerializer: operation failed", ignored); }
         return Color.BLACK;
     }
 

@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.raster.LocalRasterData;
@@ -82,7 +84,7 @@ public final class NetCdfLoader {
             try {
                 CoordinateReferenceSystem crs = ((GridCoverage2D) coverage).getCoordinateReferenceSystem2D();
                 if (crs != null) crsCode = CRS.toSRS(crs, true);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
 
             return createRasterLayer(file, image, envelope, crsCode);
         } catch (Exception e) {
@@ -158,7 +160,7 @@ public final class NetCdfLoader {
                     minLat = Math.min(lats[0], lats[lats.length - 1]);
                     maxLat = Math.max(lats[0], lats[lats.length - 1]);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
 
             // Determine CRS
             String crsCode = "EPSG:4326";
@@ -244,9 +246,9 @@ public final class NetCdfLoader {
                     String units = "";
                     String desc = "";
                     int rank = 0;
-                    try { units = (String) vClass.getMethod("getUnitsString").invoke(v); } catch (Exception ignored) {}
-                    try { desc = (String) vClass.getMethod("getDescription").invoke(v); } catch (Exception ignored) {}
-                    try { rank = ((int[]) vClass.getMethod("getShape").invoke(v)).length; } catch (Exception ignored) {}
+                    try { units = (String) vClass.getMethod("getUnitsString").invoke(v); } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
+                    try { desc = (String) vClass.getMethod("getDescription").invoke(v); } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
+                    try { rank = ((int[]) vClass.getMethod("getShape").invoke(v)).length; } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
                     if (!name.isEmpty() && rank >= 2) {
                         vars.add(new VariableInfo(name, units, desc, rank));
                     }
@@ -333,7 +335,7 @@ public final class NetCdfLoader {
                     String vn = v.getClass().getMethod("getShortName").invoke(v).toString();
                     if (vn.equals(name)) return v;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
             return null;
         }
     }
@@ -420,7 +422,7 @@ public final class NetCdfLoader {
                 double[] result = new double[values.length];
                 for (int i = 0; i < values.length; i++) result[i] = values[i];
                 return result;
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
         }
         return null;
     }
@@ -487,7 +489,7 @@ public final class NetCdfLoader {
                 double maxY = ((Number) getMaximum.invoke(ge, 1)).doubleValue();
                 return new Envelope(minX, maxX, minY, maxY);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
         return null;
     }
 

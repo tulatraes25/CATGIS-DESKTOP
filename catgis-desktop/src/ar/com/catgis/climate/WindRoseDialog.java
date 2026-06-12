@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.raster.LocalRasterData;
 
@@ -162,7 +164,7 @@ public class WindRoseDialog extends JDialog {
 
             infoLabel.setText("Rosa generada con " + uValues.size() + " muestras de viento.");
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Rosa de los vientos calculada: " + roseRenderer.getTotalCount() + " muestras.");
+                AppContext.setStatusMessage("Rosa de los vientos calculada: " + roseRenderer.getTotalCount() + " muestras.");
             }
         } else {
             computeDemoWindRose();
@@ -207,7 +209,7 @@ public class WindRoseDialog extends JDialog {
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("WindRoseDialog: operation failed", ignored); }
     }
 
     private void computeDemoWindRose() {
@@ -251,7 +253,7 @@ public class WindRoseDialog extends JDialog {
         try {
             ImageIO.write(img, "png", file);
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Rosa de vientos exportada: " + file.getName());
+                AppContext.setStatusMessage("Rosa de vientos exportada: " + file.getName());
             }
             JOptionPane.showMessageDialog(this,
                     "Rosa de vientos guardada como PNG con fondo transparente:\n"
@@ -269,7 +271,7 @@ public class WindRoseDialog extends JDialog {
         ImageSelection selection = new ImageSelection(img);
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, null);
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Rosa de vientos copiada al portapapeles.");
+            AppContext.setStatusMessage("Rosa de vientos copiada al portapapeles.");
         }
     }
 

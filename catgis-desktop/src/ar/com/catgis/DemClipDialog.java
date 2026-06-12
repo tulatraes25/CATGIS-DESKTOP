@@ -291,7 +291,7 @@ public class DemClipDialog extends JDialog {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("DEM recortado generado: ") + result.layer().getName());
+            AppContext.setStatusMessage(I18n.t("DEM recortado generado: ") + result.layer().getName());
         }
     }
 

@@ -61,8 +61,7 @@ public class SplashScreenWindow extends JWindow {
         Thread worker = new Thread(() -> {
             try {
                 Thread.sleep(millis);
-            } catch (InterruptedException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("SplashScreenWindow: operation failed", ignored); }
 
             SwingUtilities.invokeLater(this::dismiss);
         }, "catgis-splash-thread");

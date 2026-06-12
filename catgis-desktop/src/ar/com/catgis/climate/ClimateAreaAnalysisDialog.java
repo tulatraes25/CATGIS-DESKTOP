@@ -1,4 +1,6 @@
 package ar.com.catgis.climate;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.data.raster.RasterCoverageSupport;
@@ -282,7 +284,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                             evalGeom = JTS.transform(geom, transform);
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) { CatgisLogger.warn("ClimateAreaAnalysisDialog: operation failed", ignored); }
 
                 // Evaluate GridCoverage2D at grid cell centers within the polygon
                 List<Double> pixelsInPoly = new ArrayList<>();
@@ -302,7 +304,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                                     pixelsInPoly.add(result[0]);
                                     pxCount++;
                                 }
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) { CatgisLogger.warn("ClimateAreaAnalysisDialog: operation failed", ignored); }
                         }
                     }
                 }
@@ -335,7 +337,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                         "Análisis climático", JOptionPane.INFORMATION_MESSAGE);
             } else {
                 if (CatgisDesktopApp.statusBar != null) {
-                    CatgisDesktopApp.statusBar.setMessage(
+                    AppContext.setStatusMessage(
                             "Análisis climático completado: " + processedCount + " áreas procesadas.");
                 }
             }
@@ -389,7 +391,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
         StringSelection sel = new StringSelection(sb.toString());
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(sel, null);
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Resultados copiados al portapapeles.");
+            AppContext.setStatusMessage("Resultados copiados al portapapeles.");
         }
     }
 
@@ -445,7 +447,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                         DF.format(r.stdDev), DF.format(r.sum), r.pixelCount);
             }
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Análisis climático exportado: " + file.getName());
+                AppContext.setStatusMessage("Análisis climático exportado: " + file.getName());
             }
             JOptionPane.showMessageDialog(this,
                     "Resultados exportados a:\n" + file.getAbsolutePath(),
@@ -496,7 +498,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                 if (response != null && response.contains("ok")) {
                     sent = true;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("ClimateAreaAnalysisDialog: operation failed", ignored); }
 
             // 3. If CATMAP not running, save for later + offer to open
             if (!sent) {
@@ -527,7 +529,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             }
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Tabla climática enviada a CATMAP.");
+                AppContext.setStatusMessage("Tabla climática enviada a CATMAP.");
             }
 
         } catch (Exception ex) {

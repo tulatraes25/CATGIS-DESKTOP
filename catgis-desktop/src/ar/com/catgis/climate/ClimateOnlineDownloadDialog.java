@@ -4,6 +4,7 @@ import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.raster.LocalRasterData;
 import ar.com.catgis.data.raster.RasterCoverageSupport;
 
+import ar.com.catgis.AppContext;
 import ar.com.catgis.AppErrorSupport;
 import ar.com.catgis.AppIcons;
 import ar.com.catgis.CRSDefinitions;
@@ -489,7 +490,7 @@ public class ClimateOnlineDownloadDialog extends JDialog {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Capa climática incorporada: ") + layer.getName());
+            AppContext.setStatusMessage(I18n.t("Capa climática incorporada: ") + layer.getName());
         }
     }
 

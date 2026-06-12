@@ -445,8 +445,7 @@ public class WelcomePageDialog extends JDialog {
                     }
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("WelcomePageDialog: operation failed", ignored); }
 
         return projects;
     }
@@ -481,7 +480,6 @@ public class WelcomePageDialog extends JDialog {
             }
 
             java.nio.file.Files.write(recentFile.toPath(), lines);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("WelcomePageDialog: operation failed", ignored); }
     }
 }

@@ -344,7 +344,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
 
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     I18n.format("Analisis topohidrologico generado: {0} raster(es), {1} vector(es).",
                             result.rasterLayers().size(),
                             result.vectorLayers().size())

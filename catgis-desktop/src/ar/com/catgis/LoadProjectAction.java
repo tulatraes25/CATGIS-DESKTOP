@@ -204,7 +204,7 @@ public class LoadProjectAction extends AbstractAction {
             });
 
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
+                AppContext.setStatusMessage(
                         "Proyecto cargado | CRS: " + CRSDefinitions.getLabelForCode(CatgisDesktopApp.currentProject.getProjectCRS())
                 );
             }
@@ -302,7 +302,7 @@ public class LoadProjectAction extends AbstractAction {
             );
             if (!(layer instanceof PostgisLayer) && CatgisDesktopApp.statusBar != null) {
                 String layerName = layer != null ? layer.getName() : "capa desconocida";
-                CatgisDesktopApp.statusBar.setMessage("No se pudo reconstruir la capa \"" + layerName + "\".");
+                AppContext.setStatusMessage("No se pudo reconstruir la capa \"" + layerName + "\".");
             }
         }
     }
@@ -719,7 +719,7 @@ public class LoadProjectAction extends AbstractAction {
                 } else if (part.startsWith("LABEL_FONT=")) {
                     layer.setLabelFontFamily(part.substring("LABEL_FONT=".length()).trim());
                 } else if (part.startsWith("LABEL_SIZE=")) {
-                    try { layer.setLabelFontSize(Integer.parseInt(part.substring("LABEL_SIZE=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelFontSize(Integer.parseInt(part.substring("LABEL_SIZE=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_BOLD=")) {
                     layer.setLabelBold(Boolean.parseBoolean(part.substring("LABEL_BOLD=".length()).trim()));
                 } else if (part.startsWith("LABEL_ITALIC=")) {
@@ -731,19 +731,19 @@ public class LoadProjectAction extends AbstractAction {
                 } else if (part.startsWith("LABEL_HALO_COLOR=")) {
                     Color c = parseColor(part.substring("LABEL_HALO_COLOR=".length()).trim()); if (c != null) layer.setLabelHaloColor(c);
                 } else if (part.startsWith("LABEL_HALO_WIDTH=")) {
-                    try { layer.setLabelHaloWidth(Float.parseFloat(part.substring("LABEL_HALO_WIDTH=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelHaloWidth(Float.parseFloat(part.substring("LABEL_HALO_WIDTH=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_OFFSET_X=")) {
-                    try { layer.setLabelOffsetX(Integer.parseInt(part.substring("LABEL_OFFSET_X=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelOffsetX(Integer.parseInt(part.substring("LABEL_OFFSET_X=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_OFFSET_Y=")) {
-                    try { layer.setLabelOffsetY(Integer.parseInt(part.substring("LABEL_OFFSET_Y=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelOffsetY(Integer.parseInt(part.substring("LABEL_OFFSET_Y=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_UNDERLINE=")) {
                     layer.setLabelUnderline(Boolean.parseBoolean(part.substring("LABEL_UNDERLINE=".length()).trim()));
                 } else if (part.startsWith("LABEL_PLACEMENT=")) {
                     layer.setLabelPlacement(part.substring("LABEL_PLACEMENT=".length()).trim());
                 } else if (part.startsWith("LABEL_PLACEMENT_MODE=")) {
-                    try { layer.setLabelPlacementMode(Layer.LabelPlacementMode.fromValue(part.substring("LABEL_PLACEMENT_MODE=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelPlacementMode(Layer.LabelPlacementMode.fromValue(part.substring("LABEL_PLACEMENT_MODE=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_PRIORITY=")) {
-                    try { layer.setLabelPriority(Integer.parseInt(part.substring("LABEL_PRIORITY=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelPriority(Integer.parseInt(part.substring("LABEL_PRIORITY=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_COLLISION_AVOID=")) {
                     layer.setLabelCollisionAvoid(Boolean.parseBoolean(part.substring("LABEL_COLLISION_AVOID=".length()).trim()));
                 } else if (part.startsWith("LABEL_BG=")) {
@@ -751,9 +751,9 @@ public class LoadProjectAction extends AbstractAction {
                 } else if (part.startsWith("LABEL_BG_COLOR=")) {
                     Color c = parseColor(part.substring("LABEL_BG_COLOR=".length()).trim()); if (c != null) layer.setLabelBackgroundColor(c);
                 } else if (part.startsWith("LABEL_MIN_SCALE=")) {
-                    try { layer.setLabelMinScale(Double.parseDouble(part.substring("LABEL_MIN_SCALE=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelMinScale(Double.parseDouble(part.substring("LABEL_MIN_SCALE=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 } else if (part.startsWith("LABEL_MAX_SCALE=")) {
-                    try { layer.setLabelMaxScale(Double.parseDouble(part.substring("LABEL_MAX_SCALE=".length()).trim())); } catch (Exception ignored) {}
+                    try { layer.setLabelMaxScale(Double.parseDouble(part.substring("LABEL_MAX_SCALE=".length()).trim())); } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
                 }
             }
 
@@ -798,7 +798,7 @@ public class LoadProjectAction extends AbstractAction {
             try {
                 return new String(value.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1),
                         java.nio.charset.StandardCharsets.UTF_8);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) { CatgisLogger.warn("LoadProjectAction: operation failed", ignored); }
         }
         return value;
     }

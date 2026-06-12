@@ -1,4 +1,6 @@
 package ar.com.catgis.layout;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.vector.ShapefileData;
@@ -171,7 +173,7 @@ public class LayoutLabel implements LayoutElement {
                     String name = proj.getName();
                     if (name != null && !name.isBlank()) projName = name;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("LayoutLabel: operation failed", ignored); }
             result = result.replace("{project}", projName);
         }
         if (result.contains("{crs}")) {
@@ -181,7 +183,7 @@ public class LayoutLabel implements LayoutElement {
                 if (proj != null && proj.getProjectCRS() != null) {
                     crsText = proj.getProjectCRS();
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("LayoutLabel: operation failed", ignored); }
             result = result.replace("{crs}", crsText);
         }
         if (result.contains("{page}")) {

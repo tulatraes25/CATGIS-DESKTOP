@@ -1,4 +1,6 @@
 package ar.com.catgis.catmap;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 
@@ -59,7 +61,7 @@ public final class CatgisSocketServer {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
             }
-        } catch (IOException ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("CatgisSocketServer: operation failed", ignored); }
     }
 
     private static void handleClient(Socket client) {
@@ -74,7 +76,7 @@ public final class CatgisSocketServer {
         } catch (IOException e) {
             // Client disconnected
         } finally {
-            try { client.close(); } catch (IOException ignored) {}
+            try { client.close(); } catch (Exception ignored) { CatgisLogger.warn("CatgisSocketServer: operation failed", ignored); }
         }
     }
 

@@ -136,8 +136,7 @@ public final class CadLayerSupport {
                     }
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("CadLayerSupport: operation failed", ignored); }
         return names;
     }
 

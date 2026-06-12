@@ -65,7 +65,7 @@ public final class OfflineRoutingEngine {
                     return new RoutingResult(result.route(), result.totalDistance(),
                             result.warnings(), System.currentTimeMillis() - t0);
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("OfflineRoutingEngine: operation failed", ignored); }
         }
 
         // Dijkstra fallback

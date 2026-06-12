@@ -316,7 +316,7 @@ public class ContourGenerationDialog extends JDialog {
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(I18n.t("Curvas de nivel generadas: ") + result.layer().getName());
+            AppContext.setStatusMessage(I18n.t("Curvas de nivel generadas: ") + result.layer().getName());
         }
     }
 

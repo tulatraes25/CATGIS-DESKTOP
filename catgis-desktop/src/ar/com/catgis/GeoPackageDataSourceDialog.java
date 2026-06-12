@@ -281,7 +281,7 @@ public class GeoPackageDataSourceDialog extends JDialog {
 
                     CatgisDesktopApp.markProjectDirty();
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage(loaded.size() == 1
+                        AppContext.setStatusMessage(loaded.size() == 1
                                 ? "Capa GeoPackage agregada: " + loaded.get(0).layer.getName()
                                 : loaded.size() + " capas GeoPackage agregadas.");
                     }

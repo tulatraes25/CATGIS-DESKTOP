@@ -1,5 +1,7 @@
 package ar.com.catgis.layout;
 
+import ar.com.catgis.CatgisLogger;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.io.File;
@@ -103,8 +105,8 @@ public class QgisQptImporter {
     }
 
     private static double getDoubleAttr(Element el, String name, double def) {
-        try { String v = el.getAttribute(name); if (v != null && !v.isEmpty()) return Double.parseDouble(v); } catch (Exception ignored) {}
-        try { Node n = el.getElementsByTagName(name).item(0); if (n != null) return Double.parseDouble(n.getTextContent()); } catch (Exception ignored) {}
+        try { String v = el.getAttribute(name); if (v != null && !v.isEmpty()) return Double.parseDouble(v); } catch (Exception ignored) { CatgisLogger.warn("QgisQptImporter: operation failed", ignored); }
+        try { Node n = el.getElementsByTagName(name).item(0); if (n != null) return Double.parseDouble(n.getTextContent()); } catch (Exception ignored) { CatgisLogger.warn("QgisQptImporter: operation failed", ignored); }
         return def;
     }
 
@@ -129,7 +131,7 @@ public class QgisQptImporter {
             boolean bold = "true".equalsIgnoreCase(getAttr(el, "bold", "false"));
             int style = bold ? Font.BOLD : Font.PLAIN;
             return new Font(family, style, size);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("QgisQptImporter: operation failed", ignored); }
         return null;
     }
 }

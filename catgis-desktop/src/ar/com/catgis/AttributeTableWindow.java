@@ -495,7 +495,7 @@ public class AttributeTableWindow extends JFrame {
             CatgisDesktopApp.layersPanel.refreshLayerList();
         }
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Campo creado: " + fieldName);
+            AppContext.setStatusMessage("Campo creado: " + fieldName);
         }
         CatgisDesktopApp.markProjectDirty();
         statusLabel.setText("Campo nuevo listo para calcular: " + config.getPublicName());
@@ -762,7 +762,7 @@ public class AttributeTableWindow extends JFrame {
 
         applyChanges();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Cálculo aplicado sobre el campo: " + model.getColumnName(targetColumn));
+            AppContext.setStatusMessage("Cálculo aplicado sobre el campo: " + model.getColumnName(targetColumn));
         }
         statusLabel.setText("Calculadora de campos aplicada sobre: " + model.getColumnName(targetColumn));
         return rows.size();
@@ -800,7 +800,7 @@ public class AttributeTableWindow extends JFrame {
 
         applyChanges();
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Valor asignado sobre el campo: " + model.getColumnName(targetColumn));
+            AppContext.setStatusMessage("Valor asignado sobre el campo: " + model.getColumnName(targetColumn));
         }
         statusLabel.setText("Valor asignado sobre: " + model.getColumnName(targetColumn));
         return rows.size();
@@ -1160,7 +1160,7 @@ public class AttributeTableWindow extends JFrame {
             }
             CatgisDesktopApp.markProjectDirty();
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage("Cambios aplicados en la tabla de atributos.");
+                AppContext.setStatusMessage("Cambios aplicados en la tabla de atributos.");
             }
 
             editMode = false;
@@ -1188,8 +1188,7 @@ public class AttributeTableWindow extends JFrame {
                     return binding;
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("AttributeTableWindow: operation failed", ignored); }
 
         return String.class;
     }
@@ -1288,8 +1287,7 @@ public class AttributeTableWindow extends JFrame {
                 SimpleDateFormat fmt = new SimpleDateFormat(pattern);
                 fmt.setLenient(false);
                 return fmt.parse(text);
-            } catch (ParseException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("AttributeTableWindow: operation failed", ignored); }
         }
         return null;
     }

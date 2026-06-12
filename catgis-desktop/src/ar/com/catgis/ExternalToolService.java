@@ -128,20 +128,18 @@ public final class ExternalToolService {
             pb.redirectErrorStream(true);
             Process p = pb.start();
             if (p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                String path = reader.readLine();
-                reader.close();
-                p.destroyForcibly();
-                if (path != null && !path.isBlank()) {
-                    File file = new File(path.trim());
-                    if (file.exists()) {
-                        return file.getAbsolutePath();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                    String path = reader.readLine();
+                    if (path != null && !path.isBlank()) {
+                        File file = new File(path.trim());
+                        if (file.exists()) {
+                            return file.getAbsolutePath();
+                        }
                     }
                 }
             }
             p.destroyForcibly();
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("ExternalToolService: operation failed", ignored); }
         return null;
     }
 
@@ -151,7 +149,7 @@ public final class ExternalToolService {
     public static Path getToolsDirectory() {
         try {
             Files.createDirectories(TOOLS_DIR);
-        } catch (IOException ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("ExternalToolService: operation failed", ignored); }
         return TOOLS_DIR;
     }
 }

@@ -247,7 +247,7 @@ public class PostgisExportDialog extends JDialog {
                         addResultToProject(result);
                     }
                     if (CatgisDesktopApp.statusBar != null) {
-                        CatgisDesktopApp.statusBar.setMessage("Capa enviada a CATSERVER: " + result.layer().getSchemaName() + "." + result.layer().getTableName());
+                        AppContext.setStatusMessage("Capa enviada a CATSERVER: " + result.layer().getSchemaName() + "." + result.layer().getTableName());
                     }
                     JOptionPane.showMessageDialog(
                             PostgisExportDialog.this,

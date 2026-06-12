@@ -217,7 +217,7 @@ public class IdentifyResultsDialog extends JDialog {
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);
 
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Atributos copiados al portapapeles.");
+            AppContext.setStatusMessage("Atributos copiados al portapapeles.");
         }
     }
 

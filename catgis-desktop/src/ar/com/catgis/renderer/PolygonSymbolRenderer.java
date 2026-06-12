@@ -16,12 +16,13 @@ public final class PolygonSymbolRenderer {
 
     // Cache for TexturePaint objects to avoid per-polygon allocation
     private static final int PAINT_CACHE_MAX = 64;
-    private static final Map<Long, Paint> paintCache = new LinkedHashMap<>(PAINT_CACHE_MAX, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Map.Entry<Long, Paint> eldest) {
-            return size() > PAINT_CACHE_MAX;
-        }
-    };
+    private static final Map<Long, Paint> paintCache = java.util.Collections.synchronizedMap(
+            new LinkedHashMap<>(PAINT_CACHE_MAX, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<Long, Paint> eldest) {
+                    return size() > PAINT_CACHE_MAX;
+                }
+            });
 
     /** Return a TexturePaint for use with g2.fill(path) in map rendering */
     public static Paint buildPaint(Layer.PolygonFillStyle style, Color fillColor, Color borderColor, int tileSize) {

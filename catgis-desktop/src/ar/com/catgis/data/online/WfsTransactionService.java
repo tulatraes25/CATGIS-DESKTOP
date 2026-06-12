@@ -1,5 +1,7 @@
 package ar.com.catgis.data.online;
 
+import ar.com.catgis.CatgisLogger;
+
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.vector.ShapefileData;
@@ -60,7 +62,7 @@ public final class WfsTransactionService {
             return false;
         } finally {
             if (store != null) {
-                try { store.dispose(); } catch (Exception ignored) {}
+                try { store.dispose(); } catch (Exception ignored) { CatgisLogger.warn("WfsTransactionService: operation failed", ignored); }
             }
         }
     }
@@ -104,7 +106,7 @@ public final class WfsTransactionService {
             return false;
         } finally {
             if (store != null) {
-                try { store.dispose(); } catch (Exception ignored) {}
+                try { store.dispose(); } catch (Exception ignored) { CatgisLogger.warn("WfsTransactionService: operation failed", ignored); }
             }
         }
     }

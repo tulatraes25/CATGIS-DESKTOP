@@ -134,9 +134,9 @@ public class ProportionalSymbolsDialog extends JDialog {
                     double val = Double.parseDouble(String.valueOf(v));
                     min = Math.min(min, val);
                     max = Math.max(max, val);
-                } catch (NumberFormatException ignored) {}
+                } catch (Exception ignored) { CatgisLogger.warn("ProportionalSymbolsDialog: operation failed", ignored); }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("ProportionalSymbolsDialog: operation failed", ignored); }
         if (min < Double.MAX_VALUE && max > -Double.MAX_VALUE) {
             workingCopy.setMinValue(min);
             workingCopy.setMaxValue(max);

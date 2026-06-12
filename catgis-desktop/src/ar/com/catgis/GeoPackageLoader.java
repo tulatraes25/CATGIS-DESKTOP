@@ -127,8 +127,7 @@ public final class GeoPackageLoader {
         if (schema != null && schema.getCoordinateReferenceSystem() != null) {
             try {
                 return CRSDefinitions.normalizeCode(org.geotools.referencing.CRS.toSRS(schema.getCoordinateReferenceSystem(), true));
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("GeoPackageLoader: operation failed", ignored); }
         }
         if (entry != null && entry.getSrid() > 0) {
             return CRSDefinitions.normalizeCode("EPSG:" + entry.getSrid());

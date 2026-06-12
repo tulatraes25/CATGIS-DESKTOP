@@ -37,7 +37,7 @@ public final class CadWorkflowSupport {
                 CatgisDesktopApp.mapPanel.repaint();
             }
             if (CatgisDesktopApp.statusBar != null) {
-                CatgisDesktopApp.statusBar.setMessage(
+                AppContext.setStatusMessage(
                         "Georreferenciacion CAD actualizada: " + layer.getName() + " -> " + CadGeoreferenceSupport.buildDetailedSummary(layer)
                 );
             }
@@ -70,7 +70,7 @@ public final class CadWorkflowSupport {
             CatgisDesktopApp.mapPanel.repaint();
         }
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(
+            AppContext.setStatusMessage(
                     "Capas internas CAD actualizadas: " + layer.getName() + " -> " + CadLayerSupport.buildCadInternalLayerFilterLabel(layer)
             );
         }
@@ -104,7 +104,7 @@ public final class CadWorkflowSupport {
                             CatgisDesktopApp.mapPanel.repaint();
                         }
                         if (CatgisDesktopApp.statusBar != null) {
-                            CatgisDesktopApp.statusBar.setMessage(
+                            AppContext.setStatusMessage(
                                     "Ajuste CAD por arrastre aplicado: " + layer.getName() + " -> " + CadPlacementSupport.buildPlacementSummary(layer)
                             );
                         }
@@ -119,7 +119,7 @@ public final class CadWorkflowSupport {
                             CatgisDesktopApp.mapPanel.repaint();
                         }
                         if (CatgisDesktopApp.statusBar != null) {
-                            CatgisDesktopApp.statusBar.setMessage("Arrastre CAD cancelado: " + layer.getName());
+                            AppContext.setStatusMessage("Arrastre CAD cancelado: " + layer.getName());
                         }
                     }
                 },

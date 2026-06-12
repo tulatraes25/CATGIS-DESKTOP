@@ -204,8 +204,7 @@ public final class WfsCapabilitiesService {
                     double maxY = Double.parseDouble(upperParts[1]);
                     return new Envelope(minX, maxX, minY, maxY);
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("WfsCapabilitiesService: operation failed", ignored); }
         }
 
         Element latLon = firstDescendant(featureType, "LatLongBoundingBox");
@@ -216,8 +215,7 @@ public final class WfsCapabilitiesService {
                 double maxX = Double.parseDouble(attrAny(latLon, "maxx", "maxX"));
                 double maxY = Double.parseDouble(attrAny(latLon, "maxy", "maxY"));
                 return new Envelope(minX, maxX, minY, maxY);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("WfsCapabilitiesService: operation failed", ignored); }
         }
         return null;
     }

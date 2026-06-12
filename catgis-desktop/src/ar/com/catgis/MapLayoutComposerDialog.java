@@ -549,7 +549,7 @@ public class MapLayoutComposerDialog extends JFrame {
         acceptBtn.addActionListener(e -> {
             scale.setSegments((Integer)segCombo.getSelectedItem());
             scale.setUnitLabel(unitField.getText().trim());
-            try { double s = Double.parseDouble(scaleField.getText()); if(s>0) scale.setMapScaleDenominator(s); } catch(Exception ignored){}
+            try { double s = Double.parseDouble(scaleField.getText()); if(s>0) scale.setMapScaleDenominator(s); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
             previewPanel.repaint(); popup.dispose();
         });
         cancelBtn.addActionListener(e -> popup.dispose());
@@ -584,7 +584,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
         JButton acceptBtn = new JButton("Aceptar"); JButton cancelBtn = new JButton("Cancelar");
         acceptBtn.addActionListener(e -> {
-            try { north.setBoundsMm(Double.parseDouble(xField.getText()), Double.parseDouble(yField.getText()), Double.parseDouble(wField.getText()), Double.parseDouble(wField.getText())); } catch(Exception ignored){}
+            try { north.setBoundsMm(Double.parseDouble(xField.getText()), Double.parseDouble(yField.getText()), Double.parseDouble(wField.getText()), Double.parseDouble(wField.getText())); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
             previewPanel.repaint(); popup.dispose();
         });
         cancelBtn.addActionListener(e -> popup.dispose());
@@ -620,7 +620,7 @@ public class MapLayoutComposerDialog extends JFrame {
                     applyMapScale(s);
                     previewPanel.repaint();
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
         });
         form.add(new JLabel()); form.add(applyScaleBtn);
 
@@ -649,7 +649,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 vp.fitToExtent(mnX, mnY, mxX, mxY);
                 map.invalidateRenderCache();
                 previewPanel.repaint();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
         });
         form.add(new JLabel()); form.add(applyExtentBtn);
 
@@ -1695,15 +1695,13 @@ public class MapLayoutComposerDialog extends JFrame {
             if (in != null) {
                 return ImageIO.read(in);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
         try {
             File file = new File("src/icons/catmap-start.png");
             if (file.isFile()) {
                 return ImageIO.read(file);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
         return null;
     }
 
@@ -4084,7 +4082,7 @@ public class MapLayoutComposerDialog extends JFrame {
                         double mz = ctxMapPanel().getZoomFactor();
                         java.io.File gf = new java.io.File(file.getAbsolutePath() + ".geo.txt");
                         java.nio.file.Files.write(gf.toPath(), ("# Referencia de coordenadas del mapa\n# X=" + mx + " Y=" + my + " Zoom=" + mz + "\n").getBytes());
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
                 }
             }
             announceExport("Composicion PDF exportada", file);
@@ -4118,7 +4116,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private void announceExport(String prefix, File file) {
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(prefix + ": " + file.getName());
+            AppContext.setStatusMessage(prefix + ": " + file.getName());
         }
         statusLabel.setText(prefix + ": " + file.getAbsolutePath());
         JOptionPane.showMessageDialog(this, prefix + " correctamente:\n" + file.getAbsolutePath());
@@ -8879,7 +8877,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 double denom = mp.getCurrentScaleDenominator();
                 if (denom > 0) return denom;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
         return 10000;
     }
 
@@ -9110,7 +9108,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 mp.restoreView(cx - hw, cy - hh, newZoom);
                 statusLabel.setText("Escala aplicada: 1:" + String.format("%,.0f", denominator));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
     }
 
     private int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
@@ -9339,16 +9337,16 @@ public class MapLayoutComposerDialog extends JFrame {
         nameField.addActionListener(e -> { label.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
         y++;
         JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", label.getBoundsMm().x));
-        xField.addActionListener(e -> { try { label.setBoundsMm(Double.parseDouble(xField.getText()), label.getBoundsMm().y, label.getBoundsMm().width, label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        xField.addActionListener(e -> { try { label.setBoundsMm(Double.parseDouble(xField.getText()), label.getBoundsMm().y, label.getBoundsMm().width, label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", label.getBoundsMm().y));
-        yField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, Double.parseDouble(yField.getText()), label.getBoundsMm().width, label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        yField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, Double.parseDouble(yField.getText()), label.getBoundsMm().width, label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", label.getBoundsMm().width));
-        wField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, label.getBoundsMm().y, Double.parseDouble(wField.getText()), label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        wField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, label.getBoundsMm().y, Double.parseDouble(wField.getText()), label.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", label.getBoundsMm().height));
-        hField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, label.getBoundsMm().y, label.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        hField.addActionListener(e -> { try { label.setBoundsMm(label.getBoundsMm().x, label.getBoundsMm().y, label.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         y = addBoolRow(form, g, y, "Visible:", label.isVisible(), v -> { label.setVisible(v); refreshElementList(); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Bloqueado:", label.isLocked(), v -> { label.setLocked(v); refreshElementList(); previewPanel.repaint(); });
@@ -9389,16 +9387,16 @@ public class MapLayoutComposerDialog extends JFrame {
         nameField.addActionListener(e -> { el.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
         y++;
         JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", el.getBoundsMm().x));
-        xField.addActionListener(e -> { try { el.setBoundsMm(Double.parseDouble(xField.getText()), el.getBoundsMm().y, el.getBoundsMm().width, el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        xField.addActionListener(e -> { try { el.setBoundsMm(Double.parseDouble(xField.getText()), el.getBoundsMm().y, el.getBoundsMm().width, el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", el.getBoundsMm().y));
-        yField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, Double.parseDouble(yField.getText()), el.getBoundsMm().width, el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        yField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, Double.parseDouble(yField.getText()), el.getBoundsMm().width, el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", el.getBoundsMm().width));
-        wField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, el.getBoundsMm().y, Double.parseDouble(wField.getText()), el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        wField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, el.getBoundsMm().y, Double.parseDouble(wField.getText()), el.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", el.getBoundsMm().height));
-        hField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, el.getBoundsMm().y, el.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        hField.addActionListener(e -> { try { el.setBoundsMm(el.getBoundsMm().x, el.getBoundsMm().y, el.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         y = addBoolRow(form, g, y, "Visible:", el.isVisible(), v -> { el.setVisible(v); refreshElementList(); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Bloqueado:", el.isLocked(), v -> { el.setLocked(v); refreshElementList(); previewPanel.repaint(); });
@@ -9423,9 +9421,9 @@ public class MapLayoutComposerDialog extends JFrame {
             LayoutGraticule lg = (LayoutGraticule) el;
             y++; sectionLabel(form, g, y, "Grilla"); y++;
             JTextField intXField = field(form, g, y, "Intervalo X:", String.format("%.2f", lg.getIntervalX()));
-            intXField.addActionListener(ev -> { try { lg.setIntervalX(Double.parseDouble(intXField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            intXField.addActionListener(ev -> { try { lg.setIntervalX(Double.parseDouble(intXField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } }); y++;
             JTextField intYField = field(form, g, y, "Intervalo Y:", String.format("%.2f", lg.getIntervalY()));
-            intYField.addActionListener(ev -> { try { lg.setIntervalY(Double.parseDouble(intYField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            intYField.addActionListener(ev -> { try { lg.setIntervalY(Double.parseDouble(intYField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } }); y++;
             y = addBoolRow(form, g, y, "Geografico:", lg.isGeographic(), v -> { lg.setGeographic(v); previewPanel.repaint(); });
             y = addBoolRow(form, g, y, "Etiquetas:", lg.isShowLabels(), v -> { lg.setShowLabels(v); previewPanel.repaint(); });
         }
@@ -9433,13 +9431,13 @@ public class MapLayoutComposerDialog extends JFrame {
             LayoutLine ll = (LayoutLine) el;
             y++; sectionLabel(form, g, y, "Linea"); y++;
             JTextField lwField = field(form, g, y, "Grosor:", String.format("%.1f", ll.getLineWidth()));
-            lwField.addActionListener(ev -> { try { ll.setLineWidth(Float.parseFloat(lwField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            lwField.addActionListener(ev -> { try { ll.setLineWidth(Float.parseFloat(lwField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } }); y++;
             y = addBoolRow(form, g, y, "Punteada:", ll.isDashed(), v -> { ll.setDashed(v); previewPanel.repaint(); });
         }
         if (el instanceof LayoutEllipse || el instanceof LayoutRectangle) {
             y++; sectionLabel(form, g, y, "Estilo"); y++;
             JTextField bwField = field(form, g, y, "Borde:", String.format("%.1f", el instanceof LayoutEllipse ? ((LayoutEllipse)el).getBorderWidth() : 1.5f));
-            bwField.addActionListener(ev -> { try { float v = Float.parseFloat(bwField.getText()); if (el instanceof LayoutEllipse) ((LayoutEllipse)el).setBorderWidth(v); previewPanel.repaint(); } catch (Exception ignored) {} }); y++;
+            bwField.addActionListener(ev -> { try { float v = Float.parseFloat(bwField.getText()); if (el instanceof LayoutEllipse) ((LayoutEllipse)el).setBorderWidth(v); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } }); y++;
         }
 
         g.gridx = 0; g.gridy = y; g.gridwidth = 2; g.weighty = 1;
@@ -9468,16 +9466,16 @@ public class MapLayoutComposerDialog extends JFrame {
         nameField.addActionListener(e -> { map.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
         y++;
         JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", map.getBoundsMm().x));
-        xField.addActionListener(e -> { try { map.setBoundsMm(Double.parseDouble(xField.getText()), map.getBoundsMm().y, map.getBoundsMm().width, map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        xField.addActionListener(e -> { try { map.setBoundsMm(Double.parseDouble(xField.getText()), map.getBoundsMm().y, map.getBoundsMm().width, map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", map.getBoundsMm().y));
-        yField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, Double.parseDouble(yField.getText()), map.getBoundsMm().width, map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        yField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, Double.parseDouble(yField.getText()), map.getBoundsMm().width, map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", map.getBoundsMm().width));
-        wField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, map.getBoundsMm().y, Double.parseDouble(wField.getText()), map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        wField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, map.getBoundsMm().y, Double.parseDouble(wField.getText()), map.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", map.getBoundsMm().height));
-        hField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, map.getBoundsMm().y, map.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        hField.addActionListener(e -> { try { map.setBoundsMm(map.getBoundsMm().x, map.getBoundsMm().y, map.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         y = addBoolRow(form, g, y, "Visible:", map.isVisible(), v -> { map.setVisible(v); refreshElementList(); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Bloqueado:", map.isLocked(), v -> { map.setLocked(v); refreshElementList(); previewPanel.repaint(); });
@@ -9512,7 +9510,7 @@ public class MapLayoutComposerDialog extends JFrame {
                     rebuildMapCard(map);
                     previewPanel.repaint();
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
         });
         scaleBtnRow.add(applyBtn);
         g.gridx = 0; g.gridy = y; g.gridwidth = 2; form.add(scaleBtnRow, g); y++;
@@ -9536,20 +9534,20 @@ public class MapLayoutComposerDialog extends JFrame {
 
         if (map.isGridByDistance()) {
             JTextField intXField = field(form, g, y, "Intervalo X:", String.format("%.1f", map.getGridIntervalX()));
-            intXField.addActionListener(e -> { try { map.setGridIntervalX(Double.parseDouble(intXField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            intXField.addActionListener(e -> { try { map.setGridIntervalX(Double.parseDouble(intXField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
             y++;
             JTextField intYField = field(form, g, y, "Intervalo Y:", String.format("%.1f", map.getGridIntervalY()));
-            intYField.addActionListener(e -> { try { map.setGridIntervalY(Double.parseDouble(intYField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            intYField.addActionListener(e -> { try { map.setGridIntervalY(Double.parseDouble(intYField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
             y++;
             JTextField unitField = field(form, g, y, "Unidad:", map.getGridUnit());
             unitField.addActionListener(e -> { map.setGridUnit(unitField.getText().trim()); previewPanel.repaint(); });
             y++;
         } else {
             JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(gridColumnsSpinner.getValue()));
-            colsField.addActionListener(e -> { try { gridColumnsSpinner.setValue(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            colsField.addActionListener(e -> { try { gridColumnsSpinner.setValue(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
             y++;
             JTextField rowsField = field(form, g, y, "Filas:", String.valueOf(gridRowsSpinner.getValue()));
-            rowsField.addActionListener(e -> { try { gridRowsSpinner.setValue(Integer.parseInt(rowsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+            rowsField.addActionListener(e -> { try { gridRowsSpinner.setValue(Integer.parseInt(rowsField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
             y++;
         }
         y = addBoolRow(form, g, y, "Etiquetas:", gridLabelsCheck.isSelected(), v -> { gridLabelsCheck.setSelected(v); previewPanel.repaint(); });
@@ -9624,16 +9622,16 @@ public class MapLayoutComposerDialog extends JFrame {
         nameField.addActionListener(e -> { legend.setName(nameField.getText().trim()); refreshElementList(); previewPanel.repaint(); });
         y++;
         JTextField xField = field(form, g, y, "X (mm):", String.format("%.1f", legend.getBoundsMm().x));
-        xField.addActionListener(e -> { try { legend.setBoundsMm(Double.parseDouble(xField.getText()), legend.getBoundsMm().y, legend.getBoundsMm().width, legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        xField.addActionListener(e -> { try { legend.setBoundsMm(Double.parseDouble(xField.getText()), legend.getBoundsMm().y, legend.getBoundsMm().width, legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField yField = field(form, g, y, "Y (mm):", String.format("%.1f", legend.getBoundsMm().y));
-        yField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, Double.parseDouble(yField.getText()), legend.getBoundsMm().width, legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        yField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, Double.parseDouble(yField.getText()), legend.getBoundsMm().width, legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField wField = field(form, g, y, "Ancho:", String.format("%.1f", legend.getBoundsMm().width));
-        wField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, legend.getBoundsMm().y, Double.parseDouble(wField.getText()), legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+        wField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, legend.getBoundsMm().y, Double.parseDouble(wField.getText()), legend.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField hField = field(form, g, y, "Alto:", String.format("%.1f", legend.getBoundsMm().height));
-        hField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, legend.getBoundsMm().y, legend.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        hField.addActionListener(e -> { try { legend.setBoundsMm(legend.getBoundsMm().x, legend.getBoundsMm().y, legend.getBoundsMm().width, Double.parseDouble(hField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         y = addBoolRow(form, g, y, "Visible:", legend.isVisible(), v -> { legend.setVisible(v); refreshElementList(); previewPanel.repaint(); });
         y = addBoolRow(form, g, y, "Bloqueado:", legend.isLocked(), v -> { legend.setLocked(v); refreshElementList(); previewPanel.repaint(); });
@@ -9644,10 +9642,10 @@ public class MapLayoutComposerDialog extends JFrame {
         titleField.addActionListener(e -> { legend.setTitle(titleField.getText().trim()); previewPanel.repaint(); });
         y++;
         JTextField titleSizeField = field(form, g, y, "Tamano titulo:", String.valueOf(legend.getTitleFont().getSize()));
-        titleSizeField.addActionListener(e -> { try { legend.setTitleFont(legend.getTitleFont().deriveFont((float)Integer.parseInt(titleSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) {} });
+        titleSizeField.addActionListener(e -> { try { legend.setTitleFont(legend.getTitleFont().deriveFont((float)Integer.parseInt(titleSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField itemSizeField = field(form, g, y, "Tamano items:", String.valueOf(legend.getItemFont().getSize()));
-        itemSizeField.addActionListener(e -> { try { legend.setItemFont(legend.getItemFont().deriveFont((float)Integer.parseInt(itemSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) {} });
+        itemSizeField.addActionListener(e -> { try { legend.setItemFont(legend.getItemFont().deriveFont((float)Integer.parseInt(itemSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
 
         // Seccion: Contenido
         y++; sectionLabel(form, g, y, "Contenido"); y++;
@@ -9689,17 +9687,17 @@ public class MapLayoutComposerDialog extends JFrame {
         JTextField paddingField = field(form, g, y, "Padding (mm):", String.format("%.1f", legend.getPaddingMm()));
         y++;
         JTextField opacityField = field(form, g, y, "Opacidad:", String.format("%.0f%%", legend.getBgOpacity() * 100));
-        opacityField.addActionListener(e -> { try { float v = Float.parseFloat(opacityField.getText().replace("%","")); legend.setBgOpacity(Math.max(0, Math.min(100, v)) / 100f); previewPanel.repaint(); } catch (Exception ignored) {} });
+        opacityField.addActionListener(e -> { try { float v = Float.parseFloat(opacityField.getText().replace("%","")); legend.setBgOpacity(Math.max(0, Math.min(100, v)) / 100f); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
 
         // Seccion: Ajuste
         y++; sectionLabel(form, g, y, "Ajuste"); y++;
         y = addBoolRow(form, g, y, "Alto automatico:", legend.isAutoHeight(), v -> { legend.setAutoHeight(v); previewPanel.repaint(); });
         JTextField colsField = field(form, g, y, "Columnas:", String.valueOf(legend.getColumns()));
-        colsField.addActionListener(e -> { try { legend.setColumns(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        colsField.addActionListener(e -> { try { legend.setColumns(Integer.parseInt(colsField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField symSizeField = field(form, g, y, "Tamano simbolo:", String.format("%.1f", legend.getSymbolSizeMm()));
-        symSizeField.addActionListener(e -> { try { legend.setSymbolSizeMm(Double.parseDouble(symSizeField.getText())); previewPanel.repaint(); } catch (Exception ignored) {} });
+        symSizeField.addActionListener(e -> { try { legend.setSymbolSizeMm(Double.parseDouble(symSizeField.getText())); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
 
         // Spacer

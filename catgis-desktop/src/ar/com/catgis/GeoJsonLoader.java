@@ -53,8 +53,7 @@ public class GeoJsonLoader {
         SimpleFeatureType detectedType = null;
         try (FileReader reader = new FileReader(file, java.nio.charset.StandardCharsets.UTF_8)) {
             detectedType = featureJSON.readFeatureCollectionSchema(reader, true);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("GeoJsonLoader: operation failed", ignored); }
         if (detectedType != null) {
             featureJSON.setFeatureType(detectedType);
         }
@@ -79,8 +78,7 @@ public class GeoJsonLoader {
 
         try {
             envelope = featureCollection.getBounds();
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { CatgisLogger.warn("GeoJsonLoader: operation failed", ignored); }
 
         if ((envelope == null || envelope.isNull()) && !features.isEmpty()) {
             for (SimpleFeature feature : features) {

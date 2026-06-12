@@ -63,8 +63,7 @@ public final class OnlineWmsImageCache {
                     MEMORY_CACHE.put(key, image);
                     return image;
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("OnlineWmsImageCache: operation failed", ignored); }
         }
 
         Long retryAfter = RETRY_AFTER.get(key);

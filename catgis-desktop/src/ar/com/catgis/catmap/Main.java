@@ -1,4 +1,6 @@
 package ar.com.catgis.catmap;
+
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
@@ -747,13 +749,13 @@ public class Main {
 
             // Position & Size (editable)
             JTextField xField = addEditablePropRow(propsPanel, "X (mm):", String.format("%.1f", element.getBoundsMm().x),
-                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(Double.parseDouble(e), element.getBoundsMm().y, element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(Double.parseDouble(e), element.getBoundsMm().y, element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
             JTextField yField = addEditablePropRow(propsPanel, "Y (mm):", String.format("%.1f", element.getBoundsMm().y),
-                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, Double.parseDouble(e), element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, Double.parseDouble(e), element.getBoundsMm().width, element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
             JTextField wField = addEditablePropRow(propsPanel, "Ancho (mm):", String.format("%.1f", element.getBoundsMm().width),
-                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, Double.parseDouble(e), element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, Double.parseDouble(e), element.getBoundsMm().height); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
             JTextField hField = addEditablePropRow(propsPanel, "Alto (mm):", String.format("%.1f", element.getBoundsMm().height),
-                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, element.getBoundsMm().width, Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                    e -> { layoutModel.saveSnapshot(); try { element.setBoundsMm(element.getBoundsMm().x, element.getBoundsMm().y, element.getBoundsMm().width, Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
 
             // Type-specific editable properties
             if (element instanceof LayoutLabel label) {
@@ -762,7 +764,7 @@ public class Main {
                 addEditablePropRow(propsPanel, "Fuente:", label.getFont().getFamily(),
                         e -> { layoutModel.saveSnapshot(); label.setFont(new Font(e, label.getFont().getStyle(), label.getFont().getSize())); previewPanel.repaint(); });
                 addEditablePropRow(propsPanel, "Tamaño:", String.valueOf(label.getFont().getSize()),
-                        e -> { layoutModel.saveSnapshot(); try { label.setFont(new Font(label.getFont().getFamily(), label.getFont().getStyle(), Integer.parseInt(e))); previewPanel.repaint(); } catch (Exception ignored) {} });
+                        e -> { layoutModel.saveSnapshot(); try { label.setFont(new Font(label.getFont().getFamily(), label.getFont().getStyle(), Integer.parseInt(e))); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
                 JCheckBox boldCheck = new JCheckBox("Negrita", label.getFont().isBold());
                 boldCheck.addActionListener(e -> { label.setFont(label.getFont().deriveFont(boldCheck.isSelected() ? label.getFont().getStyle() | Font.BOLD : label.getFont().getStyle() & ~Font.BOLD)); previewPanel.repaint(); });
                 JCheckBox italicCheck = new JCheckBox("Cursiva", label.getFont().isItalic());
@@ -784,9 +786,9 @@ public class Main {
                 addPropRowCustom(propsPanel, "Auto-alto:", autoCheck);
             } else if (element instanceof LayoutScaleBar scale) {
                 addEditablePropRow(propsPanel, "Escala 1:", String.valueOf((int) scale.getMapScaleDenominator()),
-                        e -> { layoutModel.saveSnapshot(); try { scale.setMapScaleDenominator(Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                        e -> { layoutModel.saveSnapshot(); try { scale.setMapScaleDenominator(Double.parseDouble(e)); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
                 addEditablePropRow(propsPanel, "Segmentos:", String.valueOf(scale.getSegments()),
-                        e -> { layoutModel.saveSnapshot(); try { scale.setSegments(Integer.parseInt(e)); previewPanel.repaint(); } catch (Exception ignored) {} });
+                        e -> { layoutModel.saveSnapshot(); try { scale.setSegments(Integer.parseInt(e)); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); } });
             } else if (element instanceof LayoutNorthArrow) {
                 addPropRow(propsPanel, "Tipo:", "Flecha norte");
             } else if (element instanceof LayoutCartouche cartouche) {
@@ -1667,7 +1669,7 @@ public class Main {
                     prefs.remove("pendingCatmapTable");
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { CatgisLogger.warn("Main: operation failed", ignored); }
     }
 
     private static void showShortcuts() {

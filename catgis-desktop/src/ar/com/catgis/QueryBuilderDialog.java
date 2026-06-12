@@ -232,9 +232,9 @@ public class QueryBuilderDialog extends JDialog {
 
         if (CatgisDesktopApp.statusBar != null) {
             if (featureIds.isEmpty()) {
-                CatgisDesktopApp.statusBar.setMessage("La consulta no encontró entidades en " + layer.getName() + ".");
+                AppContext.setStatusMessage("La consulta no encontró entidades en " + layer.getName() + ".");
             } else {
-                CatgisDesktopApp.statusBar.setMessage("Consulta aplicada en " + layer.getName() + ": " + featureIds.size() + " entidad(es).");
+                AppContext.setStatusMessage("Consulta aplicada en " + layer.getName() + ": " + featureIds.size() + " entidad(es).");
             }
         }
     }
@@ -249,7 +249,7 @@ public class QueryBuilderDialog extends JDialog {
         }
         resultLabel.setText("Selección limpia.");
         if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage("Selección de consulta limpiada para " + layer.getName() + ".");
+            AppContext.setStatusMessage("Selección de consulta limpiada para " + layer.getName() + ".");
         }
     }
 
@@ -382,8 +382,7 @@ public class QueryBuilderDialog extends JDialog {
                 SimpleDateFormat sdf = new SimpleDateFormat(pattern);
                 sdf.setLenient(false);
                 return sdf.parse(text).getTime();
-            } catch (ParseException ignored) {
-            }
+            } catch (Exception ignored) { CatgisLogger.warn("QueryBuilderDialog: operation failed", ignored); }
         }
         return null;
     }
