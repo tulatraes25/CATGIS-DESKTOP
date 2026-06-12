@@ -200,20 +200,41 @@ public final class ScriptEngine {
             }
         }
 
-        // Check PATH
+        // Check PATH — resolve to absolute path to avoid bare-name execution
         String[] candidates = {"python3", "python", "py"};
         for (String cmd : candidates) {
             try {
-                ProcessBuilder pb = new ProcessBuilder(cmd, "--version");
-                pb.redirectErrorStream(true);
-                Process p = pb.start();
-                if (p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0) {
-                    cachedPythonPath = cmd;
+                String resolved = resolveOnPath(cmd);
+                if (resolved != null) {
+                    cachedPythonPath = resolved;
                     return cachedPythonPath;
                 }
             } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
         }
 
+        return null;
+    }
+
+    private static String resolveOnPath(String cmd) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("where", cmd);
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            if (p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0) {
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8));
+                String path = reader.readLine();
+                reader.close();
+                p.destroyForcibly();
+                if (path != null && !path.isBlank()) {
+                    File file = new File(path.trim());
+                    if (file.exists()) {
+                        return file.getAbsolutePath();
+                    }
+                }
+            }
+            p.destroyForcibly();
+        } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
         return null;
     }
 
