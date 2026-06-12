@@ -140,6 +140,123 @@ class RasterCalculatorEngineTest {
         assertNull(RasterCalculatorEngine.evaluate(sources, ""));
     }
 
+    @Test
+    void evaluateCotReturnsExpectedValue() {
+        BufferedImage a = createRaster(2, 2, 45);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "cot(a)");
+        assertNotNull(result);
+        // cot(45°) = 1/tan(45°) ≈ 1.0 → clamp to byte = 1
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(1, val);
+    }
+
+    @Test
+    void evaluateMinReturnsMinValue() {
+        BufferedImage a = createRaster(2, 2, 30);
+        BufferedImage b = createRaster(2, 2, 70);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a"),
+                new RasterCalculatorEngine.RasterSource(b, null, "b")
+        );
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "min(a, b)");
+        assertNotNull(result);
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(30, val);
+    }
+
+    @Test
+    void evaluateMaxReturnsMaxValue() {
+        BufferedImage a = createRaster(2, 2, 30);
+        BufferedImage b = createRaster(2, 2, 70);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a"),
+                new RasterCalculatorEngine.RasterSource(b, null, "b")
+        );
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "max(a, b)");
+        assertNotNull(result);
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(70, val);
+    }
+
+    @Test
+    void evaluateClampRestrictsRange() {
+        BufferedImage a = createRaster(2, 2, 200);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        // clamp(lo, hi, val) → clamp(0, 100, a) = 100 since a=200
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "clamp(0, 100, a)");
+        assertNotNull(result);
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(100, val);
+    }
+
+    @Test
+    void evaluateModReturnsRemainder() {
+        BufferedImage a = createRaster(2, 2, 17);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "mod(a, 5)");
+        assertNotNull(result);
+        // 17 % 5 = 2
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(2, val);
+    }
+
+    @Test
+    void evaluateSignReturnsSignum() {
+        BufferedImage a = createRaster(2, 2, 42);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "sign(a)");
+        assertNotNull(result);
+        // sign(42) = 1.0 → clamp = 1
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(1, val);
+    }
+
+    @Test
+    void evaluatePiReturnsConstant() {
+        BufferedImage a = createRaster(2, 2, 0);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "pi");
+        assertNotNull(result);
+        // pi ≈ 3.14 → clamp = 3
+        int val = result.getRaster().getSample(0, 0, 0);
+        assertEquals(3, val);
+    }
+
+    @Test
+    void evaluateProgressListenerCalled() {
+        BufferedImage a = createRaster(4, 4, 50);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        int[] progressCount = {0};
+        BufferedImage result = RasterCalculatorEngine.evaluate(sources, "a * 2",
+                (current, total) -> progressCount[0]++);
+        assertNotNull(result);
+        assertTrue(progressCount[0] > 0, "Progress listener should be called at least once");
+    }
+
+    @Test
+    void evaluateProgressListenerReceivesFinalTotal() {
+        BufferedImage a = createRaster(3, 3, 50);
+        List<RasterCalculatorEngine.RasterSource> sources = List.of(
+                new RasterCalculatorEngine.RasterSource(a, null, "a")
+        );
+        int[] lastTotal = {0};
+        RasterCalculatorEngine.evaluate(sources, "a", (current, total) -> lastTotal[0] = total);
+        assertEquals(9, lastTotal[0], "Final total should be width * height = 9");
+    }
+
     private BufferedImage createRaster(int w, int h, int value) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
         WritableRaster raster = img.getRaster();

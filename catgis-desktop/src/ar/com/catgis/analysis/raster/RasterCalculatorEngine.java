@@ -17,12 +17,28 @@ import java.util.Stack;
  * <p>
  * Rasters referenced by index starting at 0, or by the names 'a','b','c',...
  * </p>
+ * <p>
+ * Progress reporting via {@link ProgressListener}.
+ * </p>
  */
 public final class RasterCalculatorEngine {
 
     private RasterCalculatorEngine() {}
 
+    /**
+     * Callback for pixel-by-pixel progress updates.
+     */
+    @FunctionalInterface
+    public interface ProgressListener {
+        void onProgress(int current, int total);
+    }
+
     public static BufferedImage evaluate(List<RasterSource> sources, String expression) {
+        return evaluate(sources, expression, null);
+    }
+
+    public static BufferedImage evaluate(List<RasterSource> sources, String expression,
+                                          ProgressListener progress) {
         if (sources == null || sources.isEmpty()) return null;
         if (expression == null || expression.isBlank()) return null;
 
@@ -72,6 +88,8 @@ public final class RasterCalculatorEngine {
         // Evaluate per pixel
         int numBands = inputRasters.get(0).getNumBands();
         double[] pixel = new double[numBands];
+        int totalPixels = width * height;
+        int pixelCount = 0;
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
@@ -88,7 +106,15 @@ public final class RasterCalculatorEngine {
                     outRaster.setSample(x, y, 2, 0);
                     outRaster.setSample(x, y, 3, 0);
                 }
+                pixelCount++;
+                if (progress != null && pixelCount % 1000 == 0) {
+                    progress.onProgress(pixelCount, totalPixels);
+                }
             }
+        }
+
+        if (progress != null) {
+            progress.onProgress(totalPixels, totalPixels);
         }
 
         return output;
@@ -175,9 +201,13 @@ public final class RasterCalculatorEngine {
                         case "savi" -> { double red = stack.pop(); double nir = stack.pop(); stack.push(((nir - red) / (nir + red + 0.5)) * 1.5); }
                         case "evi" -> { double blue = stack.pop(); double red = stack.pop(); double nir = stack.pop(); double denom = nir + 6*red - 7.5*blue + 1; stack.push(denom != 0 ? 2.5 * (nir - red) / denom : 0); }
                         case "tan" -> stack.push(Math.tan(stack.pop()));
+                        case "atan2" -> { double dy = stack.pop(); stack.push(Math.atan2(stack.pop(), dy)); }
                         case "asin" -> stack.push(Math.asin(Math.max(-1, Math.min(1, stack.pop()))));
                         case "acos" -> stack.push(Math.acos(Math.max(-1, Math.min(1, stack.pop()))));
                         case "atan" -> stack.push(Math.atan(stack.pop()));
+                        case "cot" -> stack.push(1.0 / Math.tan(stack.pop()));
+                        case "sec" -> stack.push(1.0 / Math.cos(stack.pop()));
+                        case "csc" -> stack.push(1.0 / Math.sin(stack.pop()));
                         case "log10" -> stack.push(Math.log10(stack.pop()));
                         case "ln" -> stack.push(Math.log(stack.pop()));
                         case "sign" -> stack.push(Math.signum(stack.pop()));
@@ -190,6 +220,7 @@ public final class RasterCalculatorEngine {
                         case "hypot" -> { double y2 = stack.pop(); stack.push(Math.hypot(stack.pop(), y2)); }
                         case "degrees" -> stack.push(Math.toDegrees(stack.pop()));
                         case "radians" -> stack.push(Math.toRadians(stack.pop()));
+                        case "random" -> stack.push(Math.random() * 255.0);
                         case "x" -> stack.push((double) x / w);
                         case "y" -> stack.push((double) y / h);
                     }
@@ -238,6 +269,7 @@ public final class RasterCalculatorEngine {
                          "floor","ceil","round","if","ndvi","ndwi","nbr","savi","evi",
                          "asin","acos","atan","atan2","degrees","radians","sign",
                          "hypot","min","max","clamp","mod","pi","e","random",
+                         "cot","sec","csc",
                          "x","y" -> true;
                     default -> false;
                 };
