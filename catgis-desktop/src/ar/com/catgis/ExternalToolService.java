@@ -98,7 +98,7 @@ public final class ExternalToolService {
      * Returns an absolute path or null. Never returns a bare command name
      * that would be resolved via PATH at execution time.
      */
-    private static String findWhiteboxTools() {
+    static String findWhiteboxTools() {
         // 1. Check TOOLS_DIR for absolute paths
         String[] localCandidates = {
             TOOLS_DIR.resolve("whitebox_tools.exe").toString(),
