@@ -570,20 +570,21 @@ public class CatgisDesktopApp extends JFrame {
         }
     }
 
+    /**
+     * @deprecated Use {@code AppContext.get().markProjectDirty()} instead.
+     */
+    @Deprecated
     public static void markProjectDirty() {
-        if (currentProject == null) {
-            return;
-        }
-        currentProject.setModified(true);
+        AppContext.get().markProjectDirty();
         updateWindowTitle();
     }
 
+    /**
+     * @deprecated Use {@code AppContext.get().markProjectClean()} instead.
+     */
+    @Deprecated
     public static void markProjectClean() {
-        if (currentProject == null) {
-            return;
-        }
-        currentProject.setModified(false);
-        updateWindowTitle();
+        AppContext.get().markProjectClean();
     }
 
     public static boolean hasUnsavedProjectChanges() {
