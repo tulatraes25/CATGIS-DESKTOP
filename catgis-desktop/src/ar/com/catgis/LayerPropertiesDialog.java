@@ -378,6 +378,7 @@ public class LayerPropertiesDialog extends JDialog {
         tabs.addTab("General", buildGeneralTab());
         tabs.addTab("Simbologia", buildSymbologyTab(pointCatalogScroll, pointGraphicFilePanel, categorizedButton, importSldButton, exportSldButton));
         tabs.addTab("Etiquetas", buildLabelsTab());
+        tabs.addTab("Data Defined", buildDataDefinedTab());
         return tabs;
     }
 
@@ -1533,5 +1534,15 @@ public class LayerPropertiesDialog extends JDialog {
             dialog.setLocationRelativeTo(parent);
         }
         dialog.setVisible(true);
+    }
+
+    private JPanel buildDataDefinedTab() {
+        ar.com.catgis.core.model.DataDefinedOverrides model =
+                new ar.com.catgis.core.model.DataDefinedOverrides();
+        List<String> props = java.util.List.of(
+                "fontSize", "fontColor", "fontFamily", "labelText",
+                "fillColor", "strokeColor", "strokeWidth", "pointSize",
+                "rotation", "offsetX", "offsetY", "haloEnabled", "haloColor");
+        return new ar.com.catgis.core.model.DataDefinedOverridesPanel(model, props);
     }
 }

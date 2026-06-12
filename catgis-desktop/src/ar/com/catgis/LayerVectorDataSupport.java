@@ -6,6 +6,7 @@ import javax.swing.JOptionPane;
 import java.awt.Component;
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.List;
 
 final class LayerVectorDataSupport {
 
@@ -133,8 +134,50 @@ final class LayerVectorDataSupport {
             }
             return projectAndAttach(layer, data);
         }
+        if (lowerPath.endsWith(".las") || lowerPath.endsWith(".laz")) {
+            data = loadLasFile(path, layer);
+            if (isBlank(layer.getSourceCRS())) {
+                layer.setSourceCRS("EPSG:4326");
+            }
+            return projectAndAttach(layer, data);
+        }
 
         return null;
+    }
+
+    private static ShapefileData loadLasFile(String path, Layer layer) throws Exception {
+        File file = new File(path);
+        LasReader.LasHeader header = LasReader.readHeader(file);
+        List<LasReader.LasPoint> lasPoints = LasReader.readPoints(file, 50000);
+
+        org.geotools.feature.simple.SimpleFeatureTypeBuilder tb =
+                new org.geotools.feature.simple.SimpleFeatureTypeBuilder();
+        tb.setName(layer.getName());
+        tb.add("the_geom", org.locationtech.jts.geom.Point.class);
+        tb.add("intensity", Double.class);
+        tb.add("classification", Integer.class);
+
+        var schema = tb.buildFeatureType();
+        org.geotools.feature.simple.SimpleFeatureBuilder fb =
+                new org.geotools.feature.simple.SimpleFeatureBuilder(schema);
+        List<org.geotools.api.feature.simple.SimpleFeature> features = new java.util.ArrayList<>();
+        org.locationtech.jts.geom.GeometryFactory gf = new org.locationtech.jts.geom.GeometryFactory();
+
+        for (int i = 0; i < lasPoints.size(); i++) {
+            LasReader.LasPoint lp = lasPoints.get(i);
+            fb.reset();
+            fb.set("the_geom", gf.createPoint(
+                    new org.locationtech.jts.geom.Coordinate(lp.x(), lp.y())));
+            fb.set("intensity", (double) lp.intensity());
+            fb.set("classification", lp.classification());
+            features.add(fb.buildFeature(String.valueOf(i)));
+        }
+
+        org.locationtech.jts.geom.Envelope envelope = new org.locationtech.jts.geom.Envelope(
+                header.minX(), header.maxX(), header.minY(), header.maxY());
+
+        return new ShapefileData(features, envelope, layer.getName(), features.size(),
+                "LiDAR: " + features.size() + " puntos", schema);
     }
 
     static void showLoadFailure(Layer layer,
