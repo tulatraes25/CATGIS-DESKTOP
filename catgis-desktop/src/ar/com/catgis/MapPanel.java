@@ -362,6 +362,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         if (dx != 0 || dy != 0) {
             viewMinX -= dx / zoomFactor;
             viewMinY += dy / zoomFactor;
+            syncViewToController();
             lastMouseX = e.getX();
             lastMouseY = e.getY();
             temporaryMiddlePanMoved = true;
@@ -2005,6 +2006,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         this.viewMinX = viewMinX;
         this.viewMinY = viewMinY;
         this.zoomFactor = zoomFactor;
+        syncViewToController();
         refreshStatusBarScale();
         repaint();
     }
@@ -2073,6 +2075,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
             viewMinX = renderViewMinX;
             viewMinY = renderViewMinY;
             zoomFactor = renderZoomFactor;
+            syncViewToController();
             layoutRenderMode = !includeDecorations;
             paintComponent(g2);
             if (includeDecorations && mapDecorations != null) {
@@ -2089,6 +2092,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
             viewMinX = oldViewMinX;
             viewMinY = oldViewMinY;
             zoomFactor = oldZoomFactor;
+            syncViewToController();
             layoutRenderMode = oldLayoutRenderMode;
             if (oldWidth <= 1 || oldHeight <= 1) {
                 setSize(oldWidth, oldHeight);
@@ -2720,6 +2724,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
 
         viewMinX = env.getMinX() - extraWorldWidth / 2.0;
         viewMinY = env.getMinY() - extraWorldHeight / 2.0;
+        syncViewToController();
         refreshStatusBarScale();
     }
 
@@ -2806,6 +2811,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         viewMinX += (worldXBefore - worldXAfter);
         viewMinY += (worldYBefore - worldYAfter);
 
+        syncViewToController();
         refreshStatusBarScale();
         repaint();
     }
