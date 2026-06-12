@@ -62,7 +62,7 @@ public final class EventBusInitializer {
                     CatgisDesktopApp.mapPanel.repaint();
                 }
                 if (CatgisDesktopApp.layersPanel != null) {
-                    CatgisDesktopApp.layersPanel.repaint();
+                    AppContext.repaintLayers();
                 }
             });
         });

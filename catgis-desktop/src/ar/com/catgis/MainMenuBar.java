@@ -183,7 +183,7 @@ public class MainMenuBar extends JMenuBar {
 
         JMenuItem itemSimbologiaCapa = createItem("Simbologia de capa seleccionada...", AppIcons.propertiesIcon());
         itemSimbologiaCapa.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
             if (layer == null) {
                 JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa para editar su simbologia."));
                 return;
@@ -193,7 +193,7 @@ public class MainMenuBar extends JMenuBar {
 
         JMenuItem itemTematicaCampo = createItem("Simbologia por campo...", AppIcons.propertiesIcon());
         itemTematicaCampo.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
             if (layer == null) {
                 JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa vectorial."));
                 return;
@@ -507,13 +507,13 @@ public class MainMenuBar extends JMenuBar {
 
         JMenuItem itemCadGeoref = createItem("Georreferenciar capa CAD seleccionada...", AppIcons.crsIcon());
         itemCadGeoref.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
             CadWorkflowSupport.openGeoreferenceWorkflow(CatgisDesktopApp.getMainFrameSafe(), layer);
         });
 
         JMenuItem itemCadInternalLayers = createItem("Capas internas CAD...", AppIcons.tableIcon());
         itemCadInternalLayers.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
             CadWorkflowSupport.openCadInternalLayers(CatgisDesktopApp.getMainFrameSafe(), layer);
         });
 
@@ -828,7 +828,7 @@ public class MainMenuBar extends JMenuBar {
     }
 
     private void runTopologyValidation(String rule) {
-        Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+        Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
         if (layer == null) {
             JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
                     I18n.t("Selecciona una capa para validar topología."));
@@ -908,7 +908,7 @@ public class MainMenuBar extends JMenuBar {
             }
         }
 
-        Layer selectedLayer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+        Layer selectedLayer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
         if (selectedLayer != null && !(selectedLayer instanceof RasterLayer)) {
             return selectedLayer;
         }

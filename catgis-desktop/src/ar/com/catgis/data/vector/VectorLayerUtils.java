@@ -279,8 +279,8 @@ public final class VectorLayerUtils {
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.addLayer(layer);
-            CatgisDesktopApp.layersPanel.selectLayer(layer);
+            AppContext.addLayer(layer);
+            AppContext.selectLayer(layer);
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);

@@ -30,7 +30,7 @@ public final class CadWorkflowSupport {
             CadGeoreferenceSupport.applyResultToLayer(layer, result);
             CatgisDesktopApp.markProjectDirty();
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.refreshLayerList();
+                AppContext.refreshLayerList();
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.resetView();
@@ -64,7 +64,7 @@ public final class CadWorkflowSupport {
         layer.setCadHiddenInternalLayers(result.hiddenLayerNames());
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.repaint();
@@ -98,7 +98,7 @@ public final class CadWorkflowSupport {
                         layer.setCadOffsetY(offsetY);
                         CatgisDesktopApp.markProjectDirty();
                         if (CatgisDesktopApp.layersPanel != null) {
-                            CatgisDesktopApp.layersPanel.refreshLayerList();
+                            AppContext.refreshLayerList();
                         }
                         if (CatgisDesktopApp.mapPanel != null) {
                             CatgisDesktopApp.mapPanel.repaint();
@@ -113,7 +113,7 @@ public final class CadWorkflowSupport {
                     @Override
                     public void onDragCanceled() {
                         if (CatgisDesktopApp.layersPanel != null) {
-                            CatgisDesktopApp.layersPanel.refreshLayerList();
+                            AppContext.refreshLayerList();
                         }
                         if (CatgisDesktopApp.mapPanel != null) {
                             CatgisDesktopApp.mapPanel.repaint();

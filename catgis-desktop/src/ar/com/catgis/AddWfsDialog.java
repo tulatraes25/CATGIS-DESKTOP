@@ -290,8 +290,8 @@ public class AddWfsDialog extends JDialog {
                     }
 
                     AppContext.project().addLayer(loaded.layer);
-                    CatgisDesktopApp.layersPanel.addLayer(loaded.layer);
-                    CatgisDesktopApp.layersPanel.selectLayer(loaded.layer);
+                    AppContext.addLayer(loaded.layer);
+                    AppContext.selectLayer(loaded.layer);
                     CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(loaded.layer, loaded.data);
                     CatgisDesktopApp.markProjectDirty();
                     if (CatgisDesktopApp.statusBar != null) {

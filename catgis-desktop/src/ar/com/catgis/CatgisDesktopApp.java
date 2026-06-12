@@ -619,7 +619,7 @@ public class CatgisDesktopApp extends JFrame {
         if (quickStylePanel != null) {
             quickStylePanel.setVisible(quickStylePanelVisible);
             if (quickStylePanelVisible) {
-                quickStylePanel.setLayer(CatgisDesktopApp.layersPanel.getSelectedLayer());
+                quickStylePanel.setLayer(AppContext.getSelectedLayer());
             }
         }
         if (getMainFrame() != null) {

@@ -351,7 +351,7 @@ public class ExportVectorLayerAction {
                     AppContext.project().addLayer(resultLayer);
                     CatgisDesktopApp.markProjectDirty();
                     if (CatgisDesktopApp.layersPanel != null) {
-                        CatgisDesktopApp.layersPanel.addLayer(resultLayer);
+                        AppContext.addLayer(resultLayer);
                     }
                     if (CatgisDesktopApp.mapPanel != null) {
                         CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(resultLayer, reloaded);
@@ -1627,7 +1627,7 @@ public class ExportVectorLayerAction {
             CatgisDesktopApp.mapPanel.repaint();
         }
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
     }
 

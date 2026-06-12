@@ -40,8 +40,8 @@ public final class OnlineBaseMapAction {
             hideOtherOnlineBaseMaps(existing);
             existing.setVisible(true);
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.selectLayer(existing);
-                CatgisDesktopApp.layersPanel.refreshLayerList();
+                AppContext.selectLayer(existing);
+                AppContext.refreshLayerList();
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.addOrUpdateOnlineTileLayer(existing);
@@ -62,8 +62,8 @@ public final class OnlineBaseMapAction {
         hideOtherOnlineBaseMaps(layer);
         AppContext.project().addLayer(layer);
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.addLayer(layer);
-            CatgisDesktopApp.layersPanel.selectLayer(layer);
+            AppContext.addLayer(layer);
+            AppContext.selectLayer(layer);
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateOnlineTileLayer(layer);

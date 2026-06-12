@@ -795,7 +795,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             }
         }
         if (CatgisDesktopApp.layersPanel != null) {
-            Layer selected = CatgisDesktopApp.layersPanel.getSelectedLayer();
+            Layer selected = AppContext.getSelectedLayer();
             if (selected != null && !(selected instanceof RasterLayer)
                     && (CatgisDesktopApp.mapPanel == null || !CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(selected))) {
                 return selected;

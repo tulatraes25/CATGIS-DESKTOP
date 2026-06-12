@@ -2259,7 +2259,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
         layer.setVisible(!layer.isVisible());
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
         if (ctxMapPanel() != null) {
             ctxMapPanel().refreshLayerVisibility();
@@ -2310,7 +2310,7 @@ public class MapLayoutComposerDialog extends JFrame {
             LayerPropertiesDialog.open(this, layer);
         }
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
         if (ctxMapPanel() != null) {
             ctxMapPanel().refreshLayerVisibility();
@@ -2339,7 +2339,7 @@ public class MapLayoutComposerDialog extends JFrame {
             ctxMapPanel().reorderLayers(new ArrayList<>(orderedLayers));
         }
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
         CatgisDesktopApp.markProjectDirty();
         loadProjectLayersFromProject();

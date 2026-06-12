@@ -284,8 +284,8 @@ public final class GribLoader {
 
         AppContext.project().addLayer(layer);
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.addLayer(layer);
-            CatgisDesktopApp.layersPanel.selectLayer(layer);
+            AppContext.addLayer(layer);
+            AppContext.selectLayer(layer);
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);

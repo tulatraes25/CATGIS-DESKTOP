@@ -47,49 +47,49 @@ public class ProInterpretationToolbar extends JPanel {
         thematicButton = createButton("Mapa Pro", "Generar mapa tematico Pro desde la capa raster seleccionada.", AppIcons.imageryIcon());
         thematicButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedProThematic();
+                AppContext.runSelectedProThematic();
             }
         });
 
         qaButton = createButton("QA Pro", "Generar QA preliminar desde la capa raster Pro seleccionada.", AppIcons.propertiesIcon());
         qaButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedProQa();
+                AppContext.runSelectedProQa();
             }
         });
 
         cloudsButton = createButton("Nubes", "Generar mascara Landsat QA_PIXEL para nubes y cirrus.", AppIcons.propertiesIcon());
         cloudsButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS);
+                AppContext.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS);
             }
         });
 
         shadowButton = createButton("Sombra", "Generar mascara Landsat QA_PIXEL para sombra de nube.", AppIcons.propertiesIcon());
         shadowButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW);
+                AppContext.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW);
             }
         });
 
         snowButton = createButton("Nieve", "Generar mascara Landsat QA_PIXEL para nieve o hielo.", AppIcons.propertiesIcon());
         snowButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW);
+                AppContext.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW);
             }
         });
 
         waterButton = createButton("Agua", "Generar mascara Landsat QA_PIXEL para agua.", AppIcons.propertiesIcon());
         waterButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER);
+                AppContext.runSelectedLandsatQaMask(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER);
             }
         });
 
         compareButton = createButton("Comparar", "Comparar la capa Pro seleccionada con otra fecha compatible del proyecto.", AppIcons.attrRefreshIcon());
         compareButton.addActionListener(e -> {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.runSelectedProComparison();
+                AppContext.runSelectedProComparison();
             }
         });
 

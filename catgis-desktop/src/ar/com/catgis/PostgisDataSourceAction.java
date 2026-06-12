@@ -16,7 +16,7 @@ public final class PostgisDataSourceAction {
     }
 
     public static void exportSelectedLayerToPostgis() {
-        Layer layer = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+        Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
             javax.swing.JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa vectorial para enviar a CATSERVER."));
             return;

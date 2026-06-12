@@ -27,7 +27,7 @@ public class OpenAttributeTableAction extends AbstractAction {
     }
 
     public static void openAttributeTable() {
-        Layer selectedLayer = CatgisDesktopApp.layersPanel.getSelectedLayer();
+        Layer selectedLayer = AppContext.getSelectedLayer();
 
         if (selectedLayer == null) {
             JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
@@ -142,7 +142,7 @@ public class OpenAttributeTableAction extends AbstractAction {
 
 
     public static void openFieldCalculatorForSelectedLayer() {
-        Layer layer = CatgisDesktopApp.layersPanel.getSelectedLayer();
+        Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
             JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
             return;
@@ -159,7 +159,7 @@ public class OpenAttributeTableAction extends AbstractAction {
     }
 
     public static void openAssignValueForSelectedLayer() {
-        Layer layer = CatgisDesktopApp.layersPanel.getSelectedLayer();
+        Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
             JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
             return;
@@ -176,7 +176,7 @@ public class OpenAttributeTableAction extends AbstractAction {
     }
 
     public static void openQueryBuilderForSelectedLayer() {
-        Layer layer = CatgisDesktopApp.layersPanel.getSelectedLayer();
+        Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
             JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
             return;

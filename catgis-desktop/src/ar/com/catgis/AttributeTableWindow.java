@@ -492,7 +492,7 @@ public class AttributeTableWindow extends JFrame {
             CatgisDesktopApp.mapPanel.refreshMap();
         }
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage("Campo creado: " + fieldName);
@@ -1156,7 +1156,7 @@ public class AttributeTableWindow extends JFrame {
                 CatgisDesktopApp.mapPanel.refreshMap();
             }
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.repaint();
+                AppContext.repaintLayers();
             }
             CatgisDesktopApp.markProjectDirty();
             if (CatgisDesktopApp.statusBar != null) {

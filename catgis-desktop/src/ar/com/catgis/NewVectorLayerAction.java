@@ -88,8 +88,8 @@ public class NewVectorLayerAction extends AbstractAction {
             CatgisDesktopApp.markProjectDirty();
 
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.addLayer(layer);
-                CatgisDesktopApp.layersPanel.selectLayer(layer);
+                AppContext.addLayer(layer);
+                AppContext.selectLayer(layer);
             }
 
             if (CatgisDesktopApp.mapPanel != null) {

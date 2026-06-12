@@ -2666,8 +2666,8 @@ public class LayersPanel extends JPanel {
         AppContext.project().addLayer(generated.layer());
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.addLayer(generated.layer());
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.addLayer(generated.layer());
+            AppContext.refreshLayerList();
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(generated.layer(), generated.data());

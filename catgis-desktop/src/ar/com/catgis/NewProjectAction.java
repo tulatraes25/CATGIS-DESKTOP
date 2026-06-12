@@ -27,7 +27,7 @@ public class NewProjectAction extends AbstractAction {
         project.setProjectCRS(inheritedCrs);
 
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.clearLayers();
+            AppContext.clearLayers();
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.clearAllLayers();

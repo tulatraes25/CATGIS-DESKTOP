@@ -1050,7 +1050,7 @@ public class LayerPropertiesDialog extends JDialog {
         CatgisDesktopApp.markProjectDirty();
 
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
         if (CatgisDesktopApp.mapPanel != null) {
             if (CadLayerSupport.isCadLayer(layer)
@@ -1275,7 +1275,7 @@ public class LayerPropertiesDialog extends JDialog {
             syncStyleControlsFromLayer();
             CatgisDesktopApp.markProjectDirty();
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.refreshLayerList();
+                AppContext.refreshLayerList();
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.repaint();

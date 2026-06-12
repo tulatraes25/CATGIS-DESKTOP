@@ -42,7 +42,7 @@ public final class TopographyWorkflowSupport {
     }
 
     public static Layer resolvePreferredRasterLayer() {
-        Layer selected = CatgisDesktopApp.layersPanel != null ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+        Layer selected = AppContext.getSelectedLayer();
         if (isRasterLayer(selected)) {
             return selected;
         }
@@ -308,7 +308,7 @@ public final class TopographyWorkflowSupport {
             CatgisDesktopApp.mapPanel.reorderLayers(new ArrayList<>(ordered));
         }
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
         }
     }
 

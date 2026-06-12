@@ -275,8 +275,8 @@ public class PostgisExportDialog extends JDialog {
         }
         AppContext.project().addLayer(result.layer());
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.addLayer(result.layer());
-            CatgisDesktopApp.layersPanel.selectLayer(result.layer());
+            AppContext.addLayer(result.layer());
+            AppContext.selectLayer(result.layer());
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.layer(), result.data());

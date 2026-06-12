@@ -352,8 +352,8 @@ public class AddWmsDialog extends JDialog {
             AppContext.setCurrentProject(new Project("Proyecto actual"));
         }
         AppContext.project().addLayer(layer);
-        CatgisDesktopApp.layersPanel.addLayer(layer);
-        CatgisDesktopApp.layersPanel.selectLayer(layer);
+        AppContext.addLayer(layer);
+        AppContext.selectLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateOnlineWmsLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {

@@ -456,7 +456,7 @@ public final class NetCdfLoader {
         }
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
-        CatgisDesktopApp.layersPanel.addLayer(layer);
+        AppContext.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
         CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
         CatgisDesktopApp.mapPanel.zoomToLayer(layer);

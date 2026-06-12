@@ -461,7 +461,7 @@ public class BasinFromOutletDialog extends JDialog {
             }
             AppContext.project().addLayer(generated.layer());
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.addLayer(generated.layer());
+                AppContext.addLayer(generated.layer());
             }
             ShapefileData projected = TopographyWorkflowSupport.projectVectorDataToCurrentProject(generated.layer(), generated.data());
             persistGeneratedLayerIfNeeded(generated.layer(), projected);
@@ -475,7 +475,7 @@ public class BasinFromOutletDialog extends JDialog {
         TopographyWorkflowSupport.placeLayersAtFront(desiredFrontOrder);
 
         if (lastAdded != null && CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.selectLayer(lastAdded);
+            AppContext.selectLayer(lastAdded);
         }
         if (lastAdded != null && CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.showOpenedFile(lastAdded.getName());

@@ -402,7 +402,7 @@ public class QuickStylePanel extends JPanel {
 
         // Refresh
         CatgisDesktopApp.mapPanel.repaint();
-        CatgisDesktopApp.layersPanel.refreshLayerList();
+        AppContext.refreshLayerList();
         previewLabel.repaint();
     }
 
@@ -410,7 +410,7 @@ public class QuickStylePanel extends JPanel {
         // Poll-free: wait for the panel to be shown, then use layerList's listener
         addHierarchyListener(e -> {
             if (isShowing() && CatgisDesktopApp.layersPanel != null) {
-                Layer selected = CatgisDesktopApp.layersPanel.getSelectedLayer();
+                Layer selected = AppContext.getSelectedLayer();
                 if (selected != currentLayer) {
                     setLayer(selected);
                 }

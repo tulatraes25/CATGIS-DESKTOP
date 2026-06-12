@@ -304,7 +304,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
         for (TerrainHydrologyAnalysisService.GeneratedRasterLayer raster : result.rasterLayers()) {
             AppContext.project().addLayer(raster.layer());
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.addLayer(raster.layer());
+                AppContext.addLayer(raster.layer());
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(raster.layer(), raster.data());
@@ -316,7 +316,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             ShapefileData projectedData = TopographyWorkflowSupport.projectVectorDataToCurrentProject(vector.layer(), vector.data());
             AppContext.project().addLayer(vector.layer());
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.addLayer(vector.layer());
+                AppContext.addLayer(vector.layer());
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(vector.layer(), projectedData);
@@ -335,7 +335,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
 
         if (lastAdded != null) {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.selectLayer(lastAdded);
+                AppContext.selectLayer(lastAdded);
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.showOpenedFile(lastAdded.getName());

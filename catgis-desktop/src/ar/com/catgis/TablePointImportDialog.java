@@ -134,7 +134,7 @@ public class TablePointImportDialog extends JDialog {
 
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
-            CatgisDesktopApp.layersPanel.addLayer(layer);
+            AppContext.addLayer(layer);
             CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
             CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
             CatgisDesktopApp.mapPanel.resetView();

@@ -169,7 +169,7 @@ public class LoadProjectAction extends AbstractAction {
             normalizeCatserverGrouping(loadedProject);
 
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.clearLayers();
+                AppContext.clearLayers();
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.clearAllLayers();
@@ -179,13 +179,13 @@ public class LoadProjectAction extends AbstractAction {
             AppContext.get().setProject(loadedProject);
 
             for (Layer layer : loadedProject.getLayers()) {
-                CatgisDesktopApp.layersPanel.addLayer(layer);
+                AppContext.addLayer(layer);
                 loadLayerData(layer);
             }
 
             TopographyWorkflowSupport.normalizeTopographyOverlayOrder();
             CatgisDesktopApp.mapPanel.refreshLayerVisibility();
-            CatgisDesktopApp.layersPanel.refreshLayerList();
+            AppContext.refreshLayerList();
             CatgisDesktopApp.markProjectClean();
 
             boolean finalViewLoaded = viewLoaded;

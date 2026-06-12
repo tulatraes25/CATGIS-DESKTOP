@@ -79,6 +79,48 @@ public final class AppContext {
     public static Project project() { return get().currentProject; }
     public static void setCurrentProject(Project p) { get().setProject(p); }
 
+    // ---- LayersPanel convenience accessors ----
+    public static void addLayer(ar.com.catgis.core.model.Layer layer) {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.addLayer(layer);
+    }
+    public static void selectLayer(ar.com.catgis.core.model.Layer layer) {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.selectLayer(layer);
+    }
+    public static void refreshLayerList() {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.refreshLayerList();
+    }
+    public static ar.com.catgis.core.model.Layer getSelectedLayer() {
+        LayersPanel lp = get().layersPanel;
+        return lp != null ? lp.getSelectedLayer() : null;
+    }
+    public static void clearLayers() {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.clearLayers();
+    }
+    public static void repaintLayers() {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.repaint();
+    }
+    public static void runSelectedProThematic() {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.runSelectedProThematic();
+    }
+    public static void runSelectedProQa() {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.runSelectedProQa();
+    }
+    public static void runSelectedLandsatQaMask(String mask) {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.runSelectedLandsatQaMask(mask);
+    }
+    public static void runSelectedProComparison() {
+        LayersPanel lp = get().layersPanel;
+        if (lp != null) lp.runSelectedProComparison();
+    }
+
     public static void setStatusMessage(String message) {
         StatusBar sb = get().statusBar;
         if (sb != null) {

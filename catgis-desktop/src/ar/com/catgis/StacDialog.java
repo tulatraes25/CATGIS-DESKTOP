@@ -245,7 +245,7 @@ public class StacDialog extends JDialog {
 
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
-            CatgisDesktopApp.layersPanel.addLayer(layer);
+            AppContext.addLayer(layer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
             CatgisDesktopApp.mapPanel.zoomToLayer(layer);
             return true;

@@ -303,7 +303,7 @@ public class MapPanel extends JPanel implements SnapContext {
     }
 
     private void zoomToSelectedLayer() {
-        Layer layer = (CatgisDesktopApp.layersPanel != null) ? CatgisDesktopApp.layersPanel.getSelectedLayer() : null;
+        Layer layer = (CatgisDesktopApp.layersPanel != null) ? AppContext.getSelectedLayer() : null;
         if (layer == null) {
             JOptionPane.showMessageDialog(this, "Primero seleccionÃ¡ una capa en el panel de capas.");
             return;
@@ -383,7 +383,7 @@ public class MapPanel extends JPanel implements SnapContext {
     void refreshEditingUi() {
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
         if (CatgisDesktopApp.layersPanel != null) {
-            javax.swing.SwingUtilities.invokeLater(() -> CatgisDesktopApp.layersPanel.refreshLayerList());
+            javax.swing.SwingUtilities.invokeLater(() -> AppContext.refreshLayerList());
         }
         repaint();
     }

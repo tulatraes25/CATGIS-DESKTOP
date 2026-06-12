@@ -405,7 +405,7 @@ public class OpenFileAction extends AbstractAction {
         VectorLayerUtils.populateFieldConfigs(layer, data.getSchema());
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
-        CatgisDesktopApp.layersPanel.addLayer(layer);
+        AppContext.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
         CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
     }
@@ -549,7 +549,7 @@ public class OpenFileAction extends AbstractAction {
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
-            CatgisDesktopApp.layersPanel.addLayer(layer);
+            AppContext.addLayer(layer);
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
@@ -572,7 +572,7 @@ public class OpenFileAction extends AbstractAction {
             layer.setRasterMode(rasterData.getRasterMode());
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
-            CatgisDesktopApp.layersPanel.addLayer(layer);
+            AppContext.addLayer(layer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
             CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
             CatgisDesktopApp.mapPanel.zoomToLayer(layer);

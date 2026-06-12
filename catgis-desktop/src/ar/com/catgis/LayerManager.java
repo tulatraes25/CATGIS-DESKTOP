@@ -29,7 +29,7 @@ public class LayerManager {
             return;
         }
         AppContext.project().addLayer(layer);
-        CatgisDesktopApp.layersPanel.addLayer(layer);
+        AppContext.addLayer(layer);
         panel.repaint();
     }
 

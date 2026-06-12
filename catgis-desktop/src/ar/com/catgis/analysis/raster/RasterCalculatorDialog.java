@@ -245,7 +245,7 @@ public class RasterCalculatorDialog extends JDialog {
                                 1, src.isGeoreferenced(), src.getSourceCRS());
                         Layer layer = new Layer(name, "", "RASTER");
                         AppContext.project().addLayer(layer);
-                        CatgisDesktopApp.layersPanel.addLayer(layer);
+                        AppContext.addLayer(layer);
                         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, outData);
                         CatgisDesktopApp.markProjectDirty();
                         JOptionPane.showMessageDialog(RasterCalculatorDialog.this,

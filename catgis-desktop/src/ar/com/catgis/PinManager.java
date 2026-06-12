@@ -90,7 +90,7 @@ public class PinManager {
 
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
-            CatgisDesktopApp.layersPanel.addLayer(layer);
+            AppContext.addLayer(layer);
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
                 CatgisDesktopApp.mapPanel.repaint();

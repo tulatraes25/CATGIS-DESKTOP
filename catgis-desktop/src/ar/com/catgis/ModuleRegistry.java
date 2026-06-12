@@ -323,8 +323,8 @@ public final class ModuleRegistry {
         module.addAction(new CatgisModuleAction("catserver-export", "Enviar capa a CATSERVER...", "Toma la capa vectorial seleccionada y la escribe en el servidor PostgreSQL/PostGIS configurado en CATSERVER.",
                 AppIcons.exportIcon(), PostgisDataSourceAction::exportSelectedLayerToPostgis, ModuleActionPlacement.MODULE_MENU,
                 () -> CatgisDesktopApp.layersPanel != null
-                        && CatgisDesktopApp.layersPanel.getSelectedLayer() != null
-                        && !(CatgisDesktopApp.layersPanel.getSelectedLayer() instanceof RasterLayer)));
+                        && AppContext.getSelectedLayer() != null
+                        && !(AppContext.getSelectedLayer() instanceof RasterLayer)));
         return module;
     }
 

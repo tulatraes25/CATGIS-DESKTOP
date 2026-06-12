@@ -338,7 +338,7 @@ public class BooleanRiskDialog extends JDialog {
         if (result.vectorLayer() != null) {
             AppContext.project().addLayer(result.vectorLayer().layer());
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.addLayer(result.vectorLayer().layer());
+                AppContext.addLayer(result.vectorLayer().layer());
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
@@ -350,7 +350,7 @@ public class BooleanRiskDialog extends JDialog {
         for (BooleanRiskService.GeneratedRasterLayer raster : result.rasterLayers()) {
             AppContext.project().addLayer(raster.layer());
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.addLayer(raster.layer());
+                AppContext.addLayer(raster.layer());
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(raster.layer(), raster.data());
@@ -363,7 +363,7 @@ public class BooleanRiskDialog extends JDialog {
         CatgisDesktopApp.markProjectDirty();
         if (lastAdded != null) {
             if (CatgisDesktopApp.layersPanel != null) {
-                CatgisDesktopApp.layersPanel.selectLayer(lastAdded);
+                AppContext.selectLayer(lastAdded);
             }
             if (CatgisDesktopApp.mapPanel != null) {
                 CatgisDesktopApp.mapPanel.showOpenedFile(lastAdded.getName());
