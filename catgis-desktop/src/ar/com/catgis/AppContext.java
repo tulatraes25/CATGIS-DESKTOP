@@ -77,4 +77,11 @@ public final class AppContext {
     // ---- Convenience accessors ----
     public static MapPanel mapPanel() { return get().mapPanel; }
     public static Project project() { return get().currentProject; }
+
+    public static void setStatusMessage(String message) {
+        StatusBar sb = get().statusBar;
+        if (sb != null) {
+            sb.setMessage(message);
+        }
+    }
 }

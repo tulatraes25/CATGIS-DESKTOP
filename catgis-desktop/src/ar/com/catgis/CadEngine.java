@@ -54,9 +54,7 @@ public class CadEngine {
                 : I18n.t("Arrastre CAD cancelado.");
         panel.requestFocusInWindow();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(panel.cadPlacementDragStartMessage);
-        }
+        AppContext.setStatusMessage(panel.cadPlacementDragStartMessage);
         panel.repaint();
     }
 
@@ -81,9 +79,7 @@ public class CadEngine {
         panel.cadPlacementDragStartY = Double.NaN;
         panel.cadPlacementDragLayer = null;
         panel.cadPlacementDragHandler = null;
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(panel.cadPlacementDragCancelMessage);
-        }
+        AppContext.setStatusMessage(panel.cadPlacementDragCancelMessage);
         panel.applyCursorForCurrentMode();
         panel.repaint();
         if (handler != null) {
@@ -139,9 +135,7 @@ public class CadEngine {
         panel.cadPlacementDragLayer = null;
         panel.cadPlacementDragHandler = null;
 
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(moved ? panel.cadPlacementDragSuccessMessage : panel.cadPlacementDragCancelMessage);
-        }
+        AppContext.setStatusMessage(moved ? panel.cadPlacementDragSuccessMessage : panel.cadPlacementDragCancelMessage);
         panel.applyCursorForCurrentMode();
         panel.repaint();
         if (handler != null) {
@@ -186,9 +180,7 @@ public class CadEngine {
                 : I18n.t("Captura de pour point cancelada.");
         panel.requestFocusInWindow();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(panel.pointCaptureStartMessage);
-        }
+        AppContext.setStatusMessage(panel.pointCaptureStartMessage);
         panel.repaint();
     }
 
@@ -196,9 +188,7 @@ public class CadEngine {
         MapPanel.MapPointCaptureHandler handler = panel.pointCaptureHandler;
         panel.pointCaptureActive = false;
         panel.pointCaptureHandler = null;
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(panel.pointCaptureCancelMessage);
-        }
+        AppContext.setStatusMessage(panel.pointCaptureCancelMessage);
         panel.repaint();
         if (handler != null) {
             handler.onCaptureCanceled();
@@ -218,9 +208,7 @@ public class CadEngine {
         panel.pointCaptureActive = false;
         panel.pointCaptureHandler = null;
         panel.repaint();
-        if (CatgisDesktopApp.statusBar != null) {
-            CatgisDesktopApp.statusBar.setMessage(panel.pointCaptureSuccessMessage);
-        }
+        AppContext.setStatusMessage(panel.pointCaptureSuccessMessage);
         if (handler != null) {
             handler.onPointCaptured(coordinate, projectCrs);
         }
