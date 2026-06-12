@@ -51,6 +51,9 @@ dependencies {
     implementation 'org.apache.poi:poi:5.4.1'
     implementation 'org.apache.poi:poi-ooxml:5.4.1'
 
+    // H3 hexagonal indexing
+    implementation 'com.uber:h3:4.1.1'
+
     implementation 'com.github.albfernandez:javadbf:1.14.1'
     implementation 'com.github.miachm.sods:SODS:1.8.2'
     implementation 'com.formdev:flatlaf:3.7'

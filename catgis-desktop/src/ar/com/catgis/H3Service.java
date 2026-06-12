@@ -1,126 +1,149 @@
 package ar.com.catgis;
 
+import com.uber.h3core.AreaUnit;
+import com.uber.h3core.H3Core;
+import com.uber.h3core.util.LatLng;
 import org.geotools.api.feature.simple.SimpleFeature;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Envelope;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.geom.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * H3-like hexagonal indexing service for CATGIS.
- * Pure Java implementation (no external dependencies).
+ * H3 hexagonal indexing service using the uber/h3 library.
  */
 public final class H3Service {
 
     private H3Service() {}
 
-    public record HexBin(String hexIndex, int count, double centerX, double centerY) {}
+    private static volatile H3Core h3;
+    private static final GeometryFactory GF = new GeometryFactory();
 
-    /**
-     * Compute hex index for a coordinate at given resolution.
-     * Resolution: 1=coarse, 10=fine.
-     */
-    public static String latLngToH3(double lat, double lng, int resolution) {
-        double cellSize = getCellSize(resolution);
-        int col = (int) Math.floor(lng / cellSize);
-        int row = (int) Math.floor(lat / cellSize);
-        return "h3_" + row + "_" + col;
+    public record HexBin(String hexIndex, int count, double centerLat, double centerLng) {}
+
+    private static H3Core h3() {
+        if (h3 == null) {
+            synchronized (H3Service.class) {
+                if (h3 == null) {
+                    try {
+                        h3 = H3Core.newInstance();
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to initialize H3 core", e);
+                    }
+                }
+            }
+        }
+        return h3;
     }
 
-    /**
-     * Get hex cell boundary as a polygon.
-     */
-    public static Polygon h3ToBoundary(String h3Index, int resolution) {
-        double cellSize = getCellSize(resolution);
-        String[] parts = h3Index.split("_");
-        if (parts.length < 3) return null;
+    /** Convert lat/lng to H3 cell address. */
+    public static String latLngToCell(double lat, double lng, int resolution) {
+        return h3().latLngToCellAddress(lat, lng, clampRes(resolution));
+    }
 
-        int row = Integer.parseInt(parts[1]);
-        int col = Integer.parseInt(parts[2]);
+    /** Get cell boundary as JTS Polygon. */
+    public static Polygon cellToBoundary(String h3Address) {
+        List<LatLng> boundary = h3().cellToBoundary(h3Address);
+        if (boundary == null || boundary.isEmpty()) return null;
 
-        double cx = col * cellSize;
-        double cy = row * cellSize;
-        double hw = cellSize / 2;
-        double hh = cellSize * Math.sqrt(3) / 2;
-
-        Coordinate[] coords = new Coordinate[7];
-        for (int i = 0; i < 6; i++) {
-            double angle = Math.PI / 3 * i - Math.PI / 6;
-            coords[i] = new Coordinate(cx + hw * Math.cos(angle), cy + hh * Math.sin(angle));
+        Coordinate[] coords = new Coordinate[boundary.size() + 1];
+        for (int i = 0; i < boundary.size(); i++) {
+            coords[i] = new Coordinate(boundary.get(i).lng, boundary.get(i).lat);
         }
-        coords[6] = new Coordinate(coords[0].x, coords[0].y);
-
+        coords[boundary.size()] = new Coordinate(coords[0].x, coords[0].y);
         return GF.createPolygon(coords);
     }
 
-    /**
-     * Bin points into hexagonal cells.
-     */
-    public static List<HexBin> hexBin(List<SimpleFeature> points, int resolution) {
-        Map<String, Integer> counts = new HashMap<>();
-        Map<String, double[]> centers = new HashMap<>();
-        double cellSize = getCellSize(resolution);
-
-        for (SimpleFeature f : points) {
-            Geometry g = (Geometry) f.getDefaultGeometry();
-            if (g == null) continue;
-            Point p = g instanceof Point pt ? pt : g.getCentroid();
-
-            int col = (int) Math.floor(p.getX() / cellSize);
-            int row = (int) Math.floor(p.getY() / cellSize);
-            String key = "h3_" + row + "_" + col;
-            counts.merge(key, 1, Integer::sum);
-            centers.putIfAbsent(key, new double[]{p.getX(), p.getY()});
-        }
-
-        List<HexBin> bins = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            double[] center = centers.get(entry.getKey());
-            bins.add(new HexBin(entry.getKey(), entry.getValue(), center[0], center[1]));
-        }
-        return bins;
+    /** Get cell center (lat, lng). */
+    public static double[] cellToLatLng(String h3Address) {
+        LatLng center = h3().cellToLatLng(h3Address);
+        return new double[]{center.lat, center.lng};
     }
 
-    /**
-     * Get all hex cells within a bounding box.
-     */
-    public static List<String> polygonToH3(Envelope envelope, int resolution) {
-        List<String> cells = new ArrayList<>();
-        double cellSize = getCellSize(resolution);
+    /** Ring of cells at distance k. */
+    public static List<String> gridDisk(String h3Address, int k) {
+        return h3().gridDisk(h3Address, clampRing(k));
+    }
 
-        for (double lat = envelope.getMinY(); lat <= envelope.getMaxY(); lat += cellSize) {
-            for (double lng = envelope.getMinX(); lng <= envelope.getMaxX(); lng += cellSize) {
-                String cell = latLngToH3(lat, lng, resolution);
+    /** Grid distance between cells. */
+    public static long gridDistance(String a, String b) {
+        return h3().gridDistance(a, b);
+    }
+
+    /** Cells covering a polygon envelope. */
+    public static List<String> polygonToCells(Geometry polygon, int resolution) {
+        if (polygon == null) return List.of();
+        int res = clampRes(resolution);
+        Envelope env = polygon.getEnvelopeInternal();
+        List<String> cells = new ArrayList<>();
+
+        double cellAreaKm2 = h3().getHexagonAreaAvg(res, AreaUnit.km2);
+        double stepDegrees = Math.sqrt(cellAreaKm2) / 111.0;
+
+        for (double lat = env.getMinY(); lat <= env.getMaxY(); lat += stepDegrees) {
+            for (double lng = env.getMinX(); lng <= env.getMaxX(); lng += stepDegrees * 1.5) {
+                String cell = latLngToCell(lat, lng, res);
                 if (!cells.contains(cell)) cells.add(cell);
             }
         }
         return cells;
     }
 
-    /**
-     * Get hex cell center coordinates.
-     */
-    public static double[] h3ToCenter(String h3Index, int resolution) {
-        String[] parts = h3Index.split("_");
-        if (parts.length < 3) return null;
-        double cellSize = getCellSize(resolution);
-        int row = Integer.parseInt(parts[1]);
-        int col = Integer.parseInt(parts[2]);
-        return new double[]{col * cellSize + cellSize / 2, row * cellSize + cellSize / 2};
+    /** Bin points into hexagonal cells. */
+    public static List<HexBin> hexBin(List<SimpleFeature> points, int resolution) {
+        Map<String, Integer> counts = new HashMap<>();
+        Map<String, double[]> centers = new HashMap<>();
+        int res = clampRes(resolution);
+
+        for (SimpleFeature f : points) {
+            Geometry g = (Geometry) f.getDefaultGeometry();
+            if (g == null) continue;
+            Point p = g instanceof Point pt ? pt : g.getCentroid();
+            String cell = latLngToCell(p.getY(), p.getX(), res);
+            counts.merge(cell, 1, Integer::sum);
+            centers.computeIfAbsent(cell, k -> {
+                LatLng gc = h3().cellToLatLng(k);
+                return new double[]{gc.lat, gc.lng};
+            });
+        }
+
+        List<HexBin> bins = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : counts.entrySet()) {
+            double[] c = centers.get(e.getKey());
+            bins.add(new HexBin(e.getKey(), e.getValue(),
+                    c != null ? c[0] : 0, c != null ? c[1] : 0));
+        }
+        return bins;
     }
 
-    private static double getCellSize(int resolution) {
-        // Approximate cell size in degrees based on resolution
-        // Resolution 1 ≈ 1107km, Resolution 10 ≈ 25m
-        return 110.0 / Math.pow(2, resolution);
+    /** Parent at coarser resolution. */
+    public static String cellToParent(String h3Address, int parentRes) {
+        return h3().cellToParentAddress(h3Address, clampRes(parentRes));
     }
 
-    private static final GeometryFactory GF = new GeometryFactory();
+    /** Children at finer resolution. */
+    public static List<String> cellToChildren(String h3Address, int childRes) {
+        return h3().cellToChildren(h3Address, clampRes(childRes));
+    }
+
+    /** Cell area in km². */
+    public static double cellAreaKm2(String h3Address) {
+        return h3().getHexagonAreaAvg(h3().getResolution(h3Address), AreaUnit.km2);
+    }
+
+    /** Validate H3 address. */
+    public static boolean isValidCell(String h3Address) {
+        return h3().isValidCell(h3Address);
+    }
+
+    /** Get cell resolution. */
+    public static int getResolution(String h3Address) {
+        return h3().getResolution(h3Address);
+    }
+
+    private static int clampRes(int r) { return Math.max(0, Math.min(15, r)); }
+    private static int clampRing(int k) { return Math.max(0, Math.min(k, 10)); }
 }

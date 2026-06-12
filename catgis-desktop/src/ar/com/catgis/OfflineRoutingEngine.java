@@ -6,27 +6,77 @@ import java.util.*;
 
 /**
  * Offline network routing engine using Dijkstra algorithm.
- * Provides shortest path, service area, and network statistics.
- * Can be enhanced with external routing engines (GraphHopper, OSRM).
+ * <p>
+ * Provides shortest path, service area, network statistics, and
+ * a pluggable routing backend for GraphHopper/OSRM integration.
+ * </p>
  */
 public final class OfflineRoutingEngine {
 
     private OfflineRoutingEngine() {}
 
-    public record RoutingResult(List<Coordinate> route, double totalDistance, String warnings) {}
-    public record NetworkStatsResult(int nodeCount, int edgeCount, double totalLength, double avgDegree, double density) {}
+    public record RoutingResult(List<Coordinate> route, double totalDistance,
+                                 String warnings, long timeMs) {
+        public RoutingResult(List<Coordinate> route, double totalDistance, String warnings) {
+            this(route, totalDistance, warnings, 0);
+        }
+    }
+    public record NetworkStatsResult(int nodeCount, int edgeCount, double totalLength,
+                                      double avgDegree, double density) {}
 
     /**
-     * Find shortest path between two points using Dijkstra.
+     * Pluggable routing backend for external engines.
+     */
+    @FunctionalInterface
+    public interface RoutingBackend {
+        RoutingResult findRoute(List<org.geotools.api.feature.simple.SimpleFeature> network,
+                                 Coordinate start, Coordinate end, double snapTolerance);
+    }
+
+    private static RoutingBackend externalBackend;
+
+    /**
+     * Set an external routing backend (e.g., GraphHopper).
+     */
+    public static void setRoutingBackend(RoutingBackend backend) {
+        externalBackend = backend;
+    }
+
+    /**
+     * Get the current routing backend.
+     */
+    public static RoutingBackend getRoutingBackend() {
+        return externalBackend;
+    }
+
+    /**
+     * Find shortest path between two points.
+     * Tries external backend first, falls back to Dijkstra.
      */
     public static RoutingResult shortestPath(List<org.geotools.api.feature.simple.SimpleFeature> lineFeatures,
                                               Coordinate start, Coordinate end, double snapTolerance) {
+        long t0 = System.currentTimeMillis();
+
+        // Try external backend
+        if (externalBackend != null) {
+            try {
+                RoutingResult result = externalBackend.findRoute(lineFeatures, start, end, snapTolerance);
+                if (result != null && !result.route().isEmpty()) {
+                    return new RoutingResult(result.route(), result.totalDistance(),
+                            result.warnings(), System.currentTimeMillis() - t0);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        // Dijkstra fallback
         List<NetworkAnalysisEngine.NetworkPoint> nodes = buildGraph(lineFeatures, snapTolerance);
-        if (nodes.size() < 2) return new RoutingResult(Collections.emptyList(), 0, "Insufficient nodes.");
+        if (nodes.size() < 2) return new RoutingResult(Collections.emptyList(), 0,
+                "Insufficient nodes.", System.currentTimeMillis() - t0);
 
         int startIdx = findNearestNode(nodes, start);
         int endIdx = findNearestNode(nodes, end);
-        if (startIdx < 0 || endIdx < 0) return new RoutingResult(Collections.emptyList(), 0, "Points outside network.");
+        if (startIdx < 0 || endIdx < 0) return new RoutingResult(Collections.emptyList(), 0,
+                "Points outside network.", System.currentTimeMillis() - t0);
 
         double[][] adj = buildAdjacencyMatrix(lineFeatures, nodes);
         double[] dist = new double[nodes.size()];
@@ -52,11 +102,13 @@ public final class OfflineRoutingEngine {
             }
         }
 
-        if (dist[endIdx] == Double.MAX_VALUE) return new RoutingResult(Collections.emptyList(), 0, "No path found.");
+        if (dist[endIdx] == Double.MAX_VALUE) return new RoutingResult(Collections.emptyList(), 0,
+                "No path found.", System.currentTimeMillis() - t0);
         List<Coordinate> route = new ArrayList<>();
         for (int at = endIdx; at != -1; at = prev[at]) route.add(nodes.get(at).coordinate());
         Collections.reverse(route);
-        return new RoutingResult(route, dist[endIdx], "");
+        return new RoutingResult(route, dist[endIdx], "",
+                System.currentTimeMillis() - t0);
     }
 
     /**
