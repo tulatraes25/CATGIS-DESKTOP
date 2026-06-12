@@ -211,10 +211,10 @@ public class QueryBuilderDialog extends JDialog {
         List<String> featureIds = evaluateQuery();
         resultLabel.setText(featureIds.size() + " resultado(s) seleccionados.");
 
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.syncSelectionFromAttributeTable(layer, featureIds);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().syncSelectionFromAttributeTable(layer, featureIds);
             if (!featureIds.isEmpty() && zoomToResultCheck.isSelected()) {
-                CatgisDesktopApp.mapPanel.zoomToFeatureSelection(layer, featureIds);
+                AppContext.mapPanel().zoomToFeatureSelection(layer, featureIds);
             }
         }
 
@@ -240,8 +240,8 @@ public class QueryBuilderDialog extends JDialog {
     }
 
     private void clearQuerySelection() {
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.syncSelectionFromAttributeTable(layer, new ArrayList<>());
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().syncSelectionFromAttributeTable(layer, new ArrayList<>());
         }
         AttributeTableWindow tableWindow = OpenAttributeTableAction.getOpenWindow(layer);
         if (tableWindow != null) {

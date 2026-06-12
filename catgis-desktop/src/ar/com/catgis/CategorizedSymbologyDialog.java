@@ -525,8 +525,8 @@ public class CategorizedSymbologyDialog extends JDialog {
         }
 
         CatgisDesktopApp.markProjectDirty();
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().repaint();
         }
         dispose();
     }
@@ -631,7 +631,7 @@ public class CategorizedSymbologyDialog extends JDialog {
     }
 
     public static void open(Component parent, Layer layer) {
-        if (layer == null || CatgisDesktopApp.mapPanel == null) {
+        if (layer == null || AppContext.mapPanel() == null) {
             return;
         }
         ShapefileData data = OpenAttributeTableAction.ensureLayerDataAvailable(layer);

@@ -30,7 +30,7 @@ public class RasterDisplaySettingsDialog extends JDialog {
         super(SwingUtilities.getWindowAncestor(parent) instanceof Frame ? (Frame) SwingUtilities.getWindowAncestor(parent) : null,
                 "Ajustes de visualizacion raster", true);
         this.layer = layer;
-        this.mapPanel = CatgisDesktopApp.mapPanel;
+        this.mapPanel = AppContext.mapPanel();
         build();
         setLocationRelativeTo(parent);
         setVisible(true);

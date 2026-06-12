@@ -303,23 +303,23 @@ public class TopologyValidationDialog extends JDialog {
     private void selectSelectedResult() {
         Layer layer = layerCombo.getItemCount() > 0 ? layerCombo.getItemAt(layerCombo.getSelectedIndex()) : null;
         TopologyCheckResult result = getSelectedResult();
-        if (layer == null || result == null || CatgisDesktopApp.mapPanel == null) {
+        if (layer == null || result == null || AppContext.mapPanel() == null) {
             return;
         }
         if (!result.getFeatureIds().isEmpty()) {
-            CatgisDesktopApp.mapPanel.syncSelectionFromAttributeTable(layer, result.getFeatureIds());
+            AppContext.mapPanel().syncSelectionFromAttributeTable(layer, result.getFeatureIds());
         } else if (result.hasFocusGeometry()) {
-            CatgisDesktopApp.mapPanel.flashGeometry(result.getFocusGeometry(), result.getSourceCrs());
+            AppContext.mapPanel().flashGeometry(result.getFocusGeometry(), result.getSourceCrs());
         }
     }
 
     private void highlightSelectedResult() {
         TopologyCheckResult result = getSelectedResult();
-        if (result == null || CatgisDesktopApp.mapPanel == null) {
+        if (result == null || AppContext.mapPanel() == null) {
             return;
         }
         if (result.hasFocusGeometry()) {
-            CatgisDesktopApp.mapPanel.flashGeometry(result.getFocusGeometry(), result.getSourceCrs());
+            AppContext.mapPanel().flashGeometry(result.getFocusGeometry(), result.getSourceCrs());
         } else {
             selectSelectedResult();
         }
@@ -328,17 +328,17 @@ public class TopologyValidationDialog extends JDialog {
     private void zoomToSelectedResult() {
         Layer layer = layerCombo.getItemCount() > 0 ? layerCombo.getItemAt(layerCombo.getSelectedIndex()) : null;
         TopologyCheckResult result = getSelectedResult();
-        if (result == null || CatgisDesktopApp.mapPanel == null) {
+        if (result == null || AppContext.mapPanel() == null) {
             return;
         }
         if (!result.getFeatureIds().isEmpty() && layer != null) {
-            CatgisDesktopApp.mapPanel.syncSelectionFromAttributeTable(layer, result.getFeatureIds());
-            CatgisDesktopApp.mapPanel.zoomToFeatureSelection(layer, result.getFeatureIds());
+            AppContext.mapPanel().syncSelectionFromAttributeTable(layer, result.getFeatureIds());
+            AppContext.mapPanel().zoomToFeatureSelection(layer, result.getFeatureIds());
             highlightSelectedResult();
             return;
         }
         if (result.hasFocusGeometry()) {
-            CatgisDesktopApp.mapPanel.zoomToGeometry(result.getFocusGeometry(), result.getSourceCrs());
+            AppContext.mapPanel().zoomToGeometry(result.getFocusGeometry(), result.getSourceCrs());
         }
     }
 

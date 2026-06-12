@@ -69,8 +69,8 @@ public class HillshadeDialog extends JDialog {
 
     private void populateRasterLayers() {
         layerCombo.removeAllItems();
-        if (CatgisDesktopApp.mapPanel == null) return;
-        var rasterLayers = CatgisDesktopApp.mapPanel.getRasterLayers();
+        if (AppContext.mapPanel() == null) return;
+        var rasterLayers = AppContext.mapPanel().getRasterLayers();
         if (rasterLayers != null) {
             for (var entry : rasterLayers.entrySet()) {
                 if (entry.getKey() instanceof RasterLayer) {
@@ -98,7 +98,7 @@ public class HillshadeDialog extends JDialog {
         }
 
         // Find the raster layer and its data
-        var rasterLayers = CatgisDesktopApp.mapPanel.getRasterLayers();
+        var rasterLayers = AppContext.mapPanel().getRasterLayers();
         Layer targetLayer = null;
         LocalRasterData targetData = null;
         if (rasterLayers != null) {
@@ -141,7 +141,7 @@ public class HillshadeDialog extends JDialog {
                 LocalRasterData hsData = new LocalRasterData(
                         hillshade, envelope, 1, true, sourceCrs);
 
-                CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(hsLayer, hsData);
+                AppContext.mapPanel().addOrUpdateRasterLayer(hsLayer, hsData);
 
                 statusLabel.setText("Hillshade generado: " + newName);
                 dispose();

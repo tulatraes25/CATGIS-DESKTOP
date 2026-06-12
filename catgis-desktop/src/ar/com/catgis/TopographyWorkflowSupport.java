@@ -56,7 +56,7 @@ public final class TopographyWorkflowSupport {
     }
 
     public static SelectedProfileLine resolveSelectedProfileLine() {
-        MapPanel mapPanel = CatgisDesktopApp.mapPanel;
+        MapPanel mapPanel = AppContext.mapPanel();
         if (mapPanel == null) {
             return null;
         }
@@ -304,8 +304,8 @@ public final class TopographyWorkflowSupport {
         }
 
         AppContext.project().setLayerOrder(ordered);
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.reorderLayers(new ArrayList<>(ordered));
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().reorderLayers(new ArrayList<>(ordered));
         }
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.refreshLayerList();
@@ -573,7 +573,7 @@ public final class TopographyWorkflowSupport {
             return null;
         }
 
-        LocalRasterData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getRasterData(layer) : null;
+        LocalRasterData data = AppContext.mapPanel() != null ? AppContext.mapPanel().getRasterData(layer) : null;
         if (data == null || data.getEnvelope() == null || data.getEnvelope().isNull()
                 || data.getWidth() <= 0 || data.getHeight() <= 0) {
             return null;

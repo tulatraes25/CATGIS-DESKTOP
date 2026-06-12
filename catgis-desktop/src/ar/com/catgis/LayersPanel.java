@@ -239,7 +239,7 @@ public class LayersPanel extends JPanel {
                     }
                     CatgisDesktopApp.markProjectDirty();
                     refreshLayerList();
-                    CatgisDesktopApp.mapPanel.repaint();
+                    AppContext.mapPanel().repaint();
 
                     if (CatgisDesktopApp.statusBar != null) {
                         if (selectedGroup != null) {
@@ -261,7 +261,7 @@ public class LayersPanel extends JPanel {
                         CatgisDesktopApp.markProjectDirty();
                         refreshLayerList();
                     } else if (selectedLayer != null) {
-                        CatgisDesktopApp.mapPanel.zoomToLayer(selectedLayer);
+                        AppContext.mapPanel().zoomToLayer(selectedLayer);
                     }
                     return;
                 }
@@ -710,7 +710,7 @@ public class LayersPanel extends JPanel {
     private void zoomToSelectedLayer() {
         Object sel = layerList.getSelectedValue();
         if (sel instanceof Layer layer) {
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+            AppContext.mapPanel().zoomToLayer(layer);
         }
     }
 
@@ -734,7 +734,7 @@ public class LayersPanel extends JPanel {
         if (opt != JOptionPane.YES_OPTION) return;
         for (Object obj : selected) {
             if (obj instanceof Layer l) {
-                CatgisDesktopApp.mapPanel.removeLayers(List.of(l));
+                AppContext.mapPanel().removeLayers(List.of(l));
                 if (AppContext.project() != null) {
                     AppContext.project().removeLayer(l);
                 }
@@ -797,7 +797,7 @@ public class LayersPanel extends JPanel {
             selectedGroup.setVisible(!selectedGroup.isVisible());
             CatgisDesktopApp.markProjectDirty();
             refreshLayerList();
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         });
         popupMenu.add(toggleVisibilityItem);
 
@@ -862,14 +862,14 @@ public class LayersPanel extends JPanel {
         popupMenu.add(editItem);
 
         JMenuItem copyToEditingItem = createMenuItem("Copiar seleccionadas a capa en edicion", AppIcons.attrCopyIcon());
-        boolean canCopyToEditing = CatgisDesktopApp.mapPanel != null
-                && CatgisDesktopApp.mapPanel.canCopySelectedFeaturesFromLayerToEditingLayer(selectedLayer);
+        boolean canCopyToEditing = AppContext.mapPanel() != null
+                && AppContext.mapPanel().canCopySelectedFeaturesFromLayerToEditingLayer(selectedLayer);
         copyToEditingItem.setEnabled(canCopyToEditing);
         copyToEditingItem.addActionListener(ev -> {
-            if (CatgisDesktopApp.mapPanel != null
-                    && CatgisDesktopApp.mapPanel.copySelectedFeaturesFromLayerToEditingLayer(selectedLayer)) {
+            if (AppContext.mapPanel() != null
+                    && AppContext.mapPanel().copySelectedFeaturesFromLayerToEditingLayer(selectedLayer)) {
                 refreshLayerList();
-                CatgisDesktopApp.mapPanel.repaint();
+                AppContext.mapPanel().repaint();
             }
         });
         popupMenu.add(copyToEditingItem);
@@ -890,7 +890,7 @@ public class LayersPanel extends JPanel {
             selectedLayer.setLabelsVisible(false);
             selectedLayer.setLabelField(null);
             refreshLayerList();
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         });
         simbologiaMenu.add(clearLabelsItem);
 
@@ -900,14 +900,14 @@ public class LayersPanel extends JPanel {
         JCheckBoxMenuItem heatmapItem = new JCheckBoxMenuItem("Mapa de calor (heatmap)", selectedLayer.isHeatmapEnabled());
         heatmapItem.addActionListener(ev -> {
             selectedLayer.setHeatmapEnabled(!selectedLayer.isHeatmapEnabled());
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         });
         popupMenu.add(heatmapItem);
 
         JCheckBoxMenuItem clusterItem = new JCheckBoxMenuItem("Agrupar puntos (clustering)", selectedLayer.isClusteringEnabled());
         clusterItem.addActionListener(ev -> {
             selectedLayer.setClusteringEnabled(!selectedLayer.isClusteringEnabled());
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         });
         popupMenu.add(clusterItem);
 
@@ -1228,7 +1228,7 @@ public class LayersPanel extends JPanel {
 
     private void addCommonTopItems(JPopupMenu popupMenu, Layer selectedLayer, String hideText, String showText) {
         JMenuItem zoomToLayerItem = createMenuItem("Zoom a la capa", AppIcons.zoomLayerIcon());
-        zoomToLayerItem.addActionListener(ev -> CatgisDesktopApp.mapPanel.zoomToLayer(selectedLayer));
+        zoomToLayerItem.addActionListener(ev -> AppContext.mapPanel().zoomToLayer(selectedLayer));
         popupMenu.add(zoomToLayerItem);
 
         JMenuItem toggleVisibilityItem = createMenuItem(
@@ -1239,7 +1239,7 @@ public class LayersPanel extends JPanel {
             selectedLayer.setVisible(!selectedLayer.isVisible());
             CatgisDesktopApp.markProjectDirty();
             refreshLayerList();
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         });
         popupMenu.add(toggleVisibilityItem);
     }
@@ -1377,7 +1377,7 @@ public class LayersPanel extends JPanel {
         }
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
-        CatgisDesktopApp.mapPanel.repaint();
+        AppContext.mapPanel().repaint();
     }
 
     private void removeLayersFromGroup(List<Layer> layers) {
@@ -1480,9 +1480,9 @@ public class LayersPanel extends JPanel {
             return;
         }
 
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().prepareLayerForEditing(layer);
+            AppContext.mapPanel().zoomToLayer(layer);
         }
 
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
@@ -1578,8 +1578,8 @@ public class LayersPanel extends JPanel {
         layer.setCadRotationDegrees(result.rotationDegrees());
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
-        CatgisDesktopApp.mapPanel.resetView();
-        CatgisDesktopApp.mapPanel.repaint();
+        AppContext.mapPanel().resetView();
+        AppContext.mapPanel().repaint();
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage("Ajuste CAD actualizado: " + layer.getName() + " -> " + CadPlacementSupport.buildPlacementSummary(layer));
         }
@@ -1597,8 +1597,8 @@ public class LayersPanel extends JPanel {
         if (isRasterLayer(layer)) {
             reloadRasterMode(layer, getRasterMode(layer), true, true);
         } else {
-            CatgisDesktopApp.mapPanel.resetView();
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().resetView();
+            AppContext.mapPanel().repaint();
         }
 
         if (CatgisDesktopApp.statusBar != null) {
@@ -1614,7 +1614,7 @@ public class LayersPanel extends JPanel {
             layer.setName(newName.trim());
             CatgisDesktopApp.markProjectDirty();
             refreshLayerList();
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         }
     }
 
@@ -1664,8 +1664,8 @@ public class LayersPanel extends JPanel {
             ordered.add(afterTarget ? targetIndex + 1 : targetIndex, layer);
         }
         AppContext.project().setLayerOrder(ordered);
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.reorderLayers(ordered);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().reorderLayers(ordered);
         }
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
@@ -1811,8 +1811,8 @@ public class LayersPanel extends JPanel {
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
         selectLayer(sourceLayer);
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().repaint();
         }
     }
 
@@ -1826,8 +1826,8 @@ public class LayersPanel extends JPanel {
         }
         ordered.add(0, sourceLayer);
         AppContext.project().setLayerOrder(ordered);
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.reorderLayers(ordered);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().reorderLayers(ordered);
         }
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
@@ -1846,8 +1846,8 @@ public class LayersPanel extends JPanel {
         if (AppContext.project() != null) {
             AppContext.project().setLayerOrder(orderedLayers);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.reorderLayers(orderedLayers);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().reorderLayers(orderedLayers);
         }
 
         CatgisDesktopApp.markProjectDirty();
@@ -1916,8 +1916,8 @@ public class LayersPanel extends JPanel {
             OpenAttributeTableAction.closeOpenWindow(layer);
         }
 
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.removeLayers(orderedLayers);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().removeLayers(orderedLayers);
         }
 
         restoreSelectionAfterRemoval(fallbackIndex);
@@ -1935,8 +1935,8 @@ public class LayersPanel extends JPanel {
 
     private boolean confirmLayerRemoval(List<Layer> layersToRemove) {
         boolean removesEditingLayer = false;
-        if (CatgisDesktopApp.mapPanel != null) {
-            Layer editingLayer = CatgisDesktopApp.mapPanel.getEditingLayerRef();
+        if (AppContext.mapPanel() != null) {
+            Layer editingLayer = AppContext.mapPanel().getEditingLayerRef();
             removesEditingLayer = editingLayer != null && layersToRemove.contains(editingLayer);
         }
 
@@ -2065,8 +2065,8 @@ public class LayersPanel extends JPanel {
         }
 
         try {
-            LocalRasterData rasterData = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getRasterData(rasterLayer)
+            LocalRasterData rasterData = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getRasterData(rasterLayer)
                     : null;
             String projectName = AppContext.project() != null
                     ? nonBlank(AppContext.project().getName(), "Proyecto CATGIS")
@@ -2441,13 +2441,13 @@ public class LayersPanel extends JPanel {
                         ((RasterLayer) layer).setRasterMode(data.getRasterMode());
                     }
 
-                    CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, data);
+                    AppContext.mapPanel().addOrUpdateRasterLayer(layer, data);
                     CatgisDesktopApp.markProjectDirty();
                     refreshLayerList();
                     if (resetViewAfterLoad) {
-                        CatgisDesktopApp.mapPanel.resetView();
+                        AppContext.mapPanel().resetView();
                     }
-                    CatgisDesktopApp.mapPanel.repaint();
+                    AppContext.mapPanel().repaint();
 
                     String msg = "Raster recargado en modo " + getRasterModeLabel(data.getRasterMode()) + ": " + layer.getName();
 
@@ -2669,9 +2669,9 @@ public class LayersPanel extends JPanel {
             AppContext.addLayer(generated.layer());
             AppContext.refreshLayerList();
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(generated.layer(), generated.data());
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateRasterLayer(generated.layer(), generated.data());
+            AppContext.mapPanel().repaint();
         }
     }
 
@@ -2698,7 +2698,7 @@ public class LayersPanel extends JPanel {
     }
 
     private Object getRasterDataFromMapPanel(Layer layer) {
-        if (CatgisDesktopApp.mapPanel == null || layer == null) {
+        if (AppContext.mapPanel() == null || layer == null) {
             return null;
         }
         String[] candidateMethods = new String[] {
@@ -2709,8 +2709,8 @@ public class LayersPanel extends JPanel {
         };
         for (String name : candidateMethods) {
             try {
-                Method m = CatgisDesktopApp.mapPanel.getClass().getMethod(name, Layer.class);
-                return m.invoke(CatgisDesktopApp.mapPanel, layer);
+                Method m = AppContext.mapPanel().getClass().getMethod(name, Layer.class);
+                return m.invoke(AppContext.mapPanel(), layer);
             } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
         }
         return null;
@@ -2937,7 +2937,7 @@ public class LayersPanel extends JPanel {
 
             Layer layer = (Layer) value;
             boolean missingCrs = hasMissingCRS(layer);
-            boolean editingLayer = CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isLayerArmedForEditing(layer);
+            boolean editingLayer = AppContext.mapPanel() != null && AppContext.mapPanel().isLayerArmedForEditing(layer);
             boolean effectiveVisible = AppContext.project() == null
                     ? layer.isVisible()
                     : AppContext.project().isLayerEffectivelyVisible(layer);
@@ -3047,7 +3047,7 @@ public class LayersPanel extends JPanel {
                     ? " | Etiquetas: " + (layer.getLabelField() != null ? layer.getLabelField() : "Si")
                     : "";
             String hidden = buildVisibilitySuffix(layer);
-            String editing = (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isLayerArmedForEditing(layer))
+            String editing = (AppContext.mapPanel() != null && AppContext.mapPanel().isLayerArmedForEditing(layer))
                     ? " | En edicion"
                     : "";
             return type + " | " + count + " elementos | " + crsInfo + editing + labelInfo + hidden;
@@ -3154,11 +3154,11 @@ public class LayersPanel extends JPanel {
         }
 
         private String resolveGeometryTypeFromData(Layer layer) {
-            if (layer == null || CatgisDesktopApp.mapPanel == null) {
+            if (layer == null || AppContext.mapPanel() == null) {
                 return null;
             }
 
-            ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+            ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
             if (data == null) {
                 return null;
             }

@@ -191,8 +191,8 @@ public class DemClipDialog extends JDialog {
                     JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una mascara poligonal para recortar el DEM."));
                     return;
                 }
-                ShapefileData maskData = CatgisDesktopApp.mapPanel != null
-                        ? CatgisDesktopApp.mapPanel.getShapefileData(maskLayer)
+                ShapefileData maskData = AppContext.mapPanel() != null
+                        ? AppContext.mapPanel().getShapefileData(maskLayer)
                         : null;
                 if (maskData == null) {
                     maskData = VectorLayerUtils.ensureVectorData(maskLayer);
@@ -219,7 +219,7 @@ public class DemClipDialog extends JDialog {
                 maskGeometry = UnaryUnionOp.union(geometries);
                 envelope = maskGeometry != null ? new Envelope(maskGeometry.getEnvelopeInternal()) : null;
             } else {
-                envelope = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getCurrentViewEnvelope() : null;
+                envelope = AppContext.mapPanel() != null ? AppContext.mapPanel().getCurrentViewEnvelope() : null;
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, I18n.t("No se pudo preparar el area de recorte del DEM:") + "\n" + ex.getMessage());
@@ -284,10 +284,10 @@ public class DemClipDialog extends JDialog {
             AppContext.addLayer(result.layer());
             AppContext.selectLayer(result.layer());
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(result.layer(), result.rasterData());
-            CatgisDesktopApp.mapPanel.showOpenedFile(result.layer().getName());
-            CatgisDesktopApp.mapPanel.zoomToLayer(result.layer());
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateRasterLayer(result.layer(), result.rasterData());
+            AppContext.mapPanel().showOpenedFile(result.layer().getName());
+            AppContext.mapPanel().zoomToLayer(result.layer());
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {

@@ -158,12 +158,12 @@ class ClippedDemRoundTripAlignmentTest {
             assertEquals("EPSG:4326", slopeLayer.getSourceCRS());
             assertEquals("EPSG:4326", accumulationLayer.getSourceCRS());
 
-            LocalRasterData clippedData = CatgisDesktopApp.mapPanel.getRasterData(clippedLayer);
-            LocalRasterData slopeData = CatgisDesktopApp.mapPanel.getRasterData(slopeLayer);
-            LocalRasterData accumulationData = CatgisDesktopApp.mapPanel.getRasterData(accumulationLayer);
-            ShapefileData drainageData = CatgisDesktopApp.mapPanel.getShapefileData(drainageLayer);
-            ShapefileData basinsData = CatgisDesktopApp.mapPanel.getShapefileData(basinsLayer);
-            ShapefileData outletsData = CatgisDesktopApp.mapPanel.getShapefileData(outletsLayer);
+            LocalRasterData clippedData = AppContext.mapPanel().getRasterData(clippedLayer);
+            LocalRasterData slopeData = AppContext.mapPanel().getRasterData(slopeLayer);
+            LocalRasterData accumulationData = AppContext.mapPanel().getRasterData(accumulationLayer);
+            ShapefileData drainageData = AppContext.mapPanel().getShapefileData(drainageLayer);
+            ShapefileData basinsData = AppContext.mapPanel().getShapefileData(basinsLayer);
+            ShapefileData outletsData = AppContext.mapPanel().getShapefileData(outletsLayer);
 
             assertNotNull(clippedData);
             assertNotNull(slopeData);
@@ -191,13 +191,13 @@ class ClippedDemRoundTripAlignmentTest {
     private static void addRasterLayer(RasterLayer layer, LocalRasterData data) {
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
-        CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, data);
+        AppContext.mapPanel().addOrUpdateRasterLayer(layer, data);
     }
 
     private static void addVectorLayer(Layer layer, ShapefileData data) {
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
-        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+        AppContext.mapPanel().addOrUpdateShapefileLayer(layer, data);
     }
 
     private static Layer findLayer(String name) {

@@ -316,7 +316,7 @@ public class ClimateOnlineDownloadDialog extends JDialog {
 
     private void loadCurrentViewEnvelope() {
         try {
-            Envelope current = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getCurrentViewEnvelope() : null;
+            Envelope current = AppContext.mapPanel() != null ? AppContext.mapPanel().getCurrentViewEnvelope() : null;
             String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
             Envelope latLon = RasterCoverageSupport.reprojectEnvelope(current, projectCrs, "EPSG:4326");
             if (latLon == null) {
@@ -483,10 +483,10 @@ public class ClimateOnlineDownloadDialog extends JDialog {
             AppContext.addLayer(layer);
             AppContext.selectLayer(layer);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
-            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+            AppContext.mapPanel().showOpenedFile(layer.getName());
+            AppContext.mapPanel().zoomToLayer(layer);
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {

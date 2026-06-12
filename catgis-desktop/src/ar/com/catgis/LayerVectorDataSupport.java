@@ -21,8 +21,8 @@ final class LayerVectorDataSupport {
             return null;
         }
 
-        ShapefileData cached = CatgisDesktopApp.mapPanel != null
-                ? CatgisDesktopApp.mapPanel.getShapefileData(layer)
+        ShapefileData cached = AppContext.mapPanel() != null
+                ? AppContext.mapPanel().getShapefileData(layer)
                 : null;
         if (cached != null) {
             return cached;
@@ -207,8 +207,8 @@ final class LayerVectorDataSupport {
         ShapefileData projected = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
         layer.setSourceName(projected.getSourceName());
         layer.setFeatureCount(projected.getFeatureCount());
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, projected);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, projected);
         }
         return projected;
     }

@@ -47,7 +47,7 @@ class ContourThresholdControlTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             ContourGenerationService.GeneratedContourLayer allContours =
                     ContourGenerationService.generateContours(demLayer, 5d, 5, "Curvas sin filtro", true, false, null);

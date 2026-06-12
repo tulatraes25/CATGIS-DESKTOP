@@ -30,7 +30,7 @@ public class LayoutContext {
     public static LayoutContext fromCatgis() {
         LayoutContext ctx = new LayoutContext();
         ctx.project = AppContext.project();
-        ctx.mapPanel = CatgisDesktopApp.mapPanel;
+        ctx.mapPanel = AppContext.mapPanel();
         return ctx;
     }
 
@@ -50,7 +50,7 @@ public class LayoutContext {
     public void setProject(Project project) { this.project = project; }
 
     public MapPanel getMapPanel() {
-        return mapPanel != null ? mapPanel : CatgisDesktopApp.mapPanel;
+        return mapPanel != null ? mapPanel : AppContext.mapPanel();
     }
 
     public void setMapPanel(MapPanel mapPanel) { this.mapPanel = mapPanel; }

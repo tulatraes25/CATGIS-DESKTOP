@@ -122,15 +122,15 @@ public class TemporalController extends JPanel {
      * Non-temporal layers are left untouched.
      */
     private void applyVisibility() {
-        if (CatgisDesktopApp.mapPanel == null || steps.isEmpty()) return;
+        if (AppContext.mapPanel() == null || steps.isEmpty()) return;
         TemporalStep step = steps.get(currentStep);
         if (step == null) return;
 
         // Collect the set of layers that are part of this temporal sequence
         java.util.Set<Layer> temporalLayers = new java.util.HashSet<>();
         for (TemporalStep s : steps) {
-            if (s.layerIndex() >= 0 && s.layerIndex() < CatgisDesktopApp.mapPanel.getRenderOrderLayers().size()) {
-                temporalLayers.add(CatgisDesktopApp.mapPanel.getRenderOrderLayers().get(s.layerIndex()));
+            if (s.layerIndex() >= 0 && s.layerIndex() < AppContext.mapPanel().getRenderOrderLayers().size()) {
+                temporalLayers.add(AppContext.mapPanel().getRenderOrderLayers().get(s.layerIndex()));
             }
         }
 
@@ -138,8 +138,8 @@ public class TemporalController extends JPanel {
         for (Layer layer : temporalLayers) {
             boolean visible = false;
             for (TemporalStep s : steps) {
-                if (s.layerIndex() >= 0 && s.layerIndex() < CatgisDesktopApp.mapPanel.getRenderOrderLayers().size()) {
-                    Layer stepLayer = CatgisDesktopApp.mapPanel.getRenderOrderLayers().get(s.layerIndex());
+                if (s.layerIndex() >= 0 && s.layerIndex() < AppContext.mapPanel().getRenderOrderLayers().size()) {
+                    Layer stepLayer = AppContext.mapPanel().getRenderOrderLayers().get(s.layerIndex());
                     if (stepLayer == layer && s == step) {
                         visible = true;
                         break;
@@ -148,7 +148,7 @@ public class TemporalController extends JPanel {
             }
             layer.setVisible(visible);
         }
-        CatgisDesktopApp.mapPanel.repaint();
+        AppContext.mapPanel().repaint();
     }
 
     private void playAnimation() {

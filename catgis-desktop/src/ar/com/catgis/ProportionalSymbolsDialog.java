@@ -158,8 +158,8 @@ public class ProportionalSymbolsDialog extends JDialog {
     }
 
     public static boolean open(Component parent, Layer layer) {
-        ShapefileData data = CatgisDesktopApp.mapPanel != null
-            ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = AppContext.mapPanel() != null
+            ? AppContext.mapPanel().getShapefileData(layer) : null;
         if (data == null) data = VectorLayerUtils.ensureVectorData(layer);
         if (data == null) {
             JOptionPane.showMessageDialog(parent,

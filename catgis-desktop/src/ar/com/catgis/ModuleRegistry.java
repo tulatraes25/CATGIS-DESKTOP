@@ -128,107 +128,107 @@ public final class ModuleRegistry {
 
         module.addAction(new CatgisModuleAction("cad-snap", "Alternar SNAP", "Activa o desactiva el snapping de vertices y segmentos.",
                 AppIcons.selectIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.setSnapEnabled(!CatgisDesktopApp.mapPanel.isSnapEnabled());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().setSnapEnabled(!AppContext.mapPanel().isSnapEnabled());
                 CatgisDesktopApp.syncFloatingVectorEditToolbar();
             }
         }, ModuleActionPlacement.EDIT_TOOLBAR, () -> true));
         module.addAction(new CatgisModuleAction("cad-continue-line", "Continuar linea", "Continua una linea existente desde uno de sus extremos.",
                 AppIcons.lineIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableContinueLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableContinueLineMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureCount() > 0));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureCount() > 0));
         module.addAction(new CatgisModuleAction("cad-rectangle", "Rectangulo", "Dibuja un rectangulo poligonal real.",
                 AppIcons.rectangleIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableDrawRectangleMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawRectangleMode();
             }
         }, ModuleActionPlacement.EDIT_TOOLBAR, () -> true));
         module.addAction(new CatgisModuleAction("cad-circle", "Circulo", "Dibuja un circulo a partir de centro y radio.",
                 AppIcons.circleIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableDrawCircleMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawCircleMode();
             }
         }, ModuleActionPlacement.EDIT_TOOLBAR, () -> true));
         module.addAction(new CatgisModuleAction("cad-circle-3p", "Circulo por 3 puntos", "Construye un circulo usando tres puntos sobre la circunferencia.",
                 AppIcons.circleThreePointsIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableDrawCircleThreePointMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawCircleThreePointMode();
             }
         }, ModuleActionPlacement.EDIT_TOOLBAR, () -> true));
         module.addAction(new CatgisModuleAction("cad-add-vertex", "Agregar vertice", "Inserta vertices sobre la entidad en edicion.",
                 AppIcons.addVertexIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateAddVertexMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateAddVertexMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-remove-vertex", "Quitar vertice", "Elimina vertices de la entidad en edicion.",
                 AppIcons.removeVertexIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateRemoveVertexMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateRemoveVertexMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-grow-area", "Aumentar superficie", "Expande poligonos por distancia.",
                 AppIcons.increaseAreaIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.increaseSelectedPolygonArea();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().increaseSelectedPolygonArea();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-shrink-area", "Disminuir superficie", "Contrae poligonos por distancia.",
                 AppIcons.decreaseAreaIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.decreaseSelectedPolygonArea();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().decreaseSelectedPolygonArea();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-extend-line", "Extender linea", "Extiende la linea seleccionada desde uno de sus extremos.",
                 AppIcons.extendLineIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateExtendLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateExtendLineMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-shorten-line", "Acortar linea", "Acorta la linea seleccionada desde uno de sus extremos.",
                 AppIcons.shortenLineIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateShortenLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateShortenLineMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-parallel", "Paralela", "Genera una linea paralela o desplazamiento lateral a partir de una linea seleccionada.",
                 AppIcons.parallelIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateParallelLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateParallelLineMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-perpendicular", "Perpendicular", "Genera una linea perpendicular a partir de un tramo de referencia.",
                 AppIcons.perpendicularIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activatePerpendicularLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activatePerpendicularLineMode();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureRef() != null));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureRef() != null));
         module.addAction(new CatgisModuleAction("cad-merge", "Unir elementos", "Fusiona entidades seleccionadas cuando es valido.",
                 AppIcons.saveIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.mergeSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().mergeSelectedFeatures();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.canMergeSelectedFeatures()));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().canMergeSelectedFeatures()));
         module.addAction(new CatgisModuleAction("cad-explode", "Explotar entidades", "Convierte multipartes en entidades separadas.",
                 AppIcons.exportIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.explodeSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().explodeSelectedFeatures();
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.canExplodeSelectedFeatures()));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().canExplodeSelectedFeatures()));
         module.addAction(new CatgisModuleAction("cad-copy-edit-layer", "Copiar seleccion a capa editable", "Duplica la seleccion sobre la capa actualmente editable.",
                 AppIcons.attrAssignIcon(), () -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                Layer layer = CatgisDesktopApp.mapPanel.getEditingLayerRef();
+            if (AppContext.mapPanel() != null) {
+                Layer layer = AppContext.mapPanel().getEditingLayerRef();
                 if (layer != null) {
-                    CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
-                    CatgisDesktopApp.mapPanel.copySelectedFeaturesToEditingLayer();
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
+                    AppContext.mapPanel().copySelectedFeaturesToEditingLayer();
                 } else {
                     JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), "No hay una capa editable activa.");
                 }
             }
-        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedFeatureCount() > 0));
+        }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureCount() > 0));
 
         return module;
     }
@@ -354,7 +354,7 @@ public final class ModuleRegistry {
                 true
         );
         module.addAction(new CatgisModuleAction("layout-open", "Abrir compositor...", "Abre el compositor de mapas para generar una salida cartografica exportable o imprimible.",
-                AppIcons.projectIcon(), MapLayoutComposerDialog::open, ModuleActionPlacement.MODULE_MENU, () -> CatgisDesktopApp.mapPanel != null));
+                AppIcons.projectIcon(), MapLayoutComposerDialog::open, ModuleActionPlacement.MODULE_MENU, () -> AppContext.mapPanel() != null));
         return module;
     }
 

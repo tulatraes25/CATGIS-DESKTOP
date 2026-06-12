@@ -291,8 +291,8 @@ public class MainMenuBar extends JMenuBar {
 
         JMenuItem itemExportKml = createItem("Exportar capa a KML...", null);
         itemExportKml.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getSelectedLayerRef()
+            Layer layer = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getSelectedLayerRef()
                     : null;
             if (layer != null) KmlExportEngine.exportLayerWithDialog(MainMenuBar.this, layer);
         });
@@ -300,8 +300,8 @@ public class MainMenuBar extends JMenuBar {
 
         JMenuItem itemExportSld = createItem("Exportar capa a SLD...", null);
         itemExportSld.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getSelectedLayerRef()
+            Layer layer = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getSelectedLayerRef()
                     : null;
             if (layer != null) {
                 JFileChooser chooser = new JFileChooser();
@@ -322,183 +322,183 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemCortar = createItem("Cortar selección", AppIcons.cutIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_X, menuMask));
         itemCortar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.cutSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().cutSelectedFeatures();
             }
         });
 
         JMenuItem itemCopiar = createItem("Copiar selección", AppIcons.attrCopyIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_C, menuMask));
         itemCopiar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.copySelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().copySelectedFeatures();
             }
         });
 
         JMenuItem itemPegar = createItem("Pegar en capa editable", AppIcons.openIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_V, menuMask));
         itemPegar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
+            if (AppContext.mapPanel() != null) {
                 Layer layer = getPreferredVectorLayer();
                 if (layer != null) {
-                    CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
                 }
-                CatgisDesktopApp.mapPanel.pasteCopiedFeatures();
+                AppContext.mapPanel().pasteCopiedFeatures();
             }
         });
 
         JMenuItem itemCopiarACapaEditable = createItem("Copiar selección a capa editable", AppIcons.attrAssignIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_V, menuMask | InputEvent.SHIFT_DOWN_MASK));
         itemCopiarACapaEditable.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
+            if (AppContext.mapPanel() != null) {
                 Layer layer = getPreferredVectorLayer();
                 if (layer != null) {
-                    CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
                 }
-                CatgisDesktopApp.mapPanel.copySelectedFeaturesToEditingLayer();
+                AppContext.mapPanel().copySelectedFeaturesToEditingLayer();
             }
         });
 
         JMenuItem itemBorrar = createItem("Borrar selección", AppIcons.removeIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
         itemBorrar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.deleteSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().deleteSelectedFeatures();
             }
         });
 
         JMenuItem itemDeshacer = createItem("Deshacer", AppIcons.undoIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_Z, menuMask));
         itemDeshacer.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.undoFeatureEdit();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().undoFeatureEdit();
             }
         });
 
         JMenuItem itemRehacer = createItem("Rehacer", AppIcons.redoIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_Y, menuMask));
         itemRehacer.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.redoFeatureEdit();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().redoFeatureEdit();
             }
         });
 
         JMenuItem itemMoverSeleccion = createItem("Mover selección", AppIcons.moveFeatureIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_M, menuMask));
         itemMoverSeleccion.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateMoveFeatureMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateMoveFeatureMode();
             }
         });
 
         JMenuItem itemCortarGeometria = createItem("Cortar geometría", AppIcons.cutIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_K, menuMask));
         itemCortarGeometria.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateCutFeatureMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateCutFeatureMode();
             }
         });
 
         JMenuItem itemUnirVertices = createItem("Unir vértices", AppIcons.joinVerticesIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_U, menuMask | InputEvent.SHIFT_DOWN_MASK));
         itemUnirVertices.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateJoinVerticesMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateJoinVerticesMode();
             }
         });
 
         JMenuItem itemGuardarEdicion = createItem("Guardar cambios de edición", AppIcons.saveIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_G, menuMask));
         itemGuardarEdicion.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.saveFeatureEditChanges();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().saveFeatureEditChanges();
             }
         });
 
         JMenuItem itemTerminarEdicion = createItem("Terminar edición", AppIcons.finishIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK));
         itemTerminarEdicion.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.finishFeatureEdit();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().finishFeatureEdit();
             }
         });
 
         JMenuItem itemCancelarEdicion = createItem("Cancelar edición", AppIcons.cancelIcon());
         itemCancelarEdicion.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.cancelFeatureEdit();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().cancelFeatureEdit();
             }
         });
 
         JMenuItem itemUnirElementos = createItem("Unir elementos seleccionados", AppIcons.saveIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_J, menuMask | InputEvent.SHIFT_DOWN_MASK));
         itemUnirElementos.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.mergeSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().mergeSelectedFeatures();
             }
         });
 
         JMenuItem itemExplotar = createItem("Explotar entidades seleccionadas", AppIcons.exportIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_E, menuMask | InputEvent.SHIFT_DOWN_MASK));
         itemExplotar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.explodeSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().explodeSelectedFeatures();
             }
         });
 
         JMenuItem itemContinuarLinea = createItem("Continuar linea", AppIcons.lineIcon());
         itemContinuarLinea.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableContinueLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableContinueLineMode();
             }
         });
 
         JMenuItem itemRectangulo = createItem("Rectangulo", AppIcons.rectangleIcon());
         itemRectangulo.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableDrawRectangleMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawRectangleMode();
             }
         });
 
         JMenuItem itemCirculo = createItem("Circulo", AppIcons.circleIcon());
         itemCirculo.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableDrawCircleMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawCircleMode();
             }
         });
 
         JMenuItem itemCirculo3P = createItem("Circulo por 3 puntos", AppIcons.circleThreePointsIcon());
         itemCirculo3P.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enableDrawCircleThreePointMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawCircleThreePointMode();
             }
         });
 
         JMenuItem itemExtenderLinea = createItem("Extender linea", AppIcons.extendLineIcon());
         itemExtenderLinea.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateExtendLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateExtendLineMode();
             }
         });
 
         JMenuItem itemAcortarLinea = createItem("Acortar linea", AppIcons.shortenLineIcon());
         itemAcortarLinea.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateShortenLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateShortenLineMode();
             }
         });
 
         JMenuItem itemParalela = createItem("Paralela / desplazamiento lateral", AppIcons.parallelIcon());
         itemParalela.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activateParallelLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activateParallelLineMode();
             }
         });
 
         JMenuItem itemPerpendicular = createItem("Perpendicular", AppIcons.perpendicularIcon());
         itemPerpendicular.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.activatePerpendicularLineMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().activatePerpendicularLineMode();
             }
         });
 
@@ -552,22 +552,22 @@ public class MainMenuBar extends JMenuBar {
         menuEdicion.add(itemCancelarEdicion);
 
         JMenuItem itemZoomMas = createItem("Zoom +", AppIcons.zoomInIcon());
-        itemZoomMas.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomIn());
+        itemZoomMas.addActionListener(e -> AppContext.mapPanel().zoomIn());
 
         JMenuItem itemZoomMenos = createItem("Zoom -", AppIcons.zoomOutIcon());
-        itemZoomMenos.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomOut());
+        itemZoomMenos.addActionListener(e -> AppContext.mapPanel().zoomOut());
 
         JMenuItem itemZoomCapa = createItem("Zoom a capa seleccionada", AppIcons.zoomLayerIcon());
-        itemZoomCapa.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomToSelectedLayerPublic());
+        itemZoomCapa.addActionListener(e -> AppContext.mapPanel().zoomToSelectedLayerPublic());
 
         JMenuItem itemZoomTodo = createItem("Zoom a todas las capas", AppIcons.zoomAllIcon());
-        itemZoomTodo.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomToAllLayers());
+        itemZoomTodo.addActionListener(e -> AppContext.mapPanel().zoomToAllLayers());
 
         JMenuItem itemVistaAnterior = createItem("Vista anterior", AppIcons.viewPreviousIcon());
-        itemVistaAnterior.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomPrevious());
+        itemVistaAnterior.addActionListener(e -> AppContext.mapPanel().zoomPrevious());
 
         JMenuItem itemVistaSiguiente = createItem("Vista siguiente", AppIcons.viewNextIcon());
-        itemVistaSiguiente.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomNext());
+        itemVistaSiguiente.addActionListener(e -> AppContext.mapPanel().zoomNext());
 
         menuVer.add(itemZoomMas);
         menuVer.add(itemZoomMenos);
@@ -579,47 +579,47 @@ public class MainMenuBar extends JMenuBar {
         menuVer.add(itemVistaSiguiente);
 
         JMenuItem itemMover = createItem("Mover", AppIcons.panIcon());
-        itemMover.addActionListener(e -> CatgisDesktopApp.mapPanel.enablePanMode());
+        itemMover.addActionListener(e -> AppContext.mapPanel().enablePanMode());
 
         JMenuItem itemIdentificar = createItem("Identificar", AppIcons.identifyIcon());
-        itemIdentificar.addActionListener(e -> CatgisDesktopApp.mapPanel.enableIdentifyMode());
+        itemIdentificar.addActionListener(e -> AppContext.mapPanel().enableIdentifyMode());
 
         JMenuItem itemBuscarCoord = createItem("Buscar por coordenadas", createSearchXYIcon());
         itemBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
 
         JMenuItem itemPunto = createItem("Dibujar punto", AppIcons.pointIcon());
-        itemPunto.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawPointMode());
+        itemPunto.addActionListener(e -> AppContext.mapPanel().enableDrawPointMode());
 
         JMenuItem itemMultiPunto = createItem("Dibujar multipunto", AppIcons.multiPointIcon());
-        itemMultiPunto.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawMultiPointMode());
+        itemMultiPunto.addActionListener(e -> AppContext.mapPanel().enableDrawMultiPointMode());
 
         JMenuItem itemLinea = createItem("Dibujar línea", AppIcons.lineIcon());
-        itemLinea.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawLineMode());
+        itemLinea.addActionListener(e -> AppContext.mapPanel().enableDrawLineMode());
 
         JMenuItem itemPoligono = createItem("Dibujar polígono", AppIcons.polygonIcon());
-        itemPoligono.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawPolygonMode());
+        itemPoligono.addActionListener(e -> AppContext.mapPanel().enableDrawPolygonMode());
 
         JMenuItem itemMedirDist = createItem("Medir distancia", AppIcons.distanceIcon());
-        itemMedirDist.addActionListener(e -> CatgisDesktopApp.mapPanel.enableMeasureDistanceMode());
+        itemMedirDist.addActionListener(e -> AppContext.mapPanel().enableMeasureDistanceMode());
 
         JMenuItem itemMedirArea = createItem("Medir área", AppIcons.areaIcon());
-        itemMedirArea.addActionListener(e -> CatgisDesktopApp.mapPanel.enableMeasureAreaMode());
+        itemMedirArea.addActionListener(e -> AppContext.mapPanel().enableMeasureAreaMode());
 
         JMenuItem itemTerminar = createItem("Terminar", AppIcons.finishIcon());
         itemTerminar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
-                CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
+            if (AppContext.mapPanel().isMeasurementActive()) {
+                AppContext.mapPanel().finishCurrentMeasurement();
             } else {
-                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
+                AppContext.mapPanel().closeCurrentDrawingSession();
             }
         });
 
         JMenuItem itemCancelar = createItem("Cancelar", AppIcons.cancelIcon());
         itemCancelar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
-                CatgisDesktopApp.mapPanel.cancelCurrentMeasurement();
+            if (AppContext.mapPanel().isMeasurementActive()) {
+                AppContext.mapPanel().cancelCurrentMeasurement();
             } else {
-                CatgisDesktopApp.mapPanel.cancelCurrentDrawing();
+                AppContext.mapPanel().cancelCurrentDrawing();
             }
         });
 
@@ -649,7 +649,7 @@ public class MainMenuBar extends JMenuBar {
         menuHerramientas.add(itemBuscarCoord);
         menuHerramientas.addSeparator();
         JMenuItem itemRectanguloDibujo = createItem("Dibujar rectangulo", AppIcons.rectangleIcon());
-        itemRectanguloDibujo.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawRectangleMode());
+        itemRectanguloDibujo.addActionListener(e -> AppContext.mapPanel().enableDrawRectangleMode());
 
         menuHerramientas.add(itemPunto);
         menuHerramientas.add(itemMultiPunto);
@@ -836,7 +836,7 @@ public class MainMenuBar extends JMenuBar {
         }
 
         java.util.List<org.geotools.api.feature.simple.SimpleFeature> features = new java.util.ArrayList<>();
-        ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = AppContext.mapPanel() != null ? AppContext.mapPanel().getShapefileData(layer) : null;
         if (data != null && data.getFeatureCollection() != null) {
             org.geotools.data.simple.SimpleFeatureCollection fc = data.getFeatureCollection();
             try (org.geotools.feature.FeatureIterator<org.geotools.api.feature.simple.SimpleFeature> it = fc.features()) {
@@ -901,8 +901,8 @@ public class MainMenuBar extends JMenuBar {
     }
 
     private Layer getPreferredVectorLayer() {
-        if (CatgisDesktopApp.mapPanel != null) {
-            Layer editingLayer = CatgisDesktopApp.mapPanel.getEditingLayerRef();
+        if (AppContext.mapPanel() != null) {
+            Layer editingLayer = AppContext.mapPanel().getEditingLayerRef();
             if (editingLayer != null) {
                 return editingLayer;
             }

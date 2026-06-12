@@ -273,7 +273,7 @@ public class LayoutMap implements LayoutElement {
             key = key * 31 + Double.doubleToLongBits(ownViewMinY);
             key = key * 31 + Double.doubleToLongBits(ownZoomFactor);
         } else {
-            ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+            ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
             if (map != null) {
                 key = key * 31 + Double.doubleToLongBits(map.getViewMinX());
                 key = key * 31 + Double.doubleToLongBits(map.getViewMinY());
@@ -393,7 +393,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private BufferedImage captureMapImage(int w, int h) {
-        ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+        ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
         if (map == null) return null;
         try {
             double vx, vy, zf;
@@ -468,7 +468,7 @@ public class LayoutMap implements LayoutElement {
     public double getOwnZoomFactor() { return ownZoomFactor; }
     public void setOwnZoomFactor(double v) { ownZoomFactor = v; }
     public void captureFromMainMap() {
-        ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+        ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
         if (map != null) {
             ownViewMinX = map.getViewMinX();
             ownViewMinY = map.getViewMinY();

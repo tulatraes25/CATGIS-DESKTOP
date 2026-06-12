@@ -52,7 +52,7 @@ class ProjectOperationalCrsRoundTripTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             DrainageExtractionService.GeneratedDrainageLayer drainage =
                     DrainageExtractionService.generateDrainage(
@@ -78,7 +78,7 @@ class ProjectOperationalCrsRoundTripTest {
             drainage.layer().setPath(drainagePath.toString());
             AppContext.project().addLayer(drainage.layer());
             CatgisDesktopApp.layersPanel.addLayer(drainage.layer());
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(drainage.layer(), projectedDrainage);
+            AppContext.mapPanel().addOrUpdateShapefileLayer(drainage.layer(), projectedDrainage);
 
             TerrainHydrologyAnalysisService.AnalysisResult analysis =
                     TerrainHydrologyAnalysisService.generateAnalysis(
@@ -104,7 +104,7 @@ class ProjectOperationalCrsRoundTripTest {
             TerrainHydrologyAnalysisService.GeneratedRasterLayer analysisRaster = analysis.rasterLayers().get(0);
             AppContext.project().addLayer(analysisRaster.layer());
             CatgisDesktopApp.layersPanel.addLayer(analysisRaster.layer());
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(analysisRaster.layer(), analysisRaster.data());
+            AppContext.mapPanel().addOrUpdateRasterLayer(analysisRaster.layer(), analysisRaster.data());
 
             TerrainHydrologyAnalysisService.GeneratedVectorLayer basins = analysis.vectorLayers().stream()
                     .filter(layer -> "basins".equalsIgnoreCase(layer.operation()))
@@ -124,7 +124,7 @@ class ProjectOperationalCrsRoundTripTest {
             basins.layer().setPath(basinsPath.toString());
             AppContext.project().addLayer(basins.layer());
             CatgisDesktopApp.layersPanel.addLayer(basins.layer());
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(basins.layer(), projectedBasins);
+            AppContext.mapPanel().addOrUpdateShapefileLayer(basins.layer(), projectedBasins);
 
             assertTrue(SaveProjectAction.saveProjectToFile(projectFile.toFile(), false));
         });
@@ -150,12 +150,12 @@ class ProjectOperationalCrsRoundTripTest {
             assertEquals("EPSG:22182", basinLayer.getSourceCRS());
             assertEquals("EPSG:22182", analysisRaster.getSourceCRS());
 
-            LocalRasterData demData = CatgisDesktopApp.mapPanel.getRasterData(demLayer);
+            LocalRasterData demData = AppContext.mapPanel().getRasterData(demLayer);
             assertNotNull(demData);
             assertEquals("EPSG:22182", demData.getDisplayCRS());
-            assertNotNull(CatgisDesktopApp.mapPanel.getRasterData(analysisRaster));
-            assertNotNull(CatgisDesktopApp.mapPanel.getShapefileData(drainageLayer));
-            assertNotNull(CatgisDesktopApp.mapPanel.getShapefileData(basinLayer));
+            assertNotNull(AppContext.mapPanel().getRasterData(analysisRaster));
+            assertNotNull(AppContext.mapPanel().getShapefileData(drainageLayer));
+            assertNotNull(AppContext.mapPanel().getShapefileData(basinLayer));
         });
     }
 

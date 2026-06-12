@@ -66,12 +66,12 @@ class ProjectBooleanRiskRoundTripTest {
             for (BooleanRiskService.GeneratedRasterLayer raster : result.rasterLayers()) {
                 AppContext.project().addLayer(raster.layer());
                 CatgisDesktopApp.layersPanel.addLayer(raster.layer());
-                CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(raster.layer(), raster.data());
+                AppContext.mapPanel().addOrUpdateRasterLayer(raster.layer(), raster.data());
             }
             if (result.vectorLayer() != null) {
                 AppContext.project().addLayer(result.vectorLayer().layer());
                 CatgisDesktopApp.layersPanel.addLayer(result.vectorLayer().layer());
-                CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
+                AppContext.mapPanel().addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
             }
 
             assertTrue(SaveProjectAction.saveProjectToFile(projectFile.toFile(), false));
@@ -98,10 +98,10 @@ class ProjectBooleanRiskRoundTripTest {
             assertEquals("EPSG:22182", riskRaster.getSourceCRS());
             assertEquals("EPSG:22182", riskVector.getSourceCRS());
 
-            LocalRasterData slopeMaskData = CatgisDesktopApp.mapPanel.getRasterData(slopeMask);
-            LocalRasterData soilMaskData = CatgisDesktopApp.mapPanel.getRasterData(soilMask);
-            LocalRasterData riskRasterData = CatgisDesktopApp.mapPanel.getRasterData(riskRaster);
-            ShapefileData riskVectorData = CatgisDesktopApp.mapPanel.getShapefileData(riskVector);
+            LocalRasterData slopeMaskData = AppContext.mapPanel().getRasterData(slopeMask);
+            LocalRasterData soilMaskData = AppContext.mapPanel().getRasterData(soilMask);
+            LocalRasterData riskRasterData = AppContext.mapPanel().getRasterData(riskRaster);
+            ShapefileData riskVectorData = AppContext.mapPanel().getShapefileData(riskVector);
 
             assertNotNull(slopeMaskData);
             assertNotNull(soilMaskData);
@@ -137,7 +137,7 @@ class ProjectBooleanRiskRoundTripTest {
         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
-        CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
+        AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
         return layer;
     }
 

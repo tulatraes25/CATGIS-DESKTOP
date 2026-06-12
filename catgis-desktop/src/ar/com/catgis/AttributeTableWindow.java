@@ -433,7 +433,7 @@ public class AttributeTableWindow extends JFrame {
     }
 
     private void syncSelectionToMap() {
-        if (CatgisDesktopApp.mapPanel == null || layer == null || data == null) {
+        if (AppContext.mapPanel() == null || layer == null || data == null) {
             return;
         }
 
@@ -448,7 +448,7 @@ public class AttributeTableWindow extends JFrame {
             }
         }
 
-        CatgisDesktopApp.mapPanel.syncSelectionFromAttributeTable(layer, featureIds);
+        AppContext.mapPanel().syncSelectionFromAttributeTable(layer, featureIds);
     }
 
     List<Integer> getEditableColumnIndexes() {
@@ -487,9 +487,9 @@ public class AttributeTableWindow extends JFrame {
         rawColumnNames.addAll(VectorAttributeSupport.resolveVisibleAttributeNames(layer, rebuilt));
         rebuildVisibleColumns();
 
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, rebuilt);
-            CatgisDesktopApp.mapPanel.refreshMap();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, rebuilt);
+            AppContext.mapPanel().refreshMap();
         }
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.refreshLayerList();
@@ -996,8 +996,8 @@ public class AttributeTableWindow extends JFrame {
 
         JMenuItem copyToEditingItem = new JMenuItem("Copiar y pegar en capa en edicion", AppIcons.attrCopyIcon());
         boolean canCopyToEditing = selectedCount > 0
-                && CatgisDesktopApp.mapPanel != null
-                && CatgisDesktopApp.mapPanel.canCopySelectedFeaturesFromLayerToEditingLayer(layer);
+                && AppContext.mapPanel() != null
+                && AppContext.mapPanel().canCopySelectedFeaturesFromLayerToEditingLayer(layer);
         copyToEditingItem.setEnabled(canCopyToEditing);
         copyToEditingItem.addActionListener(ev -> copySelectedRowsToEditingLayer());
         popup.add(copyToEditingItem);
@@ -1078,14 +1078,14 @@ public class AttributeTableWindow extends JFrame {
     }
 
     private void copySelectedRowsToEditingLayer() {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             return;
         }
         syncSelectionToMap();
-        boolean copied = CatgisDesktopApp.mapPanel.copySelectedFeaturesFromLayerToEditingLayer(layer);
+        boolean copied = AppContext.mapPanel().copySelectedFeaturesFromLayerToEditingLayer(layer);
         if (copied) {
             statusLabel.setText("Seleccion copiada a la capa en edicion.");
-            AttributeTableWindow editingWindow = OpenAttributeTableAction.getOpenWindow(CatgisDesktopApp.mapPanel.getEditingLayerRef());
+            AttributeTableWindow editingWindow = OpenAttributeTableAction.getOpenWindow(AppContext.mapPanel().getEditingLayerRef());
             if (editingWindow != null && editingWindow != this) {
                 editingWindow.reloadFromFeatures();
             }
@@ -1152,8 +1152,8 @@ public class AttributeTableWindow extends JFrame {
                 }
             }
 
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.refreshMap();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().refreshMap();
             }
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.repaintLayers();

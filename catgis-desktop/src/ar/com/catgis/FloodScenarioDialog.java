@@ -334,9 +334,9 @@ public class FloodScenarioDialog extends JDialog {
                 AppContext.addLayer(result.layer());
                 AppContext.selectLayer(result.layer());
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(result.layer(), result.data());
-                CatgisDesktopApp.mapPanel.showOpenedFile(result.layer().getName());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateRasterLayer(result.layer(), result.data());
+                AppContext.mapPanel().showOpenedFile(result.layer().getName());
             }
             addedLayers.add(result.layer());
             lastResult = result;

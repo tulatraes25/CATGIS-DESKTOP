@@ -137,9 +137,9 @@ public class SaveProjectAction extends AbstractAction {
             }
 
             writer.write("VIEW|"
-                    + CatgisDesktopApp.mapPanel.getViewMinX() + "|"
-                    + CatgisDesktopApp.mapPanel.getViewMinY() + "|"
-                    + CatgisDesktopApp.mapPanel.getZoomFactor());
+                    + AppContext.mapPanel().getViewMinX() + "|"
+                    + AppContext.mapPanel().getViewMinY() + "|"
+                    + AppContext.mapPanel().getZoomFactor());
             writer.newLine();
 
             for (Layer layer : AppContext.project().getLayers()) {
@@ -395,7 +395,7 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     private static boolean persistVectorLayers(File projectFile, boolean showDialogs) {
-        if (AppContext.project() == null || CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.project() == null || AppContext.mapPanel() == null) {
             return true;
         }
 
@@ -403,7 +403,7 @@ public class SaveProjectAction extends AbstractAction {
             if (layer == null || layer instanceof RasterLayer || VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
                 continue;
             }
-            ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+            ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
             if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
                 continue;
             }

@@ -406,8 +406,8 @@ public class OpenFileAction extends AbstractAction {
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         AppContext.addLayer(layer);
-        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-        CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
+        AppContext.mapPanel().addOrUpdateShapefileLayer(layer, data);
+        AppContext.mapPanel().showOpenedFile(layer.getName());
     }
 
     private static void configureImportedLayerDefaults(Layer layer, ShapefileData data, String lowerName) {
@@ -551,10 +551,10 @@ public class OpenFileAction extends AbstractAction {
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.addLayer(layer);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
-            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+            AppContext.mapPanel().showOpenedFile(layer.getName());
+            AppContext.mapPanel().zoomToLayer(layer);
         }
         return layer;
     }
@@ -573,9 +573,9 @@ public class OpenFileAction extends AbstractAction {
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             AppContext.addLayer(layer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
-            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+            AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+            AppContext.mapPanel().showOpenedFile(layer.getName());
+            AppContext.mapPanel().zoomToLayer(layer);
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage(
                         (demMode ? I18n.t("DEM local agregado: ") : "Raster agregado en vista rapida: ") + layer.getName()

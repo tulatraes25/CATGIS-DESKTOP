@@ -60,12 +60,12 @@ public class EditingToolsWindow extends JDialog {
     }
 
     private static Layer getEditingLayer() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         return map != null ? map.getEditingLayerRef() : null;
     }
 
     private static boolean hasUnsavedChanges() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         return map != null && map.canUndoFeatureEdit();
     }
 
@@ -97,7 +97,7 @@ public class EditingToolsWindow extends JDialog {
 
         JPanel tools = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         tools.setOpaque(false);
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
 
         addGroup(tools, "Seleccion",
                 btn("Seleccionar", AppIcons.selectIcon(), () -> { if (map != null) map.enableSelectMode(); }),
@@ -194,7 +194,7 @@ public class EditingToolsWindow extends JDialog {
     }
 
     public void doSaveAndClose() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         Layer layer = getEditingLayer();
         String layerName = layer != null ? layer.getName() : "desconocida";
 
@@ -202,8 +202,8 @@ public class EditingToolsWindow extends JDialog {
             map.finishFeatureEdit();
         }
         hideIfOpen();
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.enablePanMode();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().enablePanMode();
         }
         updateStatusBar("Edicion guardada: " + layerName);
     }
@@ -225,7 +225,7 @@ public class EditingToolsWindow extends JDialog {
             }
         }
 
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         if (map != null) {
             map.cancelFeatureEdit();
             map.enablePanMode();
@@ -261,7 +261,7 @@ public class EditingToolsWindow extends JDialog {
     }
 
     private void cancelWithoutPrompt() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         if (map != null) {
             map.cancelFeatureEdit();
             map.enablePanMode();

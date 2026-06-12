@@ -228,9 +228,9 @@ public class DrainageExtractionDialog extends JDialog {
             AppContext.selectLayer(result.layer());
         }
         ShapefileData projectedData = TopographyWorkflowSupport.projectVectorDataToCurrentProject(result.layer(), result.data());
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.layer(), projectedData);
-            CatgisDesktopApp.mapPanel.showOpenedFile(result.layer().getName());
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(result.layer(), projectedData);
+            AppContext.mapPanel().showOpenedFile(result.layer().getName());
         }
         result.layer().setFeatureCount(projectedData != null ? projectedData.getFeatureCount() : result.layer().getFeatureCount());
         TopographyWorkflowSupport.placeLayersAtFront(List.of(result.layer()));

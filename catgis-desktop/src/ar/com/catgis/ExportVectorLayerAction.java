@@ -73,7 +73,7 @@ public class ExportVectorLayerAction {
             return;
         }
 
-        ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+        ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
         if (!hasExportableVectorData(data)) {
             JOptionPane.showMessageDialog(null, "La capa no tiene datos disponibles para exportar.");
             return;
@@ -249,11 +249,11 @@ public class ExportVectorLayerAction {
     }
 
     public static boolean saveLayerToCurrentPath(Layer layer, Component parent, boolean showSuccessMessage) {
-        if (layer == null || layer.getPath() == null || layer.getPath().isBlank() || CatgisDesktopApp.mapPanel == null) {
+        if (layer == null || layer.getPath() == null || layer.getPath().isBlank() || AppContext.mapPanel() == null) {
             return false;
         }
 
-        ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+        ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
         if (!hasExportableVectorData(data)) {
             return false;
         }
@@ -353,9 +353,9 @@ public class ExportVectorLayerAction {
                     if (CatgisDesktopApp.layersPanel != null) {
                         AppContext.addLayer(resultLayer);
                     }
-                    if (CatgisDesktopApp.mapPanel != null) {
-                        CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(resultLayer, reloaded);
-                        CatgisDesktopApp.mapPanel.showOpenedFile(resultLayer.getName());
+                    if (AppContext.mapPanel() != null) {
+                        AppContext.mapPanel().addOrUpdateShapefileLayer(resultLayer, reloaded);
+                        AppContext.mapPanel().showOpenedFile(resultLayer.getName());
                     }
                 } else {
                     OpenFileAction.openSelectedFile(file, option, parent);
@@ -1622,9 +1622,9 @@ public class ExportVectorLayerAction {
             layer.setName(stripExtension(file.getName()));
         }
 
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, reloaded);
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, reloaded);
+            AppContext.mapPanel().repaint();
         }
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.refreshLayerList();

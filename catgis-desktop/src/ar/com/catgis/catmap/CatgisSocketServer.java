@@ -136,7 +136,7 @@ public final class CatgisSocketServer {
         sb.append("]");
 
         // Extent
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         if (map != null) {
             sb.append(",\"extent\":{");
             sb.append("\"minX\":").append(map.getViewMinX());
@@ -173,7 +173,7 @@ public final class CatgisSocketServer {
     }
 
     private static String getExtent() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         if (map == null) return "{\"error\":\"no map panel\"}";
 
         return "{\"extent\":{"

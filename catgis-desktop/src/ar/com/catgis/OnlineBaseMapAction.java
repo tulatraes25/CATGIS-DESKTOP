@@ -43,12 +43,12 @@ public final class OnlineBaseMapAction {
                 AppContext.selectLayer(existing);
                 AppContext.refreshLayerList();
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateOnlineTileLayer(existing);
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateOnlineTileLayer(existing);
                 if (hasNoProjectDataLayers()) {
-                    CatgisDesktopApp.mapPanel.zoomToLayer(existing);
+                    AppContext.mapPanel().zoomToLayer(existing);
                 } else {
-                    CatgisDesktopApp.mapPanel.refreshMap();
+                    AppContext.mapPanel().refreshMap();
                 }
             }
             if (CatgisDesktopApp.statusBar != null) {
@@ -65,10 +65,10 @@ public final class OnlineBaseMapAction {
             AppContext.addLayer(layer);
             AppContext.selectLayer(layer);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateOnlineTileLayer(layer);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateOnlineTileLayer(layer);
             if (hasNoProjectDataLayers()) {
-                CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+                AppContext.mapPanel().zoomToLayer(layer);
             }
         }
         CatgisDesktopApp.markProjectDirty();

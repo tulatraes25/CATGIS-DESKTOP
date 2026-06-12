@@ -171,8 +171,8 @@ public class LoadProjectAction extends AbstractAction {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.clearLayers();
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.clearAllLayers();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().clearAllLayers();
             }
 
             AppContext.setCurrentProject(loadedProject);
@@ -184,7 +184,7 @@ public class LoadProjectAction extends AbstractAction {
             }
 
             TopographyWorkflowSupport.normalizeTopographyOverlayOrder();
-            CatgisDesktopApp.mapPanel.refreshLayerVisibility();
+            AppContext.mapPanel().refreshLayerVisibility();
             AppContext.refreshLayerList();
             CatgisDesktopApp.markProjectClean();
 
@@ -194,13 +194,13 @@ public class LoadProjectAction extends AbstractAction {
             double finalSavedZoomFactor = savedZoomFactor;
 
             SwingUtilities.invokeLater(() -> {
-                CatgisDesktopApp.mapPanel.restoreViewOrReset(
+                AppContext.mapPanel().restoreViewOrReset(
                         finalSavedViewMinX,
                         finalSavedViewMinY,
                         finalSavedZoomFactor,
                         finalViewLoaded
                 );
-                CatgisDesktopApp.mapPanel.repaint();
+                AppContext.mapPanel().repaint();
             });
 
             if (CatgisDesktopApp.statusBar != null) {
@@ -231,11 +231,11 @@ public class LoadProjectAction extends AbstractAction {
         }
 
         if (layer instanceof OnlineTileLayer) {
-            CatgisDesktopApp.mapPanel.addOrUpdateOnlineTileLayer((OnlineTileLayer) layer);
+            AppContext.mapPanel().addOrUpdateOnlineTileLayer((OnlineTileLayer) layer);
             return;
         }
         if (layer instanceof OnlineWmsLayer) {
-            CatgisDesktopApp.mapPanel.addOrUpdateOnlineWmsLayer((OnlineWmsLayer) layer);
+            AppContext.mapPanel().addOrUpdateOnlineWmsLayer((OnlineWmsLayer) layer);
             return;
         }
         try {
@@ -280,7 +280,7 @@ public class LoadProjectAction extends AbstractAction {
                     if (savedCrs == null || savedCrs.isBlank()) {
                         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCRS));
                     }
-                    CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
+                    AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
                 }
                 return;
             }

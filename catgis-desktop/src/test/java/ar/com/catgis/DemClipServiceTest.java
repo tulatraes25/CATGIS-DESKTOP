@@ -48,7 +48,7 @@ class DemClipServiceTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             Envelope sourceEnvelope = demData.getEnvelope();
             double width = sourceEnvelope.getWidth();

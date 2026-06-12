@@ -19,7 +19,7 @@ public class SaveMapViewAction extends AbstractAction {
     }
 
     public static void saveCurrentView() {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             JOptionPane.showMessageDialog(null, "No hay mapa disponible para exportar.");
             return;
         }
@@ -50,8 +50,8 @@ public class SaveMapViewAction extends AbstractAction {
         }
 
         try {
-            int width = Math.max(CatgisDesktopApp.mapPanel.getWidth(), 1200);
-            int height = Math.max(CatgisDesktopApp.mapPanel.getHeight(), 800);
+            int width = Math.max(AppContext.mapPanel().getWidth(), 1200);
+            int height = Math.max(AppContext.mapPanel().getHeight(), 800);
 
             BufferedImage image = new BufferedImage(width, height,
                     "jpg".equalsIgnoreCase(format) ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB);
@@ -61,7 +61,7 @@ public class SaveMapViewAction extends AbstractAction {
                 g2.setColor(Color.WHITE);
                 g2.fillRect(0, 0, width, height);
             }
-            CatgisDesktopApp.mapPanel.paint(g2);
+            AppContext.mapPanel().paint(g2);
             g2.dispose();
 
             ImageIO.write(image, format, file);

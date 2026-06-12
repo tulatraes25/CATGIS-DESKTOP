@@ -47,7 +47,7 @@ class ProjectOperationalCrs32719AlignmentTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:32719"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             DrainageExtractionService.GeneratedDrainageLayer drainage =
                     DrainageExtractionService.generateDrainage(

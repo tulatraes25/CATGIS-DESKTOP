@@ -367,7 +367,7 @@ public class UnifiedAnalysisDialog extends JDialog {
         double n = resultNorth;
         if (Math.abs(w) < 0.001 && Math.abs(n) < 0.001) {
             // No real georeferencing — use project view extent
-            var mp = CatgisDesktopApp.mapPanel;
+            var mp = AppContext.mapPanel();
             if (mp != null) {
                 w = mp.getViewMinX();
                 n = mp.getViewMinY();
@@ -394,9 +394,9 @@ public class UnifiedAnalysisDialog extends JDialog {
         if (AppContext.project() != null) {
             AppContext.project().addLayer(rasterLayer);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(rasterLayer, data);
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateRasterLayer(rasterLayer, data);
+            AppContext.mapPanel().repaint();
         }
 
         statusLabel.setText("Resultado agregado al mapa: " + name);

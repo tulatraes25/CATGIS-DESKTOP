@@ -50,7 +50,7 @@ class ProjectContourOperationalCrsRoundTripTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             ContourGenerationService.GeneratedContourLayer contours =
                     ContourGenerationService.generateContours(demLayer, 10d, 5, "Curvas 10m - DEM curvas 22182", true, false, null);
@@ -62,7 +62,7 @@ class ProjectContourOperationalCrsRoundTripTest {
             contours.layer().setFeatureCount(projectedContours.getFeatureCount());
             AppContext.project().addLayer(contours.layer());
             CatgisDesktopApp.layersPanel.addLayer(contours.layer());
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(contours.layer(), projectedContours);
+            AppContext.mapPanel().addOrUpdateShapefileLayer(contours.layer(), projectedContours);
 
             assertTrue(SaveProjectAction.saveProjectToFile(projectFile.toFile(), false));
         });
@@ -80,11 +80,11 @@ class ProjectContourOperationalCrsRoundTripTest {
             assertNotNull(contourLayer);
             assertEquals("EPSG:3857", demLayer.getSourceCRS());
             assertEquals("EPSG:22182", contourLayer.getSourceCRS());
-            LocalRasterData demData = CatgisDesktopApp.mapPanel.getRasterData(demLayer);
+            LocalRasterData demData = AppContext.mapPanel().getRasterData(demLayer);
             assertNotNull(demData);
             assertEquals("EPSG:22182", demData.getDisplayCRS());
 
-            ShapefileData contourData = CatgisDesktopApp.mapPanel.getShapefileData(contourLayer);
+            ShapefileData contourData = AppContext.mapPanel().getShapefileData(contourLayer);
             assertNotNull(contourData);
             assertNotNull(contourData.getSchema());
             assertTrue(contourData.getFeatureCount() > 0);

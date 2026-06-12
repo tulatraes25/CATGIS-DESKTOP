@@ -81,7 +81,7 @@ public class LayoutTemplateManager {
 
     private static String resolveType(ar.com.catgis.core.model.Layer l) {
         try {
-            ar.com.catgis.MapPanel mp = ar.com.catgis.CatgisDesktopApp.mapPanel;
+            ar.com.catgis.MapPanel mp = ar.com.catgis.AppContext.mapPanel();
             if (mp != null) {
                 ar.com.catgis.data.vector.ShapefileData d = mp.getShapefileData(l);
                 if (d != null) { String f = ar.com.catgis.data.vector.VectorLayerUtils.resolveGeometryFamily(d); if (f != null) return f; }

@@ -43,7 +43,7 @@ class ReleaseProjectRoundTripTest {
             AppContext.project().setProjectFile(projectFile.toFile());
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.layersPanel.addLayer(layer);
-            CatgisDesktopApp.mapPanel.showShapefile(layer, data);
+            AppContext.mapPanel().showShapefile(layer, data);
             assertTrue(SaveProjectAction.saveProjectToFile(projectFile.toFile(), false));
         });
 
@@ -57,7 +57,7 @@ class ReleaseProjectRoundTripTest {
             assertEquals("Pozos", loadedLayer.getName());
             assertTrue("EPSG:4326".equalsIgnoreCase(loadedLayer.getSourceCRS())
                     || "CRS:84".equalsIgnoreCase(loadedLayer.getSourceCRS()));
-            assertNotNull(CatgisDesktopApp.mapPanel.getShapefileData(loadedLayer));
+            assertNotNull(AppContext.mapPanel().getShapefileData(loadedLayer));
         });
     }
 }

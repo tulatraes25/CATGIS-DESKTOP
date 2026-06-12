@@ -98,7 +98,7 @@ public class MapFrameRenderer {
         }
         if (hasOnlineOrRaster) {
             // Try to delegate to MapPanel (works in standalone and integrated mode)
-            ar.com.catgis.MapPanel map = ar.com.catgis.CatgisDesktopApp.mapPanel;
+            ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
             if (map != null) {
                 double vpWidth = Math.max(viewport.getWidth(), 1);
                 double zoomFactor = (double) widthPx / vpWidth;
@@ -534,7 +534,7 @@ public class MapFrameRenderer {
     }
 
     private ShapefileData getShapefileData(Layer layer) {
-        MapPanel mapPanel = CatgisDesktopApp.mapPanel;
+        MapPanel mapPanel = AppContext.mapPanel();
         ShapefileData data = mapPanel != null ? mapPanel.getShapefileData(layer) : null;
         if (data != null) {
             return data;

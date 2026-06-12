@@ -273,9 +273,9 @@ public class GeoPackageDataSourceDialog extends JDialog {
                             AppContext.addLayer(item.layer);
                             AppContext.selectLayer(item.layer);
                         }
-                        if (CatgisDesktopApp.mapPanel != null) {
-                            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(item.layer, item.data);
-                            CatgisDesktopApp.mapPanel.showOpenedFile(item.layer.getName());
+                        if (AppContext.mapPanel() != null) {
+                            AppContext.mapPanel().addOrUpdateShapefileLayer(item.layer, item.data);
+                            AppContext.mapPanel().showOpenedFile(item.layer.getName());
                         }
                     }
 

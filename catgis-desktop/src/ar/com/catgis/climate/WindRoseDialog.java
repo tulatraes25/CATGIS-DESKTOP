@@ -33,7 +33,7 @@ public class WindRoseDialog extends JDialog {
 
     public WindRoseDialog(Window owner) {
         super(owner, "Rosa de los vientos", ModalityType.APPLICATION_MODAL);
-        this.mapPanel = CatgisDesktopApp.mapPanel;
+        this.mapPanel = AppContext.mapPanel();
         this.roseRenderer = new WindRoseRenderer();
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));

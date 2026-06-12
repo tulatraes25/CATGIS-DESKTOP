@@ -978,10 +978,10 @@ public class CRSSelectorDialog extends JDialog {
     }
 
     private double[] resolveCurrentProjectMarker() {
-        if (AppContext.project() == null || CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.project() == null || AppContext.mapPanel() == null) {
             return null;
         }
-        var envelope = CatgisDesktopApp.mapPanel.getCurrentViewEnvelope();
+        var envelope = AppContext.mapPanel().getCurrentViewEnvelope();
         if (envelope == null || envelope.isNull()) {
             return null;
         }

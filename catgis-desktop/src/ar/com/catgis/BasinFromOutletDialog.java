@@ -245,14 +245,14 @@ public class BasinFromOutletDialog extends JDialog {
     }
 
     private void loadSelectedPoint(boolean showWarning) {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             if (showWarning) {
                 JOptionPane.showMessageDialog(this, I18n.t("No hay mapa activo para leer la seleccion actual."));
             }
             return;
         }
-        SimpleFeature feature = CatgisDesktopApp.mapPanel.getSelectedFeatureRef();
-        Layer layer = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
+        SimpleFeature feature = AppContext.mapPanel().getSelectedFeatureRef();
+        Layer layer = AppContext.mapPanel().getSelectedLayerRef();
         Coordinate coordinate = extractRepresentativePoint(feature);
         if (coordinate == null) {
             if (showWarning) {
@@ -266,12 +266,12 @@ public class BasinFromOutletDialog extends JDialog {
     }
 
     private void capturePointOnMap() {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             JOptionPane.showMessageDialog(this, I18n.t("No hay mapa activo para capturar un point."));
             return;
         }
         setVisible(false);
-        CatgisDesktopApp.mapPanel.startPointCapture(new MapPanel.MapPointCaptureHandler() {
+        AppContext.mapPanel().startPointCapture(new MapPanel.MapPointCaptureHandler() {
             @Override
             public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
                 capturedCoordinate = coordinate != null ? new Coordinate(coordinate) : null;
@@ -349,8 +349,8 @@ public class BasinFromOutletDialog extends JDialog {
                 JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una capa puntual con uno o mas outlets."));
                 return;
             }
-            ShapefileData outletData = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getShapefileData(outletLayer)
+            ShapefileData outletData = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getShapefileData(outletLayer)
                     : null;
             if (outletData == null) {
                 outletData = VectorLayerUtils.ensureVectorData(outletLayer);
@@ -465,8 +465,8 @@ public class BasinFromOutletDialog extends JDialog {
             }
             ShapefileData projected = TopographyWorkflowSupport.projectVectorDataToCurrentProject(generated.layer(), generated.data());
             persistGeneratedLayerIfNeeded(generated.layer(), projected);
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(generated.layer(), projected);
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateShapefileLayer(generated.layer(), projected);
             }
             generated.layer().setFeatureCount(projected != null ? projected.getFeatureCount() : generated.layer().getFeatureCount());
             desiredFrontOrder.add(generated.layer());
@@ -477,8 +477,8 @@ public class BasinFromOutletDialog extends JDialog {
         if (lastAdded != null && CatgisDesktopApp.layersPanel != null) {
             AppContext.selectLayer(lastAdded);
         }
-        if (lastAdded != null && CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.showOpenedFile(lastAdded.getName());
+        if (lastAdded != null && AppContext.mapPanel() != null) {
+            AppContext.mapPanel().showOpenedFile(lastAdded.getName());
         }
 
         CatgisDesktopApp.markProjectDirty();

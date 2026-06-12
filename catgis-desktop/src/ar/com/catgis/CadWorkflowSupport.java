@@ -32,9 +32,9 @@ public final class CadWorkflowSupport {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.refreshLayerList();
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.resetView();
-                CatgisDesktopApp.mapPanel.repaint();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().resetView();
+                AppContext.mapPanel().repaint();
             }
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage(
@@ -66,8 +66,8 @@ public final class CadWorkflowSupport {
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.refreshLayerList();
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().repaint();
         }
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(
@@ -81,15 +81,15 @@ public final class CadWorkflowSupport {
             JOptionPane.showMessageDialog(owner, "Selecciona una capa CAD (DWG/DXF) para moverla sobre el mapa.");
             return;
         }
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             JOptionPane.showMessageDialog(owner, "No se encontro la vista de mapa activa para arrastrar la referencia CAD.");
             return;
         }
-        if (CatgisDesktopApp.mapPanel.isCadPlacementDragActive()) {
+        if (AppContext.mapPanel().isCadPlacementDragActive()) {
             JOptionPane.showMessageDialog(owner, "Ya hay un arrastre CAD activo. Termina o cancela el flujo actual.");
             return;
         }
-        CatgisDesktopApp.mapPanel.startCadPlacementDrag(
+        AppContext.mapPanel().startCadPlacementDrag(
                 layer,
                 new MapPanel.CadPlacementDragHandler() {
                     @Override
@@ -100,8 +100,8 @@ public final class CadWorkflowSupport {
                         if (CatgisDesktopApp.layersPanel != null) {
                             AppContext.refreshLayerList();
                         }
-                        if (CatgisDesktopApp.mapPanel != null) {
-                            CatgisDesktopApp.mapPanel.repaint();
+                        if (AppContext.mapPanel() != null) {
+                            AppContext.mapPanel().repaint();
                         }
                         if (CatgisDesktopApp.statusBar != null) {
                             AppContext.setStatusMessage(
@@ -115,8 +115,8 @@ public final class CadWorkflowSupport {
                         if (CatgisDesktopApp.layersPanel != null) {
                             AppContext.refreshLayerList();
                         }
-                        if (CatgisDesktopApp.mapPanel != null) {
-                            CatgisDesktopApp.mapPanel.repaint();
+                        if (AppContext.mapPanel() != null) {
+                            AppContext.mapPanel().repaint();
                         }
                         if (CatgisDesktopApp.statusBar != null) {
                             AppContext.setStatusMessage("Arrastre CAD cancelado: " + layer.getName());

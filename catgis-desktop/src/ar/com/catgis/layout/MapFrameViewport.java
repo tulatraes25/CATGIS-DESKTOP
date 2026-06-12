@@ -101,7 +101,7 @@ public class MapFrameViewport {
     }
 
     public boolean fitFromMainMap() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         if (map != null) {
             Envelope env = map.getCurrentViewEnvelope();
             if (env != null && !env.isNull() && env.getWidth() > 0 && env.getHeight() > 0) {
@@ -220,7 +220,7 @@ public class MapFrameViewport {
         // For online tile layers, try to get the current view from MapPanel
         // instead of returning the entire world extent
         if (layer instanceof OnlineTileLayer) {
-            MapPanel map = CatgisDesktopApp.mapPanel;
+            MapPanel map = AppContext.mapPanel();
             if (map != null) {
                 Envelope viewEnv = map.getCurrentViewEnvelope();
                 if (viewEnv != null && !viewEnv.isNull() && viewEnv.getWidth() > 0 && viewEnv.getHeight() > 0) {

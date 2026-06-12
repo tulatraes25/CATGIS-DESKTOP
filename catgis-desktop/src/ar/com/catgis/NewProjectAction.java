@@ -29,10 +29,10 @@ public class NewProjectAction extends AbstractAction {
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.clearLayers();
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.clearAllLayers();
-            CatgisDesktopApp.mapPanel.resetView();
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().clearAllLayers();
+            AppContext.mapPanel().resetView();
+            AppContext.mapPanel().repaint();
         }
 
         AppContext.setCurrentProject(project);

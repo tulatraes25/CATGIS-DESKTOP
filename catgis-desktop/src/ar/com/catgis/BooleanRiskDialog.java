@@ -340,8 +340,8 @@ public class BooleanRiskDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.addLayer(result.vectorLayer().layer());
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
             }
             frontOrder.add(result.vectorLayer().layer());
             lastAdded = result.vectorLayer().layer();
@@ -352,8 +352,8 @@ public class BooleanRiskDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.addLayer(raster.layer());
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(raster.layer(), raster.data());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateRasterLayer(raster.layer(), raster.data());
             }
             frontOrder.add(raster.layer());
             lastAdded = raster.layer();
@@ -365,8 +365,8 @@ public class BooleanRiskDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.selectLayer(lastAdded);
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.showOpenedFile(lastAdded.getName());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().showOpenedFile(lastAdded.getName());
             }
         }
         if (CatgisDesktopApp.statusBar != null) {
@@ -727,11 +727,11 @@ public class BooleanRiskDialog extends JDialog {
     }
 
     private boolean layersIntersectInProjectView(Layer first, Layer second) {
-        if (first == null || second == null || CatgisDesktopApp.mapPanel == null) {
+        if (first == null || second == null || AppContext.mapPanel() == null) {
             return true;
         }
-        LocalRasterData firstData = CatgisDesktopApp.mapPanel.getRasterData(first);
-        LocalRasterData secondData = CatgisDesktopApp.mapPanel.getRasterData(second);
+        LocalRasterData firstData = AppContext.mapPanel().getRasterData(first);
+        LocalRasterData secondData = AppContext.mapPanel().getRasterData(second);
         if (firstData == null || secondData == null || firstData.getEnvelope() == null || secondData.getEnvelope() == null) {
             return true;
         }

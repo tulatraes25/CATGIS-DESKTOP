@@ -135,10 +135,10 @@ public class TablePointImportDialog extends JDialog {
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             AppContext.addLayer(layer);
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-            CatgisDesktopApp.mapPanel.resetView();
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, data);
+            AppContext.mapPanel().showOpenedFile(layer.getName());
+            AppContext.mapPanel().resetView();
+            AppContext.mapPanel().repaint();
 
             JOptionPane.showMessageDialog(this, "Tabla importada correctamente como capa de puntos.");
             dispose();

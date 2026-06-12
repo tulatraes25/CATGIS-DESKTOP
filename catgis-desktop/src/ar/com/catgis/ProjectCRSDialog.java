@@ -26,8 +26,8 @@ public class ProjectCRSDialog {
                 );
             }
 
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.reloadRasterLayersForProjectCRS();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().reloadRasterLayersForProjectCRS();
             }
 
             CatgisDesktopApp.updateWindowTitle();

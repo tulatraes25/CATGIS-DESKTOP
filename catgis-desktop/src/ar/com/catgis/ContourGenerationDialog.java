@@ -309,10 +309,10 @@ public class ContourGenerationDialog extends JDialog {
             AppContext.addLayer(result.layer());
             AppContext.selectLayer(result.layer());
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.layer(), projectedData);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(result.layer(), projectedData);
             TopographyWorkflowSupport.normalizeTopographyOverlayOrder();
-            CatgisDesktopApp.mapPanel.showOpenedFile(result.layer().getName());
+            AppContext.mapPanel().showOpenedFile(result.layer().getName());
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {

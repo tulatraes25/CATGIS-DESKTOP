@@ -91,9 +91,9 @@ public class PinManager {
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             AppContext.addLayer(layer);
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-                CatgisDesktopApp.mapPanel.repaint();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().showOpenedFile(layer.getName());
+                AppContext.mapPanel().repaint();
             }
 
             JOptionPane.showMessageDialog(panel, "Pines convertidos y guardados correctamente:\n" + exportedFile.getAbsolutePath());

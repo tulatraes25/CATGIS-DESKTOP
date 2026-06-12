@@ -49,7 +49,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
 
     public ClimateAreaAnalysisDialog(Window owner) {
         super(owner, "Análisis climático por áreas (AID/AII)", ModalityType.APPLICATION_MODAL);
-        this.mapPanel = CatgisDesktopApp.mapPanel;
+        this.mapPanel = AppContext.mapPanel();
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
         buildUI();

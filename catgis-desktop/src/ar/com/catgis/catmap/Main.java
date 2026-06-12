@@ -1447,7 +1447,7 @@ public class Main {
 
     private static String resolveGeometryTypeForLegend(Layer layer) {
         try {
-            ar.com.catgis.MapPanel map = CatgisDesktopApp.mapPanel;
+            ar.com.catgis.MapPanel map = AppContext.mapPanel();
             ar.com.catgis.data.vector.ShapefileData data = map != null ? map.getShapefileData(layer) : null;
             if (data == null) return "POLYGON";
             String upper = data.getFeatureCollection().getSchema()

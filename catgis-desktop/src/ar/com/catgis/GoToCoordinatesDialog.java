@@ -242,19 +242,19 @@ public class GoToCoordinatesDialog extends JDialog {
     }
 
     private void centerMap(double x, double y) {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             return;
         }
 
-        double zoom = CatgisDesktopApp.mapPanel.getZoomFactor();
-        int panelWidth = Math.max(CatgisDesktopApp.mapPanel.getWidth(), 800);
-        int panelHeight = Math.max(CatgisDesktopApp.mapPanel.getHeight(), 600);
+        double zoom = AppContext.mapPanel().getZoomFactor();
+        int panelWidth = Math.max(AppContext.mapPanel().getWidth(), 800);
+        int panelHeight = Math.max(AppContext.mapPanel().getHeight(), 600);
 
         double viewMinX = x - (panelWidth / (2.0 * zoom));
         double viewMinY = y - (panelHeight / (2.0 * zoom));
 
-        CatgisDesktopApp.mapPanel.restoreView(viewMinX, viewMinY, zoom);
-        CatgisDesktopApp.mapPanel.repaint();
+        AppContext.mapPanel().restoreView(viewMinX, viewMinY, zoom);
+        AppContext.mapPanel().repaint();
 
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(String.format("Mapa centrado en X: %.3f  Y: %.3f", x, y));

@@ -57,15 +57,15 @@ public class H3BinningDialog extends JDialog {
 
     private void execute() {
         try {
-            Layer layer = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getSelectedLayerRef()
+            Layer layer = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getSelectedLayerRef()
                     : null;
             if (layer == null) {
                 statusLabel.setText("No layer selected.");
                 return;
             }
 
-            ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+            ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
             if (data == null || data.getFeatures().isEmpty()) {
                 statusLabel.setText("Layer has no features.");
                 return;
@@ -116,7 +116,7 @@ public class H3BinningDialog extends JDialog {
 
             String resultName = layer.getName() + "_h3_r" + resolution;
             Layer resultLayer = new Layer(resultName, "", "SHAPEFILE");
-            CatgisDesktopApp.mapPanel.showShapefile(resultLayer, result);
+            AppContext.mapPanel().showShapefile(resultLayer, result);
 
             statusLabel.setText(featureCount + " hex bins created.");
             dispose();
@@ -127,7 +127,7 @@ public class H3BinningDialog extends JDialog {
 
     public static void open() {
         java.awt.Window owner = javax.swing.SwingUtilities.getWindowAncestor(
-                CatgisDesktopApp.mapPanel);
+                AppContext.mapPanel());
         if (owner instanceof Frame f) {
             new H3BinningDialog(f).setVisible(true);
         } else if (owner instanceof Dialog d) {

@@ -143,7 +143,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
     private static MapPanel ctxMapPanel() {
         MapPanel m = AppContext.get().getMapPanel();
-        return m != null ? m : CatgisDesktopApp.mapPanel;
+        return m != null ? m : AppContext.mapPanel();
     }
 
     private static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");

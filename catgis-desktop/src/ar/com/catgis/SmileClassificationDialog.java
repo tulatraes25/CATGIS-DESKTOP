@@ -120,8 +120,8 @@ public class SmileClassificationDialog extends JDialog {
 
     private void refreshLayers() {
         layerCombo.removeAllItems();
-        if (CatgisDesktopApp.mapPanel == null) return;
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        if (AppContext.mapPanel() == null) return;
+        for (Layer layer : AppContext.mapPanel().getRenderOrderLayers()) {
             ShapefileData data = ar.com.catgis.data.vector.VectorLayerUtils.ensureVectorData(layer);
             if (data != null && data.getFeatures() != null && !data.getFeatures().isEmpty()) {
                 layerCombo.addItem(layer.getName());
@@ -154,8 +154,8 @@ public class SmileClassificationDialog extends JDialog {
     }
 
     private Layer findLayer(String name) {
-        if (CatgisDesktopApp.mapPanel == null) return null;
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        if (AppContext.mapPanel() == null) return null;
+        for (Layer layer : AppContext.mapPanel().getRenderOrderLayers()) {
             if (layer.getName().equals(name)) return layer;
         }
         return null;

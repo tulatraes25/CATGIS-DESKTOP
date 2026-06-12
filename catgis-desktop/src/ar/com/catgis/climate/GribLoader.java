@@ -287,10 +287,10 @@ public final class GribLoader {
             AppContext.addLayer(layer);
             AppContext.selectLayer(layer);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
-            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+            AppContext.mapPanel().showOpenedFile(layer.getName());
+            AppContext.mapPanel().zoomToLayer(layer);
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {

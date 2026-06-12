@@ -68,7 +68,7 @@ class BooleanRiskServiceTest {
             assertTrue(andResult.intersectingSoilSamples() > 0);
             assertTrue(Double.isFinite(andResult.positiveAreaHectares()));
 
-            Envelope demEnvelope = CatgisDesktopApp.mapPanel.getRasterData(demLayer).getEnvelope();
+            Envelope demEnvelope = AppContext.mapPanel().getRasterData(demLayer).getEnvelope();
             for (BooleanRiskService.GeneratedRasterLayer generated : andResult.rasterLayers()) {
                 assertEquals("EPSG:22182", generated.layer().getSourceCRS());
                 assertEquals("EPSG:22182", generated.data().getDisplayCRS());
@@ -118,7 +118,7 @@ class BooleanRiskServiceTest {
         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
         AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
-        CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
+        AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
         return layer;
     }
 

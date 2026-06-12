@@ -354,7 +354,7 @@ public class AddWmsDialog extends JDialog {
         AppContext.project().addLayer(layer);
         AppContext.addLayer(layer);
         AppContext.selectLayer(layer);
-        CatgisDesktopApp.mapPanel.addOrUpdateOnlineWmsLayer(layer);
+        AppContext.mapPanel().addOrUpdateOnlineWmsLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage("Capa WMS agregada: " + layer.getName());

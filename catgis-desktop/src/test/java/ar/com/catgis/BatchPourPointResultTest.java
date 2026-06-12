@@ -52,7 +52,7 @@ class BatchPourPointResultTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             double[] left = CoordinateTransformSupport.transformPoint(-7664550, -3877600, "EPSG:3857", "EPSG:22182");
             double[] right = CoordinateTransformSupport.transformPoint(-7661500, -3877600, "EPSG:3857", "EPSG:22182");

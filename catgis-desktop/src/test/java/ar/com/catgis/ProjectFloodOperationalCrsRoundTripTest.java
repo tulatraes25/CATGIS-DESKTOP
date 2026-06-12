@@ -49,7 +49,7 @@ class ProjectFloodOperationalCrsRoundTripTest {
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
             AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
+            AppContext.mapPanel().addOrUpdateRasterLayer(demLayer, demData);
 
             FloodScenarioService.FloodScenarioResult floodResult = FloodScenarioService.generateScenario(
                     new FloodScenarioService.FloodScenarioRequest(
@@ -66,7 +66,7 @@ class ProjectFloodOperationalCrsRoundTripTest {
 
             AppContext.project().addLayer(floodResult.layer());
             CatgisDesktopApp.layersPanel.addLayer(floodResult.layer());
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(floodResult.layer(), floodResult.data());
+            AppContext.mapPanel().addOrUpdateRasterLayer(floodResult.layer(), floodResult.data());
 
             assertEquals("EPSG:22182", floodResult.layer().getSourceCRS());
             assertEquals("EPSG:22182", floodResult.data().getDisplayCRS());
@@ -84,7 +84,7 @@ class ProjectFloodOperationalCrsRoundTripTest {
             assertNotNull(floodLayer);
             assertEquals("EPSG:22182", floodLayer.getSourceCRS());
 
-            LocalRasterData floodData = CatgisDesktopApp.mapPanel.getRasterData(floodLayer);
+            LocalRasterData floodData = AppContext.mapPanel().getRasterData(floodLayer);
             assertNotNull(floodData);
             assertEquals("EPSG:22182", floodData.getDisplayCRS());
             assertTrue(floodLayer instanceof RasterLayer);

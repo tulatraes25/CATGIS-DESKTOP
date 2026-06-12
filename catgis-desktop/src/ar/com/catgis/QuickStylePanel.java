@@ -352,8 +352,8 @@ public class QuickStylePanel extends JPanel {
         if (labelFieldCombo != null) {
             labelFieldCombo.removeAllItems();
             labelFieldCombo.addItem("(ninguno)");
-            ShapefileData data = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+            ShapefileData data = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getShapefileData(layer) : null;
             if (data != null) {
                 for (String attr : data.getAttributeNames()) {
                     labelFieldCombo.addItem(attr);
@@ -401,7 +401,7 @@ public class QuickStylePanel extends JPanel {
         }
 
         // Refresh
-        CatgisDesktopApp.mapPanel.repaint();
+        AppContext.mapPanel().repaint();
         AppContext.refreshLayerList();
         previewLabel.repaint();
     }

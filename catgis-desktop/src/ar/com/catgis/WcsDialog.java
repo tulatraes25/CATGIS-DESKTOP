@@ -232,8 +232,8 @@ public class WcsDialog extends JDialog {
             AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             AppContext.addLayer(layer);
-            CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
-            CatgisDesktopApp.mapPanel.zoomToLayer(layer);
+            AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+            AppContext.mapPanel().zoomToLayer(layer);
             return true;
         } catch (Exception e) {
             CatgisLogger.warn("Failed to load WCS coverage as layer", e);

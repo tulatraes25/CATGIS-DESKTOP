@@ -492,8 +492,8 @@ public class AnalysisConsoleDialog extends JDialog {
             // Find layer for actual stats
             Layer layer = findLayerByName(name);
             if (layer != null) {
-                ShapefileData data = CatgisDesktopApp.mapPanel != null
-                        ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+                ShapefileData data = AppContext.mapPanel() != null
+                        ? AppContext.mapPanel().getShapefileData(layer) : null;
                 if (data != null) {
                     int count = data.getFeatureCollection() != null
                             ? data.getFeatureCollection().size() : 0;
@@ -546,8 +546,8 @@ public class AnalysisConsoleDialog extends JDialog {
                     Layer layer = findLayerByName(name);
                     if (layer != null) {
                         sb.append("  ").append(name).append(":\n");
-                        ShapefileData data = CatgisDesktopApp.mapPanel != null
-                                ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+                        ShapefileData data = AppContext.mapPanel() != null
+                                ? AppContext.mapPanel().getShapefileData(layer) : null;
                         if (data != null) {
                             List<String> attrs = data.getAttributeNames();
                             sb.append("    Atributos: ").append(attrs.size()).append("\n");
@@ -596,8 +596,8 @@ public class AnalysisConsoleDialog extends JDialog {
             sb.append("  Escalas: ").append((int)layer.getLabelMinScale()).append(" - ")
                     .append((int)layer.getLabelMaxScale()).append("\n");
 
-            ShapefileData data = CatgisDesktopApp.mapPanel != null
-                    ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+            ShapefileData data = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getShapefileData(layer) : null;
             if (data != null) {
                 try {
                     SimpleFeatureCollection fc = data.getFeatureCollection();

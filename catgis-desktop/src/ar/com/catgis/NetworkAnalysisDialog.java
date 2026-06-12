@@ -129,8 +129,8 @@ public class NetworkAnalysisDialog extends JDialog {
 
     private void refreshLayers() {
         layerCombo.removeAllItems();
-        if (CatgisDesktopApp.mapPanel == null) return;
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        if (AppContext.mapPanel() == null) return;
+        for (Layer layer : AppContext.mapPanel().getRenderOrderLayers()) {
             ShapefileData data = ar.com.catgis.data.vector.VectorLayerUtils.ensureVectorData(layer);
             if (data != null && data.getSchema() != null) {
                 String geomType = data.getSchema().getGeometryDescriptor() != null
@@ -161,7 +161,7 @@ public class NetworkAnalysisDialog extends JDialog {
 
         // Find the layer
         Layer targetLayer = null;
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        for (Layer layer : AppContext.mapPanel().getRenderOrderLayers()) {
             if (layer.getName().equals(layerName)) {
                 targetLayer = layer;
                 break;

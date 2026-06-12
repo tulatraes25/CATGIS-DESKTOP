@@ -127,8 +127,8 @@ public class SpectralIndexDialog extends JDialog {
 
     private void refreshRasterLayers() {
         rasterLayerCombo.removeAllItems();
-        if (CatgisDesktopApp.mapPanel == null) return;
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        if (AppContext.mapPanel() == null) return;
+        for (Layer layer : AppContext.mapPanel().getRenderOrderLayers()) {
             if (layer instanceof RasterLayer) {
                 rasterLayerCombo.addItem(layer.getName());
             }
@@ -153,7 +153,7 @@ public class SpectralIndexDialog extends JDialog {
 
         // Find the raster layer
         Layer targetLayer = null;
-        for (Layer layer : CatgisDesktopApp.mapPanel.getRenderOrderLayers()) {
+        for (Layer layer : AppContext.mapPanel().getRenderOrderLayers()) {
             if (layer.getName().equals(layerName) && layer instanceof RasterLayer) {
                 targetLayer = layer;
                 break;
@@ -162,7 +162,7 @@ public class SpectralIndexDialog extends JDialog {
         if (targetLayer == null) return;
 
         // Get raster data
-        LocalRasterData data = CatgisDesktopApp.mapPanel.getRasterData(targetLayer);
+        LocalRasterData data = AppContext.mapPanel().getRasterData(targetLayer);
         if (data == null) {
             JOptionPane.showMessageDialog(this, "No hay datos raster para esta capa.");
             return;
@@ -211,7 +211,7 @@ public class SpectralIndexDialog extends JDialog {
         Envelope envelope = data.getEnvelope();
         LocalRasterData resultData = new LocalRasterData(result, envelope, 1, true, data.getSourceCRS());
         Layer resultLayer = new RasterLayer(resultName, "");
-        CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(resultLayer, resultData);
+        AppContext.mapPanel().addOrUpdateRasterLayer(resultLayer, resultData);
 
         statusLabel.setText("Indice " + si.id() + " calculado y agregado como capa.");
         statusLabel.setForeground(new Color(0, 128, 0));

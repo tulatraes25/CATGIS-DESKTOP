@@ -282,10 +282,10 @@ public final class VectorLayerUtils {
             AppContext.addLayer(layer);
             AppContext.selectLayer(layer);
         }
-        if (CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
-            CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-            CatgisDesktopApp.mapPanel.repaint();
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, data);
+            AppContext.mapPanel().showOpenedFile(layer.getName());
+            AppContext.mapPanel().repaint();
         }
         return layer;
     }

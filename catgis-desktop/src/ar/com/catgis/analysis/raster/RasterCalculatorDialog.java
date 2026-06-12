@@ -187,7 +187,7 @@ public class RasterCalculatorDialog extends JDialog {
 
         for (Layer layer : project.getLayers()) {
             if (layer == null) continue;
-            LocalRasterData data = CatgisDesktopApp.mapPanel.getRasterData(layer);
+            LocalRasterData data = AppContext.mapPanel().getRasterData(layer);
             if (data != null) {
                 String name = layer.getName();
                 rasterMap.put(name, data);
@@ -246,7 +246,7 @@ public class RasterCalculatorDialog extends JDialog {
                         Layer layer = new Layer(name, "", "RASTER");
                         AppContext.project().addLayer(layer);
                         AppContext.addLayer(layer);
-                        CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, outData);
+                        AppContext.mapPanel().addOrUpdateRasterLayer(layer, outData);
                         CatgisDesktopApp.markProjectDirty();
                         JOptionPane.showMessageDialog(RasterCalculatorDialog.this,
                                 "Capa '" + name + "' creada correctamente.", "Exito",

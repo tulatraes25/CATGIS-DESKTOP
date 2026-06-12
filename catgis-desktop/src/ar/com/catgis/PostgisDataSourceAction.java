@@ -29,10 +29,10 @@ public final class PostgisDataSourceAction {
     }
 
     public static void savePostgisLayerChanges(PostgisLayer layer) {
-        if (layer == null || CatgisDesktopApp.mapPanel == null) {
+        if (layer == null || AppContext.mapPanel() == null) {
             return;
         }
-        ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+        ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
         if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
             javax.swing.JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), "La capa no tiene datos disponibles para guardar en PostGIS.");
             return;

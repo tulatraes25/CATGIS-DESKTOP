@@ -380,8 +380,8 @@ public class GraduatedSymbologyDialog extends JDialog {
 
     /** Convenience: open dialog and return whether user accepted. */
     public static boolean open(Component owner, Layer layer) {
-        ShapefileData data = CatgisDesktopApp.mapPanel != null
-            ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = AppContext.mapPanel() != null
+            ? AppContext.mapPanel().getShapefileData(layer) : null;
         if (data == null) {
             data = VectorLayerUtils.ensureVectorData(layer);
         }

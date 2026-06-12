@@ -131,9 +131,9 @@ public final class PostgisWriteService {
             layer.setGeometryTypeLabel(result.layer().getGeometryTypeLabel());
             layer.setFeatureCount(result.data().getFeatureCount());
             layer.setReadOnly(false);
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, result.data());
-                CatgisDesktopApp.mapPanel.refreshMap();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateShapefileLayer(layer, result.data());
+                AppContext.mapPanel().refreshMap();
             }
             CatgisDesktopApp.markProjectDirty();
             if (result != null && showSuccessMessage) {

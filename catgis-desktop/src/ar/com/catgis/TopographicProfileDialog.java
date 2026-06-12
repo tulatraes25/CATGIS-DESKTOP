@@ -258,7 +258,7 @@ public class TopographicProfileDialog extends JDialog {
     }
 
     private void startMapCapture() {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             JOptionPane.showMessageDialog(this, I18n.t("No hay un mapa activo para capturar el perfil."));
             return;
         }
@@ -272,7 +272,7 @@ public class TopographicProfileDialog extends JDialog {
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
         }
-        CatgisDesktopApp.mapPanel.startTopographicProfileCapture(new MapPanel.TopographicProfileCaptureHandler() {
+        AppContext.mapPanel().startTopographicProfileCapture(new MapPanel.TopographicProfileCaptureHandler() {
             @Override
             public void onLineCaptured(LineString line, String sourceCrs) {
                 profileLineGeometry = line;
@@ -300,8 +300,8 @@ public class TopographicProfileDialog extends JDialog {
     }
 
     private void cancelCaptureIfNeeded() {
-        if (captureActive && CatgisDesktopApp.mapPanel != null) {
-            CatgisDesktopApp.mapPanel.cancelTopographicProfileCapture();
+        if (captureActive && AppContext.mapPanel() != null) {
+            AppContext.mapPanel().cancelTopographicProfileCapture();
             captureActive = false;
         }
     }

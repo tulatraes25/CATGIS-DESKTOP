@@ -92,13 +92,13 @@ public class NewVectorLayerAction extends AbstractAction {
                 AppContext.selectLayer(layer);
             }
 
-            if (CatgisDesktopApp.mapPanel != null) {
-                if (CatgisDesktopApp.mapPanel.getShapefileData(layer) == null) {
-                    CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
+            if (AppContext.mapPanel() != null) {
+                if (AppContext.mapPanel().getShapefileData(layer) == null) {
+                    AppContext.mapPanel().addOrUpdateShapefileLayer(layer, data);
                 }
-                CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
-                CatgisDesktopApp.mapPanel.showOpenedFile(layer.getName());
-                CatgisDesktopApp.mapPanel.repaint();
+                AppContext.mapPanel().prepareLayerForEditing(layer);
+                AppContext.mapPanel().showOpenedFile(layer.getName());
+                AppContext.mapPanel().repaint();
             }
 
             if (CatgisDesktopApp.statusBar != null) {

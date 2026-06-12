@@ -306,8 +306,8 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.addLayer(raster.layer());
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(raster.layer(), raster.data());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateRasterLayer(raster.layer(), raster.data());
             }
             lastAdded = raster.layer();
         }
@@ -318,8 +318,8 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.addLayer(vector.layer());
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(vector.layer(), projectedData);
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().addOrUpdateShapefileLayer(vector.layer(), projectedData);
             }
             vector.layer().setFeatureCount(projectedData != null ? projectedData.getFeatureCount() : vector.layer().getFeatureCount());
             lastAdded = vector.layer();
@@ -337,8 +337,8 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.selectLayer(lastAdded);
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.showOpenedFile(lastAdded.getName());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().showOpenedFile(lastAdded.getName());
             }
         }
 

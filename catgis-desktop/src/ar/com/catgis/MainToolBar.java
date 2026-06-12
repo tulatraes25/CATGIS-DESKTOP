@@ -50,65 +50,65 @@ public class MainToolBar extends JToolBar {
         btnModulos.addActionListener(e -> ModuleManagerDialog.open());
 
         JButton btnZoomMas = createButton(I18n.t("Acercar"), AppIcons.zoomInIcon());
-        btnZoomMas.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomIn());
+        btnZoomMas.addActionListener(e -> AppContext.mapPanel().zoomIn());
 
         JButton btnZoomMenos = createButton(I18n.t("Alejar"), AppIcons.zoomOutIcon());
-        btnZoomMenos.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomOut());
+        btnZoomMenos.addActionListener(e -> AppContext.mapPanel().zoomOut());
 
         JButton btnZoomCapa = createButton(I18n.t("Zoom a capa seleccionada"), AppIcons.zoomLayerIcon());
-        btnZoomCapa.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomToSelectedLayerPublic());
+        btnZoomCapa.addActionListener(e -> AppContext.mapPanel().zoomToSelectedLayerPublic());
 
         JButton btnZoomTodo = createButton(I18n.t("Zoom a todas las capas"), AppIcons.zoomAllIcon());
-        btnZoomTodo.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomToAllLayers());
+        btnZoomTodo.addActionListener(e -> AppContext.mapPanel().zoomToAllLayers());
 
         JButton btnVistaAnterior = createButton(I18n.t("Vista anterior"), AppIcons.viewPreviousIcon());
-        btnVistaAnterior.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomPrevious());
+        btnVistaAnterior.addActionListener(e -> AppContext.mapPanel().zoomPrevious());
 
         JButton btnVistaSiguiente = createButton(I18n.t("Vista siguiente"), AppIcons.viewNextIcon());
-        btnVistaSiguiente.addActionListener(e -> CatgisDesktopApp.mapPanel.zoomNext());
+        btnVistaSiguiente.addActionListener(e -> AppContext.mapPanel().zoomNext());
 
         JButton btnMover = createButton(I18n.t("Desplazar mapa"), AppIcons.panIcon());
-        btnMover.addActionListener(e -> CatgisDesktopApp.mapPanel.enablePanMode());
+        btnMover.addActionListener(e -> AppContext.mapPanel().enablePanMode());
 
         JButton btnIdentificar = createButton(I18n.t("Consultar entidades"), AppIcons.identifyIcon());
-        btnIdentificar.addActionListener(e -> CatgisDesktopApp.mapPanel.enableIdentifyMode());
+        btnIdentificar.addActionListener(e -> AppContext.mapPanel().enableIdentifyMode());
 
         JButton btnBuscarCoord = createButton(I18n.t("Buscar por coordenadas"), createSearchXYIcon());
         btnBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
 
         JButton btnPunto = createButton(I18n.t("Dibujar puntos"), AppIcons.pointIcon());
-        btnPunto.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawPointMode());
+        btnPunto.addActionListener(e -> AppContext.mapPanel().enableDrawPointMode());
 
         JButton btnMultiPunto = createButton(I18n.t("Dibujar multipunto"), AppIcons.multiPointIcon());
-        btnMultiPunto.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawMultiPointMode());
+        btnMultiPunto.addActionListener(e -> AppContext.mapPanel().enableDrawMultiPointMode());
 
         JButton btnLinea = createButton(I18n.t("Dibujar lineas"), AppIcons.lineIcon());
-        btnLinea.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawLineMode());
+        btnLinea.addActionListener(e -> AppContext.mapPanel().enableDrawLineMode());
 
         JButton btnPoligono = createButton(I18n.t("Dibujar poligonos"), AppIcons.polygonIcon());
-        btnPoligono.addActionListener(e -> CatgisDesktopApp.mapPanel.enableDrawPolygonMode());
+        btnPoligono.addActionListener(e -> AppContext.mapPanel().enableDrawPolygonMode());
 
         JButton btnMedirDist = createButton(I18n.t("Medir distancia"), AppIcons.distanceIcon());
-        btnMedirDist.addActionListener(e -> CatgisDesktopApp.mapPanel.enableMeasureDistanceMode());
+        btnMedirDist.addActionListener(e -> AppContext.mapPanel().enableMeasureDistanceMode());
 
         JButton btnMedirArea = createButton(I18n.t("Medir area"), AppIcons.areaIcon());
-        btnMedirArea.addActionListener(e -> CatgisDesktopApp.mapPanel.enableMeasureAreaMode());
+        btnMedirArea.addActionListener(e -> AppContext.mapPanel().enableMeasureAreaMode());
 
         JButton btnTerminar = createButton(I18n.t("Finalizar dibujo o medicion"), AppIcons.finishIcon());
         btnTerminar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
-                CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
+            if (AppContext.mapPanel().isMeasurementActive()) {
+                AppContext.mapPanel().finishCurrentMeasurement();
             } else {
-                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
+                AppContext.mapPanel().closeCurrentDrawingSession();
             }
         });
 
         JButton btnCancelar = createButton(I18n.t("Cancelar dibujo o medicion"), AppIcons.cancelIcon());
         btnCancelar.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
-                CatgisDesktopApp.mapPanel.cancelCurrentMeasurement();
+            if (AppContext.mapPanel().isMeasurementActive()) {
+                AppContext.mapPanel().cancelCurrentMeasurement();
             } else {
-                CatgisDesktopApp.mapPanel.cancelCurrentDrawing();
+                AppContext.mapPanel().cancelCurrentDrawing();
             }
         });
 

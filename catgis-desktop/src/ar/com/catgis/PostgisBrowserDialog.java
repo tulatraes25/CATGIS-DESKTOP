@@ -338,7 +338,7 @@ public final class PostgisBrowserDialog extends JDialog {
                         }
                         AppContext.project().addLayer(it.layer);
                         if (CatgisDesktopApp.layersPanel != null) { AppContext.addLayer(it.layer); AppContext.selectLayer(it.layer); }
-                        if (CatgisDesktopApp.mapPanel != null) { CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(it.layer, it.data); CatgisDesktopApp.mapPanel.showOpenedFile(it.layer.getName()); }
+                        if (AppContext.mapPanel() != null) { AppContext.mapPanel().addOrUpdateShapefileLayer(it.layer, it.data); AppContext.mapPanel().showOpenedFile(it.layer.getName()); }
                     }
                     PostgisConnectionStore.saveLastConnection(info);
                     CatgisDesktopApp.markProjectDirty();

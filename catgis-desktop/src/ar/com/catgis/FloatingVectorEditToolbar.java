@@ -106,20 +106,20 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnMove = createToggleButton("Mover mapa", AppIcons.panIcon());
         btnMove.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.enablePanMode();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enablePanMode();
             }
             refreshState();
         });
 
         btnSelect = createToggleButton("Seleccionar elemento de la capa editable", AppIcons.selectIcon());
         btnSelect.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
+            if (AppContext.mapPanel() != null) {
                 Layer layer = getPreferredEditingLayer();
                 if (layer != null) {
-                    CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
                 } else {
-                    CatgisDesktopApp.mapPanel.enableSelectMode();
+                    AppContext.mapPanel().enableSelectMode();
                 }
             }
             refreshState();
@@ -127,22 +127,22 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnSnap = createSnapToggleButton();
         btnSnap.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.setSnapEnabled(btnSnap.isSelected());
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().setSnapEnabled(btnSnap.isSelected());
             }
             refreshState();
         });
 
         btnZoomSelected = createActionButton("Zoom al elemento seleccionado", AppIcons.zoomInIcon());
         btnZoomSelected.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                if (CatgisDesktopApp.mapPanel.getSelectedFeatureCount() > 1) {
-                    CatgisDesktopApp.mapPanel.zoomToFeatureSelection(
-                            CatgisDesktopApp.mapPanel.getSelectedLayerRef(),
-                            CatgisDesktopApp.mapPanel.getSelectedFeatureIds()
+            if (AppContext.mapPanel() != null) {
+                if (AppContext.mapPanel().getSelectedFeatureCount() > 1) {
+                    AppContext.mapPanel().zoomToFeatureSelection(
+                            AppContext.mapPanel().getSelectedLayerRef(),
+                            AppContext.mapPanel().getSelectedFeatureIds()
                     );
                 } else {
-                    CatgisDesktopApp.mapPanel.zoomToSelectedFeature();
+                    AppContext.mapPanel().zoomToSelectedFeature();
                 }
             }
             refreshState();
@@ -153,7 +153,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("copiar el elemento")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.copySelectedFeatures();
+            AppContext.mapPanel().copySelectedFeatures();
             refreshState();
         });
 
@@ -164,20 +164,20 @@ public class FloatingVectorEditToolbar extends JPanel {
             }
             Layer layer = getPreferredEditingLayer();
             if (layer != null) {
-                CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+                AppContext.mapPanel().prepareLayerForEditing(layer);
             }
-            CatgisDesktopApp.mapPanel.copySelectedFeaturesToEditingLayer();
+            AppContext.mapPanel().copySelectedFeaturesToEditingLayer();
             refreshState();
         });
 
         btnPaste = createActionButton("Pegar elementos en la capa en edicion", AppIcons.openIcon());
         btnPaste.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
+            if (AppContext.mapPanel() != null) {
                 Layer layer = getPreferredEditingLayer();
                 if (layer != null) {
-                    CatgisDesktopApp.mapPanel.prepareLayerForEditing(layer);
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
                 }
-                CatgisDesktopApp.mapPanel.pasteCopiedFeature();
+                AppContext.mapPanel().pasteCopiedFeature();
             }
             refreshState();
         });
@@ -187,14 +187,14 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("eliminar el elemento")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.deleteSelectedFeatures();
+            AppContext.mapPanel().deleteSelectedFeatures();
             refreshState();
         });
 
         btnClearSelection = createActionButton("Limpiar seleccion", AppIcons.attrCloseIcon());
         btnClearSelection.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.clearSelectedFeature();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().clearSelectedFeature();
             }
             refreshState();
         });
@@ -224,7 +224,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("continuar la linea")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.enableContinueLineMode();
+            AppContext.mapPanel().enableContinueLineMode();
             refreshState();
         });
 
@@ -233,7 +233,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("extender la linea")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.activateExtendLineMode();
+            AppContext.mapPanel().activateExtendLineMode();
             refreshState();
         });
 
@@ -242,7 +242,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("acortar la linea")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.activateShortenLineMode();
+            AppContext.mapPanel().activateShortenLineMode();
             refreshState();
         });
 
@@ -251,7 +251,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("crear una paralela")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.activateParallelLineMode();
+            AppContext.mapPanel().activateParallelLineMode();
             refreshState();
         });
 
@@ -260,7 +260,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("crear una perpendicular")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.activatePerpendicularLineMode();
+            AppContext.mapPanel().activatePerpendicularLineMode();
             refreshState();
         });
 
@@ -281,7 +281,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("mover los elementos")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.activateMoveFeatureMode();
+            AppContext.mapPanel().activateMoveFeatureMode();
             refreshState();
         });
 
@@ -311,7 +311,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("aumentar la superficie")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.increaseSelectedPolygonArea();
+            AppContext.mapPanel().increaseSelectedPolygonArea();
             refreshState();
         });
 
@@ -320,7 +320,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (!ensureFeatureSelection("disminuir la superficie")) {
                 return;
             }
-            CatgisDesktopApp.mapPanel.decreaseSelectedPolygonArea();
+            AppContext.mapPanel().decreaseSelectedPolygonArea();
             refreshState();
         });
 
@@ -329,32 +329,32 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnMerge = createActionButton("Unir elementos", AppIcons.saveIcon());
         btnMerge.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.mergeSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().mergeSelectedFeatures();
             }
             refreshState();
         });
 
         btnExplode = createActionButton("Explotar entidades seleccionadas", AppIcons.exportIcon());
         btnExplode.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.explodeSelectedFeatures();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().explodeSelectedFeatures();
             }
             refreshState();
         });
 
         btnUndo = createActionButton("Deshacer", AppIcons.undoIcon());
         btnUndo.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.undoFeatureEdit();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().undoFeatureEdit();
             }
             refreshState();
         });
 
         btnRedo = createActionButton("Rehacer", AppIcons.redoIcon());
         btnRedo.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.redoFeatureEdit();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().redoFeatureEdit();
             }
             refreshState();
         });
@@ -371,8 +371,8 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnSaveChanges = createActionButton("Salvar cambios", AppIcons.saveIcon());
         btnSaveChanges.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isFeatureEditMode()) {
-                CatgisDesktopApp.mapPanel.saveFeatureEditChanges();
+            if (AppContext.mapPanel() != null && AppContext.mapPanel().isFeatureEditMode()) {
+                AppContext.mapPanel().saveFeatureEditChanges();
             } else {
                 SaveProjectAction.saveProject();
             }
@@ -381,34 +381,34 @@ public class FloatingVectorEditToolbar extends JPanel {
 
         btnFinish = createActionButton("Terminar", AppIcons.finishIcon());
         btnFinish.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel == null) {
+            if (AppContext.mapPanel() == null) {
                 return;
             }
-            if (CatgisDesktopApp.mapPanel.isDrawingActive()) {
-                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
-            } else if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
-                CatgisDesktopApp.mapPanel.finishCurrentMeasurement();
-            } else if (CatgisDesktopApp.mapPanel.isFeatureEditMode() || CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
-                CatgisDesktopApp.mapPanel.finishFeatureEdit();
+            if (AppContext.mapPanel().isDrawingActive()) {
+                AppContext.mapPanel().closeCurrentDrawingSession();
+            } else if (AppContext.mapPanel().isMeasurementActive()) {
+                AppContext.mapPanel().finishCurrentMeasurement();
+            } else if (AppContext.mapPanel().isFeatureEditMode() || AppContext.mapPanel().getEditingLayerRef() != null) {
+                AppContext.mapPanel().finishFeatureEdit();
             } else {
-                CatgisDesktopApp.mapPanel.closeCurrentDrawingSession();
+                AppContext.mapPanel().closeCurrentDrawingSession();
             }
             refreshState();
         });
 
         btnCancel = createActionButton("Cancelar", AppIcons.cancelIcon());
         btnCancel.addActionListener(e -> {
-            if (CatgisDesktopApp.mapPanel == null) {
+            if (AppContext.mapPanel() == null) {
                 return;
             }
-            if (CatgisDesktopApp.mapPanel.isDrawingActive()) {
-                CatgisDesktopApp.mapPanel.cancelCurrentDrawing();
-            } else if (CatgisDesktopApp.mapPanel.isMeasurementActive()) {
-                CatgisDesktopApp.mapPanel.cancelCurrentMeasurement();
-            } else if (CatgisDesktopApp.mapPanel.isFeatureEditMode() || CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
-                CatgisDesktopApp.mapPanel.cancelFeatureEdit();
+            if (AppContext.mapPanel().isDrawingActive()) {
+                AppContext.mapPanel().cancelCurrentDrawing();
+            } else if (AppContext.mapPanel().isMeasurementActive()) {
+                AppContext.mapPanel().cancelCurrentMeasurement();
+            } else if (AppContext.mapPanel().isFeatureEditMode() || AppContext.mapPanel().getEditingLayerRef() != null) {
+                AppContext.mapPanel().cancelFeatureEdit();
             } else {
-                CatgisDesktopApp.mapPanel.cancelCurrentDrawing();
+                AppContext.mapPanel().cancelCurrentDrawing();
             }
             refreshState();
         });
@@ -502,7 +502,7 @@ public class FloatingVectorEditToolbar extends JPanel {
     }
 
     public void refreshState() {
-        MapPanel map = CatgisDesktopApp.mapPanel;
+        MapPanel map = AppContext.mapPanel();
         if (map == null) {
             return;
         }
@@ -671,8 +671,8 @@ public class FloatingVectorEditToolbar extends JPanel {
             return "";
         }
 
-        if (CatgisDesktopApp.mapPanel != null) {
-            ShapefileData data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+        if (AppContext.mapPanel() != null) {
+            ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
             String familyFromData = resolveGeometryFamily(data);
             if (!familyFromData.isEmpty()) {
                 return familyFromData;
@@ -758,46 +758,46 @@ public class FloatingVectorEditToolbar extends JPanel {
     }
 
     private void activateDrawMode(String mode) {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             return;
         }
 
         if ("POINT".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawPointMode();
+            AppContext.mapPanel().enableDrawPointMode();
         } else if ("MULTIPOINT".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawMultiPointMode();
+            AppContext.mapPanel().enableDrawMultiPointMode();
         } else if ("LINE".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawLineMode();
+            AppContext.mapPanel().enableDrawLineMode();
         } else if ("CIRCLE".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawCircleMode();
+            AppContext.mapPanel().enableDrawCircleMode();
         } else if ("CIRCLE_3P".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawCircleThreePointMode();
+            AppContext.mapPanel().enableDrawCircleThreePointMode();
         } else if ("RECTANGLE".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawRectangleMode();
+            AppContext.mapPanel().enableDrawRectangleMode();
         } else if ("POLYGON".equalsIgnoreCase(mode)) {
-            CatgisDesktopApp.mapPanel.enableDrawPolygonMode();
+            AppContext.mapPanel().enableDrawPolygonMode();
         }
 
         refreshState();
     }
 
     private Layer getPreferredEditingLayer() {
-        if (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getEditingLayerRef() != null) {
-            Layer editing = CatgisDesktopApp.mapPanel.getEditingLayerRef();
-            if (!CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(editing)) {
+        if (AppContext.mapPanel() != null && AppContext.mapPanel().getEditingLayerRef() != null) {
+            Layer editing = AppContext.mapPanel().getEditingLayerRef();
+            if (!AppContext.mapPanel().isReadOnlyVectorLayer(editing)) {
                 return editing;
             }
         }
-        if (CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.getSelectedLayerRef() != null) {
-            Layer selected = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
-            if (!CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(selected)) {
+        if (AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedLayerRef() != null) {
+            Layer selected = AppContext.mapPanel().getSelectedLayerRef();
+            if (!AppContext.mapPanel().isReadOnlyVectorLayer(selected)) {
                 return selected;
             }
         }
         if (CatgisDesktopApp.layersPanel != null) {
             Layer selected = AppContext.getSelectedLayer();
             if (selected != null && !(selected instanceof RasterLayer)
-                    && (CatgisDesktopApp.mapPanel == null || !CatgisDesktopApp.mapPanel.isReadOnlyVectorLayer(selected))) {
+                    && (AppContext.mapPanel() == null || !AppContext.mapPanel().isReadOnlyVectorLayer(selected))) {
                 return selected;
             }
         }
@@ -805,12 +805,12 @@ public class FloatingVectorEditToolbar extends JPanel {
     }
 
     private void activateMoveVertexMode() {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             return;
         }
 
-        Layer layer = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
-        SimpleFeature feature = CatgisDesktopApp.mapPanel.getSelectedFeatureRef();
+        Layer layer = AppContext.mapPanel().getSelectedLayerRef();
+        SimpleFeature feature = AppContext.mapPanel().getSelectedFeatureRef();
         if (layer == null || feature == null) {
             JOptionPane.showMessageDialog(
                     this,
@@ -822,8 +822,8 @@ public class FloatingVectorEditToolbar extends JPanel {
             return;
         }
 
-        CatgisDesktopApp.mapPanel.enableFeatureEdit(layer, feature);
-        CatgisDesktopApp.mapPanel.activateMoveVertexMode();
+        AppContext.mapPanel().enableFeatureEdit(layer, feature);
+        AppContext.mapPanel().activateMoveVertexMode();
         refreshState();
     }
 
@@ -831,7 +831,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         if (!ensureFeatureSelection("insertar un vertice")) {
             return;
         }
-        CatgisDesktopApp.mapPanel.activateAddVertexMode();
+        AppContext.mapPanel().activateAddVertexMode();
         refreshState();
     }
 
@@ -839,7 +839,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         if (!ensureFeatureSelection("borrar un vertice")) {
             return;
         }
-        CatgisDesktopApp.mapPanel.activateRemoveVertexMode();
+        AppContext.mapPanel().activateRemoveVertexMode();
         refreshState();
     }
 
@@ -847,7 +847,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         if (!ensureFeatureSelection("unir vertices")) {
             return;
         }
-        CatgisDesktopApp.mapPanel.activateJoinVerticesMode();
+        AppContext.mapPanel().activateJoinVerticesMode();
         refreshState();
     }
 
@@ -855,7 +855,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         if (!ensureFeatureSelection("cortar la geometria")) {
             return;
         }
-        CatgisDesktopApp.mapPanel.activateCutFeatureMode();
+        AppContext.mapPanel().activateCutFeatureMode();
         refreshState();
     }
 
@@ -863,7 +863,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         if (!ensureFeatureSelection("crear un agujero")) {
             return;
         }
-        CatgisDesktopApp.mapPanel.activateHoleMode();
+        AppContext.mapPanel().activateHoleMode();
         refreshState();
     }
 
@@ -871,20 +871,20 @@ public class FloatingVectorEditToolbar extends JPanel {
         if (!ensureFeatureSelection("generar un poligono adyacente")) {
             return;
         }
-        CatgisDesktopApp.mapPanel.activateAdjacentPolygonMode();
+        AppContext.mapPanel().activateAdjacentPolygonMode();
         refreshState();
     }
 
     private boolean ensureFeatureSelection(String actionName) {
-        if (CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.mapPanel() == null) {
             return false;
         }
-        Layer layer = CatgisDesktopApp.mapPanel.getSelectedLayerRef();
-        SimpleFeature feature = CatgisDesktopApp.mapPanel.getSelectedFeatureRef();
+        Layer layer = AppContext.mapPanel().getSelectedLayerRef();
+        SimpleFeature feature = AppContext.mapPanel().getSelectedFeatureRef();
         if (layer == null || feature == null) {
             Layer editingLayer = getPreferredEditingLayer();
             if (editingLayer != null) {
-                CatgisDesktopApp.mapPanel.prepareLayerForEditing(editingLayer);
+                AppContext.mapPanel().prepareLayerForEditing(editingLayer);
             }
             JOptionPane.showMessageDialog(
                     this,
@@ -895,7 +895,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             refreshState();
             return false;
         }
-        CatgisDesktopApp.mapPanel.enableFeatureEdit(layer, feature);
+        AppContext.mapPanel().enableFeatureEdit(layer, feature);
         return true;
     }
 
@@ -1046,7 +1046,7 @@ public class FloatingVectorEditToolbar extends JPanel {
                 }
             }
         });
-        button.setSelected(CatgisDesktopApp.mapPanel == null || CatgisDesktopApp.mapPanel.isSnapEnabled());
+        button.setSelected(AppContext.mapPanel() == null || AppContext.mapPanel().isSnapEnabled());
     }
 
     public static void triggerDrawPoint() { clickStaticBtn(CatgisDesktopApp.floatingVectorEditToolbar.btnPoint); }

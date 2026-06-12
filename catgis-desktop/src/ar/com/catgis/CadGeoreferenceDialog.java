@@ -257,7 +257,7 @@ public class CadGeoreferenceDialog extends JDialog {
     }
 
     private void startCadCapture(int row) {
-        if (!captureEnabled || CatgisDesktopApp.mapPanel == null || activeCaptureRow >= 0) {
+        if (!captureEnabled || AppContext.mapPanel() == null || activeCaptureRow >= 0) {
             return;
         }
         activeCaptureRow = row;
@@ -267,7 +267,7 @@ public class CadGeoreferenceDialog extends JDialog {
         String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar CAD de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
         String successMessage = "Georreferenciacion CAD: CAD P" + (row + 1) + " capturado.";
         String cancelMessage = "Georreferenciacion CAD: captura de CAD P" + (row + 1) + " cancelada.";
-        CatgisDesktopApp.mapPanel.startPointCapture(new MapPanel.MapPointCaptureHandler() {
+        AppContext.mapPanel().startPointCapture(new MapPanel.MapPointCaptureHandler() {
             @Override
             public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
                 if (finishing || coordinate == null) {
@@ -296,7 +296,7 @@ public class CadGeoreferenceDialog extends JDialog {
                 bringDialogToFront();
             }
         }, startMessage, successMessage, cancelMessage);
-        if (!CatgisDesktopApp.mapPanel.isPointCaptureActive()) {
+        if (!AppContext.mapPanel().isPointCaptureActive()) {
             activeCaptureRow = -1;
             activeCaptureType = CaptureType.NONE;
             captureSummaryLabel.setText("No se pudo iniciar la captura sobre el mapa. Revisa si hay otra herramienta activa.");
@@ -305,7 +305,7 @@ public class CadGeoreferenceDialog extends JDialog {
     }
 
     private void startDestinationCapture(int row) {
-        if (!captureEnabled || CatgisDesktopApp.mapPanel == null || activeCaptureRow >= 0) {
+        if (!captureEnabled || AppContext.mapPanel() == null || activeCaptureRow >= 0) {
             return;
         }
         if (textOf(fields[row][0]).isBlank() || textOf(fields[row][1]).isBlank()) {
@@ -320,7 +320,7 @@ public class CadGeoreferenceDialog extends JDialog {
         String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar destino de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
         String successMessage = "Georreferenciacion CAD: destino P" + (row + 1) + " capturado.";
         String cancelMessage = "Georreferenciacion CAD: captura de destino P" + (row + 1) + " cancelada.";
-        CatgisDesktopApp.mapPanel.startPointCapture(new MapPanel.MapPointCaptureHandler() {
+        AppContext.mapPanel().startPointCapture(new MapPanel.MapPointCaptureHandler() {
             @Override
             public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
                 if (finishing || coordinate == null) {
@@ -348,7 +348,7 @@ public class CadGeoreferenceDialog extends JDialog {
                 bringDialogToFront();
             }
         }, startMessage, successMessage, cancelMessage);
-        if (!CatgisDesktopApp.mapPanel.isPointCaptureActive()) {
+        if (!AppContext.mapPanel().isPointCaptureActive()) {
             activeCaptureRow = -1;
             activeCaptureType = CaptureType.NONE;
             captureSummaryLabel.setText("No se pudo iniciar la captura sobre el mapa. Revisa si hay otra herramienta activa.");
@@ -503,10 +503,10 @@ public class CadGeoreferenceDialog extends JDialog {
         }
         finishing = true;
         result = finalResult;
-        if (activeCaptureRow >= 0 && CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isPointCaptureActive()) {
+        if (activeCaptureRow >= 0 && AppContext.mapPanel() != null && AppContext.mapPanel().isPointCaptureActive()) {
             activeCaptureRow = -1;
             activeCaptureType = CaptureType.NONE;
-            CatgisDesktopApp.mapPanel.cancelPointCapture();
+            AppContext.mapPanel().cancelPointCapture();
         }
         if (resultHandler != null) {
             resultHandler.accept(finalResult);

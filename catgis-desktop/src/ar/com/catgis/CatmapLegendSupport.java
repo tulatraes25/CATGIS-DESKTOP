@@ -124,7 +124,7 @@ public final class CatmapLegendSupport {
                 default -> "VECTOR";
             };
         }
-        ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = AppContext.mapPanel() != null ? AppContext.mapPanel().getShapefileData(layer) : null;
         String family = VectorLayerUtils.resolveGeometryFamily(data);
         if (family != null && !family.isBlank()) {
             return family.toUpperCase();
@@ -147,7 +147,7 @@ public final class CatmapLegendSupport {
             return "GPX " + gpxLayer.getContentKind().getLabel();
         }
         String geometryFamily = VectorLayerUtils.resolveGeometryFamily(
-                CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null
+                AppContext.mapPanel() != null ? AppContext.mapPanel().getShapefileData(layer) : null
         );
         if ("POINT".equalsIgnoreCase(geometryFamily)) {
             return "Punto";

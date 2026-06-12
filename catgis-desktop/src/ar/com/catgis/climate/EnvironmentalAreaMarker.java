@@ -125,8 +125,8 @@ public final class EnvironmentalAreaMarker {
     private static boolean isPolygonLayer(Layer layer) {
         if (layer instanceof RasterLayer) return false;
         // Check if the shapefile data has polygons
-        if (CatgisDesktopApp.mapPanel != null) {
-            var data = CatgisDesktopApp.mapPanel.getShapefileData(layer);
+        if (AppContext.mapPanel() != null) {
+            var data = AppContext.mapPanel().getShapefileData(layer);
             if (data != null && data.getFeatures() != null && !data.getFeatures().isEmpty()) {
                 Object geom = data.getFeatures().get(0).getDefaultGeometry();
                 if (geom != null) {

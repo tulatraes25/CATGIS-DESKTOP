@@ -274,7 +274,7 @@ public class LayerPropertiesDialog extends JDialog {
         labelsVisibleCheck = new JCheckBox("Mostrar etiquetas", layer.isLabelsVisible());
 
         List<String> fields = null;
-        ShapefileData data = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getShapefileData(layer) : null;
+        ShapefileData data = AppContext.mapPanel() != null ? AppContext.mapPanel().getShapefileData(layer) : null;
         if (data != null) {
             fields = data.getAttributeNames();
         }
@@ -1052,7 +1052,7 @@ public class LayerPropertiesDialog extends JDialog {
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.refreshLayerList();
         }
-        if (CatgisDesktopApp.mapPanel != null) {
+        if (AppContext.mapPanel() != null) {
             if (CadLayerSupport.isCadLayer(layer)
                     && (!safeEquals(CRSDefinitions.normalizeCode(previousSourceCrs), CRSDefinitions.normalizeCode(layer.getSourceCRS()))
                     || Math.abs(previousCadOffsetX - layer.getCadOffsetX()) > 1e-9
@@ -1066,9 +1066,9 @@ public class LayerPropertiesDialog extends JDialog {
                     || Math.abs(previousCadGeorefM10 - layer.getCadGeorefM10()) > 1e-9
                     || Math.abs(previousCadGeorefM11 - layer.getCadGeorefM11()) > 1e-9
                     || Math.abs(previousCadGeorefM12 - layer.getCadGeorefM12()) > 1e-9)) {
-                CatgisDesktopApp.mapPanel.resetView();
+                AppContext.mapPanel().resetView();
             }
-            CatgisDesktopApp.mapPanel.repaint();
+            AppContext.mapPanel().repaint();
         }
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(I18n.format("Propiedades actualizadas: {0}", layer.getName()));
@@ -1277,8 +1277,8 @@ public class LayerPropertiesDialog extends JDialog {
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.refreshLayerList();
             }
-            if (CatgisDesktopApp.mapPanel != null) {
-                CatgisDesktopApp.mapPanel.repaint();
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().repaint();
             }
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage("Estilo SLD importado: " + layer.getName());
