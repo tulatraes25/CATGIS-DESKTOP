@@ -95,26 +95,36 @@ public final class ExternalToolService {
 
     /**
      * Find the WhiteboxTools executable.
+     * Returns an absolute path or null. Never returns a bare command name
+     * that would be resolved via PATH at execution time.
      */
     private static String findWhiteboxTools() {
-        // Check common locations
-        String[] candidates = {
-            "whitebox_tools",
-            "wbt",
-            TOOLS_DIR.resolve("whitebox_tools").toString(),
+        // 1. Check TOOLS_DIR for absolute paths
+        String[] localCandidates = {
             TOOLS_DIR.resolve("whitebox_tools.exe").toString(),
+            TOOLS_DIR.resolve("whitebox_tools").toString(),
             TOOLS_DIR.resolve("wbt.exe").toString()
         };
-
-        for (String candidate : candidates) {
-            if (isToolAvailable(candidate)) {
+        for (String candidate : localCandidates) {
+            if (new File(candidate).exists()) {
                 return candidate;
             }
         }
 
-        // Check PATH
+        // 2. Resolve via 'where', returning absolute path only if file exists
+        for (String exeName : new String[]{"whitebox_tools", "wbt"}) {
+            String resolved = resolveOnPath(exeName);
+            if (resolved != null) {
+                return resolved;
+            }
+        }
+
+        return null;
+    }
+
+    private static String resolveOnPath(String exeName) {
         try {
-            ProcessBuilder pb = new ProcessBuilder("where", "whitebox_tools");
+            ProcessBuilder pb = new ProcessBuilder("where", exeName);
             pb.redirectErrorStream(true);
             Process p = pb.start();
             if (p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0) {
@@ -123,11 +133,15 @@ public final class ExternalToolService {
                 reader.close();
                 p.destroyForcibly();
                 if (path != null && !path.isBlank()) {
-                    return path.trim();
+                    File file = new File(path.trim());
+                    if (file.exists()) {
+                        return file.getAbsolutePath();
+                    }
                 }
             }
-        } catch (Exception ignored) {}
-
+            p.destroyForcibly();
+        } catch (Exception ignored) {
+        }
         return null;
     }
 
