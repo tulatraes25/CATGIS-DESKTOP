@@ -151,7 +151,7 @@ public class MapPopupHandler {
         showItem.addActionListener(ev -> panel.showCoordinateDialog(x, y));
         popupMenu.add(showItem);
 
-        if (!panel.pins.isEmpty()) {
+        if (!panel.pinManager.getPins().isEmpty()) {
             popupMenu.addSeparator();
 
             JMenuItem convertPinsItem = new JMenuItem("Convertir pines en capa");
@@ -289,7 +289,7 @@ public class MapPopupHandler {
         });
         popupMenu.add(removePinItem);
 
-        if (!panel.pins.isEmpty()) {
+        if (!panel.pinManager.getPins().isEmpty()) {
             popupMenu.addSeparator();
 
             JMenuItem convertPinsItem = new JMenuItem("Convertir pines en capa");

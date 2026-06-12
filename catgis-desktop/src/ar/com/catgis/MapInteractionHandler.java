@@ -107,7 +107,7 @@ public class MapInteractionHandler extends MouseAdapter {
         if (SwingUtilities.isLeftMouseButton(e)) {
             PinMarker pin = panel.findPinAtScreen(e.getX(), e.getY());
             if (pin != null) {
-                panel.activePin = pin;
+                panel.pinManager.activePin = pin;
                 panel.draggingPin = true;
                 panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 return;
@@ -152,8 +152,8 @@ public class MapInteractionHandler extends MouseAdapter {
 
         if (panel.draggingPin) {
             panel.draggingPin = false;
-            if (panel.activePin != null) {
-                panel.showCopiedMessage("Pin P" + panel.activePin.getId() + " movido.");
+            if (panel.pinManager.getActivePin() != null) {
+                panel.showCopiedMessage("Pin P" + panel.pinManager.getActivePin().getId() + " movido.");
             }
         }
 
@@ -227,9 +227,9 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.draggingPin && panel.activePin != null) {
-            panel.activePin.setX(panel.screenToWorldX(e.getX()));
-            panel.activePin.setY(panel.screenToWorldY(e.getY()));
+        if (panel.draggingPin && panel.pinManager.getActivePin() != null) {
+            panel.pinManager.getActivePin().setX(panel.screenToWorldX(e.getX()));
+            panel.pinManager.getActivePin().setY(panel.screenToWorldY(e.getY()));
             panel.repaint();
             return;
         }

@@ -6,6 +6,8 @@ import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.service.EventBus;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
@@ -13,34 +15,41 @@ import javax.swing.JPopupMenu;
 public class PinManager {
     private final MapPanel panel;
 
+    final List<PinMarker> pins = new ArrayList<>();
+    int nextPinId = 1;
+    PinMarker activePin = null;
+
     public PinManager(MapPanel panel) {
         this.panel = panel;
     }
 
+    public List<PinMarker> getPins() { return pins; }
+    public PinMarker getActivePin() { return activePin; }
+
     public PinMarker addPin(double x, double y) {
-        PinMarker pin = new PinMarker(panel.nextPinId++, x, y);
-        panel.pins.add(pin);
-        panel.activePin = pin;
+        PinMarker pin = new PinMarker(nextPinId++, x, y);
+        pins.add(pin);
+        activePin = pin;
         panel.repaint();
         return pin;
     }
 
     public void removePin(PinMarker pin) {
-        panel.pins.remove(pin);
-        if (panel.activePin == pin) {
-            panel.activePin = null;
+        pins.remove(pin);
+        if (activePin == pin) {
+            activePin = null;
         }
         panel.repaint();
     }
 
     public void clearAllPins() {
-        panel.pins.clear();
-        panel.activePin = null;
+        pins.clear();
+        activePin = null;
         panel.repaint();
     }
 
     public void convertPinsToLayer() {
-        if (panel.pins.isEmpty()) {
+        if (pins.isEmpty()) {
             JOptionPane.showMessageDialog(panel, "No hay pines para convertir.");
             return;
         }
@@ -52,7 +61,7 @@ public class PinManager {
                     ? CatgisDesktopApp.currentProject.getProjectCRS()
                     : "EPSG:4326";
 
-            ShapefileData data = PinLayerBuilder.buildFromPins(panel.pins, projectCRS);
+            ShapefileData data = PinLayerBuilder.buildFromPins(pins, projectCRS);
 
             String layerName = "Pines_" + System.currentTimeMillis();
             Layer layer = new Layer(layerName, "", "VECTOR");
@@ -95,8 +104,8 @@ public class PinManager {
     }
 
     public PinMarker findPinAtScreen(int mouseX, int mouseY) {
-        for (int i = panel.pins.size() - 1; i >= 0; i--) {
-            PinMarker pin = panel.pins.get(i);
+        for (int i = pins.size() - 1; i >= 0; i--) {
+            PinMarker pin = pins.get(i);
             int pinScreenX = panel.worldToScreenX(pin.getX());
             int pinScreenY = panel.worldToScreenY(pin.getY());
 
@@ -196,7 +205,7 @@ public class PinManager {
         });
         popupMenu.add(removePinItem);
 
-        if (!panel.pins.isEmpty()) {
+        if (!pins.isEmpty()) {
             popupMenu.addSeparator();
 
             JMenuItem convertPinsItem = new JMenuItem("Convertir pines en capa");

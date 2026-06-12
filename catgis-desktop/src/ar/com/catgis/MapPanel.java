@@ -110,11 +110,7 @@ public class MapPanel extends JPanel implements SnapContext {
     boolean onlineResolutionNoticeVisible = false;
     String onlineResolutionNotice = "";
 
-    final List<PinMarker> pins = new ArrayList<>();
-    int nextPinId = 1;
-    PinMarker activePin = null;
-
-    private final PinManager pinManager = new PinManager(this);
+    final PinManager pinManager = new PinManager(this);
     private final CopyPasteHandler copyPasteHandler;
     private final CadEngine cadEngine = new CadEngine(this);
     private final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
@@ -2386,7 +2382,7 @@ public class MapPanel extends JPanel implements SnapContext {
         showItem.addActionListener(ev -> showCoordinateDialog(x, y));
         popupMenu.add(showItem);
 
-        if (!pins.isEmpty()) {
+        if (!pinManager.getPins().isEmpty()) {
             popupMenu.addSeparator();
 
             JMenuItem convertPinsItem = new JMenuItem("Convertir pines en capa");

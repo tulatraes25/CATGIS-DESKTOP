@@ -101,7 +101,7 @@ class MouseHandler extends MouseAdapter {
         if (SwingUtilities.isLeftMouseButton(e)) {
             PinMarker pin = map.findPinAtScreen(e.getX(), e.getY());
             if (pin != null) {
-                map.activePin = pin;
+                map.pinManager.activePin = pin;
                 map.draggingPin = true;
                 map.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 return;
@@ -146,8 +146,8 @@ class MouseHandler extends MouseAdapter {
 
         if (map.draggingPin) {
             map.draggingPin = false;
-            if (map.activePin != null) {
-                map.showCopiedMessage("Pin P" + map.activePin.getId() + " movido.");
+            if (map.pinManager.getActivePin() != null) {
+                map.showCopiedMessage("Pin P" + map.pinManager.getActivePin().getId() + " movido.");
             }
         }
 
@@ -221,9 +221,9 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if (map.draggingPin && map.activePin != null) {
-            map.activePin.setX(map.screenToWorldX(e.getX()));
-            map.activePin.setY(map.screenToWorldY(e.getY()));
+        if (map.draggingPin && map.pinManager.getActivePin() != null) {
+            map.pinManager.getActivePin().setX(map.screenToWorldX(e.getX()));
+            map.pinManager.getActivePin().setY(map.screenToWorldY(e.getY()));
             map.repaint();
             return;
         }

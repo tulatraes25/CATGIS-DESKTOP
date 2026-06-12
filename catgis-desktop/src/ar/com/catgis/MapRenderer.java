@@ -74,7 +74,7 @@ class MapRenderer {
     // ── 1. drawPins ─────────────────────────────────────────────────────────
 
     void drawPins(Graphics2D g2) {
-        for (PinMarker pin : map.pins) {
+        for (PinMarker pin : map.pinManager.getPins()) {
             int x = map.worldToScreenX(pin.getX());
             int y = map.worldToScreenY(pin.getY());
 
