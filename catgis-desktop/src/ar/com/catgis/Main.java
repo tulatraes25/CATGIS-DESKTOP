@@ -22,6 +22,8 @@ public class Main {
                 ar.com.catgis.service.EventBusInitializer.init();
                 // Install global keyboard shortcuts
                 ar.com.catgis.ShortcutsDialog.installGlobalShortcutListener();
+                // Initialize plugin system
+                ar.com.catgis.plugins.PluginManager.initialize();
                 CatgisDesktopApp app = new CatgisDesktopApp();
                 app.setVisible(true);
                 SwingUtilities.invokeLater(() -> {

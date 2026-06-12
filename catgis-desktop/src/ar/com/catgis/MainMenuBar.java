@@ -249,6 +249,14 @@ public class MainMenuBar extends JMenuBar {
         itemNetwork.addActionListener(e -> NetworkAnalysisDialog.open());
         menuAnalisis.add(itemNetwork);
 
+        JMenuItem itemPgRouting = createItem("pgRouting (PostGIS)...", null);
+        itemPgRouting.addActionListener(e -> PgRoutingDialog.open());
+        menuAnalisis.add(itemPgRouting);
+
+        JMenuItem itemHillshade = createItem("Hillshade / Sombreado...", null);
+        itemHillshade.addActionListener(e -> HillshadeDialog.open());
+        menuAnalisis.add(itemHillshade);
+
         JMenuItem itemWhitebox = createItem("WhiteboxTools (terrain/hydro)...", null);
         itemWhitebox.addActionListener(e -> WhiteboxToolDialog.open());
         menuAnalisis.add(itemWhitebox);
@@ -256,6 +264,10 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemSpectral = createItem("Indices espectrales (NDVI/NDWI)...", null);
         itemSpectral.addActionListener(e -> SpectralIndexDialog.open());
         menuAnalisis.add(itemSpectral);
+
+        JMenuItem itemH3Binning = createItem("H3 hexagonal binning...", null);
+        itemH3Binning.addActionListener(e -> H3BinningDialog.open());
+        menuAnalisis.add(itemH3Binning);
 
         JMenuItem itemBatch = createItem("Procesamiento por lotes...", null);
         itemBatch.addActionListener(e -> BatchProcessorDialog.open());
@@ -285,6 +297,27 @@ public class MainMenuBar extends JMenuBar {
             if (layer != null) KmlExportEngine.exportLayerWithDialog(MainMenuBar.this, layer);
         });
         menuSalida.add(itemExportKml);
+
+        JMenuItem itemExportSld = createItem("Exportar capa a SLD...", null);
+        itemExportSld.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.mapPanel != null
+                    ? CatgisDesktopApp.mapPanel.getSelectedLayerRef()
+                    : null;
+            if (layer != null) {
+                JFileChooser chooser = new JFileChooser();
+                chooser.setSelectedFile(new java.io.File(layer.getName() + ".sld"));
+                if (chooser.showSaveDialog(MainMenuBar.this) == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        ar.com.catgis.sld.SldSupport.exportToFile(layer, chooser.getSelectedFile());
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(MainMenuBar.this,
+                                "Error al exportar SLD: " + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }
+        });
+        menuSalida.add(itemExportSld);
 
         JMenuItem itemCortar = createItem("Cortar selección", AppIcons.cutIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_X, menuMask));

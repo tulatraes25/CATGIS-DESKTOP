@@ -91,30 +91,48 @@ public final class LayoutExportEngine {
 
     /**
      * Export layout to PDF using PDFBox with vector elements.
-     * Text, lines, rectangles, ellipses are drawn as vector PDF content.
-     * Map frames, legends, tables, and images fall back to high-res raster.
      */
     public static void exportPdf(LayoutModel model, File file, int dpi) throws Exception {
+        exportPdf(model, file, new PdfExportOptions().dpi(dpi));
+    }
+
+    /**
+     * Export layout to PDF with metadata.
+     */
+    public static void exportPdf(LayoutModel model, File file, PdfExportOptions opts) throws Exception {
+        int dpi = opts.dpi > 0 ? opts.dpi : 300;
+        double pageW = opts.pageWidthMm > 0 ? opts.pageWidthMm : 297;
+        double pageH = opts.pageHeightMm > 0 ? opts.pageHeightMm : 210;
+
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
-            // A4 landscape: 297mm x 210mm
-            double pageWidthPt = mmToPt(297);
-            double pageHeightPt = mmToPt(210);
-            org.apache.pdfbox.pdmodel.common.PDRectangle rect = new org.apache.pdfbox.pdmodel.common.PDRectangle(
-                (float) pageWidthPt, (float) pageHeightPt);
+
+            org.apache.pdfbox.pdmodel.PDDocumentInformation info = document.getDocumentInformation();
+            if (!opts.title.isEmpty()) info.setTitle(opts.title);
+            if (!opts.author.isEmpty()) info.setAuthor(opts.author);
+            if (!opts.subject.isEmpty()) info.setSubject(opts.subject);
+            info.setCreator("CATGIS Desktop");
+
+            double pageWidthPt = mmToPt(pageW);
+            double pageHeightPt = mmToPt(pageH);
+            org.apache.pdfbox.pdmodel.common.PDRectangle rect =
+                    new org.apache.pdfbox.pdmodel.common.PDRectangle(
+                            (float) pageWidthPt, (float) pageHeightPt);
             org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(rect);
             document.addPage(page);
 
             try (org.apache.pdfbox.pdmodel.PDPageContentStream cs =
-                    new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                         new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
 
-                // White background
                 cs.setNonStrokingColor(Color.WHITE);
                 cs.addRect(0, 0, (float) pageWidthPt, (float) pageHeightPt);
                 cs.fill();
 
-                // Render each element
                 for (LayoutElement element : model.getVisibleElementsSortedByZ()) {
-                    exportElementToPdf(document, cs, element, dpi);
+                    exportElementToPdf(document, cs, element, dpi, pageH);
+                }
+
+                if (!opts.watermark.isEmpty()) {
+                    drawWatermark(cs, opts.watermark, pageWidthPt, pageHeightPt);
                 }
             }
 
@@ -126,11 +144,17 @@ public final class LayoutExportEngine {
             org.apache.pdfbox.pdmodel.PDDocument document,
             org.apache.pdfbox.pdmodel.PDPageContentStream cs,
             LayoutElement element, int dpi) throws Exception {
+        exportElementToPdf(document, cs, element, dpi, 210);
+    }
+
+    private static void exportElementToPdf(
+            org.apache.pdfbox.pdmodel.PDDocument document,
+            org.apache.pdfbox.pdmodel.PDPageContentStream cs,
+            LayoutElement element, int dpi, double pageHeightMm) throws Exception {
 
         Rectangle2D.Double b = element.getBoundsMm();
-        // Convert mm to PDF points (origin at lower-left)
         float x = (float) mmToPt(b.x);
-        float y = (float) (mmToPt(210) - mmToPt(b.y + b.height)); // flip Y
+        float y = (float) (mmToPt(pageHeightMm) - mmToPt(b.y + b.height)); // flip Y
         float w = (float) mmToPt(b.width);
         float h = (float) mmToPt(b.height);
 
@@ -329,6 +353,23 @@ public final class LayoutExportEngine {
     }
 
     // ========== Helpers ==========
+
+    private static void drawWatermark(
+            org.apache.pdfbox.pdmodel.PDPageContentStream cs,
+            String text, double pageWidthPt, double pageHeightPt) throws Exception {
+        cs.saveGraphicsState();
+        java.lang.reflect.Field field =
+                org.apache.pdfbox.pdmodel.font.PDType1Font.class.getField("Helvetica");
+        org.apache.pdfbox.pdmodel.font.PDFont font =
+                (org.apache.pdfbox.pdmodel.font.PDFont) field.get(null);
+        cs.beginText();
+        cs.setFont(font, 36f);
+        cs.setNonStrokingColor(new Color(200, 200, 200, 60));
+        cs.newLineAtOffset((float) (pageWidthPt * 0.2), (float) (pageHeightPt * 0.5));
+        cs.showText(text);
+        cs.endText();
+        cs.restoreGraphicsState();
+    }
 
     private static double mmToPt(double mm) {
         return mm * 72.0 / 25.4;

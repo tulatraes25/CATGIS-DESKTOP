@@ -1,13 +1,9 @@
 package ar.com.catgis.scripting;
 
 import ar.com.catgis.*;
-import ar.com.catgis.layout.LayoutModel;
 
-import javax.swing.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -148,10 +144,20 @@ public final class ScriptEngine {
     }
 
     /**
-     * Check if Python is available.
+     * Check if Python is available, re-resolving if previously not found.
      */
     public static boolean isPythonAvailable() {
-        return resolvePython() != null;
+        if (cachedPythonPath == null) {
+            resolvePython();
+        }
+        return cachedPythonPath != null;
+    }
+
+    /**
+     * Force re-detection of Python path on next call.
+     */
+    public static void refreshPythonPath() {
+        cachedPythonPath = null;
     }
 
     /**
