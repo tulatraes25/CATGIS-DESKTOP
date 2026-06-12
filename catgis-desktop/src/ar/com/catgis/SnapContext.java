@@ -44,7 +44,7 @@ interface SnapContext {
     boolean hasShapefileLayer(Layer layer);
 
     // --- Projection ---
-    MapPanel.LineSplitProjection findEditableSegmentProjection(
+    LineSplitProjection findEditableSegmentProjection(
             Geometry displayGeometry, Coordinate target,
             int screenX, int screenY, double tolerancePx);
 }

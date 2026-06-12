@@ -6333,41 +6333,6 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         return viewMinY + ((getHeight() - screenY) / zoomFactor);
     }
 
-    static class LineSplitProjection {
-        final int segmentIndex;
-        final Coordinate projected;
-        final double distance;
-
-        LineSplitProjection(int segmentIndex, Coordinate projected, double distance) {
-            this.segmentIndex = segmentIndex;
-            this.projected = projected;
-            this.distance = distance;
-        }
-    }
-
-    private static class ViewState {
-        private final double viewMinX;
-        private final double viewMinY;
-        private final double zoomFactor;
-
-        private ViewState(double viewMinX, double viewMinY, double zoomFactor) {
-            this.viewMinX = viewMinX;
-            this.viewMinY = viewMinY;
-            this.zoomFactor = zoomFactor;
-        }
-
-        private boolean isSameAs(ViewState other) {
-            if (other == null) {
-                return false;
-            }
-            return Math.abs(viewMinX - other.viewMinX) < 0.0000001
-                    && Math.abs(viewMinY - other.viewMinY) < 0.0000001
-                    && Math.abs(zoomFactor - other.zoomFactor) < 0.0000001;
-        }
-    }
-
-
-
     private void drawOnlineResolutionNotice(Graphics2D g2) {
         if (!onlineResolutionNoticeVisible || onlineResolutionNotice == null || onlineResolutionNotice.isBlank()) {
             return;
@@ -6394,6 +6359,27 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
             copy.drawString(onlineResolutionNotice, x + padding, y + metrics.getAscent() + 3);
         } finally {
             copy.dispose();
+        }
+    }
+
+    private static class ViewState {
+        private final double viewMinX;
+        private final double viewMinY;
+        private final double zoomFactor;
+
+        private ViewState(double viewMinX, double viewMinY, double zoomFactor) {
+            this.viewMinX = viewMinX;
+            this.viewMinY = viewMinY;
+            this.zoomFactor = zoomFactor;
+        }
+
+        private boolean isSameAs(ViewState other) {
+            if (other == null) {
+                return false;
+            }
+            return Math.abs(viewMinX - other.viewMinX) < 0.0000001
+                    && Math.abs(viewMinY - other.viewMinY) < 0.0000001
+                    && Math.abs(zoomFactor - other.zoomFactor) < 0.0000001;
         }
     }
 

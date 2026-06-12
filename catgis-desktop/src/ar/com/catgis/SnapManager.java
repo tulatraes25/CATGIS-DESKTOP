@@ -132,7 +132,7 @@ class SnapManager {
                 || displayGeometry instanceof MultiLineString
                 || displayGeometry instanceof Polygon
                 || displayGeometry instanceof MultiPolygon) {
-            MapPanel.LineSplitProjection projection = ctx.findEditableSegmentProjection(
+            LineSplitProjection projection = ctx.findEditableSegmentProjection(
                     displayGeometry, target, screenX, screenY, MapPanel.SNAP_TOLERANCE_PX);
             if (projection != null && projection.projected != null
                     && (bestTarget == null || projection.distance < bestTarget.distance)) {

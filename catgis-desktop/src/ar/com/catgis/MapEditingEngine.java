@@ -323,7 +323,7 @@ class MapEditingEngine {
 
         Geometry displayGeometry = map.getEditableDisplayGeometry(map.selectedFeature, map.selectedLayer);
         Coordinate displayTarget = new Coordinate(map.screenToWorldX(screenX), map.screenToWorldY(screenY));
-        MapPanel.LineSplitProjection projection = map.findEditableSegmentProjection(displayGeometry, displayTarget, screenX, screenY, MapPanel.EDIT_SEGMENT_TOLERANCE_PX);
+        LineSplitProjection projection = map.findEditableSegmentProjection(displayGeometry, displayTarget, screenX, screenY, MapPanel.EDIT_SEGMENT_TOLERANCE_PX);
         if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
             map.showCopiedMessage("No se encontró un tramo cercano para agregar el vértice.");
             return true;
@@ -629,7 +629,7 @@ class MapEditingEngine {
     private boolean chooseCadReferenceSegment(int screenX, int screenY, Geometry sourceGeometry) {
         Geometry displayGeometry = map.getEditableDisplayGeometry(map.selectedFeature, map.selectedLayer);
         Coordinate displayTarget = new Coordinate(map.screenToWorldX(screenX), map.screenToWorldY(screenY));
-        MapPanel.LineSplitProjection projection = map.findEditableSegmentProjection(
+        LineSplitProjection projection = map.findEditableSegmentProjection(
                 displayGeometry,
                 displayTarget,
                 screenX,
@@ -743,7 +743,7 @@ class MapEditingEngine {
         if (map.adjacentPolygonSegmentStart == null || map.adjacentPolygonSegmentEnd == null) {
             Geometry displayGeometry = map.getEditableDisplayGeometry(map.selectedFeature, map.selectedLayer);
             Coordinate displayTarget = new Coordinate(map.screenToWorldX(screenX), map.screenToWorldY(screenY));
-            MapPanel.LineSplitProjection projection = map.findEditableSegmentProjection(
+            LineSplitProjection projection = map.findEditableSegmentProjection(
                     displayGeometry,
                     displayTarget,
                     screenX,
@@ -1260,7 +1260,7 @@ class MapEditingEngine {
             double closestDistance = Double.MAX_VALUE;
             for (int i = 0; i < multi.getNumGeometries(); i++) {
                 LineString line = (LineString) multi.getGeometryN(i);
-                MapPanel.LineSplitProjection projection = map.projectCoordinateOntoLine(line, coordinate);
+                LineSplitProjection projection = map.projectCoordinateOntoLine(line, coordinate);
                 if (projection != null && projection.distance < closestDistance) {
                     closestDistance = projection.distance;
                     closestIndex = i;
@@ -1294,7 +1294,7 @@ class MapEditingEngine {
             return null;
         }
 
-        MapPanel.LineSplitProjection projection = map.projectCoordinateOntoLine(line, coordinate);
+        LineSplitProjection projection = map.projectCoordinateOntoLine(line, coordinate);
         if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
             return null;
         }
