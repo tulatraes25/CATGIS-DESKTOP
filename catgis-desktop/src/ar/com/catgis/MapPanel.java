@@ -93,7 +93,7 @@ import ar.com.catgis.renderer.MapDecorationRenderer;
 import ar.com.catgis.renderer.labels.LabelExpressionEngine;
 import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 
-public class MapPanel extends JPanel implements SnapContext {
+public class MapPanel extends JPanel implements SnapContext, MapViewportContext {
 
     final Map<Layer, ShapefileData> shapefileLayers = new LinkedHashMap<>();
     final Map<Layer, LocalRasterData> rasterLayers = new LinkedHashMap<>();
