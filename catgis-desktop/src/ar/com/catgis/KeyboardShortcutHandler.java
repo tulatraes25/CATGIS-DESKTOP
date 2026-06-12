@@ -35,8 +35,8 @@ class KeyboardShortcutHandler {
                     map.cancelCadPlacementDrag();
                 } else if (map.cadEngine.pointCaptureActive) {
                     map.cancelPointCapture();
-                } else if (map.topographicProfileCaptureActive) {
-                    map.cancelTopographicProfileCapture();
+                } else if (map.topographicProfileTool.isActive()) {
+                    map.topographicProfileTool.cancelCapture();
                 } else if (map.featureEditMode && !map.featureEditSketchCoordinates.isEmpty()) {
                     map.featureEditSketchCoordinates.clear();
                     map.repaint();

@@ -12,12 +12,15 @@ public class TopographicProfileTool {
 
     private final MapPanel panel;
 
+    boolean active = false;
+    final List<Coordinate> coordinates = new ArrayList<>();
+    MapPanel.TopographicProfileCaptureHandler handler = null;
+
+    public boolean isActive() { return active; }
+    public List<Coordinate> getCoordinates() { return coordinates; }
+
     public TopographicProfileTool(MapPanel panel) {
         this.panel = panel;
-    }
-
-    public boolean isActive() {
-        return panel.topographicProfileCaptureActive;
     }
 
     public void startCapture(MapPanel.TopographicProfileCaptureHandler handler) {
@@ -28,9 +31,9 @@ public class TopographicProfileTool {
             JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela el dibujo/medicion actual antes de capturar un perfil."));
             return;
         }
-        panel.topographicProfileCaptureHandler = handler;
-        panel.topographicProfileCaptureActive = true;
-        panel.topographicProfileCaptureCoordinates.clear();
+        this.handler = handler;
+        active = true;
+        coordinates.clear();
         panel.requestFocusInWindow();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         if (CatgisDesktopApp.statusBar != null) {
@@ -40,35 +43,35 @@ public class TopographicProfileTool {
     }
 
     public void cancelCapture() {
-        MapPanel.TopographicProfileCaptureHandler handler = panel.topographicProfileCaptureHandler;
-        panel.topographicProfileCaptureActive = false;
-        panel.topographicProfileCaptureCoordinates.clear();
-        panel.topographicProfileCaptureHandler = null;
+        MapPanel.TopographicProfileCaptureHandler h = this.handler;
+        active = false;
+        coordinates.clear();
+        this.handler = null;
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(I18n.t("Captura de perfil topografico cancelada."));
         }
         panel.repaint();
-        if (handler != null) {
-            handler.onCaptureCanceled();
+        if (h != null) {
+            h.onCaptureCanceled();
         }
     }
 
     public void finishCapture() {
-        if (!panel.topographicProfileCaptureActive || panel.topographicProfileCaptureCoordinates.size() < 2) {
+        if (!active || coordinates.size() < 2) {
             return;
         }
-        LineString line = TopographicProfileService.buildLineFromProjectCoordinates(panel.topographicProfileCaptureCoordinates);
-        MapPanel.TopographicProfileCaptureHandler handler = panel.topographicProfileCaptureHandler;
+        LineString line = TopographicProfileService.buildLineFromProjectCoordinates(coordinates);
+        MapPanel.TopographicProfileCaptureHandler h = this.handler;
         String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
-        panel.topographicProfileCaptureActive = false;
-        panel.topographicProfileCaptureCoordinates.clear();
-        panel.topographicProfileCaptureHandler = null;
+        active = false;
+        coordinates.clear();
+        this.handler = null;
         panel.repaint();
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(I18n.t("Linea de perfil capturada."));
         }
-        if (handler != null && line != null) {
-            handler.onLineCaptured(line, projectCrs);
+        if (h != null && line != null) {
+            h.onLineCaptured(line, projectCrs);
         }
     }
 }

@@ -331,10 +331,10 @@ class MapRenderer {
     // ── 9. drawTopographicProfileCapture ────────────────────────────────────
 
     void drawTopographicProfileCapture(Graphics2D g2) {
-        if (!map.topographicProfileCaptureActive) {
+        if (!map.topographicProfileTool.isActive()) {
             return;
         }
-        List<Coordinate> tempCoords = new ArrayList<>(map.topographicProfileCaptureCoordinates);
+        List<Coordinate> tempCoords = new ArrayList<>(map.topographicProfileTool.getCoordinates());
         Coordinate previewCoordinate = map.resolveInteractivePreviewCoordinate();
         if (previewCoordinate != null && !tempCoords.isEmpty()) {
             tempCoords.add(new Coordinate(previewCoordinate));

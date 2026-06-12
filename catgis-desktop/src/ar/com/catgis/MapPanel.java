@@ -113,7 +113,7 @@ public class MapPanel extends JPanel implements SnapContext {
     final PinManager pinManager = new PinManager(this);
     private final CopyPasteHandler copyPasteHandler;
     final CadEngine cadEngine = new CadEngine(this);
-    private final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
+    final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
     final UndoRedoManager undoRedoManager;
 
     double hoverWorldX = Double.NaN;
@@ -206,9 +206,6 @@ public class MapPanel extends JPanel implements SnapContext {
     double moveSelectionLastProjectY = Double.NaN;
     Geometry selectionFlashGeometry = null;
     long selectionFlashStartedAt = 0L;
-    boolean topographicProfileCaptureActive = false;
-    final List<Coordinate> topographicProfileCaptureCoordinates = new ArrayList<>();
-    TopographicProfileCaptureHandler topographicProfileCaptureHandler = null;
     final Timer selectionFlashTimer;
 
     public MapPanel() {
@@ -337,7 +334,7 @@ public class MapPanel extends JPanel implements SnapContext {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             return;
         }
-        if (cadEngine.isPointCaptureActive() || topographicProfileCaptureActive || isDrawingActive() || isMeasurementActive()) {
+        if (cadEngine.isPointCaptureActive() || topographicProfileTool.isActive() || isDrawingActive() || isMeasurementActive()) {
             setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         } else if ("MOVE".equalsIgnoreCase(currentTool)) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));

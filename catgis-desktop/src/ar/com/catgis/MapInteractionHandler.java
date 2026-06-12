@@ -44,9 +44,9 @@ public class MapInteractionHandler extends MouseAdapter {
             }
             return;
         }
-        if (panel.topographicProfileCaptureActive) {
+        if (panel.topographicProfileTool.isActive()) {
             if (SwingUtilities.isRightMouseButton(e)) {
-                panel.cancelTopographicProfileCapture();
+                panel.topographicProfileTool.cancelCapture();
             }
             return;
         }
@@ -139,7 +139,7 @@ public class MapInteractionHandler extends MouseAdapter {
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             return;
         }
-        if (panel.topographicProfileCaptureActive) {
+        if (panel.topographicProfileTool.isActive()) {
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             return;
         }
@@ -217,7 +217,7 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.topographicProfileCaptureActive) {
+        if (panel.topographicProfileTool.isActive()) {
             panel.repaint();
             return;
         }
@@ -291,7 +291,7 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.topographicProfileCaptureActive) {
+        if (panel.topographicProfileTool.isActive()) {
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             panel.repaint();
             return;
@@ -371,20 +371,20 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.topographicProfileCaptureActive) {
+        if (panel.topographicProfileTool.isActive()) {
             if (SwingUtilities.isRightMouseButton(e)) {
-                if (panel.topographicProfileCaptureCoordinates.size() >= 2) {
-                    panel.finishTopographicProfileCapture();
+                if (panel.topographicProfileTool.getCoordinates().size() >= 2) {
+                    panel.topographicProfileTool.finishCapture();
                 } else {
-                    panel.cancelTopographicProfileCapture();
+                    panel.topographicProfileTool.cancelCapture();
                 }
                 return;
             }
             if (SwingUtilities.isLeftMouseButton(e)) {
                 Coordinate coordinate = panel.resolveInteractiveCoordinate(e.getX(), e.getY(), false);
-                panel.topographicProfileCaptureCoordinates.add(coordinate);
+                panel.topographicProfileTool.getCoordinates().add(coordinate);
                 if (CatgisDesktopApp.statusBar != null) {
-                    if (panel.topographicProfileCaptureCoordinates.size() == 1) {
+                    if (panel.topographicProfileTool.getCoordinates().size() == 1) {
                         AppContext.setStatusMessage(I18n.t("Perfil topografico: agrega otro punto para comenzar el trazado."));
                     } else {
                         AppContext.setStatusMessage(I18n.t("Perfil topografico: agrega mas vertices o clic derecho para terminar el trazado."));

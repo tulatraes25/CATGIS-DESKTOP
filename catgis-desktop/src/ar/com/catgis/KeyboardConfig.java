@@ -39,8 +39,8 @@ public class KeyboardConfig {
                     panel.cancelCadPlacementDrag();
                 } else if (panel.cadEngine.pointCaptureActive) {
                     panel.cancelPointCapture();
-                } else if (panel.topographicProfileCaptureActive) {
-                    panel.cancelTopographicProfileCapture();
+                } else if (panel.topographicProfileTool.isActive()) {
+                    panel.topographicProfileTool.cancelCapture();
                 } else if (panel.featureEditMode && !panel.featureEditSketchCoordinates.isEmpty()) {
                     panel.featureEditSketchCoordinates.clear();
                     panel.repaint();

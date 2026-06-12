@@ -52,7 +52,7 @@ public class CadEngine {
         if (layer == null || !CadLayerSupport.isCadLayer(layer) || handler == null) {
             return;
         }
-        if (panel.isDrawingActive() || panel.isMeasurementActive() || pointCaptureActive || panel.topographicProfileCaptureActive || cadPlacementDragActive) {
+        if (panel.isDrawingActive() || panel.isMeasurementActive() || pointCaptureActive || panel.topographicProfileTool.isActive() || cadPlacementDragActive) {
             JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de arrastrar la referencia CAD."));
             return;
         }
@@ -181,7 +181,7 @@ public class CadEngine {
         if (handler == null) {
             return;
         }
-        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.topographicProfileCaptureActive || cadPlacementDragActive) {
+        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.topographicProfileTool.isActive() || cadPlacementDragActive) {
             JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de capturar un punto en el mapa."));
             return;
         }
