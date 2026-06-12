@@ -9,7 +9,14 @@ import java.awt.Component;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.security.SecureRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.prefs.Preferences;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public final class PostgisConnectionStore {
 
@@ -110,19 +117,95 @@ public final class PostgisConnectionStore {
         if (info == null || info.buildFingerprint().isBlank()) {
             return "";
         }
-        return deobfuscate(ROOT.get(passwordKey(info), ""));
+        String stored = ROOT.get(passwordKey(info), "");
+        if (stored.isBlank()) return "";
+        // Try new AES-GCM format first, fall back to legacy XOR
+        String decrypted = deobfuscate(stored);
+        if (!decrypted.isBlank()) return decrypted;
+        String legacy = deobfuscateLegacy(stored);
+        if (!legacy.isBlank()) {
+            // Migrate legacy XOR password to AES-GCM
+            info.setPassword(legacy);
+            rememberPassword(info);
+            return legacy;
+        }
+        return "";
     }
 
     private static String obfuscate(String value) {
-        byte[] bytes = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        byte[] key = getMachineKey();
-        for (int i = 0; i < bytes.length; i++) {
-            bytes[i] ^= key[i % key.length];
+        try {
+            byte[] plaintext = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            byte[] salt = new byte[16];
+            new SecureRandom().nextBytes(salt);
+            byte[] key = deriveKey(salt);
+            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            byte[] iv = new byte[12];
+            new SecureRandom().nextBytes(iv);
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, new GCMParameterSpec(128, iv));
+            byte[] ciphertext = cipher.doFinal(plaintext);
+            byte[] combined = new byte[salt.length + iv.length + ciphertext.length];
+            System.arraycopy(salt, 0, combined, 0, salt.length);
+            System.arraycopy(iv, 0, combined, salt.length, iv.length);
+            System.arraycopy(ciphertext, 0, combined, salt.length + iv.length, ciphertext.length);
+            return java.util.Base64.getEncoder().encodeToString(combined);
+        } catch (Exception e) {
+            return "";
         }
-        return java.util.Base64.getEncoder().encodeToString(bytes);
+    }
+
+    private static byte[] deriveKey(byte[] salt) throws Exception {
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        String passphrase = getMachinePassphrase();
+        PBEKeySpec spec = new PBEKeySpec(
+                passphrase.toCharArray(), salt, 100_000, 256);
+        return factory.generateSecret(spec).getEncoded();
+    }
+
+    private static String getMachinePassphrase() {
+        return System.getProperty("user.name", "catgis")
+                + "|" + System.getProperty("os.arch", "")
+                + "|" + getWindowsMachineGuid()
+                + "|CATGIS_V2_SALT_2026";
+    }
+
+    private static String getWindowsMachineGuid() {
+        try {
+            String[] cmd = {"powershell", "-NoProfile", "-Command",
+                    "(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Cryptography' -Name MachineGuid).MachineGuid"};
+            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            if (p.waitFor(3, TimeUnit.SECONDS) && p.exitValue() == 0) {
+                String output = new String(p.getInputStream().readAllBytes()).trim();
+                if (!output.isBlank()) return output;
+            }
+        } catch (Exception ignored) {}
+        return "";
     }
 
     private static String deobfuscate(String encoded) {
+        if (encoded == null || encoded.isBlank()) {
+            return "";
+        }
+        try {
+            byte[] combined = java.util.Base64.getDecoder().decode(encoded);
+            if (combined.length < 28) return "";
+            byte[] salt = new byte[16];
+            byte[] iv = new byte[12];
+            byte[] ciphertext = new byte[combined.length - 28];
+            System.arraycopy(combined, 0, salt, 0, 16);
+            System.arraycopy(combined, 16, iv, 0, 12);
+            System.arraycopy(combined, 28, ciphertext, 0, ciphertext.length);
+            byte[] key = deriveKey(salt);
+            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, new GCMParameterSpec(128, iv));
+            return new String(cipher.doFinal(ciphertext), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private static String deobfuscateLegacy(String encoded) {
         if (encoded == null || encoded.isBlank()) {
             return "";
         }
