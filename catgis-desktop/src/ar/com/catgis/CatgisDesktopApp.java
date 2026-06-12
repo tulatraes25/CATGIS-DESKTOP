@@ -64,6 +64,10 @@ public class CatgisDesktopApp extends JFrame {
         currentProject = p;
         AppContext.get().setProject(p);
     }
+    /**
+     * @deprecated Use {@code AppContext.get().getFloatingEditToolbar()} instead.
+     */
+    @Deprecated
     public static volatile FloatingVectorEditToolbar floatingVectorEditToolbar;
     public static volatile CartographyToolbar cartographyToolbar;
     public static volatile CatserverToolbar catserverToolbar;
@@ -617,10 +621,13 @@ public class CatgisDesktopApp extends JFrame {
         refreshProjectHeader();
     }
 
+    /**
+     * @deprecated Use {@code AppContext.get().getFloatingEditToolbar().refreshState()} directly.
+     */
+    @Deprecated
     public static void syncFloatingVectorEditToolbar() {
-        if (floatingVectorEditToolbar != null) {
-            floatingVectorEditToolbar.refreshState();
-        }
+        FloatingVectorEditToolbar tb = AppContext.get().getFloatingEditToolbar();
+        if (tb != null) tb.refreshState();
     }
 
     public static void syncProInterpretationToolbar() {
