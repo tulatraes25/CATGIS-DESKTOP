@@ -92,6 +92,26 @@ public final class HydrologicConditioningService {
         return ExternalToolService.findWhiteboxTools() != null;
     }
 
+    // ─── Geomorphons ─────────────────────────────────────────────────
+
+    /**
+     * Automatic landform classification using the Geomorphons algorithm.
+     * WhiteboxTools: Geomorphons
+     */
+    public static boolean geomorphons(File demFile, File outputFile, int searchRadius) throws IOException {
+        ensureWorkDir();
+        String wbt = ExternalToolService.findWhiteboxTools();
+        if (wbt == null) return false;
+
+        ExternalToolService.ToolResult r = ExternalToolService.execute(
+                wbt, "--run=Geomorphons",
+                "--input=" + demFile.getAbsolutePath(),
+                "--output=" + outputFile.getAbsolutePath(),
+                "--search=" + Math.max(3, searchRadius)
+        );
+        return r.success() && outputFile.exists();
+    }
+
     private static void ensureWorkDir() throws IOException {
         Files.createDirectories(WORK_DIR);
     }
