@@ -377,4 +377,112 @@ public final class RasterCalculatorEngine {
     // ─── Data source ──────────────────────────────────────────────────
 
     public record RasterSource(BufferedImage image, org.locationtech.jts.geom.Envelope envelope, String name) {}
+
+    // ─── Pansharpening (IHS method) ──────────────────────────────────
+
+    /**
+     * Pansharpen 3-band multispectral image using a panchromatic band.
+     * Uses IHS (Intensity-Hue-Saturation) color space transform.
+     *
+     * @param msRed   multispectral red band (low resolution)
+     * @param msGreen multispectral green band
+     * @param msBlue  multispectral blue band
+     * @param pan     panchromatic band (high resolution)
+     * @return pansharpened RGB image at pan resolution, or null on error
+     */
+    public static BufferedImage pansharpenIhs(BufferedImage msRed, BufferedImage msGreen,
+                                               BufferedImage msBlue, BufferedImage pan) {
+        if (msRed == null || msGreen == null || msBlue == null || pan == null) return null;
+        int pw = pan.getWidth();
+        int ph = pan.getHeight();
+        Raster panRaster = pan.getRaster();
+        double[] panPx = new double[panRaster.getNumBands()];
+
+        // Resize multispectral bands to pan dimensions (nearest neighbor)
+        BufferedImage rUp = resizeNearest(msRed, pw, ph);
+        BufferedImage gUp = resizeNearest(msGreen, pw, ph);
+        BufferedImage bUp = resizeNearest(msBlue, pw, ph);
+        if (rUp == null || gUp == null || bUp == null) return null;
+
+        Raster rRas = rUp.getRaster();
+        Raster gRas = gUp.getRaster();
+        Raster bRas = bUp.getRaster();
+        double[] rPx = new double[1], gPx = new double[1], bPx = new double[1];
+
+        BufferedImage result = new BufferedImage(pw, ph, BufferedImage.TYPE_INT_RGB);
+        WritableRaster out = result.getRaster();
+        double[] outPx = new double[3];
+
+        for (int y = 0; y < ph; y++) {
+            for (int x = 0; x < pw; x++) {
+                rRas.getPixel(x, y, rPx);
+                gRas.getPixel(x, y, gPx);
+                bRas.getPixel(x, y, bPx);
+                panRaster.getPixel(x, y, panPx);
+
+                double r = rPx[0] / 255.0;
+                double g = gPx[0] / 255.0;
+                double b = bPx[0] / 255.0;
+                double p = panPx[0] / 255.0;
+
+                // RGB → IHS
+                double i = (r + g + b) / 3.0;
+                double minRgb = Math.min(Math.min(r, g), b);
+                double s = (i > 0) ? 1.0 - (minRgb / i) : 0;
+                double h = 0;
+                if (s > 0.001) {
+                    double num = 0.5 * ((r - g) + (r - b));
+                    double den = Math.sqrt((r - g) * (r - g) + (r - b) * (g - b));
+                    double acos = (den > 0) ? Math.acos(num / den) : 0;
+                    h = (b <= g) ? acos : (2 * Math.PI - acos);
+                }
+
+                // Replace intensity with pan
+                i = p;
+
+                // IHS → RGB
+                double rOut, gOut, bOut;
+                if (s < 0.001) {
+                    rOut = gOut = bOut = i;
+                } else {
+                    double hDeg = h * 180.0 / Math.PI;
+                    if (hDeg < 120) {
+                        bOut = i * (1 - s);
+                        rOut = i * (1 + s * Math.cos(h) / Math.cos(Math.PI / 3 - h));
+                        gOut = 3 * i - (rOut + bOut);
+                    } else if (hDeg < 240) {
+                        double h2 = h - 2 * Math.PI / 3;
+                        rOut = i * (1 - s);
+                        gOut = i * (1 + s * Math.cos(h2) / Math.cos(Math.PI / 3 - h2));
+                        bOut = 3 * i - (rOut + gOut);
+                    } else {
+                        double h2 = h - 4 * Math.PI / 3;
+                        gOut = i * (1 - s);
+                        bOut = i * (1 + s * Math.cos(h2) / Math.cos(Math.PI / 3 - h2));
+                        rOut = 3 * i - (gOut + bOut);
+                    }
+                }
+
+                outPx[0] = clamp(rOut * 255.0, 0, 255);
+                outPx[1] = clamp(gOut * 255.0, 0, 255);
+                outPx[2] = clamp(bOut * 255.0, 0, 255);
+                out.setPixel(x, y, outPx);
+            }
+        }
+        return result;
+    }
+
+    private static BufferedImage resizeNearest(BufferedImage src, int w, int h) {
+        if (src == null) return null;
+        java.awt.Image scaled = src.getScaledInstance(w, h, java.awt.Image.SCALE_DEFAULT);
+        BufferedImage result = new BufferedImage(w, h, src.getType());
+        java.awt.Graphics2D g = result.createGraphics();
+        g.drawImage(scaled, 0, 0, null);
+        g.dispose();
+        return result;
+    }
+
+    private static double clamp(double val, double min, double max) {
+        return Math.max(min, Math.min(max, val));
+    }
 }
