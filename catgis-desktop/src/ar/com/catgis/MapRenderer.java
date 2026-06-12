@@ -284,17 +284,17 @@ class MapRenderer {
     // ── 7. drawCurrentMeasurement ───────────────────────────────────────────
 
     void drawCurrentMeasurement(Graphics2D g2) {
-        if (!map.isMeasurementActive() || map.measurementCoordinates.isEmpty()) {
+        if (!map.isMeasurementActive() || map.measurementTool.getPoints().isEmpty()) {
             return;
         }
 
-        List<Coordinate> tempCoords = new ArrayList<>(map.measurementCoordinates);
+        List<Coordinate> tempCoords = new ArrayList<>(map.measurementTool.getPoints());
         Coordinate previewCoordinate = map.resolveInteractivePreviewCoordinate();
         if (previewCoordinate != null) {
             tempCoords.add(new Coordinate(previewCoordinate));
         }
 
-        drawTemporaryGeometry(g2, tempCoords, map.measurementMode, Color.CYAN, new Color(0, 255, 255, 40));
+        drawTemporaryGeometry(g2, tempCoords, map.getMeasurementMode(), Color.CYAN, new Color(0, 255, 255, 40));
     }
 
     // ── 8. drawFeatureEditSketch ────────────────────────────────────────────

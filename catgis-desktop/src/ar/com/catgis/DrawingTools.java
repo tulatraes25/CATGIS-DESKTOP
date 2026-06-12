@@ -53,8 +53,7 @@ public class DrawingTools {
     }
 
     public void cancelCurrentMeasurement() {
-        panel.measurementMode = null;
-        panel.measurementCoordinates.clear();
+        panel.measurementTool.cancelMeasurement();
         EventBus.emit(EventBus.EventType.TOOLBAR_SYNC);
         panel.repaint();
     }
@@ -71,13 +70,13 @@ public class DrawingTools {
                     ? CatgisDesktopApp.currentProject.getProjectCRS()
                     : "EPSG:4326";
 
-            if ("DISTANCE".equalsIgnoreCase(panel.measurementMode)) {
-                if (panel.measurementCoordinates.size() < 2) {
+            if ("DISTANCE".equalsIgnoreCase(panel.getMeasurementMode())) {
+                if (panel.measurementTool.getPoints().size() < 2) {
                     JOptionPane.showMessageDialog(panel, "Para medir distancia necesit\u00E1s al menos 2 v\u00E9rtices.");
                     return;
                 }
 
-                Geometry metricLine = buildMeasurementLineInMeters(panel.measurementCoordinates, projectCRS);
+                Geometry metricLine = buildMeasurementLineInMeters(panel.measurementTool.getPoints(), projectCRS);
                 if (metricLine == null) {
                     JOptionPane.showMessageDialog(panel, "No se pudo calcular la distancia.");
                     return;
@@ -92,13 +91,13 @@ public class DrawingTools {
                         JOptionPane.INFORMATION_MESSAGE
                 );
 
-            } else if ("AREA".equalsIgnoreCase(panel.measurementMode)) {
-                if (panel.measurementCoordinates.size() < 3) {
+            } else if ("AREA".equalsIgnoreCase(panel.getMeasurementMode())) {
+                if (panel.measurementTool.getPoints().size() < 3) {
                     JOptionPane.showMessageDialog(panel, "Para medir \u00E1rea necesit\u00E1s al menos 3 v\u00E9rtices.");
                     return;
                 }
 
-                Geometry metricPolygon = buildMeasurementPolygonInMeters(panel.measurementCoordinates, projectCRS);
+                Geometry metricPolygon = buildMeasurementPolygonInMeters(panel.measurementTool.getPoints(), projectCRS);
                 if (metricPolygon == null) {
                     JOptionPane.showMessageDialog(panel, "No se pudo calcular el \u00E1rea.");
                     return;

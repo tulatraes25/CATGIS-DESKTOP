@@ -464,13 +464,13 @@ public class MapInteractionHandler extends MouseAdapter {
             Coordinate c = panel.resolveInteractiveCoordinate(e.getX(), e.getY(), false);
 
             if (e.getClickCount() >= 2) {
-                if (!panel.measurementCoordinates.isEmpty()) {
+                if (!panel.measurementTool.getPoints().isEmpty()) {
                     panel.finishCurrentMeasurement();
                 }
                 return;
             }
 
-            panel.measurementCoordinates.add(c);
+            panel.measurementTool.addPoint(c.x, c.y);
             panel.repaint();
             return;
         }

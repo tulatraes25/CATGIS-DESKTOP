@@ -457,13 +457,13 @@ class MouseHandler extends MouseAdapter {
             Coordinate c = map.resolveInteractiveCoordinate(e.getX(), e.getY(), false);
 
             if (e.getClickCount() >= 2) {
-                if (!map.measurementCoordinates.isEmpty()) {
+                if (!map.measurementTool.getPoints().isEmpty()) {
                     map.finishCurrentMeasurement();
                 }
                 return;
             }
 
-            map.measurementCoordinates.add(c);
+            map.measurementTool.addPoint(c.x, c.y);
             map.repaint();
             return;
         }

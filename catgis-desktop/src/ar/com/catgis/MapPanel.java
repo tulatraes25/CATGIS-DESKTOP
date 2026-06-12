@@ -120,9 +120,6 @@ public class MapPanel extends JPanel implements SnapContext {
     private final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
     final UndoRedoManager undoRedoManager;
 
-    final List<Coordinate> measurementCoordinates = new ArrayList<>();
-    String measurementMode = null;
-
     double hoverWorldX = Double.NaN;
     double hoverWorldY = Double.NaN;
 
@@ -130,7 +127,7 @@ public class MapPanel extends JPanel implements SnapContext {
     final MapViewController viewController = new MapViewController();
     private final SelectionManager selectionManager = new SelectionManager();
     private final SelectionManager2 selectionManager2;
-    private final MeasurementTool measurementTool = new MeasurementTool();
+    final MeasurementTool measurementTool = new MeasurementTool();
     private final FeatureRenderer featureRenderer = new FeatureRenderer(viewController);
     private final EditingEngine editingEngine = new EditingEngine();
     final LayerManager layerManager = new LayerManager(this);
@@ -1255,8 +1252,7 @@ public class MapPanel extends JPanel implements SnapContext {
 
     public void enableMeasureDistanceMode() {
         cancelCurrentDrawing();
-        measurementMode = "DISTANCE";
-        measurementCoordinates.clear();
+        measurementTool.startDistanceMeasurement();
         setTool("MEASURE");
         showCopiedMessage("Modo medir distancia activo. Clic para vÃ©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
@@ -1264,19 +1260,19 @@ public class MapPanel extends JPanel implements SnapContext {
 
     public void enableMeasureAreaMode() {
         cancelCurrentDrawing();
-        measurementMode = "AREA";
-        measurementCoordinates.clear();
+        measurementTool.startAreaMeasurement();
         setTool("MEASURE");
         showCopiedMessage("Modo medir Ã¡rea activo. Clic para vÃ©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
     public boolean isMeasurementActive() {
-        return measurementMode != null && !measurementMode.isBlank();
+        return measurementTool.isActive();
     }
 
     public String getMeasurementMode() {
-        return measurementMode;
+        MeasurementTool.MeasureMode m = measurementTool.getMode();
+        return m == MeasurementTool.MeasureMode.NONE ? null : m.name();
     }
 
     public void cancelCurrentDrawing() {
@@ -1284,8 +1280,7 @@ public class MapPanel extends JPanel implements SnapContext {
     }
 
     public void cancelCurrentMeasurement() {
-        measurementMode = null;
-        measurementCoordinates.clear();
+        measurementTool.cancelMeasurement();
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
         repaint();
     }
@@ -1302,13 +1297,16 @@ public class MapPanel extends JPanel implements SnapContext {
                     ? CatgisDesktopApp.currentProject.getProjectCRS()
                     : "EPSG:4326";
 
-            if ("DISTANCE".equalsIgnoreCase(measurementMode)) {
-                if (measurementCoordinates.size() < 2) {
+            List<Coordinate> coords = measurementTool.getPoints();
+            String mode = getMeasurementMode();
+
+            if ("DISTANCE".equalsIgnoreCase(mode)) {
+                if (coords.size() < 2) {
                     JOptionPane.showMessageDialog(this, "Para medir distancia necesit\u00E1s al menos 2 v\u00E9rtices.");
                     return;
                 }
 
-                Geometry metricLine = buildMeasurementLineInMeters(measurementCoordinates, projectCRS);
+                Geometry metricLine = buildMeasurementLineInMeters(coords, projectCRS);
                 if (metricLine == null) {
                     JOptionPane.showMessageDialog(this, "No se pudo calcular la distancia.");
                     return;
@@ -1323,13 +1321,13 @@ public class MapPanel extends JPanel implements SnapContext {
                         JOptionPane.INFORMATION_MESSAGE
                 );
 
-            } else if ("AREA".equalsIgnoreCase(measurementMode)) {
-                if (measurementCoordinates.size() < 3) {
+            } else if ("AREA".equalsIgnoreCase(mode)) {
+                if (coords.size() < 3) {
                     JOptionPane.showMessageDialog(this, "Para medir \u00E1rea necesit\u00E1s al menos 3 v\u00E9rtices.");
                     return;
                 }
 
-                Geometry metricPolygon = buildMeasurementPolygonInMeters(measurementCoordinates, projectCRS);
+                Geometry metricPolygon = buildMeasurementPolygonInMeters(coords, projectCRS);
                 if (metricPolygon == null) {
                     JOptionPane.showMessageDialog(this, "No se pudo calcular el \u00E1rea.");
                     return;
