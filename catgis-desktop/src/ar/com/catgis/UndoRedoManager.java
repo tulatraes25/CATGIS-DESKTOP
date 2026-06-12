@@ -15,20 +15,20 @@ class UndoRedoManager {
 
     private static final int MAX_EDIT_HISTORY = 20;
 
-    private final MapPanel map;
+    private final UndoRedoContext ctx;
     private final Deque<LayerEditSnapshot> editUndoStack = new ArrayDeque<>();
     private final Deque<LayerEditSnapshot> editRedoStack = new ArrayDeque<>();
 
-    UndoRedoManager(MapPanel map) {
-        this.map = map;
+    UndoRedoManager(UndoRedoContext ctx) {
+        this.ctx = ctx;
     }
 
     boolean canUndo() {
-        return !editUndoStack.isEmpty() && map.getEditingLayerRef() != null;
+        return !editUndoStack.isEmpty() && ctx.getEditingLayer() != null;
     }
 
     boolean canRedo() {
-        return !editRedoStack.isEmpty() && map.getEditingLayerRef() != null;
+        return !editRedoStack.isEmpty() && ctx.getEditingLayer() != null;
     }
 
     void clear() {
@@ -37,10 +37,10 @@ class UndoRedoManager {
     }
 
     void pushUndoSnapshotForSelectedLayer() {
-        if (map.selectedLayer == null) {
+        if (ctx.getSelectedLayerForUndo() == null) {
             return;
         }
-        pushUndoSnapshot(map.selectedLayer, map.selectedFeature != null ? map.selectedFeature.getID() : null);
+        pushUndoSnapshot(ctx.getSelectedLayerForUndo(), ctx.getSelectedFeatureForUndo() != null ? ctx.getSelectedFeatureForUndo().getID() : null);
     }
 
     void pushUndoSnapshot(Layer layer, String selectedFeatureId) {
@@ -59,13 +59,13 @@ class UndoRedoManager {
         if (layer == null) {
             return null;
         }
-        ShapefileData data = map.getShapefileData(layer);
+        ShapefileData data = ctx.getShapefileData(layer);
         if (data == null) {
             return null;
         }
         return new LayerEditSnapshot(
                 layer,
-                map.cloneFeatureList(data.getFeatures()),
+                ctx.cloneFeatureList(data.getFeatures()),
                 data.getSourceName(),
                 data.getMessage(),
                 data.getSchema(),
@@ -80,51 +80,51 @@ class UndoRedoManager {
 
         ShapefileData restoredData = new ShapefileData(
                 snapshot.features,
-                map.computeEnvelope(snapshot.features),
+                ctx.computeEnvelope(snapshot.features),
                 snapshot.sourceName,
                 snapshot.features.size(),
                 snapshot.message,
                 snapshot.schema
         );
-        map.addOrUpdateShapefileLayer(snapshot.layer, restoredData);
+        ctx.addOrUpdateShapefileLayer(snapshot.layer, restoredData);
 
-        map.activeVectorEditingLayer = snapshot.layer;
-        map.selectedLayer = snapshot.layer;
-        map.selectedFeature = map.findFeatureById(restoredData.getFeatures(), snapshot.selectedFeatureId);
+        ctx.setActiveVectorEditingLayer(snapshot.layer);
+        ctx.setSelectedLayer(snapshot.layer);
+        ctx.setSelectedFeature(ctx.findFeatureById(restoredData.getFeatures(), snapshot.selectedFeatureId));
         if (snapshot.selectedFeatureId != null && !snapshot.selectedFeatureId.isBlank()) {
-            map.tableSelectionIds.put(snapshot.layer, new ArrayList<>(List.of(snapshot.selectedFeatureId)));
+            ctx.updateTableSelectionIds(snapshot.layer, List.of(snapshot.selectedFeatureId));
             OpenAttributeTableAction.syncSelectionFromMap(snapshot.layer, List.of(snapshot.selectedFeatureId));
         } else {
-            map.tableSelectionIds.remove(snapshot.layer);
+            ctx.clearTableSelectionIds(snapshot.layer);
             OpenAttributeTableAction.clearSelectionInOpenTables();
         }
-        map.featureEditMode = map.selectedFeature != null;
-        map.featureEditOriginalGeometry = map.extractFeatureGeometryCopy(map.selectedFeature);
-        map.featureEditDirty = true;
-        map.featureEditSketchCoordinates.clear();
-        map.activeEditVertexIndex = -1;
-        map.joinTargetVertexIndex = -1;
-        map.clearAdjacentPolygonState();
-        map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
+        ctx.setFeatureEditMode(ctx.getSelectedFeatureForUndo() != null);
+        ctx.setFeatureEditOriginalGeometry(ctx.extractFeatureGeometryCopy(ctx.getSelectedFeatureForUndo()));
+        ctx.setFeatureEditDirty(true);
+        ctx.clearFeatureEditSketchCoordinates();
+        ctx.setActiveEditVertexIndex(-1);
+        ctx.setJoinTargetVertexIndex(-1);
+        ctx.clearAdjacentPolygonState();
+        ctx.setFeatureEditOperation(MapPanel.EDIT_OP_MOVE_VERTEX);
         snapshot.layer.setFeatureCount(restoredData.getFeatureCount());
 
-        CatgisDesktopApp.markProjectDirty();
+        ctx.markProjectDirty();
         if (statusMessage != null && !statusMessage.isBlank()) {
-            map.showCopiedMessage(statusMessage);
+            ctx.showCopiedMessage(statusMessage);
         }
-        map.refreshEditingUi();
+        ctx.refreshEditingUi();
     }
 
     void undoFeatureEdit() {
         if (!canUndo()) {
             return;
         }
-        Layer layer = map.getEditingLayerRef();
+        Layer layer = ctx.getEditingLayer();
         if (layer == null) {
             return;
         }
 
-        editRedoStack.push(captureLayerSnapshot(layer, map.selectedFeature != null ? map.selectedFeature.getID() : null));
+        editRedoStack.push(captureLayerSnapshot(layer, ctx.getSelectedFeatureForUndo() != null ? ctx.getSelectedFeatureForUndo().getID() : null));
         restoreLayerSnapshot(editUndoStack.pop(), "Deshacer aplicado.");
     }
 
@@ -132,12 +132,12 @@ class UndoRedoManager {
         if (!canRedo()) {
             return;
         }
-        Layer layer = map.getEditingLayerRef();
+        Layer layer = ctx.getEditingLayer();
         if (layer == null) {
             return;
         }
 
-        editUndoStack.push(captureLayerSnapshot(layer, map.selectedFeature != null ? map.selectedFeature.getID() : null));
+        editUndoStack.push(captureLayerSnapshot(layer, ctx.getSelectedFeatureForUndo() != null ? ctx.getSelectedFeatureForUndo().getID() : null));
         restoreLayerSnapshot(editRedoStack.pop(), "Rehacer aplicado.");
     }
 

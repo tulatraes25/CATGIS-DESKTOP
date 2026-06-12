@@ -93,7 +93,7 @@ import ar.com.catgis.renderer.MapDecorationRenderer;
 import ar.com.catgis.renderer.labels.LabelExpressionEngine;
 import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 
-public class MapPanel extends JPanel implements SnapContext, MapViewportContext {
+public class MapPanel extends JPanel implements SnapContext, MapViewportContext, UndoRedoContext {
 
     final Map<Layer, ShapefileData> shapefileLayers = new LinkedHashMap<>();
     final Map<Layer, LocalRasterData> rasterLayers = new LinkedHashMap<>();
@@ -381,7 +381,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         applyCursorForCurrentMode();
     }
 
-    void refreshEditingUi() {
+    @Override public void refreshEditingUi() {
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
         if (CatgisDesktopApp.layersPanel != null) {
             javax.swing.SwingUtilities.invokeLater(() -> AppContext.refreshLayerList());
@@ -708,7 +708,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         }
     }
 
-    void clearAdjacentPolygonState() {
+    @Override public void clearAdjacentPolygonState() {
         adjacentPolygonSegmentStart = null;
         adjacentPolygonSegmentEnd = null;
     }
@@ -1955,6 +1955,24 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
     @Override public String getSelectedFeatureId() { return selectedFeature != null ? selectedFeature.getID() : null; }
     @Override public Layer getActiveVectorEditingLayer() { return activeVectorEditingLayer; }
     @Override public boolean hasShapefileLayer(Layer layer) { return layer != null && shapefileLayers.containsKey(layer); }
+
+    // --- UndoRedoContext implementation ---
+    @Override public Layer getEditingLayer() { return getEditingLayerRef(); }
+    @Override public Layer getSelectedLayerForUndo() { return selectedLayer; }
+    @Override public SimpleFeature getSelectedFeatureForUndo() { return selectedFeature; }
+    @Override public void setActiveVectorEditingLayer(Layer layer) { activeVectorEditingLayer = layer; }
+    @Override public void setSelectedLayer(Layer layer) { selectedLayer = layer; }
+    @Override public void setSelectedFeature(SimpleFeature feature) { selectedFeature = feature; }
+    @Override public void setFeatureEditMode(boolean mode) { featureEditMode = mode; }
+    @Override public void setFeatureEditOriginalGeometry(Geometry geometry) { featureEditOriginalGeometry = geometry; }
+    @Override public void setFeatureEditDirty(boolean dirty) { featureEditDirty = dirty; }
+    @Override public void clearFeatureEditSketchCoordinates() { featureEditSketchCoordinates.clear(); }
+    @Override public void setActiveEditVertexIndex(int index) { activeEditVertexIndex = index; }
+    @Override public void setJoinTargetVertexIndex(int index) { joinTargetVertexIndex = index; }
+    @Override public void setFeatureEditOperation(String operation) { featureEditOperation = operation; }
+    @Override public void markProjectDirty() { AppContext.get().markProjectDirty(); }
+    @Override public void updateTableSelectionIds(Layer layerKey, List<String> featureIds) { tableSelectionIds.put(layerKey, new ArrayList<>(featureIds)); }
+    @Override public void clearTableSelectionIds(Layer layerKey) { tableSelectionIds.remove(layerKey); }
 
     // --- Sync methods ---
     private void syncViewFromController() {
@@ -4775,7 +4793,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
     }
 
 
-    Envelope computeEnvelope(List<SimpleFeature> features) {
+    @Override public Envelope computeEnvelope(List<SimpleFeature> features) {
         Envelope envelope = new Envelope();
         if (features == null) {
             return envelope;
@@ -4810,7 +4828,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         return features;
     }
 
-    List<SimpleFeature> cloneFeatureList(List<SimpleFeature> features) {
+    @Override public List<SimpleFeature> cloneFeatureList(List<SimpleFeature> features) {
         List<SimpleFeature> clones = new ArrayList<>();
         if (features == null) {
             return clones;
@@ -4842,7 +4860,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         return builder.buildFeature(featureId != null ? featureId : sourceFeature.getID());
     }
 
-    SimpleFeature findFeatureById(List<SimpleFeature> features, String featureId) {
+    @Override public SimpleFeature findFeatureById(List<SimpleFeature> features, String featureId) {
         if (features == null || featureId == null) {
             return null;
         }
@@ -5071,7 +5089,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext 
         return MapGeometryUtils.collectGeometryParts(geometry);
     }
 
-    Geometry extractFeatureGeometryCopy(SimpleFeature feature) {
+    @Override public Geometry extractFeatureGeometryCopy(SimpleFeature feature) {
         return MapGeometryUtils.extractFeatureGeometryCopy(feature);
     }
 
