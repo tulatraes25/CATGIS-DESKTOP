@@ -37,6 +37,12 @@ public final class AppContext {
     // ---- Project ----
     public Project getProject() { return currentProject; }
     public void setProject(Project p) { this.currentProject = p; }
+    public void markProjectDirty() {
+        if (currentProject != null) currentProject.setModified(true);
+    }
+    public void markProjectClean() {
+        if (currentProject != null) currentProject.setModified(false);
+    }
 
     // ---- Layers ----
     public LayersPanel getLayersPanel() { return layersPanel; }
