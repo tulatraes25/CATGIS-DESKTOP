@@ -137,4 +137,40 @@ class GeometryToolsTest {
         lines.add(fb.buildFeature("line1"));
         return lines;
     }
+
+    @Test
+    void invertedPolygon_simplePolygon() {
+        Polygon poly = GF.createPolygon(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(10, 0),
+                new Coordinate(10, 10), new Coordinate(0, 10),
+                new Coordinate(0, 0)
+        });
+        Geometry result = GeometryTools.invertedPolygon(poly, null);
+        assertNotNull(result);
+        assertFalse(result.isEmpty());
+        assertTrue(result.getArea() > 0);
+    }
+
+    @Test
+    void invertedPolygon_nullInput() {
+        assertNull(GeometryTools.invertedPolygon(null, List.of()));
+    }
+
+    @Test
+    void invertedPolygon_withExtraFeatures() {
+        Polygon main = GF.createPolygon(new Coordinate[]{
+                new Coordinate(0, 0), new Coordinate(10, 0),
+                new Coordinate(10, 10), new Coordinate(0, 10),
+                new Coordinate(0, 0)
+        });
+        Polygon extra = GF.createPolygon(new Coordinate[]{
+                new Coordinate(3, 3), new Coordinate(7, 3),
+                new Coordinate(7, 7), new Coordinate(3, 7),
+                new Coordinate(3, 3)
+        });
+        Geometry result = GeometryTools.invertedPolygon(main, List.of(extra));
+        assertNotNull(result);
+        // Inverted polygon area = envelope area - polygon area(s) — should be smaller
+        assertTrue(result.getArea() < main.getArea());
+    }
 }

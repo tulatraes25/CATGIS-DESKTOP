@@ -333,4 +333,47 @@ public final class GeometryTools {
     public static boolean computeIsValid(Geometry geometry) {
         return geometry != null && geometry.isValid();
     }
+
+    // ─── Inverted polygon (area-of-interest mask) ────────────────────
+
+    /**
+     * Create an inverted polygon: the bounding envelope minus the input polygon.
+     * Useful for rendering a mask that highlights the area of interest.
+     *
+     * @param polygon  the area of interest polygon
+     * @param features optional additional polygons to subtract (e.g. neighboring features)
+     * @return inverted polygon (envelope with polygon hole), or null on error
+     */
+    public static Geometry invertedPolygon(Geometry polygon, List<Geometry> features) {
+        if (polygon == null || polygon.isEmpty()) return null;
+        GeometryFactory factory = polygon.getFactory() != null
+                ? polygon.getFactory() : new GeometryFactory();
+
+        // Expand envelope slightly (2%) for visual margin
+        Envelope env = polygon.getEnvelopeInternal();
+        double dx = env.getWidth() * 0.02;
+        double dy = env.getHeight() * 0.02;
+        if (dx == 0 && dy == 0) { dx = 0.01; dy = 0.01; }
+        env.expandBy(dx, dy);
+
+        Geometry envelopeGeom = factory.toGeometry(env);
+        try {
+            // Combine all polygons to subtract
+            Geometry subtractor = polygon;
+            if (features != null) {
+                List<Geometry> all = new ArrayList<>();
+                all.add(polygon);
+                for (Geometry f : features) {
+                    if (f != null && !f.isEmpty()) all.add(f);
+                }
+                subtractor = factory.buildGeometry(all);
+                if (subtractor.getNumGeometries() > 1) {
+                    subtractor = subtractor.union();
+                }
+            }
+            return envelopeGeom.difference(subtractor);
+        } catch (Exception ex) {
+            return envelopeGeom;
+        }
+    }
 }
