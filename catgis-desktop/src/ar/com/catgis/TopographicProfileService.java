@@ -370,4 +370,81 @@ public final class TopographicProfileService {
         }
         return aspects;
     }
+
+    // ─── Hypsometric curve ───────────────────────────────────────────
+
+    /**
+     * A single point on a hypsometric curve.
+     */
+    public record HypsometricPoint(double elevation, double areaFraction) {}
+
+    /**
+     * Compute hypsometric curve from a DEM raster.
+     * Returns elevation-area pairs sorted from highest to lowest elevation.
+     *
+     * @param elevationData flat array of elevation values (NaN = no data)
+     * @param numBins       number of elevation bins (e.g. 50)
+     * @return sorted list of (elevation, cumulative area fraction) points
+     */
+    public static List<HypsometricPoint> computeHypsometricCurve(double[] elevationData, int numBins) {
+        if (elevationData == null || elevationData.length == 0) return List.of();
+
+        // Collect valid elevations
+        double min = Double.MAX_VALUE;
+        double max = -Double.MAX_VALUE;
+        int validCount = 0;
+        for (double v : elevationData) {
+            if (Double.isNaN(v) || Double.isInfinite(v)) continue;
+            if (v < min) min = v;
+            if (v > max) max = v;
+            validCount++;
+        }
+        if (validCount == 0 || min >= max) return List.of();
+
+        // Build histogram
+        double binWidth = (max - min) / numBins;
+        int[] histogram = new int[numBins];
+        for (double v : elevationData) {
+            if (Double.isNaN(v) || Double.isInfinite(v)) continue;
+            int bin = (int) ((v - min) / binWidth);
+            if (bin >= numBins) bin = numBins - 1;
+            if (bin < 0) bin = 0;
+            histogram[bin]++;
+        }
+
+        // Cumulative area from highest to lowest
+        List<HypsometricPoint> curve = new ArrayList<>();
+        double cumArea = 0;
+        for (int i = numBins - 1; i >= 0; i--) {
+            cumArea += histogram[i];
+            double elevation = min + (i + 0.5) * binWidth;
+            curve.add(new HypsometricPoint(elevation, cumArea / validCount));
+        }
+
+        return curve;
+    }
+
+    /**
+     * Compute hypsometric integral (area under the curve, 0..1).
+     * Values near 0.5 indicate mature/equilibrium landscape;
+     * near 1.0 indicate young/active uplift; near 0.0 indicate old/eroded.
+     */
+    public static double hypsometricIntegral(List<HypsometricPoint> curve) {
+        if (curve == null || curve.size() < 2) return Double.NaN;
+        double minElev = curve.get(curve.size() - 1).elevation();
+        double maxElev = curve.get(0).elevation();
+        double elevRange = maxElev - minElev;
+        if (elevRange <= 0) return Double.NaN;
+
+        // Normalize elevations to 0..1 and compute area under curve
+        // Curve is sorted highest→lowest, areaFraction starts small and grows to 1.0
+        double area = 0;
+        for (int i = 1; i < curve.size(); i++) {
+            double dx = curve.get(i).areaFraction() - curve.get(i - 1).areaFraction();
+            double y1 = (curve.get(i - 1).elevation() - minElev) / elevRange;
+            double y2 = (curve.get(i).elevation() - minElev) / elevRange;
+            area += dx * (y1 + y2) / 2.0;
+        }
+        return area;
+    }
 }
