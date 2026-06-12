@@ -328,15 +328,15 @@ public class BooleanRiskDialog extends JDialog {
         if (result == null) {
             return;
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project(I18n.t("Proyecto actual"));
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project(I18n.t("Proyecto actual")));
         }
 
         List<Layer> frontOrder = new ArrayList<>();
         Layer lastAdded = null;
 
         if (result.vectorLayer() != null) {
-            CatgisDesktopApp.currentProject.addLayer(result.vectorLayer().layer());
+            AppContext.project().addLayer(result.vectorLayer().layer());
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.addLayer(result.vectorLayer().layer());
             }
@@ -348,7 +348,7 @@ public class BooleanRiskDialog extends JDialog {
         }
 
         for (BooleanRiskService.GeneratedRasterLayer raster : result.rasterLayers()) {
-            CatgisDesktopApp.currentProject.addLayer(raster.layer());
+            AppContext.project().addLayer(raster.layer());
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.addLayer(raster.layer());
             }
@@ -412,7 +412,7 @@ public class BooleanRiskDialog extends JDialog {
     private void updateNote() {
         Layer demLayer = (Layer) demCombo.getSelectedItem();
         Layer soilLayer = (Layer) soilCombo.getSelectedItem();
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
         String slopeRule = describeRule((BooleanRiskService.ComparisonMode) slopeModeCombo.getSelectedItem(), slopeValueAField.getText(), slopeValueBField.getText(), "deg");
         String soilRule = describeRule((BooleanRiskService.ComparisonMode) soilModeCombo.getSelectedItem(), soilValueAField.getText(), soilValueBField.getText(), "raw");
         String outputs = buildPlannedOutputs();

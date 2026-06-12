@@ -39,15 +39,15 @@ class ProjectFloodOperationalCrsRoundTripTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto inundacion 22182");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:22182");
-            CatgisDesktopApp.currentProject.setProjectFile(projectFile.toFile());
+            AppContext.project().setProjectCRS("EPSG:22182");
+            AppContext.project().setProjectFile(projectFile.toFile());
 
             LocalRasterData demData = RasterImageLoader.loadReal(demPath.toFile(), "EPSG:22182", "EPSG:3857");
             RasterLayer demLayer = new RasterLayer("DEM inundacion 22182", demPath.toString());
             demLayer.setSourceName("DEM local");
             demLayer.setFeatureCount(1);
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
-            CatgisDesktopApp.currentProject.addLayer(demLayer);
+            AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
 
@@ -64,7 +64,7 @@ class ProjectFloodOperationalCrsRoundTripTest {
                     )
             );
 
-            CatgisDesktopApp.currentProject.addLayer(floodResult.layer());
+            AppContext.project().addLayer(floodResult.layer());
             CatgisDesktopApp.layersPanel.addLayer(floodResult.layer());
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(floodResult.layer(), floodResult.data());
 
@@ -77,8 +77,8 @@ class ProjectFloodOperationalCrsRoundTripTest {
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Reload inundacion 22182");
             assertTrue(LoadProjectAction.loadProjectFile(projectFile.toFile(), false));
-            assertNotNull(CatgisDesktopApp.currentProject);
-            assertEquals("EPSG:22182", CatgisDesktopApp.currentProject.getProjectCRS());
+            assertNotNull(AppContext.project());
+            assertEquals("EPSG:22182", AppContext.project().getProjectCRS());
 
             Layer floodLayer = findLayer("Inundacion preliminar - DEM inundacion 22182 - 60mm");
             assertNotNull(floodLayer);
@@ -94,7 +94,7 @@ class ProjectFloodOperationalCrsRoundTripTest {
     }
 
     private static Layer findLayer(String name) {
-        return CatgisDesktopApp.currentProject.getLayers().stream()
+        return AppContext.project().getLayers().stream()
                 .filter(layer -> name.equals(layer.getName()))
                 .findFirst()
                 .orElse(null);

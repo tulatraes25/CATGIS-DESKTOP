@@ -463,10 +463,10 @@ public final class PostgisWriteService {
                 return schemaCode;
             }
         }
-        if (CatgisDesktopApp.currentProject != null
-                && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()) {
-            return CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS());
+        if (AppContext.project() != null
+                && AppContext.project().getProjectCRS() != null
+                && !AppContext.project().getProjectCRS().isBlank()) {
+            return CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
         }
         return "EPSG:4326";
     }

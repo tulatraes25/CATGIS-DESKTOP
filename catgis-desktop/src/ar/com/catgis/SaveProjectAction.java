@@ -26,12 +26,12 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     public static boolean saveProject() {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (AppContext.project() == null) {
             JOptionPane.showMessageDialog(null, "No hay proyecto actual.");
             return false;
         }
 
-        File targetFile = CatgisDesktopApp.currentProject.getProjectFile();
+        File targetFile = AppContext.project().getProjectFile();
         if (targetFile == null) {
             return saveProjectAs();
         }
@@ -40,7 +40,7 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     public static boolean saveProjectAs() {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (AppContext.project() == null) {
             JOptionPane.showMessageDialog(null, "No hay proyecto actual.");
             return false;
         }
@@ -80,7 +80,7 @@ public class SaveProjectAction extends AbstractAction {
         if (file == null) {
             return false;
         }
-        CatgisDesktopApp.currentProject.setProjectFile(file);
+        AppContext.project().setProjectFile(file);
         if (!persistVectorLayers(file, showDialogs)) {
             return false;
         }
@@ -89,44 +89,44 @@ public class SaveProjectAction extends AbstractAction {
             writer.write("CATGIS_PROJECT");
             writer.newLine();
 
-            writer.write("PROJECT_CRS|" + safe(CatgisDesktopApp.currentProject.getProjectCRS()));
+            writer.write("PROJECT_CRS|" + safe(AppContext.project().getProjectCRS()));
             writer.newLine();
 
-            writer.write("PROJECT_META|STUDY_NAME|" + safe(CatgisDesktopApp.currentProject.getStudyName()));
+            writer.write("PROJECT_META|STUDY_NAME|" + safe(AppContext.project().getStudyName()));
             writer.newLine();
-            writer.write("PROJECT_META|COMPANY_NAME|" + safe(CatgisDesktopApp.currentProject.getCompanyName()));
+            writer.write("PROJECT_META|COMPANY_NAME|" + safe(AppContext.project().getCompanyName()));
             writer.newLine();
-            writer.write("PROJECT_META|CARTOGRAPHER_NAME|" + safe(CatgisDesktopApp.currentProject.getCartographerName()));
+            writer.write("PROJECT_META|CARTOGRAPHER_NAME|" + safe(AppContext.project().getCartographerName()));
             writer.newLine();
-            writer.write("PROJECT_META|IMAGE_SOURCE|" + safe(CatgisDesktopApp.currentProject.getImageSource()));
+            writer.write("PROJECT_META|IMAGE_SOURCE|" + safe(AppContext.project().getImageSource()));
             writer.newLine();
-            writer.write("PROJECT_META|COORDINATE_REFERENCE|" + safe(CatgisDesktopApp.currentProject.getCoordinateReference()));
+            writer.write("PROJECT_META|COORDINATE_REFERENCE|" + safe(AppContext.project().getCoordinateReference()));
             writer.newLine();
-            writer.write("PROJECT_META|LEGEND_TITLE|" + safe(CatgisDesktopApp.currentProject.getLegendTitle()));
+            writer.write("PROJECT_META|LEGEND_TITLE|" + safe(AppContext.project().getLegendTitle()));
             writer.newLine();
-            writer.write("PROJECT_META|LEGEND_SUBTITLE|" + safe(CatgisDesktopApp.currentProject.getLegendSubtitle()));
+            writer.write("PROJECT_META|LEGEND_SUBTITLE|" + safe(AppContext.project().getLegendSubtitle()));
             writer.newLine();
-            writer.write("PROJECT_META|LOGO_PATH|" + safe(CatgisDesktopApp.currentProject.getLogoPath()));
+            writer.write("PROJECT_META|LOGO_PATH|" + safe(AppContext.project().getLogoPath()));
             writer.newLine();
-            writer.write("PROJECT_META|LAYOUT_IMAGE_PATH|" + safe(CatgisDesktopApp.currentProject.getLayoutImagePath()));
+            writer.write("PROJECT_META|LAYOUT_IMAGE_PATH|" + safe(AppContext.project().getLayoutImagePath()));
             writer.newLine();
-            writer.write("PROJECT_META|CATMAP_NORTH_STYLE|" + safe(CatgisDesktopApp.currentProject.getCatmapNorthStyle()));
+            writer.write("PROJECT_META|CATMAP_NORTH_STYLE|" + safe(AppContext.project().getCatmapNorthStyle()));
             writer.newLine();
-            writer.write("PROJECT_META|CATMAP_SHOW_NORTH|" + CatgisDesktopApp.currentProject.isCatmapShowNorth());
+            writer.write("PROJECT_META|CATMAP_SHOW_NORTH|" + AppContext.project().isCatmapShowNorth());
             writer.newLine();
-            for (CatmapLayoutItem item : CatgisDesktopApp.currentProject.getCatmapItems()) {
+            for (CatmapLayoutItem item : AppContext.project().getCatmapItems()) {
                 if (item != null) {
                     writer.write("PROJECT_LAYOUT_ITEM|" + safe(item.encode()));
                     writer.newLine();
                 }
             }
-            for (CatmapLegendItem item : CatgisDesktopApp.currentProject.getCatmapLegendItems()) {
+            for (CatmapLegendItem item : AppContext.project().getCatmapLegendItems()) {
                 if (item != null) {
                     writer.write("PROJECT_LEGEND_ITEM|" + safe(item.encode()));
                     writer.newLine();
                 }
             }
-            for (LayerGroup group : CatgisDesktopApp.currentProject.getLayerGroups()) {
+            for (LayerGroup group : AppContext.project().getLayerGroups()) {
                 if (group != null) {
                     writer.write("PROJECT_LAYER_GROUP|"
                             + safe(group.getName()) + "|"
@@ -142,14 +142,14 @@ public class SaveProjectAction extends AbstractAction {
                     + CatgisDesktopApp.mapPanel.getZoomFactor());
             writer.newLine();
 
-            for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+            for (Layer layer : AppContext.project().getLayers()) {
                 String line = buildLayerLine(layer);
                 writer.write(line);
                 writer.newLine();
             }
 
-            CatgisDesktopApp.currentProject.setProjectFile(file);
-            CatgisDesktopApp.currentProject.setName(stripExtension(file.getName()));
+            AppContext.project().setProjectFile(file);
+            AppContext.project().setName(stripExtension(file.getName()));
             CatgisDesktopApp.markProjectClean();
             FileChooserSupport.rememberFile("project-save", file);
             FileChooserSupport.rememberFile("project-open", file);
@@ -358,12 +358,12 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     private static File buildSuggestedFile() {
-        File currentFile = CatgisDesktopApp.currentProject.getProjectFile();
+        File currentFile = AppContext.project().getProjectFile();
         if (currentFile != null) {
             return currentFile;
         }
 
-        String projectName = CatgisDesktopApp.currentProject.getName();
+        String projectName = AppContext.project().getName();
         if (projectName == null || projectName.isBlank()) {
             projectName = "proyecto";
         }
@@ -395,11 +395,11 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     private static boolean persistVectorLayers(File projectFile, boolean showDialogs) {
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.project() == null || CatgisDesktopApp.mapPanel == null) {
             return true;
         }
 
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             if (layer == null || layer instanceof RasterLayer || VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
                 continue;
             }

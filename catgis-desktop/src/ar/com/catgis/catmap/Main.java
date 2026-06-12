@@ -59,7 +59,7 @@ public class Main {
 
             // Initialize minimal app context
             ModuleRegistry.initializeDefaults();
-            CatgisDesktopApp.currentProject = new Project("CATMAP Standalone");
+            AppContext.setCurrentProject(new Project("CATMAP Standalone"));
             CatgisDesktopApp.mapPanel = new MapPanel();
             CatgisDesktopApp.layersPanel = new LayersPanel();
             CatgisDesktopApp.statusBar = new StatusBar();
@@ -109,9 +109,9 @@ public class Main {
         layoutModel = new LayoutModel();
 
         // Add default elements if project exists
-        if (CatgisDesktopApp.currentProject != null
-                && CatgisDesktopApp.currentProject.getLayers() != null
-                && !CatgisDesktopApp.currentProject.getLayers().isEmpty()) {
+        if (AppContext.project() != null
+                && AppContext.project().getLayers() != null
+                && !AppContext.project().getLayers().isEmpty()) {
             addDefaultElements(layoutModel);
         }
 
@@ -264,7 +264,7 @@ public class Main {
     }
 
     private static void configureAtlas() {
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null || project.getLayers().isEmpty()) {
             JOptionPane.showMessageDialog(mainFrame,
                 "No hay proyecto cargado. Abrí o creá un proyecto primero.",
@@ -481,7 +481,7 @@ public class Main {
                                 && layoutAtlas.getCoverageLayerName() != null) {
                             // Use configured coverage layer
                             Layer coverageLayer = null;
-                            Project proj = CatgisDesktopApp.currentProject;
+                            Project proj = AppContext.project();
                             if (proj != null) {
                                 for (Layer l : proj.getLayers()) {
                                     if (l != null && layoutAtlas.getCoverageLayerName().equals(l.getName())) {
@@ -1386,7 +1386,7 @@ public class Main {
 
     private static void populateLegendFromProject(LayoutLegend legend) {
         legend.getItems().clear();
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null || project.getLayers() == null) return;
         for (Layer layer : project.getLayers()) {
             if (layer == null || !layer.isVisible()) continue;
@@ -1502,7 +1502,7 @@ public class Main {
     private static void refreshFromCatgis() {
         if (CatmapSocketClient.isConnected()) {
             syncFromCatgis();
-        } else if (CatgisDesktopApp.currentProject != null) {
+        } else if (AppContext.project() != null) {
             statusLabel.setText("Actualizando desde CATGIS...");
         }
         refreshMap();

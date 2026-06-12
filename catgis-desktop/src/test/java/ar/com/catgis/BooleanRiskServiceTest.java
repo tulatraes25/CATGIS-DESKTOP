@@ -39,7 +39,7 @@ class BooleanRiskServiceTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto riesgo 22182");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:22182");
+            AppContext.project().setProjectCRS("EPSG:22182");
 
             RasterLayer demLayer = addRasterLayer(demPath, "DEM riesgo base", "DEM local", "EPSG:22182");
             RasterLayer soilLayer = addRasterLayer(soilPath, "Arcilla SoilGrids", "SoilGrids clay 0-5 cm", "EPSG:22182");
@@ -116,7 +116,7 @@ class BooleanRiskServiceTest {
         layer.setSourceName(sourceName);
         layer.setFeatureCount(1);
         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
         return layer;

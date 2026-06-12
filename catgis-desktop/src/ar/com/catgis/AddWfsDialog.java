@@ -226,7 +226,7 @@ public class AddWfsDialog extends JDialog {
         if (options.isEmpty()) {
             return selected.getDefaultCrs();
         }
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
         if (projectCrs != null && !projectCrs.isBlank()) {
             for (String option : options) {
                 if (projectCrs.equalsIgnoreCase(option)) {
@@ -285,11 +285,11 @@ public class AddWfsDialog extends JDialog {
                         throw new IllegalStateException("No se pudo cargar la capa WFS.");
                     }
 
-                    if (CatgisDesktopApp.currentProject == null) {
-                        CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+                    if (AppContext.project() == null) {
+                        AppContext.setCurrentProject(new Project("Proyecto actual"));
                     }
 
-                    CatgisDesktopApp.currentProject.addLayer(loaded.layer);
+                    AppContext.project().addLayer(loaded.layer);
                     CatgisDesktopApp.layersPanel.addLayer(loaded.layer);
                     CatgisDesktopApp.layersPanel.selectLayer(loaded.layer);
                     CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(loaded.layer, loaded.data);

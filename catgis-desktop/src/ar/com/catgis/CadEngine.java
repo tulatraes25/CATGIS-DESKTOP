@@ -218,7 +218,7 @@ public class CadEngine {
             return;
         }
         MapPanel.MapPointCaptureHandler handler = pointCaptureHandler;
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
         pointCaptureActive = false;
         pointCaptureHandler = null;
         panel.repaint();

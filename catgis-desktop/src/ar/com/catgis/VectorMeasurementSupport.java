@@ -195,8 +195,8 @@ final class VectorMeasurementSupport {
                                            Geometry geometry,
                                            String sourceCode,
                                            CoordinateReferenceSystem sourceCrs) {
-        String projectCode = CatgisDesktopApp.currentProject != null
-                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        String projectCode = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                 : "";
         if (projectCode != null && !projectCode.isBlank()) {
             CoordinateReferenceSystem projectCrs = decode(projectCode);
@@ -300,10 +300,10 @@ final class VectorMeasurementSupport {
         if (layer != null && layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank()) {
             return CRSDefinitions.normalizeCode(layer.getSourceCRS());
         }
-        if (CatgisDesktopApp.currentProject != null
-                && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()) {
-            return CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS());
+        if (AppContext.project() != null
+                && AppContext.project().getProjectCRS() != null
+                && !AppContext.project().getProjectCRS().isBlank()) {
+            return CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
         }
         return "";
     }

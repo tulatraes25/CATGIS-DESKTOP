@@ -44,13 +44,13 @@ public class NewVectorLayerAction extends AbstractAction {
         }
 
         try {
-            if (CatgisDesktopApp.currentProject == null) {
-                CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+            if (AppContext.project() == null) {
+                AppContext.setCurrentProject(new Project("Proyecto actual"));
             }
 
-            String projectCrs = CatgisDesktopApp.currentProject.getProjectCRS() != null
-                    && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()
-                    ? CatgisDesktopApp.currentProject.getProjectCRS()
+            String projectCrs = AppContext.project().getProjectCRS() != null
+                    && !AppContext.project().getProjectCRS().isBlank()
+                    ? AppContext.project().getProjectCRS()
                     : "EPSG:4326";
 
             Class<? extends Geometry> geometryClass = DrawFeatureBuilder.resolveGeometryClass(result.getGeometryKind());
@@ -84,7 +84,7 @@ public class NewVectorLayerAction extends AbstractAction {
                 return null;
             }
 
-            CatgisDesktopApp.currentProject.addLayer(layer);
+            AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
 
             if (CatgisDesktopApp.layersPanel != null) {

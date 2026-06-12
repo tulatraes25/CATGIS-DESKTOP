@@ -55,10 +55,10 @@ public class PinManager {
         }
 
         try {
-            String projectCRS = (CatgisDesktopApp.currentProject != null &&
-                    CatgisDesktopApp.currentProject.getProjectCRS() != null &&
-                    !CatgisDesktopApp.currentProject.getProjectCRS().isBlank())
-                    ? CatgisDesktopApp.currentProject.getProjectCRS()
+            String projectCRS = (AppContext.project() != null &&
+                    AppContext.project().getProjectCRS() != null &&
+                    !AppContext.project().getProjectCRS().isBlank())
+                    ? AppContext.project().getProjectCRS()
                     : "EPSG:4326";
 
             ShapefileData data = PinLayerBuilder.buildFromPins(pins, projectCRS);
@@ -84,11 +84,11 @@ public class PinManager {
                 return;
             }
 
-            if (CatgisDesktopApp.currentProject == null) {
-                CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+            if (AppContext.project() == null) {
+                AppContext.setCurrentProject(new Project("Proyecto actual"));
             }
 
-            CatgisDesktopApp.currentProject.addLayer(layer);
+            AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             CatgisDesktopApp.layersPanel.addLayer(layer);
             if (CatgisDesktopApp.mapPanel != null) {
@@ -129,7 +129,7 @@ public class PinManager {
         StringBuilder sb = new StringBuilder();
         sb.append("Coordenadas del pin P").append(pin.getId()).append("\n\n");
 
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         if (projectCRS != null && !projectCRS.isBlank()) {
             sb.append("CRS proyecto: ").append(projectCRS).append("\n");
         }
@@ -155,7 +155,7 @@ public class PinManager {
             return;
         }
 
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         double[] geographic = panel.transformPoint(pin.getX(), pin.getY(), projectCRS, "EPSG:4326");
 
         if (geographic == null) {

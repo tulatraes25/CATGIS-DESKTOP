@@ -289,7 +289,7 @@ public class AnalysisConsoleDialog extends JDialog {
         layerCheckboxes.clear();
         layerInfoMap.clear();
 
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null || project.getLayers().isEmpty()) {
             layerTogglePanel.add(new JLabel("  No hay capas cargadas."));
             layerTogglePanel.revalidate();
@@ -569,7 +569,7 @@ public class AnalysisConsoleDialog extends JDialog {
     }
 
     private Layer findLayerByName(String name) {
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null) return null;
         for (Layer layer : project.getLayers()) {
             if (layer != null && name.equals(layer.getName())) return layer;

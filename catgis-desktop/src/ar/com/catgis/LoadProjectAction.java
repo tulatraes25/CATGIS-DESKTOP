@@ -175,7 +175,7 @@ public class LoadProjectAction extends AbstractAction {
                 CatgisDesktopApp.mapPanel.clearAllLayers();
             }
 
-            CatgisDesktopApp.currentProject = loadedProject;
+            AppContext.setCurrentProject(loadedProject);
             AppContext.get().setProject(loadedProject);
 
             for (Layer layer : loadedProject.getLayers()) {
@@ -205,7 +205,7 @@ public class LoadProjectAction extends AbstractAction {
 
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage(
-                        "Proyecto cargado | CRS: " + CRSDefinitions.getLabelForCode(CatgisDesktopApp.currentProject.getProjectCRS())
+                        "Proyecto cargado | CRS: " + CRSDefinitions.getLabelForCode(AppContext.project().getProjectCRS())
                 );
             }
 
@@ -247,7 +247,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
                 File rasterFile = new File(layer.getPath());
                 LocalRasterData rasterData;
-                String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+                String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
                 String sourceCRS = layer.getSourceCRS();
                 if (layer instanceof RasterLayer) {
                     RasterLayer rasterLayer = (RasterLayer) layer;

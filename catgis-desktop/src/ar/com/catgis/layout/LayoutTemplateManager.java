@@ -32,7 +32,7 @@ public class LayoutTemplateManager {
         for (LayoutElement e : rm) model.removeElement(e.getId());
         internalApply(key, model);
         ar.com.catgis.core.model.Project p = ar.com.catgis.AppContext.get().getProject();
-        if (p == null) p = ar.com.catgis.CatgisDesktopApp.currentProject;
+        if (p == null) p = ar.com.catgis.AppContext.project();
         // Auto-populate legend from project layers
         for (LayoutElement el : model.getElements()) {
             if (el instanceof LayoutMap) {

@@ -320,8 +320,8 @@ public class FloodScenarioDialog extends JDialog {
         if (batchResult == null || batchResult.results() == null || batchResult.results().isEmpty()) {
             return;
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project(I18n.t("Proyecto actual"));
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project(I18n.t("Proyecto actual")));
         }
         List<Layer> addedLayers = new ArrayList<>();
         FloodScenarioService.FloodScenarioResult lastResult = null;
@@ -329,7 +329,7 @@ public class FloodScenarioDialog extends JDialog {
             if (result == null) {
                 continue;
             }
-            CatgisDesktopApp.currentProject.addLayer(result.layer());
+            AppContext.project().addLayer(result.layer());
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.addLayer(result.layer());
                 CatgisDesktopApp.layersPanel.selectLayer(result.layer());

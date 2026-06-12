@@ -62,7 +62,7 @@ public class TopographicProfileTool {
         }
         LineString line = TopographicProfileService.buildLineFromProjectCoordinates(coordinates);
         MapPanel.TopographicProfileCaptureHandler h = this.handler;
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
         active = false;
         coordinates.clear();
         this.handler = null;

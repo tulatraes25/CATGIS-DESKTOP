@@ -437,8 +437,8 @@ public class TopographicProfileDialog extends JDialog {
                 AppContext.setStatusMessage(I18n.t("Perfil topografico exportado: ") + output.getName());
             }
             if (openComposerAfterExport) {
-                if (CatgisDesktopApp.currentProject != null) {
-                    CatgisDesktopApp.currentProject.setLayoutImagePath(output.getAbsolutePath());
+                if (AppContext.project() != null) {
+                    AppContext.project().setLayoutImagePath(output.getAbsolutePath());
                     CatgisDesktopApp.markProjectDirty();
                 }
                 MapLayoutComposerDialog.openWithLayoutImage(output);

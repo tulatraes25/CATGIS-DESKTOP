@@ -39,9 +39,9 @@ class ReleaseProjectRoundTripTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto beta final");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:4326");
-            CatgisDesktopApp.currentProject.setProjectFile(projectFile.toFile());
-            CatgisDesktopApp.currentProject.addLayer(layer);
+            AppContext.project().setProjectCRS("EPSG:4326");
+            AppContext.project().setProjectFile(projectFile.toFile());
+            AppContext.project().addLayer(layer);
             CatgisDesktopApp.layersPanel.addLayer(layer);
             CatgisDesktopApp.mapPanel.showShapefile(layer, data);
             assertTrue(SaveProjectAction.saveProjectToFile(projectFile.toFile(), false));
@@ -50,10 +50,10 @@ class ReleaseProjectRoundTripTest {
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Reload");
             assertTrue(LoadProjectAction.loadProjectFile(projectFile.toFile(), false));
-            assertNotNull(CatgisDesktopApp.currentProject);
-            assertEquals("EPSG:4326", CatgisDesktopApp.currentProject.getProjectCRS());
-            assertEquals(1, CatgisDesktopApp.currentProject.getLayers().size());
-            Layer loadedLayer = CatgisDesktopApp.currentProject.getLayers().get(0);
+            assertNotNull(AppContext.project());
+            assertEquals("EPSG:4326", AppContext.project().getProjectCRS());
+            assertEquals(1, AppContext.project().getLayers().size());
+            Layer loadedLayer = AppContext.project().getLayers().get(0);
             assertEquals("Pozos", loadedLayer.getName());
             assertTrue("EPSG:4326".equalsIgnoreCase(loadedLayer.getSourceCRS())
                     || "CRS:84".equalsIgnoreCase(loadedLayer.getSourceCRS()));

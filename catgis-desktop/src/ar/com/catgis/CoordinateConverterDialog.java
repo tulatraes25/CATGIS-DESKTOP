@@ -164,9 +164,9 @@ public class CoordinateConverterDialog extends JDialog {
         addCrsManualRow(panel, gc, "Origen manual", txtSourceManual);
         addCrsManualRow(panel, gc, "Destino manual", txtTargetManual);
 
-        if (CatgisDesktopApp.currentProject != null) {
+        if (AppContext.project() != null) {
             JLabel projectCrsLabel = new JLabel("CRS del proyecto: " +
-                    CRSDefinitions.getLabelForCode(CatgisDesktopApp.currentProject.getProjectCRS()));
+                    CRSDefinitions.getLabelForCode(AppContext.project().getProjectCRS()));
             projectCrsLabel.setForeground(new Color(90, 100, 118));
             projectCrsLabel.setFont(projectCrsLabel.getFont().deriveFont(Font.PLAIN, 11f));
             gc.gridx = 0;

@@ -17,10 +17,10 @@ public class NewProjectAction extends AbstractAction {
         }
 
         String inheritedCrs = "EPSG:4326";
-        if (CatgisDesktopApp.currentProject != null
-                && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()) {
-            inheritedCrs = CatgisDesktopApp.currentProject.getProjectCRS();
+        if (AppContext.project() != null
+                && AppContext.project().getProjectCRS() != null
+                && !AppContext.project().getProjectCRS().isBlank()) {
+            inheritedCrs = AppContext.project().getProjectCRS();
         }
 
         Project project = new Project("Proyecto sin nombre");
@@ -35,7 +35,7 @@ public class NewProjectAction extends AbstractAction {
             CatgisDesktopApp.mapPanel.repaint();
         }
 
-        CatgisDesktopApp.currentProject = project;
+        AppContext.setCurrentProject(project);
         CatgisDesktopApp.markProjectClean();
 
         if (CatgisDesktopApp.statusBar != null) {

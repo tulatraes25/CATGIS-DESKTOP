@@ -213,7 +213,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private boolean isGeographicCRS() {
-        ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
         if (proj == null) return false;
         String crs = proj.getProjectCRS();
         if (crs == null) return false;
@@ -280,7 +280,7 @@ public class LayoutMap implements LayoutElement {
                 key = key * 31 + Double.doubleToLongBits(map.getZoomFactor());
             }
         }
-        ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
         if (proj != null && proj.getLayers() != null) {
             for (ar.com.catgis.core.model.Layer layer : proj.getLayers()) {
                 if (layer == null) continue;
@@ -292,7 +292,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private boolean shouldPreferMainMapComposite() {
-        ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+        ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
         if (proj == null || proj.getLayers() == null) {
             return false;
         }

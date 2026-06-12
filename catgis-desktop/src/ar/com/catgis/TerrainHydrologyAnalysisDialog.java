@@ -295,14 +295,14 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
         if (result == null) {
             return;
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project(I18n.t("Proyecto actual"));
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project(I18n.t("Proyecto actual")));
         }
 
         Layer lastAdded = null;
         List<Layer> desiredFrontOrder = new ArrayList<>();
         for (TerrainHydrologyAnalysisService.GeneratedRasterLayer raster : result.rasterLayers()) {
-            CatgisDesktopApp.currentProject.addLayer(raster.layer());
+            AppContext.project().addLayer(raster.layer());
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.addLayer(raster.layer());
             }
@@ -314,7 +314,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
 
         for (TerrainHydrologyAnalysisService.GeneratedVectorLayer vector : result.vectorLayers()) {
             ShapefileData projectedData = TopographyWorkflowSupport.projectVectorDataToCurrentProject(vector.layer(), vector.data());
-            CatgisDesktopApp.currentProject.addLayer(vector.layer());
+            AppContext.project().addLayer(vector.layer());
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.addLayer(vector.layer());
             }

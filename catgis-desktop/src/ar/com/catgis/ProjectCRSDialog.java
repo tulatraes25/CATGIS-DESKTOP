@@ -6,18 +6,18 @@ public class ProjectCRSDialog {
     public static void openDialog() {
         String currentCode = "EPSG:4326";
 
-        if (CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getProjectCRS() != null) {
-            currentCode = CatgisDesktopApp.currentProject.getProjectCRS();
+        if (AppContext.project() != null && AppContext.project().getProjectCRS() != null) {
+            currentCode = AppContext.project().getProjectCRS();
         }
 
         String finalCurrentCode = currentCode;
 
         CRSSelectorDialog.open("CRS del proyecto", finalCurrentCode, code -> {
-            if (CatgisDesktopApp.currentProject == null) {
-                CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+            if (AppContext.project() == null) {
+                AppContext.setCurrentProject(new Project("Proyecto actual"));
             }
 
-            CatgisDesktopApp.currentProject.setProjectCRS(code);
+            AppContext.project().setProjectCRS(code);
             CatgisDesktopApp.markProjectDirty();
 
             if (CatgisDesktopApp.statusBar != null) {

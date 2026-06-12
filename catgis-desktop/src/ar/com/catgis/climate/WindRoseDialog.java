@@ -135,8 +135,8 @@ public class WindRoseDialog extends JDialog {
 
     private void populateRasterLayers(JComboBox<Layer> combo) {
         combo.removeAllItems();
-        if (CatgisDesktopApp.currentProject == null) return;
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        if (AppContext.project() == null) return;
+        for (Layer layer : AppContext.project().getLayers()) {
             if (layer instanceof RasterLayer) {
                 combo.addItem(layer);
             }

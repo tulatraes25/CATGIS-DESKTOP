@@ -96,9 +96,9 @@ public final class EnvironmentalAreaMarker {
      */
     public static List<MarkedArea> getMarkedAreaLayers() {
         List<MarkedArea> result = new ArrayList<>();
-        if (CatgisDesktopApp.currentProject == null) return result;
+        if (AppContext.project() == null) return result;
 
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             AreaType type = getAreaType(layer);
             if (type != null) {
                 result.add(new MarkedArea(layer, type));
@@ -112,9 +112,9 @@ public final class EnvironmentalAreaMarker {
      */
     public static List<Layer> getPolygonLayers() {
         List<Layer> polygonLayers = new ArrayList<>();
-        if (CatgisDesktopApp.currentProject == null) return polygonLayers;
+        if (AppContext.project() == null) return polygonLayers;
 
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             if (isPolygonLayer(layer)) {
                 polygonLayers.add(layer);
             }

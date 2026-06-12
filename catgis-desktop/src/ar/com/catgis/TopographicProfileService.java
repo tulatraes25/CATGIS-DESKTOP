@@ -45,7 +45,7 @@ public final class TopographicProfileService {
 
         String normalizedSourceCrs = normalizeCode(
                 sourceLineCrs,
-                CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326"
+                AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326"
         );
 
         GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
@@ -120,7 +120,7 @@ public final class TopographicProfileService {
             }
             String normalizedSourceCrs = normalizeCode(
                     sourceLineCrs,
-                    CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326"
+                    AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326"
             );
             String metricCode = resolveMetricCrs(normalizedSourceCrs, line);
             MathTransform toMetric = buildTransform(normalizedSourceCrs, metricCode);
@@ -134,8 +134,8 @@ public final class TopographicProfileService {
     private static String resolveMetricCrs(String sourceCode, Geometry geometry) {
         try {
             CoordinateReferenceSystem sourceCrs = CRSDefinitions.decode(normalizeCode(sourceCode, "EPSG:4326"), true);
-            String projectCode = CatgisDesktopApp.currentProject != null
-                    ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+            String projectCode = AppContext.project() != null
+                    ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                     : "";
             if (projectCode != null && !projectCode.isBlank()) {
                 CoordinateReferenceSystem projectCrs = CRSDefinitions.decode(projectCode, true);

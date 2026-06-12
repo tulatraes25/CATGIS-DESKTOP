@@ -41,8 +41,8 @@ class ProjectBooleanRiskRoundTripTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto riesgo booleano 22182");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:22182");
-            CatgisDesktopApp.currentProject.setProjectFile(projectFile.toFile());
+            AppContext.project().setProjectCRS("EPSG:22182");
+            AppContext.project().setProjectFile(projectFile.toFile());
 
             RasterLayer demLayer = addRasterLayer(demPath, "DEM riesgo booleano", "DEM local", "EPSG:22182");
             RasterLayer soilLayer = addRasterLayer(soilPath, "Arcilla SoilGrids", "SoilGrids clay 0-5 cm", "EPSG:22182");
@@ -64,12 +64,12 @@ class ProjectBooleanRiskRoundTripTest {
             );
 
             for (BooleanRiskService.GeneratedRasterLayer raster : result.rasterLayers()) {
-                CatgisDesktopApp.currentProject.addLayer(raster.layer());
+                AppContext.project().addLayer(raster.layer());
                 CatgisDesktopApp.layersPanel.addLayer(raster.layer());
                 CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(raster.layer(), raster.data());
             }
             if (result.vectorLayer() != null) {
-                CatgisDesktopApp.currentProject.addLayer(result.vectorLayer().layer());
+                AppContext.project().addLayer(result.vectorLayer().layer());
                 CatgisDesktopApp.layersPanel.addLayer(result.vectorLayer().layer());
                 CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
             }
@@ -80,8 +80,8 @@ class ProjectBooleanRiskRoundTripTest {
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Reload riesgo booleano 22182");
             assertTrue(LoadProjectAction.loadProjectFile(projectFile.toFile(), false));
-            assertNotNull(CatgisDesktopApp.currentProject);
-            assertEquals("EPSG:22182", CatgisDesktopApp.currentProject.getProjectCRS());
+            assertNotNull(AppContext.project());
+            assertEquals("EPSG:22182", AppContext.project().getProjectCRS());
 
             Layer slopeMask = findLayer("Mascara pendiente - Riesgo 22182");
             Layer soilMask = findLayer("Mascara suelo - Riesgo 22182");
@@ -135,14 +135,14 @@ class ProjectBooleanRiskRoundTripTest {
         layer.setSourceName(sourceName);
         layer.setFeatureCount(1);
         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);
         return layer;
     }
 
     private static Layer findLayer(String name) {
-        return CatgisDesktopApp.currentProject.getLayers().stream()
+        return AppContext.project().getLayers().stream()
                 .filter(layer -> name.equals(layer.getName()))
                 .findFirst()
                 .orElse(null);

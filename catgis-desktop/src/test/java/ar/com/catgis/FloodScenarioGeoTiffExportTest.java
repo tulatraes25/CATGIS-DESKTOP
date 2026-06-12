@@ -36,14 +36,14 @@ class FloodScenarioGeoTiffExportTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Flood export 22182");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:22182");
+            AppContext.project().setProjectCRS("EPSG:22182");
 
             LocalRasterData demData = RasterImageLoader.loadReal(demPath.toFile(), "EPSG:22182", "EPSG:3857");
             RasterLayer demLayer = new RasterLayer("DEM flood export", demPath.toString());
             demLayer.setSourceName("DEM local");
             demLayer.setFeatureCount(1);
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
-            CatgisDesktopApp.currentProject.addLayer(demLayer);
+            AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
 

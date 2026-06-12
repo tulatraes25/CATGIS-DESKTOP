@@ -288,7 +288,7 @@ public class AddWmsDialog extends JDialog {
         if (options.isEmpty()) {
             return null;
         }
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
         if (projectCrs != null && !projectCrs.isBlank()) {
             for (String option : options) {
                 if (projectCrs.equalsIgnoreCase(option)) {
@@ -348,10 +348,10 @@ public class AddWmsDialog extends JDialog {
         layer.setTermsUrl(normalizedServiceUrl);
         setLayerExtent(layer, selected, requestCrs);
 
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project("Proyecto actual"));
         }
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.layersPanel.selectLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateOnlineWmsLayer(layer);

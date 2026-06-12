@@ -128,11 +128,11 @@ public class TablePointImportDialog extends JDialog {
             layer.setLabelsVisible(true);
             layer.setLabelField(labelField);
 
-            if (CatgisDesktopApp.currentProject == null) {
-                CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+            if (AppContext.project() == null) {
+                AppContext.setCurrentProject(new Project("Proyecto actual"));
             }
 
-            CatgisDesktopApp.currentProject.addLayer(layer);
+            AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             CatgisDesktopApp.layersPanel.addLayer(layer);
             CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);

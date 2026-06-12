@@ -186,7 +186,7 @@ public class UnifiedAnalysisDialog extends JDialog {
         demLayerCombo.addItem("[Cargar DEM desde proyecto]");
         availableDemLayers.clear();
 
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project != null && project.getLayers() != null) {
             for (Layer layer : project.getLayers()) {
                 if (layer == null || layer.getPath() == null) continue;
@@ -383,16 +383,16 @@ public class UnifiedAnalysisDialog extends JDialog {
         // Create raster layer data
         LocalRasterData data = new LocalRasterData(
             resultImage, envelope, 3, true,
-            CatgisDesktopApp.currentProject != null
-                ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+            AppContext.project() != null
+                ? AppContext.project().getProjectCRS() : "");
 
         // Create layer and add to project
         RasterLayer rasterLayer = new RasterLayer(name, "");
         rasterLayer.setPreviewMode(true);
         rasterLayer.setSourceCRS(data.getSourceCRS());
 
-        if (CatgisDesktopApp.currentProject != null) {
-            CatgisDesktopApp.currentProject.addLayer(rasterLayer);
+        if (AppContext.project() != null) {
+            AppContext.project().addLayer(rasterLayer);
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(rasterLayer, data);

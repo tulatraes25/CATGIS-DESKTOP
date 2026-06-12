@@ -39,7 +39,7 @@ public final class OnlineLayerRenderer {
             return;
         }
 
-        String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
         if (projectCRS == null || projectCRS.isBlank()) {
             return;
         }
@@ -206,7 +206,7 @@ public final class OnlineLayerRenderer {
             return null;
         }
 
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
         String requestCrs = layer.getRequestCrs() != null && !layer.getRequestCrs().isBlank()
                 ? layer.getRequestCrs()
                 : (projectCrs != null && !projectCrs.isBlank() ? projectCrs : "EPSG:3857");

@@ -139,7 +139,7 @@ public class MapLayoutComposerDialog extends JFrame {
     // Context helpers - prefer AppContext over static globals
     private static Project ctxProject() {
         Project p = AppContext.get().getProject();
-        return p != null ? p : CatgisDesktopApp.currentProject;
+        return p != null ? p : AppContext.project();
     }
     private static MapPanel ctxMapPanel() {
         MapPanel m = AppContext.get().getMapPanel();

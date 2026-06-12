@@ -243,8 +243,8 @@ public class CsvDataSourceDialog extends JDialog {
             return "EPSG:4326";
         }
         if (minX > 1000000 && maxX < 10000000 && minY > 1000000 && maxY < 10000000) {
-            return CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                    ? CatgisDesktopApp.currentProject.getProjectCRS()
+            return AppContext.project() != null && AppContext.project().getProjectCRS() != null
+                    ? AppContext.project().getProjectCRS()
                     : "EPSG:22182";
         }
         return "EPSG:4326";

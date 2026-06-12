@@ -345,10 +345,10 @@ public class ExportVectorLayerAction {
                     resultLayer.setSourceName(file.getName());
                     resultLayer.setFeatureCount(reloaded.getFeatureCount());
                     resultLayer.setSourceCRS(targetCode);
-                    if (CatgisDesktopApp.currentProject == null) {
-                        CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+                    if (AppContext.project() == null) {
+                        AppContext.setCurrentProject(new Project("Proyecto actual"));
                     }
-                    CatgisDesktopApp.currentProject.addLayer(resultLayer);
+                    AppContext.project().addLayer(resultLayer);
                     CatgisDesktopApp.markProjectDirty();
                     if (CatgisDesktopApp.layersPanel != null) {
                         CatgisDesktopApp.layersPanel.addLayer(resultLayer);
@@ -930,10 +930,10 @@ public class ExportVectorLayerAction {
     }
 
     private static String getProjectCRSCode() {
-        if (CatgisDesktopApp.currentProject != null &&
-                CatgisDesktopApp.currentProject.getProjectCRS() != null &&
-                !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()) {
-            return CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS());
+        if (AppContext.project() != null &&
+                AppContext.project().getProjectCRS() != null &&
+                !AppContext.project().getProjectCRS().isBlank()) {
+            return CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
         }
         return "EPSG:4326";
     }

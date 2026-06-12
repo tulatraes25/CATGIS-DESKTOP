@@ -270,8 +270,8 @@ public class CadCrsAssignmentDialog extends JDialog {
     }
 
     private static String resolveProjectCrs() {
-        return CatgisDesktopApp.currentProject != null
-                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        return AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                 : "";
     }
 

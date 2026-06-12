@@ -1,6 +1,7 @@
 package ar.com.catgis.ui.dialogs;
 
 import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.AppContext;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.online.WfsTransactionService;
 
@@ -104,8 +105,8 @@ public class WfsTransactionDialog extends JDialog {
 
     private void refreshLayers() {
         layerCombo.removeAllItems();
-        if (CatgisDesktopApp.currentProject == null) return;
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        if (AppContext.project() == null) return;
+        for (Layer layer : AppContext.project().getLayers()) {
             if (layer != null && layer.getPath() != null && layer.getPath().toLowerCase().contains("wfs")) {
                 layerCombo.addItem(layer);
             }

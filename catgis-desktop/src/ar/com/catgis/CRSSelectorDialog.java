@@ -978,7 +978,7 @@ public class CRSSelectorDialog extends JDialog {
     }
 
     private double[] resolveCurrentProjectMarker() {
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.mapPanel == null) {
+        if (AppContext.project() == null || CatgisDesktopApp.mapPanel == null) {
             return null;
         }
         var envelope = CatgisDesktopApp.mapPanel.getCurrentViewEnvelope();
@@ -988,7 +988,7 @@ public class CRSSelectorDialog extends JDialog {
         double centerX = envelope.getMinX() + (envelope.getWidth() / 2d);
         double centerY = envelope.getMinY() + (envelope.getHeight() / 2d);
         try {
-            var source = CRSDefinitions.decode(CatgisDesktopApp.currentProject.getProjectCRS(), true);
+            var source = CRSDefinitions.decode(AppContext.project().getProjectCRS(), true);
             var target = CRSDefinitions.decode("EPSG:4326", true);
             var transform = org.geotools.referencing.CRS.findMathTransform(source, target, true);
             double[] src = new double[]{centerX, centerY};

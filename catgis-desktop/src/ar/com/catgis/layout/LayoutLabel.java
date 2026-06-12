@@ -147,7 +147,7 @@ public class LayoutLabel implements LayoutElement {
      * Available tokens:
      *   {date}     — current date (dd/MM/yyyy)
      *   {time}     — current time (HH:mm)
-     *   {project}  — current project name (from CatgisDesktopApp.currentProject)
+     *   {project}  — current project name (from AppContext.project())
      *   {crs}      — project CRS
      *   {page}     — current page number
      *   {scale}    — approximate scale (requires map frame context)
@@ -168,7 +168,7 @@ public class LayoutLabel implements LayoutElement {
         if (result.contains("{project}")) {
             String projName = "";
             try {
-                ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+                ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
                 if (proj != null) {
                     String name = proj.getName();
                     if (name != null && !name.isBlank()) projName = name;
@@ -179,7 +179,7 @@ public class LayoutLabel implements LayoutElement {
         if (result.contains("{crs}")) {
             String crsText = "";
             try {
-                ar.com.catgis.core.model.Project proj = ar.com.catgis.CatgisDesktopApp.currentProject;
+                ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
                 if (proj != null && proj.getProjectCRS() != null) {
                     crsText = proj.getProjectCRS();
                 }

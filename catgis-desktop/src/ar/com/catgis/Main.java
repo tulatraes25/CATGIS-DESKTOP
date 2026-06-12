@@ -29,7 +29,7 @@ public class Main {
                 SwingUtilities.invokeLater(() -> {
                     app.showStartupProjectCrsPromptIfNeeded();
                     // Show welcome page on first launch
-                    if (AppBranding.isShowWelcomePage() && CatgisDesktopApp.currentProject == null) {
+                    if (AppBranding.isShowWelcomePage() && AppContext.project() == null) {
                         WelcomePageDialog.open();
                     }
                 });

@@ -449,8 +449,8 @@ public class BasinFromOutletDialog extends JDialog {
         if (result == null || result.layers() == null || result.layers().isEmpty()) {
             return;
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project(I18n.t("Proyecto actual"));
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project(I18n.t("Proyecto actual")));
         }
         Layer lastAdded = null;
         List<Layer> desiredFrontOrder = new ArrayList<>();
@@ -459,7 +459,7 @@ public class BasinFromOutletDialog extends JDialog {
             if (generated == null || generated.layer() == null || generated.data() == null) {
                 continue;
             }
-            CatgisDesktopApp.currentProject.addLayer(generated.layer());
+            AppContext.project().addLayer(generated.layer());
             if (CatgisDesktopApp.layersPanel != null) {
                 CatgisDesktopApp.layersPanel.addLayer(generated.layer());
             }
@@ -501,8 +501,8 @@ public class BasinFromOutletDialog extends JDialog {
 
     private File buildManagedOutputFile(Layer layer) {
         File baseDirectory = null;
-        if (CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getProjectFile() != null) {
-            File projectFile = CatgisDesktopApp.currentProject.getProjectFile();
+        if (AppContext.project() != null && AppContext.project().getProjectFile() != null) {
+            File projectFile = AppContext.project().getProjectFile();
             baseDirectory = projectFile != null ? projectFile.getParentFile() : null;
         }
         if (baseDirectory == null || !baseDirectory.isDirectory()) {

@@ -563,7 +563,7 @@ public class LayersPanel extends JPanel {
         List<Object> previousSelection = new ArrayList<>(layerList.getSelectedValuesList());
         model.clear();
         unfilteredItems.clear();
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null) {
             layerList.repaint();
             CatgisDesktopApp.syncProInterpretationToolbar();
@@ -735,8 +735,8 @@ public class LayersPanel extends JPanel {
         for (Object obj : selected) {
             if (obj instanceof Layer l) {
                 CatgisDesktopApp.mapPanel.removeLayers(List.of(l));
-                if (CatgisDesktopApp.currentProject != null) {
-                    CatgisDesktopApp.currentProject.removeLayer(l);
+                if (AppContext.project() != null) {
+                    AppContext.project().removeLayer(l);
                 }
             }
         }
@@ -1328,7 +1328,7 @@ public class LayersPanel extends JPanel {
     }
 
     private void createNewGroupForLayers(List<Layer> layers) {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (AppContext.project() == null) {
             return;
         }
         String name = JOptionPane.showInputDialog(this, "Nombre del grupo:", "Nuevo grupo");
@@ -1340,10 +1340,10 @@ public class LayersPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Ingresa un nombre valido para el grupo.", "Grupos de capas", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        LayerGroup group = CatgisDesktopApp.currentProject.addLayerGroup(trimmed);
+        LayerGroup group = AppContext.project().addLayerGroup(trimmed);
         if (layers != null) {
             for (Layer layer : layers) {
-                CatgisDesktopApp.currentProject.assignLayerToGroup(layer, group.getName());
+                AppContext.project().assignLayerToGroup(layer, group.getName());
             }
         }
         CatgisDesktopApp.markProjectDirty();
@@ -1351,17 +1351,17 @@ public class LayersPanel extends JPanel {
     }
 
     private void populateMoveToGroupMenu(JMenu menu, List<Layer> layers) {
-        if (CatgisDesktopApp.currentProject == null) {
+        if (AppContext.project() == null) {
             menu.setEnabled(false);
             return;
         }
-        if (CatgisDesktopApp.currentProject.getLayerGroups().isEmpty()) {
+        if (AppContext.project().getLayerGroups().isEmpty()) {
             JMenuItem empty = createMenuItem("No hay grupos todavia", AppIcons.openIcon());
             empty.setEnabled(false);
             menu.add(empty);
             return;
         }
-        for (LayerGroup group : CatgisDesktopApp.currentProject.getLayerGroups()) {
+        for (LayerGroup group : AppContext.project().getLayerGroups()) {
             JMenuItem item = createMenuItem(group.getName(), AppIcons.openIcon());
             item.addActionListener(ev -> moveLayersToGroup(layers, group.getName()));
             menu.add(item);
@@ -1369,11 +1369,11 @@ public class LayersPanel extends JPanel {
     }
 
     private void moveLayersToGroup(List<Layer> layers, String groupName) {
-        if (CatgisDesktopApp.currentProject == null || layers == null || layers.isEmpty()) {
+        if (AppContext.project() == null || layers == null || layers.isEmpty()) {
             return;
         }
         for (Layer layer : layers) {
-            CatgisDesktopApp.currentProject.assignLayerToGroup(layer, groupName);
+            AppContext.project().assignLayerToGroup(layer, groupName);
         }
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
@@ -1381,7 +1381,7 @@ public class LayersPanel extends JPanel {
     }
 
     private void removeLayersFromGroup(List<Layer> layers) {
-        if (CatgisDesktopApp.currentProject == null || layers == null || layers.isEmpty()) {
+        if (AppContext.project() == null || layers == null || layers.isEmpty()) {
             return;
         }
         for (Layer layer : layers) {
@@ -1394,7 +1394,7 @@ public class LayersPanel extends JPanel {
     }
 
     private void renameGroup(LayerGroup group) {
-        if (group == null || CatgisDesktopApp.currentProject == null) {
+        if (group == null || AppContext.project() == null) {
             return;
         }
         String newName = JOptionPane.showInputDialog(this, "Nuevo nombre del grupo:", group.getName());
@@ -1405,13 +1405,13 @@ public class LayersPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Ingresa un nombre valido para el grupo.", "Grupos de capas", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        CatgisDesktopApp.currentProject.renameLayerGroup(group.getName(), newName.trim());
+        AppContext.project().renameLayerGroup(group.getName(), newName.trim());
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
     }
 
     private void removeGroup(LayerGroup group) {
-        if (group == null || CatgisDesktopApp.currentProject == null) {
+        if (group == null || AppContext.project() == null) {
             return;
         }
         int option = JOptionPane.showConfirmDialog(
@@ -1424,16 +1424,16 @@ public class LayersPanel extends JPanel {
         if (option != JOptionPane.YES_OPTION) {
             return;
         }
-        CatgisDesktopApp.currentProject.removeLayerGroup(group.getName(), true);
+        AppContext.project().removeLayerGroup(group.getName(), true);
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
     }
 
     private void moveGroup(LayerGroup group, int delta) {
-        if (group == null || CatgisDesktopApp.currentProject == null) {
+        if (group == null || AppContext.project() == null) {
             return;
         }
-        List<LayerGroup> groups = new ArrayList<>(CatgisDesktopApp.currentProject.getLayerGroups());
+        List<LayerGroup> groups = new ArrayList<>(AppContext.project().getLayerGroups());
         int index = groups.indexOf(group);
         int target = index + delta;
         if (index < 0 || target < 0 || target >= groups.size()) {
@@ -1447,7 +1447,7 @@ public class LayersPanel extends JPanel {
                 orderedNames.add(value.getName());
             }
         }
-        CatgisDesktopApp.currentProject.setLayerGroupOrder(orderedNames);
+        AppContext.project().setLayerGroupOrder(orderedNames);
         CatgisDesktopApp.markProjectDirty();
         refreshLayerList();
     }
@@ -1500,8 +1500,8 @@ public class LayersPanel extends JPanel {
                 ? CRSDefinitions.getLabelForCode(layer.getSourceCRS())
                 : "Desconocido";
 
-        String project = (CatgisDesktopApp.currentProject != null)
-                ? CRSDefinitions.getLabelForCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        String project = (AppContext.project() != null)
+                ? CRSDefinitions.getLabelForCode(AppContext.project().getProjectCRS())
                 : "-";
 
         StringBuilder text = new StringBuilder();
@@ -1627,10 +1627,10 @@ public class LayersPanel extends JPanel {
     }
 
     private void moveLayerWithinGroup(Layer layer, int delta) {
-        if (layer == null || CatgisDesktopApp.currentProject == null) {
+        if (layer == null || AppContext.project() == null) {
             return;
         }
-        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        List<Layer> ordered = new ArrayList<>(AppContext.project().getLayers());
         List<Layer> siblings = new ArrayList<>();
         for (Layer candidate : ordered) {
             if (candidate == null) {
@@ -1650,10 +1650,10 @@ public class LayersPanel extends JPanel {
     }
 
     private void moveLayerNearTarget(Layer layer, Layer target, boolean afterTarget) {
-        if (layer == null || target == null || CatgisDesktopApp.currentProject == null || layer == target) {
+        if (layer == null || target == null || AppContext.project() == null || layer == target) {
             return;
         }
-        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        List<Layer> ordered = new ArrayList<>(AppContext.project().getLayers());
         if (!ordered.remove(layer)) {
             return;
         }
@@ -1663,7 +1663,7 @@ public class LayersPanel extends JPanel {
         } else {
             ordered.add(afterTarget ? targetIndex + 1 : targetIndex, layer);
         }
-        CatgisDesktopApp.currentProject.setLayerOrder(ordered);
+        AppContext.project().setLayerOrder(ordered);
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.reorderLayers(ordered);
         }
@@ -1788,14 +1788,14 @@ public class LayersPanel extends JPanel {
     }
 
     private void moveLayerIntoGroup(Layer sourceLayer, LayerGroup targetGroup) {
-        if (sourceLayer == null || targetGroup == null || CatgisDesktopApp.currentProject == null) {
+        if (sourceLayer == null || targetGroup == null || AppContext.project() == null) {
             return;
         }
 
         sourceLayer.setGroupName(targetGroup.getName());
         targetGroup.setExpanded(true);
 
-        List<Layer> groupLayers = CatgisDesktopApp.currentProject.getLayersForGroup(targetGroup.getName());
+        List<Layer> groupLayers = AppContext.project().getLayersForGroup(targetGroup.getName());
         Layer anchor = null;
         for (Layer layer : groupLayers) {
             if (layer != null && layer != sourceLayer) {
@@ -1817,15 +1817,15 @@ public class LayersPanel extends JPanel {
     }
 
     private void moveLayerToTopOfUngrouped(Layer sourceLayer) {
-        if (sourceLayer == null || CatgisDesktopApp.currentProject == null) {
+        if (sourceLayer == null || AppContext.project() == null) {
             return;
         }
-        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        List<Layer> ordered = new ArrayList<>(AppContext.project().getLayers());
         if (!ordered.remove(sourceLayer)) {
             return;
         }
         ordered.add(0, sourceLayer);
-        CatgisDesktopApp.currentProject.setLayerOrder(ordered);
+        AppContext.project().setLayerOrder(ordered);
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.reorderLayers(ordered);
         }
@@ -1843,8 +1843,8 @@ public class LayersPanel extends JPanel {
             }
         }
 
-        if (CatgisDesktopApp.currentProject != null) {
-            CatgisDesktopApp.currentProject.setLayerOrder(orderedLayers);
+        if (AppContext.project() != null) {
+            AppContext.project().setLayerOrder(orderedLayers);
         }
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.reorderLayers(orderedLayers);
@@ -1910,8 +1910,8 @@ public class LayersPanel extends JPanel {
 
         for (Layer layer : orderedLayers) {
             model.removeElement(layer);
-            if (CatgisDesktopApp.currentProject != null) {
-                CatgisDesktopApp.currentProject.removeLayer(layer);
+            if (AppContext.project() != null) {
+                AppContext.project().removeLayer(layer);
             }
             OpenAttributeTableAction.closeOpenWindow(layer);
         }
@@ -2068,8 +2068,8 @@ public class LayersPanel extends JPanel {
             LocalRasterData rasterData = CatgisDesktopApp.mapPanel != null
                     ? CatgisDesktopApp.mapPanel.getRasterData(rasterLayer)
                     : null;
-            String projectName = CatgisDesktopApp.currentProject != null
-                    ? nonBlank(CatgisDesktopApp.currentProject.getName(), "Proyecto CATGIS")
+            String projectName = AppContext.project() != null
+                    ? nonBlank(AppContext.project().getName(), "Proyecto CATGIS")
                     : "Proyecto CATGIS";
             File saved = ProRasterReportService.exportMarkdownReport(rasterLayer, rasterData, projectName, outputFile);
             if (CatgisDesktopApp.statusBar != null) {
@@ -2420,7 +2420,7 @@ public class LayersPanel extends JPanel {
         SwingWorker<LocalRasterData, Void> worker = new SwingWorker<>() {
             @Override
             protected LocalRasterData doInBackground() throws Exception {
-                String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+                String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
                 String sourceCRS = layer.getSourceCRS();
                 if (RasterImageLoader.MODE_REAL.equalsIgnoreCase(mode)) {
                     return RasterImageLoader.loadReal(rasterFile, projectCRS, sourceCRS);
@@ -2632,11 +2632,11 @@ public class LayersPanel extends JPanel {
 
     private List<RasterLayer> findComparableProLayers(RasterLayer sourceLayer) {
         List<RasterLayer> candidates = new ArrayList<>();
-        if (sourceLayer == null || CatgisDesktopApp.currentProject == null) {
+        if (sourceLayer == null || AppContext.project() == null) {
             return candidates;
         }
         String variable = nonBlank(sourceLayer.getProVariableName(), "");
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             if (!(layer instanceof RasterLayer rasterLayer)) {
                 continue;
             }
@@ -2660,10 +2660,10 @@ public class LayersPanel extends JPanel {
         if (generated == null || generated.layer() == null || generated.data() == null) {
             return;
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project("Proyecto CATGIS");
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project("Proyecto CATGIS"));
         }
-        CatgisDesktopApp.currentProject.addLayer(generated.layer());
+        AppContext.project().addLayer(generated.layer());
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.addLayer(generated.layer());
@@ -2905,8 +2905,8 @@ public class LayersPanel extends JPanel {
         public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
             if (value instanceof LayerGroup group) {
                 boolean groupVisible = group.isVisible();
-                int memberCount = CatgisDesktopApp.currentProject != null
-                        ? CatgisDesktopApp.currentProject.getLayersForGroup(group.getName()).size()
+                int memberCount = AppContext.project() != null
+                        ? AppContext.project().getLayersForGroup(group.getName()).size()
                         : 0;
 
                 Color bg = isSelected ? new Color(217, 231, 251) : new Color(236, 244, 253);
@@ -2938,9 +2938,9 @@ public class LayersPanel extends JPanel {
             Layer layer = (Layer) value;
             boolean missingCrs = hasMissingCRS(layer);
             boolean editingLayer = CatgisDesktopApp.mapPanel != null && CatgisDesktopApp.mapPanel.isLayerArmedForEditing(layer);
-            boolean effectiveVisible = CatgisDesktopApp.currentProject == null
+            boolean effectiveVisible = AppContext.project() == null
                     ? layer.isVisible()
-                    : CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer);
+                    : AppContext.project().isLayerEffectivelyVisible(layer);
             boolean layerInGroup = layer.isInGroup();
 
             Color bg = editingLayer
@@ -3060,7 +3060,7 @@ public class LayersPanel extends JPanel {
             if (!layer.isVisible()) {
                 return " | Oculta";
             }
-            if (CatgisDesktopApp.currentProject != null && !CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer)) {
+            if (AppContext.project() != null && !AppContext.project().isLayerEffectivelyVisible(layer)) {
                 return " | Oculta por grupo";
             }
             return "";

@@ -51,10 +51,10 @@ public class GoToCoordinatesDialog extends JDialog {
         setLayout(new BorderLayout(10, 10));
 
         String projectCrs = "EPSG:4326";
-        if (CatgisDesktopApp.currentProject != null
-                && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()) {
-            projectCrs = CatgisDesktopApp.currentProject.getProjectCRS();
+        if (AppContext.project() != null
+                && AppContext.project().getProjectCRS() != null
+                && !AppContext.project().getProjectCRS().isBlank()) {
+            projectCrs = AppContext.project().getProjectCRS();
         }
         planarCrsField.setText(projectCrs);
 
@@ -220,10 +220,10 @@ public class GoToCoordinatesDialog extends JDialog {
 
     private double[] transformToProject(double x, double y, String sourceCrsCode) throws Exception {
         String targetCode = "EPSG:4326";
-        if (CatgisDesktopApp.currentProject != null
-                && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()) {
-            targetCode = CatgisDesktopApp.currentProject.getProjectCRS();
+        if (AppContext.project() != null
+                && AppContext.project().getProjectCRS() != null
+                && !AppContext.project().getProjectCRS().isBlank()) {
+            targetCode = AppContext.project().getProjectCRS();
         }
 
         if (sourceCrsCode.equalsIgnoreCase(targetCode)) {

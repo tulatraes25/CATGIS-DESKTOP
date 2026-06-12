@@ -3,6 +3,7 @@ import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 
 import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.AppContext;
 import ar.com.catgis.MapPanel;
 
 /**
@@ -28,7 +29,7 @@ public class LayoutContext {
      */
     public static LayoutContext fromCatgis() {
         LayoutContext ctx = new LayoutContext();
-        ctx.project = CatgisDesktopApp.currentProject;
+        ctx.project = AppContext.project();
         ctx.mapPanel = CatgisDesktopApp.mapPanel;
         return ctx;
     }
@@ -43,7 +44,7 @@ public class LayoutContext {
     }
 
     public Project getProject() {
-        return project != null ? project : CatgisDesktopApp.currentProject;
+        return project != null ? project : AppContext.project();
     }
 
     public void setProject(Project project) { this.project = project; }

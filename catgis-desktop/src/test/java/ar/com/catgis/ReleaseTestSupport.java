@@ -86,14 +86,14 @@ final class ReleaseTestSupport {
 
     static void initializeAppContext(String projectName) {
         ModuleRegistry.initializeDefaults();
-        CatgisDesktopApp.currentProject = new Project(projectName);
+        AppContext.setCurrentProject(new Project(projectName));
         CatgisDesktopApp.mapPanel = new MapPanel();
         CatgisDesktopApp.layersPanel = new LayersPanel();
         CatgisDesktopApp.statusBar = new StatusBar();
     }
 
     static void clearAppContext() {
-        CatgisDesktopApp.currentProject = null;
+        AppContext.setCurrentProject(null);
         CatgisDesktopApp.mapPanel = null;
         CatgisDesktopApp.layersPanel = null;
         CatgisDesktopApp.statusBar = null;

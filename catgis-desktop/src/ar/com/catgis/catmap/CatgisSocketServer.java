@@ -110,7 +110,7 @@ public final class CatgisSocketServer {
     }
 
     private static String getProjectState() {
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null) return "{\"error\":\"no project loaded\"}";
 
         StringBuilder sb = new StringBuilder();
@@ -150,7 +150,7 @@ public final class CatgisSocketServer {
     }
 
     private static String getLayers() {
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null) return "{\"error\":\"no project loaded\"}";
 
         StringBuilder sb = new StringBuilder();

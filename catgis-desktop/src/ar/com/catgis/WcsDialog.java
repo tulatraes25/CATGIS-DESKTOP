@@ -204,8 +204,8 @@ public class WcsDialog extends JDialog {
 
     private boolean loadAsRasterLayer(File file, String coverageName) {
         try {
-            if (CatgisDesktopApp.currentProject == null) return false;
-            String projectCRS = CatgisDesktopApp.currentProject.getProjectCRS();
+            if (AppContext.project() == null) return false;
+            String projectCRS = AppContext.project().getProjectCRS();
 
             // Ask user for resolution
             String[] options = {"Preview (2048px, rapido)", "Full (8192px, lento)"};
@@ -229,7 +229,7 @@ public class WcsDialog extends JDialog {
                     .resolveOperationalRasterCrs(rasterData, projectCRS));
             layer.setRasterMode(rasterData.getRasterMode());
 
-            CatgisDesktopApp.currentProject.addLayer(layer);
+            AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             CatgisDesktopApp.layersPanel.addLayer(layer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);

@@ -84,7 +84,7 @@ class SoilGridsDownloadServiceTest {
             ReleaseTestSupport.runOnEdt(() -> {
                 try {
                     ReleaseTestSupport.initializeAppContext("Soils 22182");
-                    CatgisDesktopApp.currentProject.setProjectCRS("EPSG:22182");
+                    AppContext.project().setProjectCRS("EPSG:22182");
 
                     LocalRasterData rasterData = RasterImageLoader.loadReal(result.file(), "EPSG:22182", "EPSG:4326");
                     assertEquals("EPSG:22182", rasterData.getDisplayCRS());

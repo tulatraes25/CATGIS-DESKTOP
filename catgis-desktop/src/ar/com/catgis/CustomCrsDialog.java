@@ -107,8 +107,8 @@ public class CustomCrsDialog extends JDialog {
 
         try {
             String normalized = CRSDefinitions.normalizeCode(input);
-            if (CatgisDesktopApp.currentProject != null) {
-                CatgisDesktopApp.currentProject.setProjectCRS(normalized);
+            if (AppContext.project() != null) {
+                AppContext.project().setProjectCRS(normalized);
             }
             statusLabel.setText("CRS aplicado: " + normalized);
             statusLabel.setForeground(new Color(0, 128, 0));

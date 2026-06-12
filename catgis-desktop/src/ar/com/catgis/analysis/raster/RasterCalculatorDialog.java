@@ -4,6 +4,7 @@ import ar.com.catgis.core.model.Project;
 import ar.com.catgis.analysis.raster.RasterCalculatorEngine;
 
 import ar.com.catgis.MapPanel;
+import ar.com.catgis.AppContext;
 import ar.com.catgis.Main;
 import ar.com.catgis.LayersPanel;
 import ar.com.catgis.CatgisDesktopApp;
@@ -181,7 +182,7 @@ public class RasterCalculatorDialog extends JDialog {
         rasterBCombo.addItem("(ninguno)");
         rasterCCombo.addItem("(ninguno)");
 
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null) return;
 
         for (Layer layer : project.getLayers()) {
@@ -243,7 +244,7 @@ public class RasterCalculatorDialog extends JDialog {
                         LocalRasterData outData = new LocalRasterData(result, src.getEnvelope(),
                                 1, src.isGeoreferenced(), src.getSourceCRS());
                         Layer layer = new Layer(name, "", "RASTER");
-                        CatgisDesktopApp.currentProject.addLayer(layer);
+                        AppContext.project().addLayer(layer);
                         CatgisDesktopApp.layersPanel.addLayer(layer);
                         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, outData);
                         CatgisDesktopApp.markProjectDirty();

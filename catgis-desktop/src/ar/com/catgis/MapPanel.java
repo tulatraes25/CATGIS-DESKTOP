@@ -1267,10 +1267,10 @@ public class MapPanel extends JPanel implements SnapContext {
         }
 
         try {
-            String projectCRS = (CatgisDesktopApp.currentProject != null &&
-                    CatgisDesktopApp.currentProject.getProjectCRS() != null &&
-                    !CatgisDesktopApp.currentProject.getProjectCRS().isBlank())
-                    ? CatgisDesktopApp.currentProject.getProjectCRS()
+            String projectCRS = (AppContext.project() != null &&
+                    AppContext.project().getProjectCRS() != null &&
+                    !AppContext.project().getProjectCRS().isBlank())
+                    ? AppContext.project().getProjectCRS()
                     : "EPSG:4326";
 
             List<Coordinate> coords = measurementTool.getPoints();
@@ -1649,7 +1649,7 @@ public class MapPanel extends JPanel implements SnapContext {
 
         String savedCrs = layer.getSourceCRS();
         if (savedCrs == null || savedCrs.isBlank()) {
-            String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+            String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
             String operationalCrs = RasterCoverageSupport.resolveOperationalRasterCrs(data, projectCrs);
             if (data.isGeoreferenced() && operationalCrs != null && !operationalCrs.isBlank()) {
                 layer.setSourceCRS(operationalCrs);
@@ -2076,8 +2076,8 @@ public class MapPanel extends JPanel implements SnapContext {
             layoutRenderMode = !includeDecorations;
             paintComponent(g2);
             if (includeDecorations && mapDecorations != null) {
-                String crsDesc = CatgisDesktopApp.currentProject != null
-                        ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+                String crsDesc = AppContext.project() != null
+                        ? AppContext.project().getProjectCRS() : "";
                 mapDecorations.render(g2, renderWidth, renderHeight,
                         getCurrentViewEnvelope(),
                         getCurrentScaleDenominator(),
@@ -2175,7 +2175,7 @@ public class MapPanel extends JPanel implements SnapContext {
         sb.append("SourceName: ").append(layer.getSourceName() != null ? layer.getSourceName() : "-").append("\n");
         sb.append("FeatureCount: ").append(layer.getFeatureCount()).append("\n");
         sb.append("CRS origen: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "desconocido").append("\n");
-        sb.append("CRS proyecto: ").append(CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "-").append("\n");
+        sb.append("CRS proyecto: ").append(AppContext.project() != null ? AppContext.project().getProjectCRS() : "-").append("\n");
         LocalRasterData rasterDataInfo = rasterLayers.get(layer);
         if (rasterDataInfo != null) {
             sb.append("Raster: SÃ­\n");
@@ -2199,7 +2199,7 @@ public class MapPanel extends JPanel implements SnapContext {
 
         try {
             String sourceCode = layer != null ? layer.getSourceCRS() : "";
-            String targetCode = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+            String targetCode = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
 
             Geometry resolvedGeometry = geometry;
             if (sourceCode == null || sourceCode.isBlank()) {
@@ -2227,7 +2227,7 @@ public class MapPanel extends JPanel implements SnapContext {
 
     Envelope reprojectEnvelopeIfNeeded(Layer layer, Envelope env) {
         String sourceCode = layer != null ? layer.getSourceCRS() : "";
-        String targetCode = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String targetCode = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         return CadPlacementSupport.applyPlacement(layer, reprojectEnvelopeIfNeeded(env, sourceCode, targetCode));
     }
 
@@ -2314,7 +2314,7 @@ public class MapPanel extends JPanel implements SnapContext {
 
         double projectX = screenToWorldX(x);
         double projectY = screenToWorldY(y);
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         double[] geographic = transformPoint(projectX, projectY, projectCRS, "EPSG:4326");
 
         JPopupMenu popupMenu = new JPopupMenu();
@@ -2512,7 +2512,7 @@ public class MapPanel extends JPanel implements SnapContext {
         double worldX = screenToWorldX(screenX);
         double worldY = screenToWorldY(screenY);
 
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         String projectText = "Proyecto: X: " + formatNumber(worldX) + "   Y: " + formatNumber(worldY);
 
         if (projectCRS != null && !projectCRS.isBlank()) {
@@ -2614,8 +2614,8 @@ public class MapPanel extends JPanel implements SnapContext {
     }
 
     private double estimateMetersPerProjectUnit() {
-        String projectCrs = CatgisDesktopApp.currentProject != null
-                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        String projectCrs = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                 : "";
         if (projectCrs == null || projectCrs.isBlank()) {
             return 0d;
@@ -2632,8 +2632,8 @@ public class MapPanel extends JPanel implements SnapContext {
     }
 
     private boolean isGeographicProjectCrs() {
-        String projectCrs = CatgisDesktopApp.currentProject != null
-                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        String projectCrs = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                 : "";
         return "EPSG:4326".equalsIgnoreCase(projectCrs)
                 || "EPSG:4258".equalsIgnoreCase(projectCrs)
@@ -2761,7 +2761,7 @@ public class MapPanel extends JPanel implements SnapContext {
         }
         Envelope world = new Envelope(OnlineMapUtils.WEB_MERCATOR_WORLD);
         return reprojectEnvelopeIfNeeded(world, "EPSG:3857",
-                CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+                AppContext.project() != null ? AppContext.project().getProjectCRS() : "");
     }
 
     private Envelope getOnlineWmsEnvelope(OnlineWmsLayer layer) {
@@ -2772,11 +2772,11 @@ public class MapPanel extends JPanel implements SnapContext {
                 || Double.isNaN(layer.getExtentMaxX()) || Double.isNaN(layer.getExtentMaxY())) {
             Envelope world = new Envelope(OnlineMapUtils.WEB_MERCATOR_WORLD);
             return reprojectEnvelopeIfNeeded(world, "EPSG:3857",
-                    CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+                    AppContext.project() != null ? AppContext.project().getProjectCRS() : "");
         }
         Envelope env = new Envelope(layer.getExtentMinX(), layer.getExtentMaxX(), layer.getExtentMinY(), layer.getExtentMaxY());
         return reprojectEnvelopeIfNeeded(env, layer.getExtentCrs(),
-                CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+                AppContext.project() != null ? AppContext.project().getProjectCRS() : "");
     }
 
     void handleZoom(MouseWheelEvent e) {
@@ -3205,7 +3205,7 @@ public class MapPanel extends JPanel implements SnapContext {
         if (geometry == null || geometry.isEmpty()) {
             return geometry;
         }
-        String targetCrs = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String targetCrs = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         if (sourceCrs == null || sourceCrs.isBlank() || targetCrs == null || targetCrs.isBlank()
                 || sourceCrs.equalsIgnoreCase(targetCrs)) {
             return geometry.copy();
@@ -3329,8 +3329,8 @@ public class MapPanel extends JPanel implements SnapContext {
             drawOnlineAttribution(g2);
             // Map decorations on screen
             if (mapDecorations != null) {
-                String crsDesc = CatgisDesktopApp.currentProject != null
-                        ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+                String crsDesc = AppContext.project() != null
+                        ? AppContext.project().getProjectCRS() : "";
                 mapDecorations.render(g2, getWidth(), getHeight(),
                         getCurrentViewEnvelope(),
                         getCurrentScaleDenominator(),
@@ -3505,7 +3505,7 @@ public class MapPanel extends JPanel implements SnapContext {
         if (sourceCode == null || sourceCode.isBlank()) {
             sourceCode = layer != null ? layer.getSourceCRS() : "";
         }
-        String targetCode = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String targetCode = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         return reprojectEnvelopeIfNeeded(new Envelope(data.getEnvelope()), sourceCode, targetCode);
     }
 
@@ -3568,7 +3568,7 @@ public class MapPanel extends JPanel implements SnapContext {
             mode = ((RasterLayer) layer).getRasterMode();
         }
 
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         String sourceCRS = layer != null ? layer.getSourceCRS() : "";
 
         if (RasterImageLoader.MODE_REAL.equalsIgnoreCase(mode)) {
@@ -5070,7 +5070,7 @@ public class MapPanel extends JPanel implements SnapContext {
     }
 
     Coordinate toSourceCoordinate(double projectX, double projectY, Layer layer) {
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         String sourceCRS = layer != null ? layer.getSourceCRS() : "";
 
         if (projectCRS == null || projectCRS.isBlank() || sourceCRS == null || sourceCRS.isBlank()
@@ -5090,7 +5090,7 @@ public class MapPanel extends JPanel implements SnapContext {
             return null;
         }
 
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         String sourceCRS = layer != null ? layer.getSourceCRS() : "";
         if (projectCRS == null || projectCRS.isBlank() || sourceCRS == null || sourceCRS.isBlank()
                 || projectCRS.equalsIgnoreCase(sourceCRS)) {

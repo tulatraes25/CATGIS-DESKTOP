@@ -321,12 +321,12 @@ public final class PostgisBrowserDialog extends JDialog {
                 setBusy(false, I18n.t("Listo"));
                 try {
                     List<LoadedPostgisLayer> loaded = get();
-                    if (CatgisDesktopApp.currentProject == null) CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+                    if (AppContext.project() == null) AppContext.setCurrentProject(new Project("Proyecto actual"));
                     LayerGroup catserverGroup = null;
                     if (catserverMode || isCatserverConnection(info)) {
-                        catserverGroup = CatgisDesktopApp.currentProject.getLayerGroup("CATSERVER");
+                        catserverGroup = AppContext.project().getLayerGroup("CATSERVER");
                         if (catserverGroup == null) {
-                            catserverGroup = CatgisDesktopApp.currentProject.addLayerGroup("CATSERVER");
+                            catserverGroup = AppContext.project().addLayerGroup("CATSERVER");
                         }
                         catserverGroup.setVisible(true);
                         catserverGroup.setExpanded(true);
@@ -334,9 +334,9 @@ public final class PostgisBrowserDialog extends JDialog {
                     for (LoadedPostgisLayer it : loaded) {
                         it.layer.setFeatureCount(it.data.getFeatureCount());
                         if (catserverGroup != null) {
-                            CatgisDesktopApp.currentProject.assignLayerToGroup(it.layer, catserverGroup.getName());
+                            AppContext.project().assignLayerToGroup(it.layer, catserverGroup.getName());
                         }
-                        CatgisDesktopApp.currentProject.addLayer(it.layer);
+                        AppContext.project().addLayer(it.layer);
                         if (CatgisDesktopApp.layersPanel != null) { CatgisDesktopApp.layersPanel.addLayer(it.layer); CatgisDesktopApp.layersPanel.selectLayer(it.layer); }
                         if (CatgisDesktopApp.mapPanel != null) { CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(it.layer, it.data); CatgisDesktopApp.mapPanel.showOpenedFile(it.layer.getName()); }
                     }

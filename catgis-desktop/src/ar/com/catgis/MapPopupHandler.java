@@ -103,7 +103,7 @@ public class MapPopupHandler {
 
         double projectX = panel.screenToWorldX(x);
         double projectY = panel.screenToWorldY(y);
-        String projectCRS = (CatgisDesktopApp.currentProject != null) ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
         double[] geographic = panel.transformPoint(projectX, projectY, projectCRS, "EPSG:4326");
 
         JPopupMenu popupMenu = new JPopupMenu();

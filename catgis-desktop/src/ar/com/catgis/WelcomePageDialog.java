@@ -142,7 +142,7 @@ public class WelcomePageDialog extends JDialog {
                 ACCENT_BLUE,
                 () -> {
                     dispose();
-                    CatgisDesktopApp.currentProject = new Project("Nuevo proyecto");
+                    AppContext.setCurrentProject(new Project("Nuevo proyecto"));
                     CatgisDesktopApp.layersPanel.clearLayers();
                     CatgisDesktopApp.markProjectDirty();
                 }

@@ -6,6 +6,7 @@ import ar.com.catgis.data.vector.VectorLayerUtils;
 import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.AppContext;
 import ar.com.catgis.MapPanel;
 import ar.com.catgis.OnlineTileLayer;
 import org.locationtech.jts.geom.Envelope;
@@ -108,7 +109,7 @@ public class MapFrameViewport {
                 // In standalone mode, MapPanel is created fresh with default view
                 // (viewMinX=0, viewMinY=0, zoomFactor=1) which gives an envelope
                 // around (0,0) — this is wrong for real-world data.
-                Project project = CatgisDesktopApp.currentProject;
+                Project project = AppContext.project();
                 boolean hasData = project != null && project.getLayers() != null
                     && project.getLayers().stream().anyMatch(l -> l != null);
 
@@ -160,7 +161,7 @@ public class MapFrameViewport {
     }
 
     public boolean fitFromProjectLayers() {
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null || project.getLayers() == null || project.getLayers().isEmpty()) {
             return false;
         }

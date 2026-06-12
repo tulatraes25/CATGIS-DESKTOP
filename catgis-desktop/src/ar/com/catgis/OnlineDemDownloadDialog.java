@@ -213,7 +213,7 @@ public class OnlineDemDownloadDialog extends JDialog {
     private void loadCurrentViewEnvelope() {
         try {
             Envelope current = CatgisDesktopApp.mapPanel != null ? CatgisDesktopApp.mapPanel.getCurrentViewEnvelope() : null;
-            String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
+            String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
             Envelope latLon = RasterCoverageSupport.reprojectEnvelope(current, projectCrs, "EPSG:4326");
             if (latLon == null) {
                 return;
@@ -342,21 +342,21 @@ public class OnlineDemDownloadDialog extends JDialog {
         if (file == null || !file.exists()) {
             throw new IllegalArgumentException(I18n.t("El archivo descargado del DEM no existe."));
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project(I18n.t("Proyecto actual"));
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project(I18n.t("Proyecto actual")));
         }
 
         String layerName = datasetName + " - " + file.getName();
         RasterLayer layer = new RasterLayer(layerName, file.getAbsolutePath());
         layer.setSourceName(sourceLabel);
 
-        String projectCrs = CatgisDesktopApp.currentProject.getProjectCRS() != null && !CatgisDesktopApp.currentProject.getProjectCRS().isBlank()
-                ? CatgisDesktopApp.currentProject.getProjectCRS()
+        String projectCrs = AppContext.project().getProjectCRS() != null && !AppContext.project().getProjectCRS().isBlank()
+                ? AppContext.project().getProjectCRS()
                 : sourceCrsCode;
         LocalRasterData rasterData = RasterImageLoader.loadReal(file, projectCrs, sourceCrsCode);
         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
 
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.addLayer(layer);
             CatgisDesktopApp.layersPanel.selectLayer(layer);

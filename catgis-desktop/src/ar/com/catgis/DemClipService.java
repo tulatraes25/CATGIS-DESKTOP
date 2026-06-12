@@ -147,7 +147,7 @@ public final class DemClipService {
         }
         RasterSidecarSupport.write(outputFile, clippedEnvelope, targetCrs);
 
-        String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : targetCrs;
+        String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : targetCrs;
         LocalRasterData rasterData = RasterImageLoader.loadReal(outputFile, projectCrs, targetCrs);
         RasterLayer resultLayer = new RasterLayer(
                 outputLayerName != null && !outputLayerName.isBlank() ? outputLayerName.trim() : "DEM recortado",

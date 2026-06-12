@@ -5,6 +5,7 @@ import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.raster.LocalRasterData;
 
 import ar.com.catgis.RasterSidecarSupport;
+import ar.com.catgis.AppContext;
 import ar.com.catgis.CRSDefinitions;
 import ar.com.catgis.CoordinateTransformSupport;
 import ar.com.catgis.CatgisDesktopApp;
@@ -397,8 +398,8 @@ public final class RasterCoverageSupport {
     }
 
     public static String resolveOperationalAnalysisCrsCode(GridCoverage2D coverage, Layer fallbackLayer) {
-        String projectCode = CatgisDesktopApp.currentProject != null
-                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        String projectCode = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                 : "";
         if (!projectCode.isBlank()) {
             return projectCode;
@@ -498,8 +499,8 @@ public final class RasterCoverageSupport {
         }
 
         String sourceCode = resolveCoverageCrsCode(coverage, layer);
-        String targetCode = CatgisDesktopApp.currentProject != null
-                ? CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS())
+        String targetCode = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
                 : "";
         if (sourceCode.isBlank() || targetCode.isBlank() || sourceCode.equalsIgnoreCase(targetCode)) {
             return coverage;

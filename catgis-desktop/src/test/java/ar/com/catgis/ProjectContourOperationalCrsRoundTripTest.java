@@ -40,15 +40,15 @@ class ProjectContourOperationalCrsRoundTripTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto curvas 22182");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:22182");
-            CatgisDesktopApp.currentProject.setProjectFile(projectFile.toFile());
+            AppContext.project().setProjectCRS("EPSG:22182");
+            AppContext.project().setProjectFile(projectFile.toFile());
 
             LocalRasterData demData = RasterImageLoader.loadReal(demPath.toFile(), "EPSG:22182", "EPSG:3857");
             RasterLayer demLayer = new RasterLayer("DEM curvas 22182", demPath.toString());
             demLayer.setSourceName("DEM local");
             demLayer.setFeatureCount(1);
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:22182"));
-            CatgisDesktopApp.currentProject.addLayer(demLayer);
+            AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
 
@@ -60,7 +60,7 @@ class ProjectContourOperationalCrsRoundTripTest {
             );
             contours.layer().setSourceName(projectedContours.getSourceName());
             contours.layer().setFeatureCount(projectedContours.getFeatureCount());
-            CatgisDesktopApp.currentProject.addLayer(contours.layer());
+            AppContext.project().addLayer(contours.layer());
             CatgisDesktopApp.layersPanel.addLayer(contours.layer());
             CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(contours.layer(), projectedContours);
 
@@ -70,8 +70,8 @@ class ProjectContourOperationalCrsRoundTripTest {
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Reload curvas 22182");
             assertTrue(LoadProjectAction.loadProjectFile(projectFile.toFile(), false));
-            assertNotNull(CatgisDesktopApp.currentProject);
-            assertEquals("EPSG:22182", CatgisDesktopApp.currentProject.getProjectCRS());
+            assertNotNull(AppContext.project());
+            assertEquals("EPSG:22182", AppContext.project().getProjectCRS());
 
             Layer demLayer = findLayer("DEM curvas 22182");
             Layer contourLayer = findLayer("Curvas 10m - DEM curvas 22182");
@@ -97,7 +97,7 @@ class ProjectContourOperationalCrsRoundTripTest {
     }
 
     private static Layer findLayer(String name) {
-        return CatgisDesktopApp.currentProject.getLayers().stream()
+        return AppContext.project().getLayers().stream()
                 .filter(layer -> name.equals(layer.getName()))
                 .findFirst()
                 .orElse(null);

@@ -30,10 +30,10 @@ public final class TopographyWorkflowSupport {
 
     public static List<Layer> getAvailableRasterLayers() {
         List<Layer> rasters = new ArrayList<>();
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.getLayers() == null) {
+        if (AppContext.project() == null || AppContext.project().getLayers() == null) {
             return rasters;
         }
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             if (isRasterLayer(layer)) {
                 rasters.add(layer);
             }
@@ -77,7 +77,7 @@ public final class TopographyWorkflowSupport {
 
         String sourceCrs = layer.getSourceCRS();
         if (sourceCrs == null || sourceCrs.isBlank()) {
-            sourceCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
+            sourceCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
         }
         String description = layer.getName() + " | " + feature.getID();
         return new SelectedProfileLine((Geometry) geometry.copy(), sourceCrs, description);
@@ -281,11 +281,11 @@ public final class TopographyWorkflowSupport {
     }
 
     public static void placeLayersAtFront(List<Layer> desiredFrontOrder) {
-        if (desiredFrontOrder == null || desiredFrontOrder.isEmpty() || CatgisDesktopApp.currentProject == null) {
+        if (desiredFrontOrder == null || desiredFrontOrder.isEmpty() || AppContext.project() == null) {
             return;
         }
 
-        List<Layer> ordered = new ArrayList<>(CatgisDesktopApp.currentProject.getLayers());
+        List<Layer> ordered = new ArrayList<>(AppContext.project().getLayers());
         List<Layer> sanitized = new ArrayList<>();
         for (Layer layer : desiredFrontOrder) {
             if (layer != null && ordered.contains(layer) && !sanitized.contains(layer)) {
@@ -303,7 +303,7 @@ public final class TopographyWorkflowSupport {
             ordered.add(0, layer);
         }
 
-        CatgisDesktopApp.currentProject.setLayerOrder(ordered);
+        AppContext.project().setLayerOrder(ordered);
         if (CatgisDesktopApp.mapPanel != null) {
             CatgisDesktopApp.mapPanel.reorderLayers(new ArrayList<>(ordered));
         }
@@ -313,13 +313,13 @@ public final class TopographyWorkflowSupport {
     }
 
     public static void normalizeTopographyOverlayOrder() {
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.getLayers() == null) {
+        if (AppContext.project() == null || AppContext.project().getLayers() == null) {
             return;
         }
 
         List<Layer> vectorOverlays = new ArrayList<>();
         List<Layer> derivedRasters = new ArrayList<>();
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             if (isTopographyOverlayVector(layer)) {
                 vectorOverlays.add(layer);
             } else if (isTopographyDerivedRaster(layer)) {
@@ -493,7 +493,7 @@ public final class TopographyWorkflowSupport {
     }
 
     private static Layer resolveSourceRasterForTransientLayer(Layer layer) {
-        if (CatgisDesktopApp.currentProject == null || layer == null) {
+        if (AppContext.project() == null || layer == null) {
             return null;
         }
 
@@ -533,16 +533,16 @@ public final class TopographyWorkflowSupport {
     }
 
     private static Layer findRasterLayerByName(String name) {
-        if (name == null || name.isBlank() || CatgisDesktopApp.currentProject == null) {
+        if (name == null || name.isBlank() || AppContext.project() == null) {
             return null;
         }
 
-        for (Layer candidate : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer candidate : AppContext.project().getLayers()) {
             if (candidate != null && isRasterLayer(candidate) && name.equalsIgnoreCase(candidate.getName())) {
                 return candidate;
             }
         }
-        for (Layer candidate : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer candidate : AppContext.project().getLayers()) {
             if (candidate != null && isRasterLayer(candidate)
                     && candidate.getName() != null
                     && candidate.getName().toLowerCase(Locale.ROOT).contains(name.toLowerCase(Locale.ROOT))) {
@@ -588,8 +588,8 @@ public final class TopographyWorkflowSupport {
         if (crsCode.isBlank() && layer != null) {
             crsCode = CRSDefinitions.normalizeCode(layer.getSourceCRS());
         }
-        if (crsCode.isBlank() && CatgisDesktopApp.currentProject != null) {
-            crsCode = CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS());
+        if (crsCode.isBlank() && AppContext.project() != null) {
+            crsCode = CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
         }
         if (crsCode.isBlank()) {
             crsCode = "EPSG:4326";
@@ -692,7 +692,7 @@ public final class TopographyWorkflowSupport {
     }
 
     public static ShapefileData projectVectorDataToCurrentProject(Layer sourceLayer, ShapefileData data) {
-        if (sourceLayer == null || data == null || CatgisDesktopApp.currentProject == null) {
+        if (sourceLayer == null || data == null || AppContext.project() == null) {
             return data;
         }
 
@@ -705,7 +705,7 @@ public final class TopographyWorkflowSupport {
         }
 
         String sourceCrs = CRSDefinitions.normalizeCode(sourceLayer.getSourceCRS());
-        String targetCrs = CRSDefinitions.normalizeCode(CatgisDesktopApp.currentProject.getProjectCRS());
+        String targetCrs = CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
         if (sourceCrs.isBlank() || targetCrs.isBlank() || sourceCrs.equalsIgnoreCase(targetCrs)) {
             sourceLayer.setSourceCRS(targetCrs.isBlank() ? sourceCrs : targetCrs);
             if (!targetCrs.isBlank() && shouldNormalizeSchemaCrs(data, targetCrs)) {

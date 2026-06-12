@@ -436,8 +436,8 @@ public final class NetCdfLoader {
     // ---- Common helper methods ----
 
     private static RasterLayer createRasterLayer(File file, BufferedImage image, Envelope envelope, String crsCode) {
-        String projectCRS = CatgisDesktopApp.currentProject != null
-                ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = AppContext.project() != null
+                ? AppContext.project().getProjectCRS() : "";
 
         LocalRasterData rasterData = new LocalRasterData(image, envelope, 1, true,
                 crsCode, "preview",
@@ -451,10 +451,10 @@ public final class NetCdfLoader {
         layer.setRasterMode("preview");
 
         // Add to project
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project("Proyecto actual"));
         }
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);

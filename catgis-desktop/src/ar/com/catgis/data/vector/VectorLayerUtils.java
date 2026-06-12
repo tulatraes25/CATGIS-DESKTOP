@@ -4,6 +4,7 @@ import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.vector.ShapefileData;
 
 import ar.com.catgis.VectorLayer;
+import ar.com.catgis.AppContext;
 import ar.com.catgis.ReadOnlyVectorLayerSource;
 import ar.com.catgis.RasterLayer;
 import ar.com.catgis.OpenAttributeTableAction;
@@ -38,11 +39,11 @@ public final class VectorLayerUtils {
 
     public static List<Layer> getVectorLayers() {
         List<Layer> layers = new ArrayList<>();
-        if (CatgisDesktopApp.currentProject == null || CatgisDesktopApp.currentProject.getLayers() == null) {
+        if (AppContext.project() == null || AppContext.project().getLayers() == null) {
             return layers;
         }
 
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        for (Layer layer : AppContext.project().getLayers()) {
             if (layer != null && !(layer instanceof RasterLayer)) {
                 layers.add(layer);
             }
@@ -263,8 +264,8 @@ public final class VectorLayerUtils {
         if (data == null) {
             return null;
         }
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project("Proyecto actual"));
         }
 
         VectorLayer layer = new VectorLayer(name, path != null ? path : "");
@@ -275,7 +276,7 @@ public final class VectorLayerUtils {
         copyLayerAppearance(styleSource, layer);
         populateFieldConfigs(layer, data.getSchema());
 
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.addLayer(layer);
@@ -382,8 +383,8 @@ public final class VectorLayerUtils {
         if (layer != null && layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank()) {
             return layer.getSourceCRS();
         }
-        if (CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getProjectCRS() != null) {
-            return CatgisDesktopApp.currentProject.getProjectCRS();
+        if (AppContext.project() != null && AppContext.project().getProjectCRS() != null) {
+            return AppContext.project().getProjectCRS();
         }
         return "EPSG:4326";
     }

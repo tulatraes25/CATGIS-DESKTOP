@@ -261,8 +261,8 @@ public final class GribLoader {
         layer.putUserData("climateVariable", varName);
         layer.putUserData("climateSource", "GRIB");
 
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project("Proyecto actual"));
         }
 
         LocalRasterData rasterData = RasterImageLoader.loadReal(file, crsCode, crsCode);
@@ -282,7 +282,7 @@ public final class GribLoader {
             layer.putUserData("climateMax", 255.0);
         }
 
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.addLayer(layer);
             CatgisDesktopApp.layersPanel.selectLayer(layer);

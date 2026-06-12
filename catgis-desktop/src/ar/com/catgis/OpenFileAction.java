@@ -403,7 +403,7 @@ public class OpenFileAction extends AbstractAction {
         layer.setSourceName(data.getSourceName());
         layer.setFeatureCount(data.getFeatureCount());
         VectorLayerUtils.populateFieldConfigs(layer, data.getSchema());
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
@@ -445,8 +445,8 @@ public class OpenFileAction extends AbstractAction {
     }
 
     private static void ensureProject() {
-        if (CatgisDesktopApp.currentProject == null) {
-            CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+        if (AppContext.project() == null) {
+            AppContext.setCurrentProject(new Project("Proyecto actual"));
         }
     }
 
@@ -510,7 +510,7 @@ public class OpenFileAction extends AbstractAction {
             throw new IllegalArgumentException("No hay una entrada Pro valida para preparar.");
         }
         effectiveMonitor.report("Validando variable Pro: " + entry.variableLabel());
-        String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
         ProRasterMaterializationService.MaterializedRaster materialized = null;
         File rasterFile = entry.rasterFile();
         if ((rasterFile == null || !rasterFile.exists()) && entry.openable()) {
@@ -546,7 +546,7 @@ public class OpenFileAction extends AbstractAction {
         layer.setRasterMode(rasterData.getRasterMode());
         applyProMetadataToRasterLayer(layer, entry, prepared.materialized());
 
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.layersPanel != null) {
             CatgisDesktopApp.layersPanel.addLayer(layer);
@@ -562,7 +562,7 @@ public class OpenFileAction extends AbstractAction {
     private static boolean openRasterFileInternal(File file, Component parent, boolean demMode, boolean showDialogs) {
         try {
             ensureProject();
-            String projectCRS = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+            String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
             LocalRasterData rasterData = RasterImageLoader.loadPreview(file, projectCRS, null);
             RasterLayer layer = new RasterLayer(file.getName(), file.getAbsolutePath());
             layer.setVisible(true);
@@ -570,7 +570,7 @@ public class OpenFileAction extends AbstractAction {
             layer.setFeatureCount(1);
             layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCRS));
             layer.setRasterMode(rasterData.getRasterMode());
-            CatgisDesktopApp.currentProject.addLayer(layer);
+            AppContext.project().addLayer(layer);
             CatgisDesktopApp.markProjectDirty();
             CatgisDesktopApp.layersPanel.addLayer(layer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, rasterData);

@@ -30,8 +30,8 @@ public class ExportReprojectedLayerDialog extends JDialog {
 
         layerCombo = new JComboBox<>(VectorLayerUtils.getVectorLayers().toArray(new Layer[0]));
         formatCombo = new JComboBox<>(ExportVectorLayerAction.getSupportedVectorFormats());
-        targetCrs = CatgisDesktopApp.currentProject != null && CatgisDesktopApp.currentProject.getProjectCRS() != null
-                ? CatgisDesktopApp.currentProject.getProjectCRS()
+        targetCrs = AppContext.project() != null && AppContext.project().getProjectCRS() != null
+                ? AppContext.project().getProjectCRS()
                 : "EPSG:4326";
 
         crsButton = new JButton(CRSDefinitions.getLabelForCode(targetCrs));

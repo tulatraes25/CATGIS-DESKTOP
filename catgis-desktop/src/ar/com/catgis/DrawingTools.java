@@ -64,10 +64,10 @@ public class DrawingTools {
         }
 
         try {
-            String projectCRS = (CatgisDesktopApp.currentProject != null &&
-                    CatgisDesktopApp.currentProject.getProjectCRS() != null &&
-                    !CatgisDesktopApp.currentProject.getProjectCRS().isBlank())
-                    ? CatgisDesktopApp.currentProject.getProjectCRS()
+            String projectCRS = (AppContext.project() != null &&
+                    AppContext.project().getProjectCRS() != null &&
+                    !AppContext.project().getProjectCRS().isBlank())
+                    ? AppContext.project().getProjectCRS()
                     : "EPSG:4326";
 
             if ("DISTANCE".equalsIgnoreCase(panel.getMeasurementMode())) {

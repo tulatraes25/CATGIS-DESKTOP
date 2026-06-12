@@ -81,7 +81,7 @@ public class MapFrameRenderer {
     public BufferedImage render(int widthPx, int heightPx, int dpi) {
         if (widthPx < 10 || heightPx < 10) return null;
 
-        Project project = CatgisDesktopApp.currentProject;
+        Project project = AppContext.project();
         if (project == null) return null;
 
         // Check if there are online/raster layers — MapFrameRenderer only handles vectors.

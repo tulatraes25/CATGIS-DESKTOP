@@ -25,10 +25,10 @@ public class LayerManager {
      * Adds a layer to the panel (project + layers panel + internal maps).
      */
     public void addLayer(Layer layer) {
-        if (layer == null || CatgisDesktopApp.currentProject == null) {
+        if (layer == null || AppContext.project() == null) {
             return;
         }
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
         panel.repaint();
     }
@@ -239,8 +239,8 @@ public class LayerManager {
         if (layer == null) {
             return false;
         }
-        if (CatgisDesktopApp.currentProject != null) {
-            return CatgisDesktopApp.currentProject.isLayerEffectivelyVisible(layer);
+        if (AppContext.project() != null) {
+            return AppContext.project().isLayerEffectivelyVisible(layer);
         }
         return layer.isVisible();
     }
@@ -248,19 +248,19 @@ public class LayerManager {
     public List<Layer> getRenderOrderLayers() {
         List<Layer> ordered = new ArrayList<>();
 
-        if (CatgisDesktopApp.currentProject != null) {
-            for (Layer layer : CatgisDesktopApp.currentProject.getUngroupedLayers()) {
+        if (AppContext.project() != null) {
+            for (Layer layer : AppContext.project().getUngroupedLayers()) {
                 if (layer != null
                         && (panel.shapefileLayers.containsKey(layer) || panel.rasterLayers.containsKey(layer) || panel.onlineTileLayers.containsKey(layer) || panel.onlineWmsLayers.containsKey(layer))
                         && !ordered.contains(layer)) {
                     ordered.add(layer);
                 }
             }
-            for (LayerGroup group : CatgisDesktopApp.currentProject.getLayerGroups()) {
+            for (LayerGroup group : AppContext.project().getLayerGroups()) {
                 if (group == null) {
                     continue;
                 }
-                for (Layer layer : CatgisDesktopApp.currentProject.getLayersForGroup(group.getName())) {
+                for (Layer layer : AppContext.project().getLayersForGroup(group.getName())) {
                     if (layer != null
                             && (panel.shapefileLayers.containsKey(layer) || panel.rasterLayers.containsKey(layer) || panel.onlineTileLayers.containsKey(layer) || panel.onlineWmsLayers.containsKey(layer))
                             && !ordered.contains(layer)) {

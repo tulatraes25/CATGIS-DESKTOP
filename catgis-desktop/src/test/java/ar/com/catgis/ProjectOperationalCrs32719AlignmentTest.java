@@ -38,14 +38,14 @@ class ProjectOperationalCrs32719AlignmentTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto 32719");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:32719");
+            AppContext.project().setProjectCRS("EPSG:32719");
 
             LocalRasterData demData = RasterImageLoader.loadReal(demPath.toFile(), "EPSG:32719", "EPSG:3857");
             RasterLayer demLayer = new RasterLayer("DEM 32719", demPath.toString());
             demLayer.setSourceName("DEM local");
             demLayer.setFeatureCount(1);
             demLayer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(demData, "EPSG:32719"));
-            CatgisDesktopApp.currentProject.addLayer(demLayer);
+            AppContext.project().addLayer(demLayer);
             CatgisDesktopApp.layersPanel.addLayer(demLayer);
             CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(demLayer, demData);
 

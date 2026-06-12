@@ -138,8 +138,8 @@ public class MapUtilities {
         StringBuilder sb = new StringBuilder();
         sb.append("Coordenadas del punto\n\n");
 
-        String projectCRS = (CatgisDesktopApp.currentProject != null)
-                ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String projectCRS = (AppContext.project() != null)
+                ? AppContext.project().getProjectCRS() : "";
         if (projectCRS != null && !projectCRS.isBlank()) {
             sb.append("CRS proyecto: ").append(projectCRS).append("\n");
         }
@@ -400,8 +400,8 @@ public class MapUtilities {
 
     private Envelope reprojectWithLayer(Layer layer, Envelope env) {
         String sourceCode = layer != null ? layer.getSourceCRS() : "";
-        String targetCode = (CatgisDesktopApp.currentProject != null)
-                ? CatgisDesktopApp.currentProject.getProjectCRS() : "";
+        String targetCode = (AppContext.project() != null)
+                ? AppContext.project().getProjectCRS() : "";
         return CadPlacementSupport.applyPlacement(layer,
                 reprojectEnvelopeIfNeeded(env, sourceCode, targetCode));
     }
@@ -410,8 +410,8 @@ public class MapUtilities {
         if (layer == null) return null;
         Envelope world = new Envelope(OnlineMapUtils.WEB_MERCATOR_WORLD);
         return reprojectEnvelopeIfNeeded(world, "EPSG:3857",
-                CatgisDesktopApp.currentProject != null
-                        ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+                AppContext.project() != null
+                        ? AppContext.project().getProjectCRS() : "");
     }
 
     private Envelope getOnlineWmsEnvelope(OnlineWmsLayer layer) {
@@ -420,14 +420,14 @@ public class MapUtilities {
                 || Double.isNaN(layer.getExtentMaxX()) || Double.isNaN(layer.getExtentMaxY())) {
             Envelope world = new Envelope(OnlineMapUtils.WEB_MERCATOR_WORLD);
             return reprojectEnvelopeIfNeeded(world, "EPSG:3857",
-                    CatgisDesktopApp.currentProject != null
-                            ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+                    AppContext.project() != null
+                            ? AppContext.project().getProjectCRS() : "");
         }
         Envelope env = new Envelope(layer.getExtentMinX(), layer.getExtentMaxX(),
                 layer.getExtentMinY(), layer.getExtentMaxY());
         return reprojectEnvelopeIfNeeded(env, layer.getExtentCrs(),
-                CatgisDesktopApp.currentProject != null
-                        ? CatgisDesktopApp.currentProject.getProjectCRS() : "");
+                AppContext.project() != null
+                        ? AppContext.project().getProjectCRS() : "");
     }
 
     private static double percentile(List<Double> values, double quantile) {

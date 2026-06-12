@@ -162,8 +162,8 @@ public class ClimateAreaAnalysisDialog extends JDialog {
 
     private void populateRasterLayers() {
         rasterCombo.removeAllItems();
-        if (CatgisDesktopApp.currentProject == null) return;
-        for (Layer layer : CatgisDesktopApp.currentProject.getLayers()) {
+        if (AppContext.project() == null) return;
+        for (Layer layer : AppContext.project().getLayers()) {
             if (layer instanceof RasterLayer) {
                 Object climateVar = layer.getUserData("climateVariable");
                 String suffix = climateVar != null ? " [" + climateVar + "]" : "";

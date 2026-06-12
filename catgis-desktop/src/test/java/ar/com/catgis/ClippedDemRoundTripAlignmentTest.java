@@ -43,8 +43,8 @@ class ClippedDemRoundTripAlignmentTest {
 
         ReleaseTestSupport.runOnEdt(() -> {
             ReleaseTestSupport.initializeAppContext("Proyecto recortado 4326");
-            CatgisDesktopApp.currentProject.setProjectCRS("EPSG:4326");
-            CatgisDesktopApp.currentProject.setProjectFile(projectFile.toFile());
+            AppContext.project().setProjectCRS("EPSG:4326");
+            AppContext.project().setProjectFile(projectFile.toFile());
 
             LocalRasterData demData = RasterImageLoader.loadReal(demPath.toFile(), "EPSG:4326", "EPSG:3857");
             RasterLayer demLayer = new RasterLayer("DEM origen", demPath.toString());
@@ -189,19 +189,19 @@ class ClippedDemRoundTripAlignmentTest {
     }
 
     private static void addRasterLayer(RasterLayer layer, LocalRasterData data) {
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateRasterLayer(layer, data);
     }
 
     private static void addVectorLayer(Layer layer, ShapefileData data) {
-        CatgisDesktopApp.currentProject.addLayer(layer);
+        AppContext.project().addLayer(layer);
         CatgisDesktopApp.layersPanel.addLayer(layer);
         CatgisDesktopApp.mapPanel.addOrUpdateShapefileLayer(layer, data);
     }
 
     private static Layer findLayer(String name) {
-        return CatgisDesktopApp.currentProject.getLayers().stream()
+        return AppContext.project().getLayers().stream()
                 .filter(layer -> name.equals(layer.getName()))
                 .findFirst()
                 .orElse(null);

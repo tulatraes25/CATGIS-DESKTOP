@@ -219,11 +219,11 @@ public final class ScriptEngine {
 
     private static void injectCatgisEnvironment(Map<String, String> env) {
         try {
-            if (CatgisDesktopApp.currentProject != null) {
-                env.put("CATGIS_PROJECT", CatgisDesktopApp.currentProject.getName());
-                if (CatgisDesktopApp.currentProject.getProjectFile() != null) {
+            if (AppContext.project() != null) {
+                env.put("CATGIS_PROJECT", AppContext.project().getName());
+                if (AppContext.project().getProjectFile() != null) {
                     env.put("CATGIS_PROJECT_FILE",
-                            CatgisDesktopApp.currentProject.getProjectFile().getAbsolutePath());
+                            AppContext.project().getProjectFile().getAbsolutePath());
                 }
             }
         } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }

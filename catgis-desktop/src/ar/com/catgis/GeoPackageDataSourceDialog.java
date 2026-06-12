@@ -257,8 +257,8 @@ public class GeoPackageDataSourceDialog extends JDialog {
                         throw new IllegalStateException("No se pudo cargar ninguna capa del GeoPackage.");
                     }
 
-                    if (CatgisDesktopApp.currentProject == null) {
-                        CatgisDesktopApp.currentProject = new Project("Proyecto actual");
+                    if (AppContext.project() == null) {
+                        AppContext.setCurrentProject(new Project("Proyecto actual"));
                     }
 
                     for (LoadedGeoPackageLayer item : loaded) {
@@ -268,7 +268,7 @@ public class GeoPackageDataSourceDialog extends JDialog {
                                     ? org.geotools.referencing.CRS.toSRS(item.data.getSchema().getCoordinateReferenceSystem(), true)
                                     : "");
                         }
-                        CatgisDesktopApp.currentProject.addLayer(item.layer);
+                        AppContext.project().addLayer(item.layer);
                         if (CatgisDesktopApp.layersPanel != null) {
                             CatgisDesktopApp.layersPanel.addLayer(item.layer);
                             CatgisDesktopApp.layersPanel.selectLayer(item.layer);
