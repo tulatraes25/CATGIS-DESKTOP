@@ -3,6 +3,7 @@ package ar.com.catgis.service;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 // QuickStylePanel is in the flat package
+import ar.com.catgis.AppContext;
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.service.EventBus.Event;
 import ar.com.catgis.service.EventBus.EventType;
