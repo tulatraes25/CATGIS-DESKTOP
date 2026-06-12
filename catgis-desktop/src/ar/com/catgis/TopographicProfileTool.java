@@ -24,7 +24,7 @@ public class TopographicProfileTool {
         if (handler == null) {
             return;
         }
-        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.pointCaptureActive || panel.cadPlacementDragActive) {
+        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.cadEngine.pointCaptureActive || panel.cadEngine.cadPlacementDragActive) {
             JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela el dibujo/medicion actual antes de capturar un perfil."));
             return;
         }

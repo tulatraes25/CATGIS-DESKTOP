@@ -28,7 +28,7 @@ public class MapInteractionHandler extends MouseAdapter {
             panel.beginTemporaryMiddlePan(e);
             return;
         }
-        if (panel.cadPlacementDragActive) {
+        if (panel.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 panel.cancelCadPlacementDrag();
                 return;
@@ -38,7 +38,7 @@ public class MapInteractionHandler extends MouseAdapter {
             }
             return;
         }
-        if (panel.pointCaptureActive) {
+        if (panel.cadEngine.pointCaptureActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 panel.cancelPointCapture();
             }
@@ -129,13 +129,13 @@ public class MapInteractionHandler extends MouseAdapter {
             panel.finishTemporaryMiddlePan();
             return;
         }
-        if (panel.cadPlacementDragActive) {
+        if (panel.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isLeftMouseButton(e)) {
                 panel.finishCadPlacementDrag();
             }
             return;
         }
-        if (panel.pointCaptureActive) {
+        if (panel.cadEngine.pointCaptureActive) {
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             return;
         }
@@ -222,7 +222,7 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.cadPlacementDragActive && panel.cadPlacementDragStarted) {
+        if (panel.cadEngine.cadPlacementDragActive && panel.cadEngine.cadPlacementDragStarted) {
             panel.updateCadPlacementDrag(e);
             return;
         }
@@ -279,13 +279,13 @@ public class MapInteractionHandler extends MouseAdapter {
 
         panel.updateHoverAndSnap(e.getX(), e.getY());
 
-        if (panel.cadPlacementDragActive) {
+        if (panel.cadEngine.cadPlacementDragActive) {
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             panel.repaint();
             return;
         }
 
-        if (panel.pointCaptureActive) {
+        if (panel.cadEngine.pointCaptureActive) {
             panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             panel.repaint();
             return;
@@ -352,7 +352,7 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.pointCaptureActive) {
+        if (panel.cadEngine.pointCaptureActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 panel.cancelPointCapture();
                 return;
@@ -364,7 +364,7 @@ public class MapInteractionHandler extends MouseAdapter {
             return;
         }
 
-        if (panel.cadPlacementDragActive) {
+        if (panel.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 panel.cancelCadPlacementDrag();
             }

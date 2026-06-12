@@ -22,7 +22,7 @@ class MouseHandler extends MouseAdapter {
             map.beginTemporaryMiddlePan(e);
             return;
         }
-        if (map.cadPlacementDragActive) {
+        if (map.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.cancelCadPlacementDrag();
                 return;
@@ -32,7 +32,7 @@ class MouseHandler extends MouseAdapter {
             }
             return;
         }
-        if (map.pointCaptureActive) {
+        if (map.cadEngine.pointCaptureActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.cancelPointCapture();
             }
@@ -123,13 +123,13 @@ class MouseHandler extends MouseAdapter {
             map.finishTemporaryMiddlePan();
             return;
         }
-        if (map.cadPlacementDragActive) {
+        if (map.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isLeftMouseButton(e)) {
                 map.finishCadPlacementDrag();
             }
             return;
         }
-        if (map.pointCaptureActive) {
+        if (map.cadEngine.pointCaptureActive) {
             map.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             return;
         }
@@ -216,7 +216,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if (map.cadPlacementDragActive && map.cadPlacementDragStarted) {
+        if (map.cadEngine.cadPlacementDragActive && map.cadEngine.cadPlacementDragStarted) {
             map.updateCadPlacementDrag(e);
             return;
         }
@@ -272,13 +272,13 @@ class MouseHandler extends MouseAdapter {
 
         map.updateHoverAndSnap(e.getX(), e.getY());
 
-        if (map.cadPlacementDragActive) {
+        if (map.cadEngine.cadPlacementDragActive) {
             map.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             map.repaint();
             return;
         }
 
-        if (map.pointCaptureActive) {
+        if (map.cadEngine.pointCaptureActive) {
             map.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
             map.repaint();
             return;
@@ -345,7 +345,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if (map.pointCaptureActive) {
+        if (map.cadEngine.pointCaptureActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.cancelPointCapture();
                 return;
@@ -357,7 +357,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if (map.cadPlacementDragActive) {
+        if (map.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.cancelCadPlacementDrag();
             }

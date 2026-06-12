@@ -35,9 +35,9 @@ public class KeyboardConfig {
         panel.getActionMap().put("cancelSketchOrMeasurement", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (panel.cadPlacementDragActive) {
+                if (panel.cadEngine.cadPlacementDragActive) {
                     panel.cancelCadPlacementDrag();
-                } else if (panel.pointCaptureActive) {
+                } else if (panel.cadEngine.pointCaptureActive) {
                     panel.cancelPointCapture();
                 } else if (panel.topographicProfileCaptureActive) {
                     panel.cancelTopographicProfileCapture();

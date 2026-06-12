@@ -31,9 +31,9 @@ class KeyboardShortcutHandler {
         map.getActionMap().put("cancelSketchOrMeasurement", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (map.cadPlacementDragActive) {
+                if (map.cadEngine.cadPlacementDragActive) {
                     map.cancelCadPlacementDrag();
-                } else if (map.pointCaptureActive) {
+                } else if (map.cadEngine.pointCaptureActive) {
                     map.cancelPointCapture();
                 } else if (map.topographicProfileCaptureActive) {
                     map.cancelTopographicProfileCapture();

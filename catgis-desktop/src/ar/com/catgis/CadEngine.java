@@ -11,6 +11,28 @@ public class CadEngine {
 
     private final MapPanel panel;
 
+    boolean cadPlacementDragActive = false;
+    Layer cadPlacementDragLayer = null;
+    MapPanel.CadPlacementDragHandler cadPlacementDragHandler = null;
+    boolean cadPlacementDragStarted = false;
+    boolean cadPlacementDragMoved = false;
+    double cadPlacementDragStartX = Double.NaN;
+    double cadPlacementDragStartY = Double.NaN;
+    double cadPlacementDragOriginalOffsetX = 0d;
+    double cadPlacementDragOriginalOffsetY = 0d;
+    String cadPlacementDragStartMessage;
+    String cadPlacementDragSuccessMessage;
+    String cadPlacementDragCancelMessage;
+
+    boolean pointCaptureActive = false;
+    MapPanel.MapPointCaptureHandler pointCaptureHandler = null;
+    String pointCaptureStartMessage;
+    String pointCaptureSuccessMessage;
+    String pointCaptureCancelMessage;
+
+    public boolean isCadPlacementDragActive() { return cadPlacementDragActive; }
+    public boolean isPointCaptureActive() { return pointCaptureActive; }
+
     public CadEngine(MapPanel panel) {
         this.panel = panel;
     }
@@ -30,56 +52,52 @@ public class CadEngine {
         if (layer == null || !CadLayerSupport.isCadLayer(layer) || handler == null) {
             return;
         }
-        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.pointCaptureActive || panel.topographicProfileCaptureActive || panel.cadPlacementDragActive) {
+        if (panel.isDrawingActive() || panel.isMeasurementActive() || pointCaptureActive || panel.topographicProfileCaptureActive || cadPlacementDragActive) {
             JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de arrastrar la referencia CAD."));
             return;
         }
-        panel.cadPlacementDragLayer = layer;
-        panel.cadPlacementDragHandler = handler;
-        panel.cadPlacementDragActive = true;
-        panel.cadPlacementDragStarted = false;
-        panel.cadPlacementDragMoved = false;
-        panel.cadPlacementDragStartX = Double.NaN;
-        panel.cadPlacementDragStartY = Double.NaN;
-        panel.cadPlacementDragOriginalOffsetX = layer.getCadOffsetX();
-        panel.cadPlacementDragOriginalOffsetY = layer.getCadOffsetY();
-        panel.cadPlacementDragStartMessage = startMessage != null && !startMessage.isBlank()
+        cadPlacementDragLayer = layer;
+        cadPlacementDragHandler = handler;
+        cadPlacementDragActive = true;
+        cadPlacementDragStarted = false;
+        cadPlacementDragMoved = false;
+        cadPlacementDragStartX = Double.NaN;
+        cadPlacementDragStartY = Double.NaN;
+        cadPlacementDragOriginalOffsetX = layer.getCadOffsetX();
+        cadPlacementDragOriginalOffsetY = layer.getCadOffsetY();
+        cadPlacementDragStartMessage = startMessage != null && !startMessage.isBlank()
                 ? startMessage
                 : I18n.t("Arrastre CAD activo: clic izquierdo y arrastra para mover. Suelta para aplicar. Usa clic derecho o Esc para cancelar.");
-        panel.cadPlacementDragSuccessMessage = successMessage != null && !successMessage.isBlank()
+        cadPlacementDragSuccessMessage = successMessage != null && !successMessage.isBlank()
                 ? successMessage
                 : I18n.t("Arrastre CAD aplicado.");
-        panel.cadPlacementDragCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
+        cadPlacementDragCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
                 ? cancelMessage
                 : I18n.t("Arrastre CAD cancelado.");
         panel.requestFocusInWindow();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        AppContext.setStatusMessage(panel.cadPlacementDragStartMessage);
+        AppContext.setStatusMessage(cadPlacementDragStartMessage);
         panel.repaint();
     }
 
-    public boolean isCadPlacementDragActive() {
-        return panel.cadPlacementDragActive;
-    }
-
     public void cancelCadPlacementDrag() {
-        if (!panel.cadPlacementDragActive) {
+        if (!cadPlacementDragActive) {
             return;
         }
-        Layer layer = panel.cadPlacementDragLayer;
+        Layer layer = cadPlacementDragLayer;
         if (layer != null) {
-            layer.setCadOffsetX(panel.cadPlacementDragOriginalOffsetX);
-            layer.setCadOffsetY(panel.cadPlacementDragOriginalOffsetY);
+            layer.setCadOffsetX(cadPlacementDragOriginalOffsetX);
+            layer.setCadOffsetY(cadPlacementDragOriginalOffsetY);
         }
-        MapPanel.CadPlacementDragHandler handler = panel.cadPlacementDragHandler;
-        panel.cadPlacementDragActive = false;
-        panel.cadPlacementDragStarted = false;
-        panel.cadPlacementDragMoved = false;
-        panel.cadPlacementDragStartX = Double.NaN;
-        panel.cadPlacementDragStartY = Double.NaN;
-        panel.cadPlacementDragLayer = null;
-        panel.cadPlacementDragHandler = null;
-        AppContext.setStatusMessage(panel.cadPlacementDragCancelMessage);
+        MapPanel.CadPlacementDragHandler handler = cadPlacementDragHandler;
+        cadPlacementDragActive = false;
+        cadPlacementDragStarted = false;
+        cadPlacementDragMoved = false;
+        cadPlacementDragStartX = Double.NaN;
+        cadPlacementDragStartY = Double.NaN;
+        cadPlacementDragLayer = null;
+        cadPlacementDragHandler = null;
+        AppContext.setStatusMessage(cadPlacementDragCancelMessage);
         panel.applyCursorForCurrentMode();
         panel.repaint();
         if (handler != null) {
@@ -88,54 +106,54 @@ public class CadEngine {
     }
 
     public void beginCadPlacementDrag(MouseEvent e) {
-        if (!panel.cadPlacementDragActive || panel.cadPlacementDragLayer == null || !SwingUtilities.isLeftMouseButton(e)) {
+        if (!cadPlacementDragActive || cadPlacementDragLayer == null || !SwingUtilities.isLeftMouseButton(e)) {
             return;
         }
         Coordinate coordinate = panel.resolveInteractiveCoordinate(e.getX(), e.getY(), false);
-        panel.cadPlacementDragStarted = true;
-        panel.cadPlacementDragMoved = false;
-        panel.cadPlacementDragStartX = coordinate.x;
-        panel.cadPlacementDragStartY = coordinate.y;
-        panel.cadPlacementDragOriginalOffsetX = panel.cadPlacementDragLayer.getCadOffsetX();
-        panel.cadPlacementDragOriginalOffsetY = panel.cadPlacementDragLayer.getCadOffsetY();
+        cadPlacementDragStarted = true;
+        cadPlacementDragMoved = false;
+        cadPlacementDragStartX = coordinate.x;
+        cadPlacementDragStartY = coordinate.y;
+        cadPlacementDragOriginalOffsetX = cadPlacementDragLayer.getCadOffsetX();
+        cadPlacementDragOriginalOffsetY = cadPlacementDragLayer.getCadOffsetY();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
     }
 
     public void updateCadPlacementDrag(MouseEvent e) {
-        if (!panel.cadPlacementDragActive || !panel.cadPlacementDragStarted || panel.cadPlacementDragLayer == null) {
+        if (!cadPlacementDragActive || !cadPlacementDragStarted || cadPlacementDragLayer == null) {
             return;
         }
         Coordinate coordinate = panel.resolveInteractiveCoordinate(e.getX(), e.getY(), true);
-        double dx = coordinate.x - panel.cadPlacementDragStartX;
-        double dy = coordinate.y - panel.cadPlacementDragStartY;
-        panel.cadPlacementDragLayer.setCadOffsetX(panel.cadPlacementDragOriginalOffsetX + dx);
-        panel.cadPlacementDragLayer.setCadOffsetY(panel.cadPlacementDragOriginalOffsetY + dy);
-        panel.cadPlacementDragMoved = panel.cadPlacementDragMoved || Math.abs(dx) > 1e-9 || Math.abs(dy) > 1e-9;
+        double dx = coordinate.x - cadPlacementDragStartX;
+        double dy = coordinate.y - cadPlacementDragStartY;
+        cadPlacementDragLayer.setCadOffsetX(cadPlacementDragOriginalOffsetX + dx);
+        cadPlacementDragLayer.setCadOffsetY(cadPlacementDragOriginalOffsetY + dy);
+        cadPlacementDragMoved = cadPlacementDragMoved || Math.abs(dx) > 1e-9 || Math.abs(dy) > 1e-9;
         panel.repaint();
     }
 
     public void finishCadPlacementDrag() {
-        if (!panel.cadPlacementDragActive) {
+        if (!cadPlacementDragActive) {
             return;
         }
-        if (!panel.cadPlacementDragStarted) {
+        if (!cadPlacementDragStarted) {
             return;
         }
-        Layer layer = panel.cadPlacementDragLayer;
-        MapPanel.CadPlacementDragHandler handler = panel.cadPlacementDragHandler;
-        boolean moved = panel.cadPlacementDragMoved;
+        Layer layer = cadPlacementDragLayer;
+        MapPanel.CadPlacementDragHandler handler = cadPlacementDragHandler;
+        boolean moved = cadPlacementDragMoved;
         double offsetX = layer != null ? layer.getCadOffsetX() : 0d;
         double offsetY = layer != null ? layer.getCadOffsetY() : 0d;
 
-        panel.cadPlacementDragActive = false;
-        panel.cadPlacementDragStarted = false;
-        panel.cadPlacementDragMoved = false;
-        panel.cadPlacementDragStartX = Double.NaN;
-        panel.cadPlacementDragStartY = Double.NaN;
-        panel.cadPlacementDragLayer = null;
-        panel.cadPlacementDragHandler = null;
+        cadPlacementDragActive = false;
+        cadPlacementDragStarted = false;
+        cadPlacementDragMoved = false;
+        cadPlacementDragStartX = Double.NaN;
+        cadPlacementDragStartY = Double.NaN;
+        cadPlacementDragLayer = null;
+        cadPlacementDragHandler = null;
 
-        AppContext.setStatusMessage(moved ? panel.cadPlacementDragSuccessMessage : panel.cadPlacementDragCancelMessage);
+        AppContext.setStatusMessage(moved ? cadPlacementDragSuccessMessage : cadPlacementDragCancelMessage);
         panel.applyCursorForCurrentMode();
         panel.repaint();
         if (handler != null) {
@@ -163,52 +181,48 @@ public class CadEngine {
         if (handler == null) {
             return;
         }
-        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.topographicProfileCaptureActive || panel.cadPlacementDragActive) {
+        if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.topographicProfileCaptureActive || cadPlacementDragActive) {
             JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de capturar un punto en el mapa."));
             return;
         }
-        panel.pointCaptureHandler = handler;
-        panel.pointCaptureActive = true;
-        panel.pointCaptureStartMessage = startMessage != null && !startMessage.isBlank()
+        pointCaptureHandler = handler;
+        pointCaptureActive = true;
+        pointCaptureStartMessage = startMessage != null && !startMessage.isBlank()
                 ? startMessage
                 : I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
-        panel.pointCaptureSuccessMessage = successMessage != null && !successMessage.isBlank()
+        pointCaptureSuccessMessage = successMessage != null && !successMessage.isBlank()
                 ? successMessage
                 : I18n.t("Pour point capturado.");
-        panel.pointCaptureCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
+        pointCaptureCancelMessage = cancelMessage != null && !cancelMessage.isBlank()
                 ? cancelMessage
                 : I18n.t("Captura de pour point cancelada.");
         panel.requestFocusInWindow();
         panel.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        AppContext.setStatusMessage(panel.pointCaptureStartMessage);
+        AppContext.setStatusMessage(pointCaptureStartMessage);
         panel.repaint();
     }
 
     public void cancelPointCapture() {
-        MapPanel.MapPointCaptureHandler handler = panel.pointCaptureHandler;
-        panel.pointCaptureActive = false;
-        panel.pointCaptureHandler = null;
-        AppContext.setStatusMessage(panel.pointCaptureCancelMessage);
+        MapPanel.MapPointCaptureHandler handler = pointCaptureHandler;
+        pointCaptureActive = false;
+        pointCaptureHandler = null;
+        AppContext.setStatusMessage(pointCaptureCancelMessage);
         panel.repaint();
         if (handler != null) {
             handler.onCaptureCanceled();
         }
     }
 
-    public boolean isPointCaptureActive() {
-        return panel.pointCaptureActive;
-    }
-
     public void finishPointCapture(Coordinate coordinate) {
-        if (!panel.pointCaptureActive || coordinate == null) {
+        if (!pointCaptureActive || coordinate == null) {
             return;
         }
-        MapPanel.MapPointCaptureHandler handler = panel.pointCaptureHandler;
+        MapPanel.MapPointCaptureHandler handler = pointCaptureHandler;
         String projectCrs = CatgisDesktopApp.currentProject != null ? CatgisDesktopApp.currentProject.getProjectCRS() : "EPSG:4326";
-        panel.pointCaptureActive = false;
-        panel.pointCaptureHandler = null;
+        pointCaptureActive = false;
+        pointCaptureHandler = null;
         panel.repaint();
-        AppContext.setStatusMessage(panel.pointCaptureSuccessMessage);
+        AppContext.setStatusMessage(pointCaptureSuccessMessage);
         if (handler != null) {
             handler.onPointCaptured(coordinate, projectCrs);
         }

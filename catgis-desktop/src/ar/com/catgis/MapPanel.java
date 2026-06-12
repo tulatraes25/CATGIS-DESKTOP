@@ -112,7 +112,7 @@ public class MapPanel extends JPanel implements SnapContext {
 
     final PinManager pinManager = new PinManager(this);
     private final CopyPasteHandler copyPasteHandler;
-    private final CadEngine cadEngine = new CadEngine(this);
+    final CadEngine cadEngine = new CadEngine(this);
     private final TopographicProfileTool topographicProfileTool = new TopographicProfileTool(this);
     final UndoRedoManager undoRedoManager;
 
@@ -209,23 +209,6 @@ public class MapPanel extends JPanel implements SnapContext {
     boolean topographicProfileCaptureActive = false;
     final List<Coordinate> topographicProfileCaptureCoordinates = new ArrayList<>();
     TopographicProfileCaptureHandler topographicProfileCaptureHandler = null;
-    boolean pointCaptureActive = false;
-    MapPointCaptureHandler pointCaptureHandler = null;
-    String pointCaptureStartMessage = I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar.");
-    String pointCaptureSuccessMessage = I18n.t("Pour point capturado.");
-    String pointCaptureCancelMessage = I18n.t("Captura de pour point cancelada.");
-    boolean cadPlacementDragActive = false;
-    Layer cadPlacementDragLayer = null;
-    CadPlacementDragHandler cadPlacementDragHandler = null;
-    boolean cadPlacementDragStarted = false;
-    boolean cadPlacementDragMoved = false;
-    double cadPlacementDragStartX = Double.NaN;
-    double cadPlacementDragStartY = Double.NaN;
-    double cadPlacementDragOriginalOffsetX = 0d;
-    double cadPlacementDragOriginalOffsetY = 0d;
-    String cadPlacementDragStartMessage = I18n.t("Arrastre CAD activo: clic izquierdo y arrastra para mover. Suelta para aplicar. Usa clic derecho o Esc para cancelar.");
-    String cadPlacementDragSuccessMessage = I18n.t("Arrastre CAD aplicado.");
-    String cadPlacementDragCancelMessage = I18n.t("Arrastre CAD cancelado.");
     final Timer selectionFlashTimer;
 
     public MapPanel() {
@@ -350,11 +333,11 @@ public class MapPanel extends JPanel implements SnapContext {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             return;
         }
-        if (cadPlacementDragActive) {
+        if (cadEngine.isCadPlacementDragActive()) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
             return;
         }
-        if (pointCaptureActive || topographicProfileCaptureActive || isDrawingActive() || isMeasurementActive()) {
+        if (cadEngine.isPointCaptureActive() || topographicProfileCaptureActive || isDrawingActive() || isMeasurementActive()) {
             setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         } else if ("MOVE".equalsIgnoreCase(currentTool)) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
