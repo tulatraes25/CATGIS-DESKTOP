@@ -168,7 +168,7 @@ public final class PostgisWriteService {
         String tableName = request.tableName().trim();
         connectionInfo.setSchema(schemaName);
 
-        DataStore store = PostgisLoader.openDataStore(connectionInfo);
+        DataStore store = PostgisConnectionFactory.openDataStore(connectionInfo);
         try {
             String existingTypeName = findMatchingTypeName(store.getTypeNames(), schemaName, tableName);
             SimpleFeatureType existingSchema = existingTypeName != null ? store.getSchema(existingTypeName) : null;
