@@ -82,4 +82,81 @@ public final class RasterReclassifyEngine {
         }
         return rules;
     }
+
+    /**
+     * Fill NoData gaps in a single-band raster using iterative mean interpolation.
+     * Each pass fills NoData pixels that have at least minValidNeighbors valid
+     * neighbors in a 3x3 window, replacing them with the mean of those neighbors.
+     * Repeats until no more pixels are filled.
+     *
+     * @param source       source raster
+     * @param noDataValue  value that marks NoData
+     * @return new raster with gaps filled, or source if no gaps found
+     */
+    public static BufferedImage fillNodata(BufferedImage source, double noDataValue) {
+        return fillNodata(source, noDataValue, 1);
+    }
+
+    public static BufferedImage fillNodata(BufferedImage source, double noDataValue, int minValidNeighbors) {
+        if (source == null) return null;
+        int w = source.getWidth();
+        int h = source.getHeight();
+        Raster raster = source.getRaster();
+        double[] pixel = new double[raster.getNumBands()];
+
+        BufferedImage work = new BufferedImage(w, h, source.getType());
+        WritableRaster workRaster = work.getRaster();
+        // Copy source to work
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                raster.getPixel(x, y, pixel);
+                workRaster.setSample(x, y, 0, pixel[0]);
+            }
+        }
+
+        boolean changed;
+        int passes = 0;
+        int maxPasses = Math.max(w, h); // worst case: fill diagonal
+        do {
+            changed = false;
+            passes++;
+            double[][] snapshot = new double[h][w];
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    snapshot[y][x] = workRaster.getSample(x, y, 0);
+                }
+            }
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    double val = snapshot[y][x];
+                    if (!isNodata(val, noDataValue)) continue;
+                    double sum = 0;
+                    int count = 0;
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dx = -1; dx <= 1; dx++) {
+                            if (dx == 0 && dy == 0) continue;
+                            int nx = x + dx;
+                            int ny = y + dy;
+                            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                            double nv = snapshot[ny][nx];
+                            if (!isNodata(nv, noDataValue)) {
+                                sum += nv;
+                                count++;
+                            }
+                        }
+                    }
+                    if (count >= minValidNeighbors) {
+                        workRaster.setSample(x, y, 0, sum / count);
+                        changed = true;
+                    }
+                }
+            }
+        } while (changed && passes < maxPasses);
+
+        return work;
+    }
+
+    private static boolean isNodata(double val, double noData) {
+        return Double.isNaN(val) || Double.isInfinite(val) || Math.abs(val - noData) < 1e-9;
+    }
 }

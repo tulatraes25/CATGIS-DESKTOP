@@ -126,6 +126,52 @@ class RasterReclassifyEngineTest {
         assertEquals(30.0, stats[0], 1e-9);
     }
 
+    @Test
+    void fillNodata_interpolatesSingleGap() {
+        BufferedImage img = new BufferedImage(3, 3, BufferedImage.TYPE_USHORT_GRAY);
+        WritableRaster raster = img.getRaster();
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 3; x++)
+                raster.setSample(x, y, 0, 100);
+        raster.setSample(1, 1, 0, 0); // 0 = NoData
+
+        BufferedImage filled = RasterReclassifyEngine.fillNodata(img, 0);
+        double center = filled.getRaster().getSample(1, 1, 0);
+        assertEquals(100.0, center, 0.001);
+    }
+
+    @Test
+    void fillNodata_returnsSameIfNoGaps() {
+        BufferedImage img = new BufferedImage(2, 2, BufferedImage.TYPE_USHORT_GRAY);
+        WritableRaster raster = img.getRaster();
+        raster.setSample(0, 0, 0, 100);
+        raster.setSample(1, 0, 0, 200);
+        raster.setSample(0, 1, 0, 300);
+        raster.setSample(1, 1, 0, 400);
+        BufferedImage filled = RasterReclassifyEngine.fillNodata(img, 0);
+        assertEquals(100.0, readPixel(filled, 0, 0), 0.001);
+        assertEquals(400.0, readPixel(filled, 1, 1), 0.001);
+    }
+
+    @Test
+    void fillNodata_interpolatesEdgeGap() {
+        BufferedImage img = new BufferedImage(3, 3, BufferedImage.TYPE_USHORT_GRAY);
+        WritableRaster raster = img.getRaster();
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 3; x++)
+                raster.setSample(x, y, 0, 50);
+        raster.setSample(0, 0, 0, 0); // corner gap
+        raster.setSample(1, 0, 0, 0); // edge gap
+
+        BufferedImage filled = RasterReclassifyEngine.fillNodata(img, 0);
+        double corner = filled.getRaster().getSample(0, 0, 0);
+        double edge = filled.getRaster().getSample(1, 0, 0);
+        assertTrue(corner > 0, "Corner should be filled");
+        assertTrue(edge > 0, "Edge should be filled");
+        assertEquals(50.0, corner, 10.0);
+        assertEquals(50.0, edge, 10.0);
+    }
+
     private static double readPixel(BufferedImage img, int x, int y) {
         double[] px = new double[img.getRaster().getNumBands()];
         img.getRaster().getPixel(x, y, px);
