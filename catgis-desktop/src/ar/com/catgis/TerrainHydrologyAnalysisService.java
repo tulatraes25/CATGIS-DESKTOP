@@ -39,6 +39,7 @@ public final class TerrainHydrologyAnalysisService {
     public static final String OP_FLOW_DIRECTION = "flow_direction";
     public static final String OP_FLOW_ACCUMULATION = "flow_accumulation";
     public static final String OP_STREAM_ORDER_LINES = "stream_order_lines";
+    public static final String OP_VIEWSHED = "viewshed";
 
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
     private static final double HILLSHADE_AZIMUTH_DEGREES = 315d;
@@ -1976,6 +1977,81 @@ public final class TerrainHydrologyAnalysisService {
                 (int) Math.round(a.getGreen() + ((b.getGreen() - a.getGreen()) * t)),
                 (int) Math.round(a.getBlue() + ((b.getBlue() - a.getBlue()) * t))
         );
+    }
+
+    // ─── Viewshed ────────────────────────────────────────────────────
+
+    /**
+     * Result of a viewshed analysis.
+     */
+    public record ViewshedResult(boolean[] visible, int width, int height, int observerX, int observerY) {}
+
+    /**
+     * Compute viewshed from a DEM raster.
+     * Returns a boolean mask where true = visible from observer.
+     *
+     * @param dem           flat array of elevation values (row-major, NaN = no data)
+     * @param width         DEM width in cells
+     * @param height        DEM height in cells
+     * @param observerX     observer column (0-based)
+     * @param observerY     observer row (0-based)
+     * @param observerHgt   observer height above ground (meters)
+     * @param radiusPixels  maximum visibility radius in pixels
+     * @return visibility mask
+     */
+    public static ViewshedResult computeViewshed(double[] dem, int width, int height,
+                                                  int observerX, int observerY,
+                                                  double observerHgt, int radiusPixels) {
+        if (dem == null || width <= 0 || height <= 0) return null;
+        if (observerX < 0 || observerX >= width || observerY < 0 || observerY >= height) return null;
+
+        int total = width * height;
+        boolean[] visible = new boolean[total];
+        int obsIdx = observerY * width + observerX;
+        double obsElev = dem[obsIdx] + observerHgt;
+        if (Double.isNaN(obsElev)) return new ViewshedResult(visible, width, height, observerX, observerY);
+
+        int r2 = radiusPixels * radiusPixels;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int dx = x - observerX;
+                int dy = y - observerY;
+                int dist2 = dx * dx + dy * dy;
+                if (dist2 > r2) continue;
+
+                int idx = y * width + x;
+                if (idx == obsIdx) {
+                    visible[idx] = true;
+                    continue;
+                }
+                double targetElev = dem[idx];
+                if (Double.isNaN(targetElev)) continue;
+
+                // Line of sight check: sample at ~dist2/2 intermediate points
+                double dist = Math.sqrt(dist2);
+                int samples = Math.max(2, (int) (dist / 0.5));
+                double obsToTargetElev = targetElev - obsElev;
+                boolean blocked = false;
+
+                for (int s = 1; s < samples; s++) {
+                    double t = (double) s / samples;
+                    int sx = (int) Math.round(observerX + dx * t);
+                    int sy = (int) Math.round(observerY + dy * t);
+                    if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue;
+                    int si = sy * width + sx;
+                    double se = dem[si];
+                    if (Double.isNaN(se)) continue;
+                    double losElev = obsElev + obsToTargetElev * t;
+                    if (se > losElev) {
+                        blocked = true;
+                        break;
+                    }
+                }
+                visible[idx] = !blocked;
+            }
+        }
+        return new ViewshedResult(visible, width, height, observerX, observerY);
     }
 
     public record AnalysisRequest(Layer rasterLayer,
