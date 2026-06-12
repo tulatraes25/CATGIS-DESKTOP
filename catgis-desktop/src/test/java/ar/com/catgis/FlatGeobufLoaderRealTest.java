@@ -10,10 +10,9 @@ import java.nio.file.Files;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * FlatGeobufLoader tests.
- * Tests rejection of invalid inputs. Testing actual .fgb parsing requires
- * a real FlatGeobuf file, which is not included in the test suite.
- * These tests validate the loader's input validation logic.
+ * Tests for FlatGeobufLoader.
+ * Tests input validation and error handling.
+ * Full round-trip testing requires real .fgb files.
  */
 class FlatGeobufLoaderRealTest {
 
@@ -56,6 +55,34 @@ class FlatGeobufLoaderRealTest {
     void loadStringPathDelegatesToFile() {
         assertThrows(Exception.class, () -> {
             FlatGeobufLoader.load("/nonexistent/file.fgb");
+        });
+    }
+
+    @Test
+    void loadFileWithBadMagicThrows() throws IOException {
+        File badFile = tempDir.resolve("bad.fgb").toFile();
+        byte[] badMagic = new byte[]{0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        Files.write(badFile.toPath(), badMagic);
+        assertThrows(Exception.class, () -> {
+            FlatGeobufLoader.load(badFile);
+        });
+    }
+
+    @Test
+    void loadFileWithCorrectMagicButInvalidHeaderThrows() throws IOException {
+        // Valid magic "gbfg" but garbage header
+        byte[] data = new byte[]{
+                0x67, 0x62, 0x66, 0x67, // magic: "gbfg"
+                0x10, 0x00, 0x00, 0x00, // header size: 16
+                0x00, 0x00, 0x00, 0x00, // garbage header
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00
+        };
+        File invalidFile = tempDir.resolve("invalid_header.fgb").toFile();
+        Files.write(invalidFile.toPath(), data);
+        assertThrows(Exception.class, () -> {
+            FlatGeobufLoader.load(invalidFile);
         });
     }
 }
