@@ -46,6 +46,7 @@ dependencies {
     implementation 'org.geotools:gt-geopkg'
     implementation 'org.geotools.jdbc:gt-jdbc-postgis:34.0'
     implementation 'org.postgresql:postgresql:42.7.5'
+    implementation 'com.zaxxer:HikariCP:5.1.0'
     implementation 'org.apache.pdfbox:pdfbox:3.0.3'
 
     implementation 'org.apache.poi:poi:5.4.1'
