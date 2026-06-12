@@ -86,3 +86,8 @@ tools/
 # Datos GIS (archivos pesados, no son codigo fuente)
 catserver_shapes/
 
+# Submodulos externos
+CONSULTLAN/
+CONSULTLAN_prescription-settings-phase1/
+CONSULTLAN_professionals_local_phase1/
+
