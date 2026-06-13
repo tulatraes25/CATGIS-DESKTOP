@@ -18,6 +18,7 @@ public class LayoutMap implements LayoutElement {
     private boolean visible = true, locked, selected;
 
     private transient BufferedImage cachedImage;
+    private transient BufferedImage previewImage;
     private transient long cacheKey;
     private transient int cachedWidthPx = -1;
     private transient int cachedHeightPx = -1;
@@ -83,6 +84,20 @@ public class LayoutMap implements LayoutElement {
 
         if (pw < 10 || ph < 10) return;
 
+        // Preview image override (for testing without MapPanel)
+        if (previewImage != null) {
+            Graphics2D mg = (Graphics2D) g2.create();
+            try {
+                mg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                mg.setClip(px, py, pw, ph);
+                mg.drawImage(previewImage, px, py, pw, ph, null);
+            } finally {
+                mg.dispose();
+            }
+            renderFrameAndGrid(g2, px, py, pw, ph);
+            return;
+        }
+
         long key = computeCacheKey();
         long now = System.nanoTime();
         // Re-render if: no cache, key changed, size changed, or more than 500ms elapsed (live update)
@@ -145,7 +160,10 @@ public class LayoutMap implements LayoutElement {
             int tw = g2.getFontMetrics().stringWidth(msg);
             g2.drawString(msg, px + (pw - tw) / 2, py + ph / 2);
         }
-        // Frame border (ArcMap-style)
+        renderFrameAndGrid(g2, px, py, pw, ph);
+    }
+
+    private void renderFrameAndGrid(Graphics2D g2, int px, int py, int pw, int ph) {
         if (frameColor.getAlpha() > 0 && frameWidth > 0) {
             g2.setColor(frameColor);
             g2.setStroke(new java.awt.BasicStroke(frameWidth));
@@ -481,6 +499,13 @@ public class LayoutMap implements LayoutElement {
     }
     public boolean isShowIndicator() { return showIndicator; }
     public void setShowIndicator(boolean b) { showIndicator = b; }
+
+    /**
+     * Inject a pre-rendered image for use in headless/golden tests.
+     * When set, render() uses this image instead of calling MapPanel.
+     * Set to null to restore normal MapPanel-based rendering.
+     */
+    public void setPreviewImage(BufferedImage img) { this.previewImage = img; }
 
     @Override
     public boolean containsMm(double xMm, double yMm) {
