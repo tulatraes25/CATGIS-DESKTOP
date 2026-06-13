@@ -16,10 +16,12 @@ import org.geotools.api.referencing.operation.MathTransform;
 import org.geotools.referencing.CRS;
 import org.geotools.geometry.jts.JTS;
 
+import java.awt.Toolkit;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -211,9 +213,9 @@ public class MapUtilities {
     }
 
     // ========================================================================
-    // 10. transformPoint — reproject a single point between CRS codes
+    // 10. reprojectPoint — reproject a single point between CRS codes
     // ========================================================================
-    private double[] reprojectPoint(double x, double y, String sourceCode, String targetCode) {
+    static double[] reprojectPoint(double x, double y, String sourceCode, String targetCode) {
         try {
             if (sourceCode == null || sourceCode.isBlank()) return null;
             if (targetCode == null || targetCode.isBlank()) return null;
@@ -406,7 +408,7 @@ public class MapUtilities {
                 reprojectEnvelopeIfNeeded(env, sourceCode, targetCode));
     }
 
-    private Envelope getOnlineLayerEnvelope(OnlineTileLayer layer) {
+    Envelope getOnlineLayerEnvelope(OnlineTileLayer layer) {
         if (layer == null) return null;
         Envelope world = new Envelope(OnlineMapUtils.WEB_MERCATOR_WORLD);
         return reprojectEnvelopeIfNeeded(world, "EPSG:3857",
@@ -414,7 +416,7 @@ public class MapUtilities {
                         ? AppContext.project().getProjectCRS() : "");
     }
 
-    private Envelope getOnlineWmsEnvelope(OnlineWmsLayer layer) {
+    Envelope getOnlineWmsEnvelope(OnlineWmsLayer layer) {
         if (layer == null) return null;
         if (Double.isNaN(layer.getExtentMinX()) || Double.isNaN(layer.getExtentMinY())
                 || Double.isNaN(layer.getExtentMaxX()) || Double.isNaN(layer.getExtentMaxY())) {
@@ -430,7 +432,7 @@ public class MapUtilities {
                         ? AppContext.project().getProjectCRS() : "");
     }
 
-    private static double percentile(List<Double> values, double quantile) {
+    static double percentile(List<Double> values, double quantile) {
         if (values == null || values.isEmpty()) return 0d;
         List<Double> sorted = new ArrayList<>(values);
         java.util.Collections.sort(sorted);
@@ -442,5 +444,152 @@ public class MapUtilities {
         if (lower == upper) return sorted.get(lower);
         double fraction = index - lower;
         return sorted.get(lower) + ((sorted.get(upper) - sorted.get(lower)) * fraction);
+    }
+
+    // ========================================================================
+    // 14. Scale/ruler utility methods (static)
+    // ========================================================================
+
+    static String formatScaleDenominator(double denominator) {
+        if (denominator <= 0d) {
+            return "";
+        }
+        return "1:" + new DecimalFormat("#,##0").format(Math.round(denominator));
+    }
+
+    static String buildScaleTooltip(double denominator) {
+        if (denominator <= 0d) {
+            return "Escala no disponible hasta que haya una vista cartografica valida.";
+        }
+        if (isGeographicProjectCrs()) {
+            return "Escala actual aproximada para la vista. En CRS geograficos se estima segun la latitud central.";
+        }
+        return "Escala actual de la vista principal. Escribe 1:5000 o 5000 y presiona Enter para ajustarla.";
+    }
+
+    static Double parseScaleDenominator(String value) {
+        if (value == null) {
+            return null;
+        }
+        String text = value.trim();
+        if (text.isBlank()) {
+            return null;
+        }
+        int colonIndex = text.indexOf(':');
+        if (colonIndex >= 0 && colonIndex < text.length() - 1) {
+            text = text.substring(colonIndex + 1);
+        }
+        text = text.replaceAll("[^0-9]", "");
+        if (text.isBlank()) {
+            return null;
+        }
+        try {
+            double denominator = Double.parseDouble(text);
+            return denominator > 0d ? denominator : null;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    static int safeScreenDpi() {
+        try {
+            int dpi = Toolkit.getDefaultToolkit().getScreenResolution();
+            return dpi > 0 ? dpi : 96;
+        } catch (Exception ex) {
+            return 96;
+        }
+    }
+
+    static boolean isGeographicProjectCrs() {
+        String projectCrs = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
+                : "";
+        return "EPSG:4326".equalsIgnoreCase(projectCrs)
+                || "EPSG:4258".equalsIgnoreCase(projectCrs)
+                || "EPSG:4269".equalsIgnoreCase(projectCrs)
+                || "EPSG:4674".equalsIgnoreCase(projectCrs)
+                || "EPSG:4190".equalsIgnoreCase(projectCrs)
+                || "EPSG:4221".equalsIgnoreCase(projectCrs);
+    }
+
+    // ========================================================================
+    // 15. Coordinate transform utility methods (static)
+    // ========================================================================
+
+    static Coordinate toSourceCoordinate(double projectX, double projectY, Layer layer) {
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
+        String sourceCRS = layer != null ? layer.getSourceCRS() : "";
+
+        if (projectCRS == null || projectCRS.isBlank() || sourceCRS == null || sourceCRS.isBlank()
+                || projectCRS.equalsIgnoreCase(sourceCRS)) {
+            return new Coordinate(projectX, projectY);
+        }
+
+        double[] source = reprojectPoint(projectX, projectY, projectCRS, sourceCRS);
+        if (source == null || source.length < 2) {
+            return new Coordinate(projectX, projectY);
+        }
+        return new Coordinate(source[0], source[1]);
+    }
+
+    static Coordinate toProjectCoordinate(Coordinate sourceCoordinate, Layer layer) {
+        if (sourceCoordinate == null) {
+            return null;
+        }
+
+        String projectCRS = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
+        String sourceCRS = layer != null ? layer.getSourceCRS() : "";
+        if (projectCRS == null || projectCRS.isBlank() || sourceCRS == null || sourceCRS.isBlank()
+                || projectCRS.equalsIgnoreCase(sourceCRS)) {
+            return new Coordinate(sourceCoordinate);
+        }
+
+        double[] projected = reprojectPoint(sourceCoordinate.x, sourceCoordinate.y, sourceCRS, projectCRS);
+        if (projected == null || projected.length < 2) {
+            return new Coordinate(sourceCoordinate);
+        }
+        return new Coordinate(projected[0], projected[1]);
+    }
+
+    static List<Coordinate> toSourceCoordinates(List<Coordinate> projectCoordinates, Layer layer) {
+        List<Coordinate> out = new ArrayList<>();
+        if (projectCoordinates == null) {
+            return out;
+        }
+        for (Coordinate coordinate : projectCoordinates) {
+            out.add(toSourceCoordinate(coordinate.x, coordinate.y, layer));
+        }
+        return out;
+    }
+
+    // ========================================================================
+    // 16. Measurement/parsing utility methods (static)
+    // ========================================================================
+
+    static double parsePositiveDistance(String input) {
+        if (input == null) {
+            return Double.NaN;
+        }
+        String normalized = input.trim().replace(',', '.');
+        if (normalized.isEmpty()) {
+            return Double.NaN;
+        }
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException ex) {
+            return Double.NaN;
+        }
+    }
+
+    static String getPolygonSurfaceDistanceHint(Layer layer) {
+        String sourceCode = layer != null ? layer.getSourceCRS() : "";
+        if (sourceCode == null || sourceCode.isBlank()) {
+            return "unidades de la capa";
+        }
+        String metricCode = MapMeasurementUtils.chooseMetricCRS(sourceCode);
+        if (sourceCode.equalsIgnoreCase(metricCode)) {
+            return "metros";
+        }
+        return "metros";
     }
 }
