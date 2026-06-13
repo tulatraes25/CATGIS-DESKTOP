@@ -223,6 +223,8 @@ public class MapLayoutComposerDialog extends JFrame {
     private boolean syncingLayoutStructureSelection;
     private final List<CatmapLayoutItem> catmapClipboard = new ArrayList<>();
     private final LayoutModel layoutModel = new LayoutModel();
+    private final ar.com.catgis.layout.CanvasRenderer canvasRenderer
+            = new ar.com.catgis.layout.CanvasRenderer(layoutModel, new java.awt.Rectangle(0, 0, 800, 600));
     private LayoutElement draggingLayoutElement;
     private String copiedElementType = null;
     private String copiedElementJson = null;
@@ -6830,6 +6832,9 @@ public class MapLayoutComposerDialog extends JFrame {
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(x, y, drawWidth, drawHeight, 4, 4);
                 drawLayoutModelOverlay(g2, settings, x, y, scale);
+                // Render dynamic layout elements via CanvasRenderer
+                canvasRenderer.setScale(scale);
+                canvasRenderer.render(g2);
                 drawSnapGuides(g2, x, y, scale, drawWidth, drawHeight);
                 drawPersistentGuides(g2, x, y, scale, drawWidth, drawHeight, settings);
                 drawDrawingPreview(g2, x, y, scale);
