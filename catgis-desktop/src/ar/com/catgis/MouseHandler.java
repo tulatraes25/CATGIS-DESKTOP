@@ -108,13 +108,7 @@ class MouseHandler extends MouseAdapter {
             }
         }
 
-        if ("MOVE".equalsIgnoreCase(map.currentTool)) {
-            map.dragging = true;
-            map.captureViewDragStart();
-            map.lastMouseX = e.getX();
-            map.lastMouseY = e.getY();
-            map.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        }
+        map.activeTool.mousePressed(e, map);
     }
 
     @Override
@@ -189,11 +183,7 @@ class MouseHandler extends MouseAdapter {
             map.repaint();
         }
 
-        if (map.dragging && ("MOVE".equalsIgnoreCase(map.currentTool))) {
-            map.rememberViewState(map.dragStartViewMinX, map.dragStartViewMinY, map.zoomFactor);
-            map.rememberCurrentView();
-            map.refreshStatusBarScale();
-        }
+        map.activeTool.mouseReleased(e, map);
 
         map.dragging = false;
 
@@ -255,15 +245,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        int dx = e.getX() - map.lastMouseX;
-        int dy = e.getY() - map.lastMouseY;
-
-        map.shiftViewByPixels(dx, dy);
-
-        map.lastMouseX = e.getX();
-        map.lastMouseY = e.getY();
-
-        map.repaint();
+        map.activeTool.mouseDragged(e, map);
     }
 
     @Override
@@ -318,12 +300,8 @@ class MouseHandler extends MouseAdapter {
             map.setCursor(map.resolveFeatureEditCursor());
         } else if (map.featureEditMode && map.isFeatureEditSketchMode()) {
             map.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        } else if ("MOVE".equalsIgnoreCase(map.currentTool)) {
-            map.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if ("IDENTIFY".equalsIgnoreCase(map.currentTool)) {
-            map.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
         } else {
-            map.setCursor(Cursor.getDefaultCursor());
+            map.setCursor(map.activeTool.getCursor(map));
         }
     }
 
@@ -473,11 +451,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if ("IDENTIFY".equalsIgnoreCase(map.currentTool)) {
-            map.identifyFeature(e.getX(), e.getY());
-        } else if ("SELECT".equalsIgnoreCase(map.currentTool)) {
-            map.selectFeatureForEditing(e.getX(), e.getY(), e.isControlDown());
-        }
+        map.activeTool.mouseClicked(e, map);
     }
 
     @Override

@@ -153,6 +153,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     int lastMouseY;
 
     String currentTool = "MOVE";
+    MapTool activeTool = new MoveTool();
 
     Layer selectedLayer;
     SimpleFeature selectedFeature;
@@ -321,6 +322,13 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     public void setTool(String tool) {
         this.currentTool = tool;
+        this.activeTool = switch (tool.toUpperCase()) {
+            case "MOVE", "PAN" -> new MoveTool();
+            case "IDENTIFY" -> new IdentifyTool();
+            case "SELECT" -> new SelectTool();
+            default -> activeTool;
+        };
+        activeTool.activate(this);
         applyCursorForCurrentMode();
         CatgisDesktopApp.syncFloatingVectorEditToolbar();
     }
