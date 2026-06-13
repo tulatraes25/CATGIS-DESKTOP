@@ -225,6 +225,8 @@ public class MapLayoutComposerDialog extends JFrame {
     private final LayoutModel layoutModel = new LayoutModel();
     private final ar.com.catgis.layout.CanvasRenderer canvasRenderer
             = new ar.com.catgis.layout.CanvasRenderer(layoutModel, new java.awt.Rectangle(0, 0, 800, 600));
+    private final ar.com.catgis.layout.LayoutSelectionManager selectionManager
+            = new ar.com.catgis.layout.LayoutSelectionManager(layoutModel);
     private LayoutElement draggingLayoutElement;
     private String copiedElementType = null;
     private String copiedElementJson = null;
