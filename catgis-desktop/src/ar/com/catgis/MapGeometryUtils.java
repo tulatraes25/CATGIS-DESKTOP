@@ -6,6 +6,7 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryCollection;
 import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.MultiLineString;
 import org.locationtech.jts.geom.MultiPoint;
@@ -391,5 +392,47 @@ public class MapGeometryUtils {
         if (geometry == null || geometry.isEmpty()) return null;
         if (geometry instanceof org.locationtech.jts.geom.LineString lineString) return cloneCoordinates(lineString.getCoordinates());
         return null;
+    }
+
+    // ─── Line projection utilities ──────────────────────────────────
+
+    public static LineSplitProjection projectCoordinateOntoLine(LineString line, Coordinate target) {
+        if (line == null || target == null) return null;
+        Coordinate[] coords = line.getCoordinates();
+        if (coords == null || coords.length < 2) return null;
+
+        int bestSegment = -1;
+        Coordinate bestProjected = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (int i = 0; i < coords.length - 1; i++) {
+            Coordinate projected = projectCoordinateOntoSegment(coords[i], coords[i + 1], target);
+            double distance = projected.distance(target);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestProjected = projected;
+                bestSegment = i;
+            }
+        }
+        if (bestSegment < 0 || bestProjected == null) return null;
+        return new LineSplitProjection(bestSegment, bestProjected, bestDistance);
+    }
+
+    public static Coordinate projectCoordinateOntoSegment(Coordinate a, Coordinate b, Coordinate target) {
+        double dx = b.x - a.x;
+        double dy = b.y - a.y;
+        if (Math.abs(dx) < 0.0000001 && Math.abs(dy) < 0.0000001) return new Coordinate(a);
+        double t = ((target.x - a.x) * dx + (target.y - a.y) * dy) / ((dx * dx) + (dy * dy));
+        t = Math.max(0.0, Math.min(1.0, t));
+        return new Coordinate(a.x + (t * dx), a.y + (t * dy));
+    }
+
+    public static void appendCoordinateIfNeeded(List<Coordinate> coordinates, Coordinate candidate, double tolerance) {
+        if (coordinates == null || candidate == null) return;
+        if (coordinates.isEmpty()) {
+            coordinates.add(new Coordinate(candidate));
+            return;
+        }
+        Coordinate last = coordinates.get(coordinates.size() - 1);
+        if (last.distance(candidate) > tolerance) coordinates.add(new Coordinate(candidate));
     }
 }

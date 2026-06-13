@@ -1260,7 +1260,7 @@ class MapEditingEngine {
             double closestDistance = Double.MAX_VALUE;
             for (int i = 0; i < multi.getNumGeometries(); i++) {
                 LineString line = (LineString) multi.getGeometryN(i);
-                LineSplitProjection projection = map.projectCoordinateOntoLine(line, coordinate);
+                LineSplitProjection projection = MapGeometryUtils.projectCoordinateOntoLine(line, coordinate);
                 if (projection != null && projection.distance < closestDistance) {
                     closestDistance = projection.distance;
                     closestIndex = i;
@@ -1294,7 +1294,7 @@ class MapEditingEngine {
             return null;
         }
 
-        LineSplitProjection projection = map.projectCoordinateOntoLine(line, coordinate);
+        LineSplitProjection projection = MapGeometryUtils.projectCoordinateOntoLine(line, coordinate);
         if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
             return null;
         }
@@ -1308,14 +1308,14 @@ class MapEditingEngine {
 
         List<Coordinate> firstCoords = new ArrayList<>();
         for (int i = 0; i <= projection.segmentIndex; i++) {
-            map.appendCoordinateIfNeeded(firstCoords, coords[i], tolerance);
+            MapGeometryUtils.appendCoordinateIfNeeded(firstCoords, coords[i], tolerance);
         }
-        map.appendCoordinateIfNeeded(firstCoords, projection.projected, tolerance);
+        MapGeometryUtils.appendCoordinateIfNeeded(firstCoords, projection.projected, tolerance);
 
         List<Coordinate> secondCoords = new ArrayList<>();
-        map.appendCoordinateIfNeeded(secondCoords, projection.projected, tolerance);
+        MapGeometryUtils.appendCoordinateIfNeeded(secondCoords, projection.projected, tolerance);
         for (int i = projection.segmentIndex + 1; i < coords.length; i++) {
-            map.appendCoordinateIfNeeded(secondCoords, coords[i], tolerance);
+            MapGeometryUtils.appendCoordinateIfNeeded(secondCoords, coords[i], tolerance);
         }
 
         if (firstCoords.size() < 2 || secondCoords.size() < 2) {

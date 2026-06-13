@@ -6060,58 +6060,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     LineSplitProjection projectCoordinateOntoLine(LineString line, Coordinate target) {
-        if (line == null || target == null) {
-            return null;
-        }
-
-        Coordinate[] coords = line.getCoordinates();
-        if (coords == null || coords.length < 2) {
-            return null;
-        }
-
-        int bestSegment = -1;
-        Coordinate bestProjected = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (int i = 0; i < coords.length - 1; i++) {
-            Coordinate projected = projectCoordinateOntoSegment(coords[i], coords[i + 1], target);
-            double distance = projected.distance(target);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestProjected = projected;
-                bestSegment = i;
-            }
-        }
-
-        if (bestSegment < 0 || bestProjected == null) {
-            return null;
-        }
-        return new LineSplitProjection(bestSegment, bestProjected, bestDistance);
-    }
-
-    private Coordinate projectCoordinateOntoSegment(Coordinate a, Coordinate b, Coordinate target) {
-        double dx = b.x - a.x;
-        double dy = b.y - a.y;
-        if (Math.abs(dx) < 0.0000001 && Math.abs(dy) < 0.0000001) {
-            return new Coordinate(a);
-        }
-
-        double t = ((target.x - a.x) * dx + (target.y - a.y) * dy) / ((dx * dx) + (dy * dy));
-        t = Math.max(0.0, Math.min(1.0, t));
-        return new Coordinate(a.x + (t * dx), a.y + (t * dy));
+        return MapGeometryUtils.projectCoordinateOntoLine(line, target);
     }
 
     void appendCoordinateIfNeeded(List<Coordinate> coordinates, Coordinate candidate, double tolerance) {
-        if (coordinates == null || candidate == null) {
-            return;
-        }
-        if (coordinates.isEmpty()) {
-            coordinates.add(new Coordinate(candidate));
-            return;
-        }
-        Coordinate last = coordinates.get(coordinates.size() - 1);
-        if (last.distance(candidate) > tolerance) {
-            coordinates.add(new Coordinate(candidate));
-        }
+        MapGeometryUtils.appendCoordinateIfNeeded(coordinates, candidate, tolerance);
     }
 
     private Geometry buildCutGeometryWithSketch(Geometry geometry, List<Coordinate> sketchCoordinates) {
