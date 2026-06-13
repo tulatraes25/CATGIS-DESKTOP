@@ -227,12 +227,13 @@ public class MapLayoutComposerDialog extends JFrame {
             = new ar.com.catgis.layout.CanvasRenderer(layoutModel, new java.awt.Rectangle(0, 0, 800, 600));
     private final ar.com.catgis.layout.LayoutSelectionManager selectionManager
             = new ar.com.catgis.layout.LayoutSelectionManager(layoutModel);
-    private LayoutElement draggingLayoutElement;
-    private String copiedElementType = null;
-    private String copiedElementJson = null;
-    private Point dragStartPagePoint;
-    private java.awt.geom.Rectangle2D.Double dragStartBoundsMm;
-    private int activeResizeHandleIndex = -1;
+    /** @deprecated Use {@link #selectionManager} instead */
+    @Deprecated private LayoutElement draggingLayoutElement;
+    @Deprecated private String copiedElementType = null;
+    @Deprecated private String copiedElementJson = null;
+    @Deprecated private Point dragStartPagePoint;
+    @Deprecated private java.awt.geom.Rectangle2D.Double dragStartBoundsMm;
+    @Deprecated private int activeResizeHandleIndex = -1;
     private DefaultListModel<String> elementListModel;
     private JLabel propertiesInfoLabel;
     private JPanel propertiesCardPanel;
