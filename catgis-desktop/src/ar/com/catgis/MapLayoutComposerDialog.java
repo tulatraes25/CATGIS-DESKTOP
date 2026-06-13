@@ -131,39 +131,60 @@ import ar.com.catgis.layout.GuideLine;
 import ar.com.catgis.layout.LayoutCartouche;
 import ar.com.catgis.layout.LayoutGraticule;
 import ar.com.catgis.layout.QgisQptImporter;
+import ar.com.catgis.layout.LayoutImagePrintable;
+import ar.com.catgis.layout.LayoutInteractionState;
+import ar.com.catgis.layout.LayoutElementType;
+import ar.com.catgis.layout.LayoutTemplate;
+import ar.com.catgis.layout.LegendPlacement;
+import ar.com.catgis.layout.MapFrameTool;
+import ar.com.catgis.layout.PreviewScaleMode;
+import ar.com.catgis.layout.ResizeHandle;
+import ar.com.catgis.layout.RectMm;
 import ar.com.catgis.layout.RulerRenderer;
+import ar.com.catgis.layout.ScaleRule;
+import ar.com.catgis.layout.ScaleStyle;
+import ar.com.catgis.layout.NorthStyle;
+import ar.com.catgis.layout.PageOrientation;
+import ar.com.catgis.layout.PageSizePreset;
+import ar.com.catgis.layout.LayoutSettings;
+import ar.com.catgis.layout.LayoutSnapshot;
+import ar.com.catgis.layout.MapFrameGeometry;
+import ar.com.catgis.layout.LayoutRenderResult;
+import ar.com.catgis.layout.FooterRenderResult;
+import ar.com.catgis.layout.LayoutLegendEntry;
+import ar.com.catgis.layout.LayoutPageRenderer;
 import ar.com.catgis.core.model.Layer;
 
 public class MapLayoutComposerDialog extends JFrame {
 
     // Context helpers - prefer AppContext over static globals
-    private static Project ctxProject() {
+    public static Project ctxProject() {
         Project p = AppContext.get().getProject();
         return p != null ? p : AppContext.project();
     }
-    private static MapPanel ctxMapPanel() {
+    public static MapPanel ctxMapPanel() {
         MapPanel m = AppContext.get().getMapPanel();
         return m != null ? m : AppContext.mapPanel();
     }
 
-    private static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    public static final DateTimeFormatter FOOTER_DATE = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final int CATMAP_SPLASH_MILLIS = 1100;
-    private static final int PREVIEW_RENDER_DPI = 200;
-    private static final double CLEAN_HEADER_HEIGHT_RATIO = 1d / 14d;
-    private static final double CLEAN_FOOTER_HEIGHT_RATIO = 1d / 9d;
-    private static final int CLEAN_HEADER_MIN_HEIGHT = 72;
-    private static final int CLEAN_FOOTER_MIN_HEIGHT = 120;
+    public static final int PREVIEW_RENDER_DPI = 200;
+    public static final double CLEAN_HEADER_HEIGHT_RATIO = 1d / 14d;
+    public static final double CLEAN_FOOTER_HEIGHT_RATIO = 1d / 9d;
+    public static final int CLEAN_HEADER_MIN_HEIGHT = 72;
+    public static final int CLEAN_FOOTER_MIN_HEIGHT = 120;
     private static MapLayoutComposerDialog openInstance;
 
-    private final JTextField titleField;
+    final JTextField titleField;
     private final JTextField subtitleField;
     private final JTextField footerField;
-    private final JTextField studyField;
-    private final JTextField cartoucheProjectField;
-    private final JTextField companyField;
-    private final JTextField cartographerField;
-    private final JTextField imageSourceField;
-    private final JTextField coordinateReferenceField;
+    final JTextField studyField;
+    final JTextField cartoucheProjectField;
+    final JTextField companyField;
+    final JTextField cartographerField;
+    final JTextField imageSourceField;
+    final JTextField coordinateReferenceField;
     private final JTextField legendTitleField;
     private final JTextField legendSubtitleField;
     private final JTextField logoPathField;
@@ -184,11 +205,11 @@ public class MapLayoutComposerDialog extends JFrame {
     private final JCheckBox gridLabelsCheck;
     private final JSpinner gridColumnsSpinner;
     private final JSpinner gridRowsSpinner;
-    private final LayoutInteractionState interactionState;
-    private final LayoutPreviewPanel previewPanel;
+    final LayoutInteractionState interactionState;
+    final LayoutPreviewPanel previewPanel = new LayoutPreviewPanel(this);
     private final JLabel currentMapLabel;
     private final JLabel scaleInfoLabel;
-    private final JLabel statusLabel;
+    final JLabel statusLabel;
     private final DefaultListModel<CatmapLayoutItem> layoutItemsModel;
     private final JList<CatmapLayoutItem> layoutItemsList;
     private final DefaultListModel<Layer> projectLayersModel;
@@ -215,25 +236,25 @@ public class MapLayoutComposerDialog extends JFrame {
     private final DefaultTreeModel layoutStructureTreeModel;
     private final JTree layoutStructureTree;
     private JScrollPane controlsScrollPane;
-    private JScrollPane previewScrollPane;
+    JScrollPane previewScrollPane;
     private JButton selectionToolButton;
-    private JButton mapPanToolButton;
+    JButton mapPanToolButton;
     private JButton mapZoomToolButton;
     private LayoutSnapshot snapshot;
     private boolean syncingLayoutStructureSelection;
     private final List<CatmapLayoutItem> catmapClipboard = new ArrayList<>();
-    private final LayoutModel layoutModel = new LayoutModel();
-    private final ar.com.catgis.layout.CanvasRenderer canvasRenderer
+    final LayoutModel layoutModel = new LayoutModel();
+    final ar.com.catgis.layout.CanvasRenderer canvasRenderer
             = new ar.com.catgis.layout.CanvasRenderer(layoutModel, new java.awt.Rectangle(0, 0, 800, 600));
-    private final ar.com.catgis.layout.LayoutSelectionManager selectionManager
+    final ar.com.catgis.layout.LayoutSelectionManager selectionManager
             = new ar.com.catgis.layout.LayoutSelectionManager(layoutModel);
     /** @deprecated Use {@link #selectionManager} instead */
-    @Deprecated private LayoutElement draggingLayoutElement;
+    @Deprecated LayoutElement draggingLayoutElement;
     @Deprecated private String copiedElementType = null;
     @Deprecated private String copiedElementJson = null;
-    @Deprecated private Point dragStartPagePoint;
-    @Deprecated private java.awt.geom.Rectangle2D.Double dragStartBoundsMm;
-    @Deprecated private int activeResizeHandleIndex = -1;
+    @Deprecated Point dragStartPagePoint;
+    @Deprecated java.awt.geom.Rectangle2D.Double dragStartBoundsMm;
+    @Deprecated int activeResizeHandleIndex = -1;
     private DefaultListModel<String> elementListModel;
     private JLabel propertiesInfoLabel;
     private JPanel propertiesCardPanel;
@@ -283,7 +304,7 @@ public class MapLayoutComposerDialog extends JFrame {
                     cellHasFocus
             );
             if (value != null) {
-                label.setIcon(LayoutRenderer.createNorthPreviewIcon(value, 18));
+                label.setIcon(LayoutPageRenderer.createNorthPreviewIcon(value, 18));
                 label.setIconTextGap(8);
             }
             return label;
@@ -402,7 +423,6 @@ public class MapLayoutComposerDialog extends JFrame {
                 return label;
             }
         });
-        previewPanel = new LayoutPreviewPanel();
         installDropTarget();
         currentMapLabel = new JLabel();
         scaleInfoLabel = new JLabel("Escala real actual: calculando...");
@@ -429,7 +449,7 @@ public class MapLayoutComposerDialog extends JFrame {
         setLocationRelativeTo(owner);
 
         // NOTE: No default LayoutMap is added here because the template
-        // (LayoutRenderer.drawMapFrame) already renders the live map frame
+        // (LayoutPageRenderer.drawMapFrame) already renders the live map frame
         // from the current MapPanel view. LayoutMap elements are intended
         // for additional/inset maps only. This avoids dual-map rendering.
 
@@ -483,7 +503,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
-    private void showCartouchePopup(LayoutCartouche cartouche) {
+    void showCartouchePopup(LayoutCartouche cartouche) {
         JDialog popup = new JDialog(this, "Datos cartograficos", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -523,7 +543,7 @@ public class MapLayoutComposerDialog extends JFrame {
         popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
-    private void showScalePopup(LayoutScaleBar scale) {
+    void showScalePopup(LayoutScaleBar scale) {
         JDialog popup = new JDialog(this, "Escala grafica", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -568,7 +588,7 @@ public class MapLayoutComposerDialog extends JFrame {
         popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
-    private void showNorthPopup(LayoutNorthArrow north) {
+    void showNorthPopup(LayoutNorthArrow north) {
         JDialog popup = new JDialog(this, "Norte", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -597,7 +617,7 @@ public class MapLayoutComposerDialog extends JFrame {
         popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
-    private void showMapPropsPopup(LayoutMap map) {
+    void showMapPropsPopup(LayoutMap map) {
         JDialog popup = new JDialog(this, "Propiedades del mapa", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -642,7 +662,7 @@ public class MapLayoutComposerDialog extends JFrame {
         form.add(new JLabel("Max X:")); form.add(maxXField);
         form.add(new JLabel("Max Y:")); form.add(maxYField);
 
-        JButton applyExtentBtn = new JButton("Aplicar extensión");
+        JButton applyExtentBtn = new JButton("Aplicar extensiÃ³n");
         applyExtentBtn.addActionListener(e -> {
             try {
                 double mnX = Double.parseDouble(minXField.getText());
@@ -725,7 +745,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 BorderFactory.createLineBorder(new Color(205, 212, 222)),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        JTextArea help = new JTextArea("Elegí una plantilla curada. La vista previa muestra el encuadre general, la ubicación de leyenda, cartucho, escala y norte antes de aplicarla.");
+        JTextArea help = new JTextArea("ElegÃ­ una plantilla curada. La vista previa muestra el encuadre general, la ubicaciÃ³n de leyenda, cartucho, escala y norte antes de aplicarla.");
         help.setLineWrap(true);
         help.setWrapStyleWord(true);
         help.setEditable(false);
@@ -799,39 +819,39 @@ public class MapLayoutComposerDialog extends JFrame {
         List<TemplateChoice> items = new ArrayList<>();
         java.util.Map<String, String[]> preferred = new java.util.LinkedHashMap<>();
         // A4 section header
-        items.add(new TemplateChoice("", "— A4 (297×210 mm) —", ""));
+        items.add(new TemplateChoice("", "â€” A4 (297Ã—210 mm) â€”", ""));
         // A4 templates
-        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura · A4 · Ubicacion general", "Mapa de ubicacion, leyenda lateral, cartucho."});
-        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura · A4 · Acceso operativo", "Rutas y caminos con cartucho compacto."});
-        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura · A4 · Emplazamiento tecnico", "Planta general de proyecto, leyenda y escala."});
-        preferred.put("A4_INFRAESTRUCTURA", new String[]{"Infraestructura · A4 · Obra civil", "Ductos, locaciones, red lineal."});
-        preferred.put("A4_TECNICO", new String[]{"Tecnica · A4 · Leyenda derecha", "Composicion tecnica con leyenda lateral."});
-        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Tecnica · A4 · Leyenda inferior", "Mapa dominante con leyenda abajo."});
-        preferred.put("A4_TECNICO_CARTUCHO", new String[]{"Tecnica · A4 · Cartucho inferior", "Mapa + cartucho tecnico."});
-        preferred.put("A4_TECNICO_LIMPIA", new String[]{"Tecnica · A4 · Mapa limpio", "Solo mapa, titulo y escala. Sin cartucho."});
-        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental · A4 · Estandar", "Mapas ambientales y de monitoreo."});
-        preferred.put("A4_AMBIENTAL_LEYENDA_LATERAL", new String[]{"Ambiental · A4 · Leyenda lateral", "Ambiental con leyenda a la derecha."});
-        preferred.put("A4_AMBIENTAL_SATELITAL", new String[]{"Ambiental · A4 · Base satelital", "Imagen satelital con overlay ambiental."});
-        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrologia · A4 · General", "Drenaje, cuencas, escorrentia."});
-        preferred.put("A4_HIDRO_DRENAJE", new String[]{"Hidrologia · A4 · Drenaje", "Red de drenaje superficial."});
-        preferred.put("A4_TOPOGRAFIA", new String[]{"Topografia · A4 · Curvas de nivel", "Relieve y curvas con balance visual."});
-        preferred.put("A4_CATASTRAL", new String[]{"Catastral · A4 · Estandar", "Plano parcelario, mapa dominante."});
-        preferred.put("A4_PARCELARIO", new String[]{"Catastral · A4 · Parcelario con tabla", "Parcelas + tabla de datos."});
-        preferred.put("A4_MUESTREO", new String[]{"Ambiental · A4 · Muestreo", "Puntos de muestreo y leyenda clara."});
-        preferred.put("A4_SATELITAL", new String[]{"Satelital · A4 · Estandar", "Imagen satelital con titulo y escala."});
-        preferred.put("A4_PERFIL", new String[]{"Perfil · A4 · Altimetria tecnica", "Traza, progresivas y tabla altimetrica."});
-        preferred.put("A4_PERFIL_MAPA", new String[]{"Perfil · A4 · Mapa + perfil", "Mapa de traza + perfil altimetrico."});
-        preferred.put("A4_INSTITUCIONAL", new String[]{"Institucional · A4 · Presentacion", "Salida institucional sobria."});
+        preferred.put("A4_REFERENCIA", new String[]{"Infraestructura Â· A4 Â· Ubicacion general", "Mapa de ubicacion, leyenda lateral, cartucho."});
+        preferred.put("A4_ACCESIBILIDAD", new String[]{"Infraestructura Â· A4 Â· Acceso operativo", "Rutas y caminos con cartucho compacto."});
+        preferred.put("A4_EMPLAZAMIENTO", new String[]{"Infraestructura Â· A4 Â· Emplazamiento tecnico", "Planta general de proyecto, leyenda y escala."});
+        preferred.put("A4_INFRAESTRUCTURA", new String[]{"Infraestructura Â· A4 Â· Obra civil", "Ductos, locaciones, red lineal."});
+        preferred.put("A4_TECNICO", new String[]{"Tecnica Â· A4 Â· Leyenda derecha", "Composicion tecnica con leyenda lateral."});
+        preferred.put("A4_TECNICO_INFERIOR", new String[]{"Tecnica Â· A4 Â· Leyenda inferior", "Mapa dominante con leyenda abajo."});
+        preferred.put("A4_TECNICO_CARTUCHO", new String[]{"Tecnica Â· A4 Â· Cartucho inferior", "Mapa + cartucho tecnico."});
+        preferred.put("A4_TECNICO_LIMPIA", new String[]{"Tecnica Â· A4 Â· Mapa limpio", "Solo mapa, titulo y escala. Sin cartucho."});
+        preferred.put("A4_AMBIENTAL", new String[]{"Ambiental Â· A4 Â· Estandar", "Mapas ambientales y de monitoreo."});
+        preferred.put("A4_AMBIENTAL_LEYENDA_LATERAL", new String[]{"Ambiental Â· A4 Â· Leyenda lateral", "Ambiental con leyenda a la derecha."});
+        preferred.put("A4_AMBIENTAL_SATELITAL", new String[]{"Ambiental Â· A4 Â· Base satelital", "Imagen satelital con overlay ambiental."});
+        preferred.put("A4_HIDROLOGIA", new String[]{"Hidrologia Â· A4 Â· General", "Drenaje, cuencas, escorrentia."});
+        preferred.put("A4_HIDRO_DRENAJE", new String[]{"Hidrologia Â· A4 Â· Drenaje", "Red de drenaje superficial."});
+        preferred.put("A4_TOPOGRAFIA", new String[]{"Topografia Â· A4 Â· Curvas de nivel", "Relieve y curvas con balance visual."});
+        preferred.put("A4_CATASTRAL", new String[]{"Catastral Â· A4 Â· Estandar", "Plano parcelario, mapa dominante."});
+        preferred.put("A4_PARCELARIO", new String[]{"Catastral Â· A4 Â· Parcelario con tabla", "Parcelas + tabla de datos."});
+        preferred.put("A4_MUESTREO", new String[]{"Ambiental Â· A4 Â· Muestreo", "Puntos de muestreo y leyenda clara."});
+        preferred.put("A4_SATELITAL", new String[]{"Satelital Â· A4 Â· Estandar", "Imagen satelital con titulo y escala."});
+        preferred.put("A4_PERFIL", new String[]{"Perfil Â· A4 Â· Altimetria tecnica", "Traza, progresivas y tabla altimetrica."});
+        preferred.put("A4_PERFIL_MAPA", new String[]{"Perfil Â· A4 Â· Mapa + perfil", "Mapa de traza + perfil altimetrico."});
+        preferred.put("A4_INSTITUCIONAL", new String[]{"Institucional Â· A4 Â· Presentacion", "Salida institucional sobria."});
         // A3 section header
-        items.add(new TemplateChoice("", "— A3 (420×297 mm) —", ""));
+        items.add(new TemplateChoice("", "â€” A3 (420Ã—297 mm) â€”", ""));
         // A3 templates
-        preferred.put("A3_TECNICO", new String[]{"Tecnica · A3 · General", "Formato grande, mapa amplio con leyenda lateral."});
-        preferred.put("A3_AMBIENTAL", new String[]{"Ambiental · A3 · Estandar", "Informe ambiental con buena superficie de lectura."});
-        preferred.put("A3_CATASTRAL", new String[]{"Catastral · A3 · Estandar", "Plano parcelario A3, mas aire visual."});
-        preferred.put("A3_SATELITAL", new String[]{"Satelital · A3 · Estandar", "Imagen satelital A3."});
-        preferred.put("A3_HIDROLOGIA", new String[]{"Hidrologia · A3 · General", "Cuencas y drenaje en formato grande."});
-        preferred.put("A3_TOPOGRAFIA", new String[]{"Topografia · A3 · General", "Relieve y curvas en A3."});
-        preferred.put("A3_PRESENTACION", new String[]{"Institucional · A3 · Presentacion", "Salida institucional con mapa dominante."});
+        preferred.put("A3_TECNICO", new String[]{"Tecnica Â· A3 Â· General", "Formato grande, mapa amplio con leyenda lateral."});
+        preferred.put("A3_AMBIENTAL", new String[]{"Ambiental Â· A3 Â· Estandar", "Informe ambiental con buena superficie de lectura."});
+        preferred.put("A3_CATASTRAL", new String[]{"Catastral Â· A3 Â· Estandar", "Plano parcelario A3, mas aire visual."});
+        preferred.put("A3_SATELITAL", new String[]{"Satelital Â· A3 Â· Estandar", "Imagen satelital A3."});
+        preferred.put("A3_HIDROLOGIA", new String[]{"Hidrologia Â· A3 Â· General", "Cuencas y drenaje en formato grande."});
+        preferred.put("A3_TOPOGRAFIA", new String[]{"Topografia Â· A3 Â· General", "Relieve y curvas en A3."});
+        preferred.put("A3_PRESENTACION", new String[]{"Institucional Â· A3 Â· Presentacion", "Salida institucional con mapa dominante."});
         java.util.Map<String, String> all = LayoutTemplateManager.getTemplateList();
         for (java.util.Map.Entry<String, String[]> entry : preferred.entrySet()) {
             String key = entry.getKey();
@@ -915,11 +935,11 @@ public class MapLayoutComposerDialog extends JFrame {
         // Show quick-pick menu with variants
         JPopupMenu menu = new JPopupMenu("Auto-componer");
         String[][] opts = {
-            {"A4_REFERENCIA", "Infraestructura · Ubicacion general", "Mapa + leyenda lateral + cartucho"},
-            {"A4_EMPLAZAMIENTO", "Infraestructura · Emplazamiento", "Mapa dominante + cartucho inferior"},
-            {"A4_TECNICO", "Tecnica · Leyenda derecha", "Mapa + leyenda lateral compacta"},
-            {"A4_AMBIENTAL", "Ambiental · Estandar", "Mapa + leyenda inferior"},
-            {"A4_PERFIL", "Perfil · Altimetria", "Mapa de traza + tabla progresivas"},
+            {"A4_REFERENCIA", "Infraestructura Â· Ubicacion general", "Mapa + leyenda lateral + cartucho"},
+            {"A4_EMPLAZAMIENTO", "Infraestructura Â· Emplazamiento", "Mapa dominante + cartucho inferior"},
+            {"A4_TECNICO", "Tecnica Â· Leyenda derecha", "Mapa + leyenda lateral compacta"},
+            {"A4_AMBIENTAL", "Ambiental Â· Estandar", "Mapa + leyenda inferior"},
+            {"A4_PERFIL", "Perfil Â· Altimetria", "Mapa de traza + tabla progresivas"},
         };
         for (String[] opt : opts) {
             JMenuItem mi = new JMenuItem(opt[1]);
@@ -972,7 +992,7 @@ public class MapLayoutComposerDialog extends JFrame {
             () -> previewPanel.lastPageBounds != null ? previewPanel.lastPageBounds.y : 0);
     }
 
-    private void populateLegendFromProject(LayoutLegend legend) {
+    void populateLegendFromProject(LayoutLegend legend) {
         legend.getItems().clear();
         if (ctxProject() == null || ctxProject().getLayers() == null) return;
         for (Layer layer : ctxProject().getLayers()) {
@@ -1281,7 +1301,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 createToolbarButton("Exportar PNG", AppIcons.exportIcon(), "Exportar a imagen PNG", this::exportImage),
                 createToolbarButton("SVG", null, "Exportar a SVG vectorial", this::exportSvg),
                 createToolbarButton("Imprimir", AppIcons.projectIcon(), "Imprimir layout", this::printLayout),
-                createToolbarButton("Plantillas...", null, "Abrir galería de plantillas con vista previa.", this::showTemplatePicker)
+                createToolbarButton("Plantillas...", null, "Abrir galerÃ­a de plantillas con vista previa.", this::showTemplatePicker)
         ));
 
         toolbar.add(buildToolbarGroup("Trabajo",
@@ -1332,7 +1352,7 @@ public class MapLayoutComposerDialog extends JFrame {
                     lbl.setZOrder(layoutModel.nextZ()); lbl.setName("Texto " + (layoutModel.size() + 1));
                     layoutModel.addElement(lbl); refreshElementList(); previewPanel.repaint();
                 }),
-                createToolbarButton("Texto Dinámico", null, "Inserta texto auto-actualizable ({date}, {project}, {crs}, {scale})", () -> {
+                createToolbarButton("Texto DinÃ¡mico", null, "Inserta texto auto-actualizable ({date}, {project}, {crs}, {scale})", () -> {
                     LayoutLabel lbl = new LayoutLabel("dlbl-" + System.currentTimeMillis(), "{date}", 60, 60, 160, 24);
                     lbl.setZOrder(layoutModel.nextZ());
                     lbl.setName("Texto dinamico " + (layoutModel.size() + 1));
@@ -1908,7 +1928,7 @@ public class MapLayoutComposerDialog extends JFrame {
         emptyContent.setOpaque(false);
         JLabel emptyIcon = new JLabel(AppIcons.attrEditIcon());
         emptyIcon.setHorizontalAlignment(JLabel.CENTER);
-        JLabel emptyLabel = new JLabel("<html><b>Sin elementos agregados.</b><br>Usa los botones de arriba si necesitás texto, imagen o figuras.</html>");
+        JLabel emptyLabel = new JLabel("<html><b>Sin elementos agregados.</b><br>Usa los botones de arriba si necesitÃ¡s texto, imagen o figuras.</html>");
         emptyLabel.setForeground(new Color(88, 98, 112));
         emptyLabel.setHorizontalAlignment(JLabel.LEFT);
         emptyContent.add(emptyIcon, BorderLayout.WEST);
@@ -2226,7 +2246,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private String projectLayerTypeLabel(Layer layer) {
-        return LayoutRenderer.layerTypeLabel(layer);
+        return LayoutPageRenderer.layerTypeLabel(layer);
     }
 
     private javax.swing.Icon iconForProjectLayer(Layer layer) {
@@ -2362,7 +2382,7 @@ public class MapLayoutComposerDialog extends JFrame {
         return items;
     }
 
-    private void persistCatmapItems() {
+    void persistCatmapItems() {
         if (ctxProject() == null) {
             return;
         }
@@ -2512,7 +2532,7 @@ public class MapLayoutComposerDialog extends JFrame {
         refreshPreviewWorkspace();
     }
 
-    private void configureNorthFromToolbar() {
+    void configureNorthFromToolbar() {
         JCheckBox visibleCheck = new JCheckBox("Mostrar norte en el layout", northCheck.isSelected());
         JComboBox<NorthStyle> styleCombo = new JComboBox<>(NorthStyle.values());
         styleCombo.setSelectedItem(northStyleCombo.getSelectedItem());
@@ -2525,13 +2545,13 @@ public class MapLayoutComposerDialog extends JFrame {
                     cellHasFocus
             );
             if (value != null) {
-                label.setIcon(LayoutRenderer.createNorthPreviewIcon(value, 18));
+                label.setIcon(LayoutPageRenderer.createNorthPreviewIcon(value, 18));
                 label.setIconTextGap(8);
             }
             return label;
         });
 
-        JLabel previewLabel = new JLabel(LayoutRenderer.createNorthPreviewIcon((NorthStyle) styleCombo.getSelectedItem(), 88));
+        JLabel previewLabel = new JLabel(LayoutPageRenderer.createNorthPreviewIcon((NorthStyle) styleCombo.getSelectedItem(), 88));
         previewLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(210, 218, 228)),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)
@@ -2539,7 +2559,7 @@ public class MapLayoutComposerDialog extends JFrame {
         previewLabel.setHorizontalAlignment(JLabel.CENTER);
         previewLabel.setOpaque(true);
         previewLabel.setBackground(Color.WHITE);
-        styleCombo.addActionListener(e -> previewLabel.setIcon(LayoutRenderer.createNorthPreviewIcon((NorthStyle) styleCombo.getSelectedItem(), 88)));
+        styleCombo.addActionListener(e -> previewLabel.setIcon(LayoutPageRenderer.createNorthPreviewIcon((NorthStyle) styleCombo.getSelectedItem(), 88)));
 
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
@@ -2564,7 +2584,7 @@ public class MapLayoutComposerDialog extends JFrame {
         gc.gridy++;
         gc.weighty = 0;
         gc.fill = GridBagConstraints.HORIZONTAL;
-        JLabel hint = new JLabel("<html>Despues podés mover y redimensionar el norte directamente desde el layout CATMAP.</html>");
+        JLabel hint = new JLabel("<html>Despues podÃ©s mover y redimensionar el norte directamente desde el layout CATMAP.</html>");
         hint.setForeground(new Color(88, 98, 112));
         panel.add(hint, gc);
 
@@ -2583,7 +2603,7 @@ public class MapLayoutComposerDialog extends JFrame {
         pushCatmapNorthSettingsToProject();
         if (northCheck.isSelected()) {
             interactionState.select(LayoutElementType.NORTH);
-            statusLabel.setText("Norte CATMAP actualizado. Podés moverlo o redimensionarlo desde el layout.");
+            statusLabel.setText("Norte CATMAP actualizado. PodÃ©s moverlo o redimensionarlo desde el layout.");
         } else {
             interactionState.select(null);
             statusLabel.setText("Norte CATMAP oculto en la composicion.");
@@ -2593,7 +2613,7 @@ public class MapLayoutComposerDialog extends JFrame {
         previewPanel.repaint();
     }
 
-    private void editSelectedCatmapItem() {
+    void editSelectedCatmapItem() {
         CatmapLayoutItem selected = getPrimarySelectedCatmapItem();
         if (selected == null) {
             JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para editar.");
@@ -2722,7 +2742,7 @@ public class MapLayoutComposerDialog extends JFrame {
             return;
         }
         LayoutElementType selected = interactionState.getSelectedElement();
-        if (isFixedLayoutElement(selected)) {
+        if (LayoutElementType.isFixed(selected)) {
             interactionState.setElementVisible(selected, false);
             if (selected == LayoutElementType.NORTH) {
                 northCheck.setSelected(false);
@@ -2735,7 +2755,7 @@ public class MapLayoutComposerDialog extends JFrame {
             refreshLayoutStructureTree();
             syncLayoutStructureSelection();
             previewPanel.repaint();
-            statusLabel.setText(layoutElementLabel(selected) + " eliminado visualmente del layout. Podés restaurarlo desde 'Restaurar por defecto'.");
+            statusLabel.setText(layoutElementLabel(selected) + " eliminado visualmente del layout. PodÃ©s restaurarlo desde 'Restaurar por defecto'.");
         }
     }
 
@@ -2899,7 +2919,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 : (lock ? "Elemento CATMAP bloqueado para mover/redimensionar." : "Elemento CATMAP liberado."));
     }
 
-    private CatmapLayoutItem getCatmapItemById(String id) {
+    CatmapLayoutItem getCatmapItemById(String id) {
         if (id == null || id.isBlank()) {
             return null;
         }
@@ -2942,7 +2962,7 @@ public class MapLayoutComposerDialog extends JFrame {
         return unlocked;
     }
 
-    private void selectCatmapItemInList(String id) {
+    void selectCatmapItemInList(String id) {
         if (id == null || id.isBlank()) {
             layoutItemsList.clearSelection();
             refreshInspectorFromSelection();
@@ -3030,7 +3050,7 @@ public class MapLayoutComposerDialog extends JFrame {
         };
     }
 
-    private String layoutElementLabel(LayoutElementType type) {
+    String layoutElementLabel(LayoutElementType type) {
         if (type == null) {
             return "Elemento";
         }
@@ -3057,7 +3077,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private boolean isLayoutElementVisible(LayoutElementType type) {
-        if (!isFixedLayoutElement(type) || !interactionState.isElementVisible(type)) {
+        if (!LayoutElementType.isFixed(type) || !interactionState.isElementVisible(type)) {
             return false;
         }
         return switch (type) {
@@ -3070,7 +3090,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private boolean isLayoutElementLocked(LayoutElementType type) {
-        return isFixedLayoutElement(type) && interactionState.isElementLocked(type);
+        return LayoutElementType.isFixed(type) && interactionState.isElementLocked(type);
     }
 
     private void refreshLayoutStructureTree() {
@@ -3120,7 +3140,7 @@ public class MapLayoutComposerDialog extends JFrame {
         syncLayoutStructureSelection();
     }
 
-    private void syncLayoutStructureSelection() {
+    void syncLayoutStructureSelection() {
         if (layoutStructureTree == null || syncingLayoutStructureSelection) {
             return;
         }
@@ -3295,7 +3315,7 @@ public class MapLayoutComposerDialog extends JFrame {
     private void showCatmapContextMenu(Component invoker, int x, int y) {
         LayoutElementType selected = interactionState.getSelectedElement();
         boolean customSelected = selected == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty();
-        boolean fixedSelected = isFixedLayoutElement(selected);
+        boolean fixedSelected = LayoutElementType.isFixed(selected);
 
         javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
         addContextItem(menu, "Editar", customSelected || fixedSelected, this::editSelectedLayoutObject);
@@ -3431,7 +3451,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void toggleLayoutElementVisibility(LayoutElementType type) {
-        if (!isFixedLayoutElement(type)) {
+        if (!LayoutElementType.isFixed(type)) {
             return;
         }
         boolean makeVisible = !isLayoutElementVisible(type);
@@ -3453,7 +3473,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void toggleLayoutElementLock(LayoutElementType type) {
-        if (!isFixedLayoutElement(type)) {
+        if (!LayoutElementType.isFixed(type)) {
             return;
         }
         boolean lock = !interactionState.isElementLocked(type);
@@ -3470,7 +3490,7 @@ public class MapLayoutComposerDialog extends JFrame {
             return;
         }
         LayoutElementType selected = interactionState.getSelectedElement();
-        if (isFixedLayoutElement(selected)) {
+        if (LayoutElementType.isFixed(selected)) {
             toggleLayoutElementVisibility(selected);
         }
     }
@@ -3481,7 +3501,7 @@ public class MapLayoutComposerDialog extends JFrame {
             return;
         }
         LayoutElementType selected = interactionState.getSelectedElement();
-        if (isFixedLayoutElement(selected)) {
+        if (LayoutElementType.isFixed(selected)) {
             toggleLayoutElementLock(selected);
         }
     }
@@ -3561,7 +3581,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 }
             }
             persistCatmapItems();
-        } else if (isFixedLayoutElement(selected) && !interactionState.isElementLocked(selected)) {
+        } else if (LayoutElementType.isFixed(selected) && !interactionState.isElementLocked(selected)) {
             interactionState.translate(selected, dx, dy);
         }
         refreshInspectorFromSelection();
@@ -3685,7 +3705,7 @@ public class MapLayoutComposerDialog extends JFrame {
             case HEADER -> AppIcons.attrEditIcon();
             case MAP_CONTENT -> AppIcons.imageryIcon();
             case LEGEND -> AppIcons.labelsIcon();
-            case NORTH -> LayoutRenderer.createNorthPreviewIcon(currentNorthStyle(), 18);
+            case NORTH -> LayoutPageRenderer.createNorthPreviewIcon(currentNorthStyle(), 18);
             case SCALE -> AppIcons.attrCalculatorIcon();
             case CARTOUCHE -> AppIcons.fieldsIcon();
             case PROFILE_IMAGE -> AppIcons.imageryIcon();
@@ -3783,7 +3803,7 @@ public class MapLayoutComposerDialog extends JFrame {
             if (selected != null) {
                 interactionState.selectCustomItem(selected.getId());
                 statusLabel.setText(selectedItems.size() > 1
-                        ? selectedItems.size() + " elementos CATMAP seleccionados. Podés alinear, distribuir o editar el principal."
+                        ? selectedItems.size() + " elementos CATMAP seleccionados. PodÃ©s alinear, distribuir o editar el principal."
                         : "Elemento CATMAP seleccionado. Arrastralo o redimensionalo desde el layout.");
             } else if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM) {
                 interactionState.select(null);
@@ -3964,7 +3984,7 @@ public class MapLayoutComposerDialog extends JFrame {
                 "<br><b>Ancho visible aprox.:</b> " + escape(snapshot.scaleLabel()) + "</html>");
     }
 
-    private void openLegendEditor() {
+    void openLegendEditor() {
         CatmapLegendEditorDialog.open(
                 this,
                 ctxProject(),
@@ -4105,7 +4125,7 @@ public class MapLayoutComposerDialog extends JFrame {
             PageFormat format = job.defaultPage();
             format.setOrientation(settings.orientation() == PageOrientation.LANDSCAPE ? PageFormat.LANDSCAPE : PageFormat.PORTRAIT);
             format = job.pageDialog(format);
-            job.setPrintable(new ImagePrintable(image), format);
+            job.setPrintable(new LayoutImagePrintable(image), format);
             if (!job.printDialog()) {
                 return;
             }
@@ -4162,7 +4182,7 @@ public class MapLayoutComposerDialog extends JFrame {
         AppErrorSupport.showErrorDialog(this, "Composicion", intro, ex);
     }
 
-    private LayoutSettings buildSettings() {
+    LayoutSettings buildSettings() {
         pushProjectMetadataFromControls();
         PageSizePreset pageSize = (PageSizePreset) pageSizeCombo.getSelectedItem();
         PageOrientation orientation = (PageOrientation) orientationCombo.getSelectedItem();
@@ -4253,7 +4273,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
-    private void updateScaleUiState(double exactDenominator) {
+    void updateScaleUiState(double exactDenominator) {
         String text = exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : "Escala no disponible";
         scaleInfoLabel.setText("Escala real actual: " + text);
         if (!mapScaleField.hasFocus()) {
@@ -4274,7 +4294,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
         syncHardcodedLayoutFlagsFromModel();
         Dimension previewSize = settings.pageSize().pixelSize(settings.orientation(), PREVIEW_RENDER_DPI);
-        LayoutRenderResult result = LayoutRenderer.renderResult(
+        LayoutRenderResult result = LayoutPageRenderer.renderResult(
                 settings,
                 snapshot,
                 previewSize.width,
@@ -4285,14 +4305,14 @@ public class MapLayoutComposerDialog extends JFrame {
         return result.exactScaleDenominator();
     }
 
-    private static String formatScaleDenominator(double denominator) {
+    public static String formatScaleDenominator(double denominator) {
         if (denominator <= 0) {
             return "Escala no disponible";
         }
         return "1:" + new DecimalFormat("#,##0").format(Math.round(denominator));
     }
 
-    private LayoutSnapshot getSnapshot() {
+    LayoutSnapshot getSnapshot() {
         return snapshot;
     }
 
@@ -4305,7 +4325,7 @@ public class MapLayoutComposerDialog extends JFrame {
         return false;
     }
 
-    private void syncHardcodedLayoutFlagsFromModel() {
+    void syncHardcodedLayoutFlagsFromModel() {
         boolean hasHeaderLabels = false;
         boolean hasCartoucheLabels = false;
         for (LayoutElement el : layoutModel.getElements()) {
@@ -4344,7 +4364,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private BufferedImage renderLayout(LayoutSettings settings, Dimension size) {
         syncHardcodedLayoutFlagsFromModel();
-        BufferedImage base = LayoutRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
+        BufferedImage base = LayoutPageRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
         if (layoutModel.size() > 0) {
             Graphics2D g2 = base.createGraphics();
             try {
@@ -4570,11 +4590,11 @@ public class MapLayoutComposerDialog extends JFrame {
                 || "EPSG:4221".equalsIgnoreCase(projectCrs);
     }
 
-    private static String safeTrim(String value) {
+    static String safeTrim(String value) {
         return value == null ? "" : value.trim();
     }
 
-    private static String formatDistance(double meters) {
+    public static String formatDistance(double meters) {
         if (meters <= 0) {
             return "Escala no disponible";
         }
@@ -4591,94 +4611,6 @@ public class MapLayoutComposerDialog extends JFrame {
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 
-    enum LayoutTemplate {
-        TECHNICAL_RIGHT("Tecnica - leyenda derecha", LegendPlacement.RIGHT_PANEL),
-        BOTTOM_REFERENCE("Referencia inferior", LegendPlacement.BOTTOM_PANEL),
-        CLEAN_CENTERED("Limpia centrada", LegendPlacement.MAP_BOTTOM_RIGHT),
-        STRONG_CARTOUCHE("Datos cartograficos enfatizados", LegendPlacement.RIGHT_PANEL);
-
-        private final String label;
-        private final LegendPlacement defaultLegendPlacement;
-
-        LayoutTemplate(String label, LegendPlacement defaultLegendPlacement) {
-            this.label = label;
-            this.defaultLegendPlacement = defaultLegendPlacement;
-        }
-
-        LegendPlacement defaultLegendPlacement() {
-            return defaultLegendPlacement;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    enum PageSizePreset {
-        A3("A3", 297d, 420d),
-        A4("A4", 210d, 297d),
-        A5("A5", 148d, 210d),
-        LETTER("Carta", 216d, 279d),
-        LEGAL("Legal", 216d, 356d),
-        TABLOID("Tabloide", 279d, 432d);
-
-        private final String label;
-        private final double widthMm;
-        private final double heightMm;
-
-        PageSizePreset(String label, double widthMm, double heightMm) {
-            this.label = label;
-            this.widthMm = widthMm;
-            this.heightMm = heightMm;
-        }
-
-        Dimension pixelSize(PageOrientation orientation, int dpi) {
-            double widthInches = (orientation == PageOrientation.LANDSCAPE ? heightMm : widthMm) / 25.4d;
-            double heightInches = (orientation == PageOrientation.LANDSCAPE ? widthMm : heightMm) / 25.4d;
-            int width = Math.max(600, (int) Math.round(widthInches * dpi));
-            int height = Math.max(600, (int) Math.round(heightInches * dpi));
-            return new Dimension(width, height);
-        }
-
-        PDRectangle toPdfRectangle(PageOrientation orientation) {
-            float widthPoints = (float) ((orientation == PageOrientation.LANDSCAPE ? heightMm : widthMm) / 25.4d * 72d);
-            float heightPoints = (float) ((orientation == PageOrientation.LANDSCAPE ? widthMm : heightMm) / 25.4d * 72d);
-            return new PDRectangle(widthPoints, heightPoints);
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    private enum PreviewScaleMode {
-        FIT_PAGE,
-        FIT_WIDTH,
-        CUSTOM
-    }
-
-    private enum MapFrameTool {
-        MOVE_FRAME,
-        PAN,
-        ZOOM
-    }
-
-    private enum LayoutElementType {
-        HEADER,
-        MAP_CONTENT,
-        LEGEND,
-        NORTH,
-        SCALE,
-        CARTOUCHE,
-        PROFILE_IMAGE,
-        CATMAP_ITEM
-    }
-
-    private static boolean isFixedLayoutElement(LayoutElementType type) {
-        return type != null && type != LayoutElementType.CATMAP_ITEM;
-    }
 
     private enum LayoutStructureNodeKind {
         ROOT,
@@ -4739,3787 +4671,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
-    private enum ResizeHandle {
-        NONE,
-        NORTH,
-        SOUTH,
-        EAST,
-        WEST,
-        NORTH_EAST,
-        NORTH_WEST,
-        SOUTH_EAST,
-        SOUTH_WEST
-    }
-
-    enum PageOrientation {
-        LANDSCAPE("Horizontal"),
-        PORTRAIT("Vertical");
-
-        private final String label;
-
-        PageOrientation(String label) {
-            this.label = label;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    private enum LegendPlacement {
-        RIGHT_PANEL("Panel derecho"),
-        BOTTOM_PANEL("Franja inferior"),
-        MAP_TOP_RIGHT("Dentro del mapa - arriba derecha"),
-        MAP_BOTTOM_RIGHT("Dentro del mapa - abajo derecha"),
-        MAP_BOTTOM_LEFT("Dentro del mapa - abajo izquierda");
-
-        private final String label;
-
-        LegendPlacement(String label) {
-            this.label = label;
-        }
-
-        boolean isInsideMap() {
-            return this == MAP_TOP_RIGHT || this == MAP_BOTTOM_RIGHT || this == MAP_BOTTOM_LEFT;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    private enum ScaleStyle {
-        SEGMENTED_BAR("Barra segmentada"),
-        SIMPLE_BAR("Barra simple"),
-        NUMERIC("Escala numerica");
-
-        private final String label;
-
-        ScaleStyle(String label) {
-            this.label = label;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    private enum ScaleRule {
-        PREFERRED_CARTOGRAPHY("Preferidas 500/1000/2000/5000/10000", new double[]{250d, 500d, 1000d, 2000d, 5000d, 10000d, 20000d, 50000d, 100000d}),
-        ENGINEERING("Ingenieria 1-2-5", null),
-        LARGE_AREA("Grandes areas 1000/2500/5000/10000", new double[]{500d, 1000d, 2500d, 5000d, 10000d, 25000d, 50000d, 100000d, 250000d});
-
-        private final String label;
-        private final double[] preferredValues;
-
-        ScaleRule(String label, double[] preferredValues) {
-            this.label = label;
-            this.preferredValues = preferredValues;
-        }
-
-        double roundValue(double rawValue) {
-            if (rawValue <= 0) {
-                return 0;
-            }
-            if (preferredValues != null && preferredValues.length > 0) {
-                double best = preferredValues[0];
-                double bestDistance = Math.abs(preferredValues[0] - rawValue);
-                for (double preferredValue : preferredValues) {
-                    double distance = Math.abs(preferredValue - rawValue);
-                    if (distance < bestDistance) {
-                        best = preferredValue;
-                        bestDistance = distance;
-                    }
-                }
-                return best;
-            }
-
-            double exponent = Math.pow(10, Math.floor(Math.log10(rawValue)));
-            double normalized = rawValue / exponent;
-            double rounded;
-            if (normalized < 1.5d) {
-                rounded = 1d;
-            } else if (normalized < 3.5d) {
-                rounded = 2d;
-            } else if (normalized < 7.5d) {
-                rounded = 5d;
-            } else {
-                rounded = 10d;
-            }
-            return rounded * exponent;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    private enum NorthStyle {
-        SIMPLE("Simple"),
-        CLASSIC("Clasico"),
-        MODERN("Moderno"),
-        ROSE("Rosa"),
-        TECHNICAL("Tecnico");
-
-        private final String label;
-
-        NorthStyle(String label) {
-            this.label = label;
-        }
-
-        @Override
-        public String toString() {
-            return label;
-        }
-    }
-
-    private record LayoutSettings(String title,
-                                  String subtitle,
-                                  String footer,
-                                  String studyName,
-                                  String cartoucheProjectName,
-                                  String companyName,
-                                  String cartographerName,
-                                  String imageSource,
-                                  String coordinateReference,
-                                  String legendTitle,
-                                  String legendSubtitle,
-                                  String logoPath,
-                                  String layoutImagePath,
-                                  LayoutTemplate template,
-                                  PageSizePreset pageSize,
-                                  PageOrientation orientation,
-                                  int dpi,
-                                  LegendPlacement legendPlacement,
-                                  ScaleStyle scaleStyle,
-                                  ScaleRule scaleRule,
-                                  NorthStyle northStyle,
-                                  boolean showNorth,
-                                  boolean showScale,
-                                  boolean showLegend,
-                                  boolean showGrid,
-                                  int gridColumns,
-                                  int gridRows,
-                                  boolean showGridLabels,
-                                  List<CatmapLayoutItem> catmapItems) {
-    }
-
-    private record LayoutSnapshot(BufferedImage mapImage,
-                                  List<Layer> visibleLayers,
-                                  String projectName,
-                                  String projectCrsLabel,
-                                  String projectCrsCode,
-                                  String scaleLabel,
-                                  double representativeMeters,
-                                  double baseViewMinX,
-                                  double baseViewMinY,
-                                  double baseZoomFactor,
-                                  int basePixelWidth,
-                                  int basePixelHeight) {
-    }
-
-    private record MapFrameGeometry(Rectangle frameBounds, Rectangle imageBounds, double shownGroundMeters) {
-    }
-
-    private record LegendItem(String key, String label, String subtitle, Layer layer, CategoryStyleRule categoryRule, String geometryType) {
-    }
-
-    private record LayoutRenderResult(BufferedImage image,
-                                      EnumMap<LayoutElementType, Rectangle> elementBounds,
-                                      java.util.Map<String, Rectangle> customItemBounds,
-                                      double exactScaleDenominator) {
-    }
-
-    private record FooterRenderResult(Rectangle cartoucheBounds, Rectangle profileImageBounds) {
-    }
-
-    static class LayoutInteractionState {
-        private LayoutTemplate template = LayoutTemplate.TECHNICAL_RIGHT;
-        private PreviewScaleMode previewScaleMode = PreviewScaleMode.FIT_PAGE;
-        private double customPreviewZoom = 1d;
-        private double mapZoom = 1d;
-        private double mapOffsetX = 0d;
-        private double mapOffsetY = 0d;
-        private MapFrameTool mapFrameTool = MapFrameTool.MOVE_FRAME;
-        private LayoutElementType selectedElement = null;
-        private String selectedCustomItemId = null;
-        private final EnumMap<LayoutElementType, Point> elementOffsets = new EnumMap<>(LayoutElementType.class);
-        private final EnumMap<LayoutElementType, Dimension> elementSizeAdjustments = new EnumMap<>(LayoutElementType.class);
-        private final java.util.EnumSet<LayoutElementType> hiddenElements = java.util.EnumSet.noneOf(LayoutElementType.class);
-        private final java.util.EnumSet<LayoutElementType> lockedElements = java.util.EnumSet.noneOf(LayoutElementType.class);
-
-        LayoutTemplate getTemplate() {
-            return template;
-        }
-
-        void setTemplate(LayoutTemplate template) {
-            this.template = template != null ? template : LayoutTemplate.TECHNICAL_RIGHT;
-        }
-
-        void resetForTemplate(LayoutTemplate template) {
-            setTemplate(template);
-            previewScaleMode = PreviewScaleMode.FIT_PAGE;
-            customPreviewZoom = 1d;
-            resetMapView();
-            elementOffsets.clear();
-            elementSizeAdjustments.clear();
-            hiddenElements.clear();
-            lockedElements.clear();
-            mapFrameTool = MapFrameTool.MOVE_FRAME;
-            selectedElement = null;
-            selectedCustomItemId = null;
-        }
-
-        void fitPage() {
-            previewScaleMode = PreviewScaleMode.FIT_PAGE;
-            customPreviewZoom = 1d;
-        }
-
-        void fitWidth() {
-            previewScaleMode = PreviewScaleMode.FIT_WIDTH;
-            customPreviewZoom = 1d;
-        }
-
-        void zoomPreview(double factor) {
-            previewScaleMode = PreviewScaleMode.CUSTOM;
-            customPreviewZoom = Math.max(0.35d, Math.min(12d, customPreviewZoom * factor));
-        }
-
-        double resolvePreviewScale(double fitPageScale, double fitWidthScale) {
-            return switch (previewScaleMode) {
-                case FIT_WIDTH -> Math.max(0.08d, fitWidthScale);
-                case CUSTOM -> Math.max(0.08d, fitPageScale * customPreviewZoom);
-                default -> Math.max(0.08d, fitPageScale);
-            };
-        }
-
-        void select(LayoutElementType elementType) {
-            selectedElement = elementType;
-            if (elementType != LayoutElementType.CATMAP_ITEM) {
-                selectedCustomItemId = null;
-            }
-        }
-
-        void selectCustomItem(String itemId) {
-            selectedElement = itemId != null && !itemId.isBlank() ? LayoutElementType.CATMAP_ITEM : null;
-            selectedCustomItemId = itemId != null ? itemId.trim() : null;
-        }
-
-        LayoutElementType getSelectedElement() {
-            return selectedElement;
-        }
-
-        String getSelectedCustomItemId() {
-            return selectedCustomItemId;
-        }
-
-        void setMapFrameTool(MapFrameTool mapFrameTool) {
-            this.mapFrameTool = mapFrameTool != null ? mapFrameTool : MapFrameTool.MOVE_FRAME;
-        }
-
-        boolean isMapFrameMoveToolActive() {
-            return mapFrameTool == MapFrameTool.MOVE_FRAME;
-        }
-
-        boolean isMapFramePanToolActive() {
-            return mapFrameTool == MapFrameTool.PAN;
-        }
-
-        boolean isMapFrameZoomToolActive() {
-            return mapFrameTool == MapFrameTool.ZOOM;
-        }
-
-        Point getOffset(LayoutElementType elementType) {
-            Point point = elementOffsets.get(elementType);
-            return point != null ? point : new Point();
-        }
-
-        Dimension getSizeAdjustment(LayoutElementType elementType) {
-            Dimension dimension = elementSizeAdjustments.get(elementType);
-            return dimension != null ? dimension : new Dimension();
-        }
-
-        boolean isElementVisible(LayoutElementType elementType) {
-            return elementType != null && !hiddenElements.contains(elementType);
-        }
-
-        void setElementVisible(LayoutElementType elementType, boolean visible) {
-            if (!isFixedLayoutElement(elementType)) {
-                return;
-            }
-            if (visible) {
-                hiddenElements.remove(elementType);
-            } else {
-                hiddenElements.add(elementType);
-            }
-        }
-
-        boolean isElementLocked(LayoutElementType elementType) {
-            return elementType != null && lockedElements.contains(elementType);
-        }
-
-        void setElementLocked(LayoutElementType elementType, boolean locked) {
-            if (!isFixedLayoutElement(elementType)) {
-                return;
-            }
-            if (locked) {
-                lockedElements.add(elementType);
-            } else {
-                lockedElements.remove(elementType);
-            }
-        }
-
-        void restoreDefaultElementControls() {
-            hiddenElements.clear();
-            lockedElements.clear();
-            elementOffsets.clear();
-            elementSizeAdjustments.clear();
-            resetMapView();
-        }
-
-        void translate(LayoutElementType elementType, int dx, int dy) {
-            if (elementType == null) {
-                return;
-            }
-            Point offset = elementOffsets.computeIfAbsent(elementType, key -> new Point());
-            offset.translate(dx, dy);
-        }
-
-        void resize(LayoutElementType elementType,
-                    ResizeHandle handle,
-                    int dx,
-                    int dy,
-                    int currentWidth,
-                    int currentHeight,
-                    int minWidth,
-                    int minHeight) {
-            if (elementType == null || handle == null || handle == ResizeHandle.NONE) {
-                return;
-            }
-            Point offset = elementOffsets.computeIfAbsent(elementType, key -> new Point());
-            Dimension size = elementSizeAdjustments.computeIfAbsent(elementType, key -> new Dimension());
-            int actualWidth = currentWidth;
-            int actualHeight = currentHeight;
-            int baseWidth = actualWidth - size.width;
-            int baseHeight = actualHeight - size.height;
-
-            switch (handle) {
-                case EAST -> {
-                    int targetWidth = Math.max(minWidth, actualWidth + dx);
-                    size.width = targetWidth - baseWidth;
-                }
-                case SOUTH -> {
-                    int targetHeight = Math.max(minHeight, actualHeight + dy);
-                    size.height = targetHeight - baseHeight;
-                }
-                case SOUTH_EAST -> {
-                    int targetWidth = Math.max(minWidth, actualWidth + dx);
-                    int targetHeight = Math.max(minHeight, actualHeight + dy);
-                    size.width = targetWidth - baseWidth;
-                    size.height = targetHeight - baseHeight;
-                }
-                case WEST -> {
-                    int targetWidth = Math.max(minWidth, actualWidth - dx);
-                    int shift = actualWidth - targetWidth;
-                    offset.translate(shift, 0);
-                    size.width = targetWidth - baseWidth;
-                }
-                case NORTH -> {
-                    int targetHeight = Math.max(minHeight, actualHeight - dy);
-                    int shift = actualHeight - targetHeight;
-                    offset.translate(0, shift);
-                    size.height = targetHeight - baseHeight;
-                }
-                case NORTH_WEST -> {
-                    int targetWidth = Math.max(minWidth, actualWidth - dx);
-                    int targetHeight = Math.max(minHeight, actualHeight - dy);
-                    offset.translate(actualWidth - targetWidth, actualHeight - targetHeight);
-                    size.width = targetWidth - baseWidth;
-                    size.height = targetHeight - baseHeight;
-                }
-                case NORTH_EAST -> {
-                    int targetWidth = Math.max(minWidth, actualWidth + dx);
-                    int targetHeight = Math.max(minHeight, actualHeight - dy);
-                    offset.translate(0, actualHeight - targetHeight);
-                    size.width = targetWidth - baseWidth;
-                    size.height = targetHeight - baseHeight;
-                }
-                case SOUTH_WEST -> {
-                    int targetWidth = Math.max(minWidth, actualWidth - dx);
-                    int targetHeight = Math.max(minHeight, actualHeight + dy);
-                    offset.translate(actualWidth - targetWidth, 0);
-                    size.width = targetWidth - baseWidth;
-                    size.height = targetHeight - baseHeight;
-                }
-                default -> {
-                }
-            }
-        }
-
-        boolean hasCustomSize(LayoutElementType elementType) {
-            Dimension size = elementSizeAdjustments.get(elementType);
-            return size != null && (size.width != 0 || size.height != 0);
-        }
-
-        void zoomMap(double factor) {
-            if (factor <= 0 || Double.isNaN(factor) || Double.isInfinite(factor)) {
-                return;
-            }
-            setMapZoom(mapZoom * factor);
-        }
-
-        void setMapZoom(double zoom) {
-            if (zoom <= 0 || Double.isNaN(zoom) || Double.isInfinite(zoom)) {
-                return;
-            }
-            mapZoom = Math.max(0.02d, Math.min(250d, zoom));
-        }
-
-        void panMap(double dx, double dy) {
-            mapOffsetX += dx;
-            mapOffsetY += dy;
-        }
-
-        void resetMapView() {
-            mapZoom = 1d;
-            mapOffsetX = 0d;
-            mapOffsetY = 0d;
-        }
-
-        double getMapZoom() {
-            return mapZoom;
-        }
-
-        double getMapOffsetX() {
-            return mapOffsetX;
-        }
-
-        double getMapOffsetY() {
-            return mapOffsetY;
-        }
-    }
-
-    private class LayoutPreviewPanel extends JPanel {
-        private LayoutRenderResult lastRenderResult;
-        private Rectangle lastPageBounds = new Rectangle();
-        private double lastPreviewScale = 1d;
-        private Point lastDragPagePoint = null;
-        private ResizeHandle activeResizeHandle = ResizeHandle.NONE;
-        private LayoutElementType activeResizeElement = null;
-        private String activeResizeCustomItemId = null;
-        private final List<Integer> activeGuideXs = new ArrayList<>();
-        private final List<Integer> activeGuideYs = new ArrayList<>();
-        private final List<GuideLine> guides = new ArrayList<>();
-        private GuideLine draggingGuide = null;
-        private double draggingGuideStartMm = 0;
-        private LayoutElement hoveredElement = null;
-        private String drawingShape = null;        // "rect", "ellipse", "line" when drawing mode active
-        private Point drawingStart = null;          // page-pixel start of the shape
-        boolean snapToGrid = true;                   // controlled by UI toggle
-        boolean snapToElements = true;               // controlled by UI toggle
-        private final JTextField inlineTitleEditor;
-        private final JPanel inlineCartoucheEditor;
-        private final JTextField inlineCartoucheStudyField;
-        private final JTextField inlineCartoucheProjectField;
-        private final JTextField inlineCartoucheCompanyField;
-        private final JTextField inlineCartoucheCartographerField;
-        private final JTextField inlineCartoucheSourceField;
-        private final JTextField inlineCartoucheCrsField;
-
-        private LayoutPreviewPanel() {
-            setLayout(null);
-            setOpaque(true);
-            setFocusable(true);
-            setBackground(new Color(155, 160, 170)); // ArcMap-style dark canvas
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(220, 224, 230)),
-                    BorderFactory.createEmptyBorder(12, 12, 12, 12)
-            ));
-            inlineTitleEditor = new JTextField();
-            inlineTitleEditor.setVisible(false);
-            inlineTitleEditor.addActionListener(e -> commitInlineTitleEdit());
-            inlineTitleEditor.addFocusListener(new java.awt.event.FocusAdapter() {
-                @Override
-                public void focusLost(java.awt.event.FocusEvent e) {
-                    commitInlineTitleEdit();
-                }
-            });
-            add(inlineTitleEditor);
-            inlineCartoucheStudyField = new JTextField();
-            inlineCartoucheProjectField = new JTextField();
-            inlineCartoucheCompanyField = new JTextField();
-            inlineCartoucheCartographerField = new JTextField();
-            inlineCartoucheSourceField = new JTextField();
-            inlineCartoucheCrsField = new JTextField();
-            inlineCartoucheEditor = buildInlineCartoucheEditor();
-            inlineCartoucheEditor.setVisible(false);
-            add(inlineCartoucheEditor);
-            installInteraction();
-        }
-
-        @Override
-        public Dimension getPreferredSize() {
-            LayoutSettings settings = buildSettings();
-            if (settings == null) {
-                return new Dimension(980, 760);
-            }
-            Dimension pageSize = settings.pageSize().pixelSize(settings.orientation(), PREVIEW_RENDER_DPI);
-            Dimension viewportSize = resolvePreviewViewportSize();
-            int availableWidth = Math.max(80, viewportSize.width - 40);
-            int availableHeight = Math.max(80, viewportSize.height - 40);
-            double fitPageScale = Math.min(availableWidth / (double) pageSize.width, availableHeight / (double) pageSize.height);
-            double fitWidthScale = availableWidth / (double) pageSize.width;
-            double scale = Math.max(0.08d, interactionState.resolvePreviewScale(fitPageScale, fitWidthScale));
-            int drawWidth = (int) Math.round(pageSize.width * scale);
-            int drawHeight = (int) Math.round(pageSize.height * scale);
-            return new Dimension(
-                    Math.max(viewportSize.width, drawWidth + 80),
-                    Math.max(viewportSize.height, drawHeight + 80)
-            );
-        }
-
-        private Dimension resolvePreviewViewportSize() {
-            if (previewScrollPane != null) {
-                Dimension extent = previewScrollPane.getViewport().getExtentSize();
-                if (extent != null && extent.width > 0 && extent.height > 0) {
-                    return extent;
-                }
-            }
-            if (getParent() instanceof javax.swing.JViewport viewport) {
-                Dimension extent = viewport.getExtentSize();
-                if (extent != null && extent.width > 0 && extent.height > 0) {
-                    return extent;
-                }
-            }
-            if (getWidth() > 0 && getHeight() > 0) {
-                return new Dimension(getWidth(), getHeight());
-            }
-            return new Dimension(980, 760);
-        }
-
-        private JPanel buildInlineCartoucheEditor() {
-            JPanel editor = new JPanel(new GridBagLayout());
-            editor.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(37, 99, 235), 2),
-                    BorderFactory.createEmptyBorder(8, 10, 8, 10)
-            ));
-            editor.setBackground(new Color(248, 250, 252));
-            editor.setOpaque(true);
-
-            GridBagConstraints gc = new GridBagConstraints();
-            gc.insets = new Insets(2, 4, 2, 4);
-            gc.anchor = GridBagConstraints.WEST;
-            gc.fill = GridBagConstraints.HORIZONTAL;
-            addInlineCartoucheField(editor, gc, 0, "Estudio", inlineCartoucheStudyField);
-            addInlineCartoucheField(editor, gc, 1, "Proyecto", inlineCartoucheProjectField);
-            addInlineCartoucheField(editor, gc, 2, "Empresa", inlineCartoucheCompanyField);
-            addInlineCartoucheField(editor, gc, 3, "Cartografo", inlineCartoucheCartographerField);
-            addInlineCartoucheField(editor, gc, 4, "Fuente", inlineCartoucheSourceField);
-            addInlineCartoucheField(editor, gc, 5, "Coord.", inlineCartoucheCrsField);
-
-            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-            buttons.setOpaque(false);
-            JButton apply = new JButton("Aplicar");
-            apply.addActionListener(e -> commitInlineCartoucheEdit());
-            JButton cancel = new JButton("Cancelar");
-            cancel.addActionListener(e -> cancelInlineCartoucheEdit());
-            buttons.add(apply);
-            buttons.add(cancel);
-
-            gc.gridx = 0;
-            gc.gridy = 6;
-            gc.gridwidth = 2;
-            gc.weightx = 1;
-            editor.add(buttons, gc);
-            return editor;
-        }
-
-        private void addInlineCartoucheField(JPanel editor, GridBagConstraints gc, int row, String label, JTextField field) {
-            JLabel fieldLabel = new JLabel(label + ":");
-            fieldLabel.setFont(fieldLabel.getFont().deriveFont(Font.BOLD, 11f));
-            gc.gridx = 0;
-            gc.gridy = row;
-            gc.gridwidth = 1;
-            gc.weightx = 0;
-            editor.add(fieldLabel, gc);
-
-            gc.gridx = 1;
-            gc.weightx = 1;
-            field.setColumns(22);
-            editor.add(field, gc);
-        }
-
-        private void installInteraction() {
-            MouseAdapter adapter = new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                        // Check if double-click on a LayoutElement -> open contextual editor
-                        Point pp = toPagePoint(e.getPoint());
-                        RectMm pr = toPageRectMm();
-                        if (pp != null && pr != null && layoutModel.size() > 0) {
-                            double xMm = pr.xMm + pp.x * pr.pxToMmScale;
-                            double yMm = pr.yMm + pp.y * pr.pxToMmScale;
-                            LayoutElement el = layoutModel.findTopmostElementAtMm(xMm, yMm);
-                            if (el instanceof LayoutMap) {
-                                layoutModel.clearSelection();
-                                el.setSelected(true);
-                                mapPanToolButton.doClick();
-                                statusLabel.setText("Editando contenido del mapa: \"" + el.getName() + "\". Esc para salir.");
-                                return;
-                            }
-                            if (el instanceof LayoutLabel) {
-                                layoutModel.clearSelection();
-                                el.setSelected(true);
-                                refreshElementList();
-                                previewPanel.showTextPopup((LayoutLabel) el);
-                                return;
-                            }
-                            if (el instanceof LayoutLegend) {
-                                layoutModel.clearSelection();
-                                el.setSelected(true);
-                                refreshElementList();
-                                previewPanel.showLegendPopup((LayoutLegend) el);
-                                return;
-                            }
-                            if (el instanceof LayoutCartouche) {
-                                layoutModel.clearSelection();
-                                el.setSelected(true);
-                                refreshElementList();
-                                showCartouchePopup((LayoutCartouche) el);
-                                return;
-                            }
-                        }
-                        Point pagePoint = toPagePoint(e.getPoint());
-                        if (pagePoint != null && isInsideElement(LayoutElementType.HEADER, pagePoint)) {
-                            beginInlineTitleEdit();
-                        } else if (pagePoint != null && isInsideElement(LayoutElementType.CARTOUCHE, pagePoint)) {
-                            beginInlineCartoucheEdit();
-                        } else if (pagePoint != null && isInsideElement(LayoutElementType.LEGEND, pagePoint)) {
-                            openLegendEditor();
-                        } else if (pagePoint != null && isInsideElement(LayoutElementType.NORTH, pagePoint)) {
-                            configureNorthFromToolbar();
-                        } else if (pagePoint != null && findCustomItemIdAt(pagePoint) != null) {
-                            selectCatmapItemInList(findCustomItemIdAt(pagePoint));
-                            editSelectedCatmapItem();
-                        }
-                    }
-                }
-
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    requestFocusInWindow();
-                    if (SwingUtilities.isRightMouseButton(e)) { handleRightClick(e); return; }
-                    if (!SwingUtilities.isLeftMouseButton(e)) return;
-
-                    // Drawing mode: start drawing
-                    if (drawingShape != null) {
-                        drawingStart = toPagePoint(e.getPoint());
-                        return;
-                    }
-
-                    // Guide interaction: drag from ruler or existing guide
-                    GuideLine.Orientation rulerHit = RulerRenderer.rulerHitTest(e.getX(), e.getY(), 0, 0, getWidth(), getHeight());
-                    if (rulerHit != null) {
-                        LayoutSettings settings = buildSettings();
-                        double pxPerMm = PREVIEW_RENDER_DPI / 25.4 * lastPreviewScale;
-                        double mm = rulerHit == GuideLine.Orientation.VERTICAL
-                                ? (e.getX() - lastPageBounds.x) / pxPerMm
-                                : (e.getY() - lastPageBounds.y) / pxPerMm;
-                        if (mm >= 0) {
-                            GuideLine newGuide = new GuideLine("guide-" + System.currentTimeMillis(), mm, rulerHit);
-                            guides.add(newGuide);
-                            draggingGuide = newGuide;
-                            draggingGuideStartMm = mm;
-                            repaint();
-                            return;
-                        }
-                    }
-                    // Check for existing guide hit
-                    {
-                        double pxPerMm = PREVIEW_RENDER_DPI / 25.4 * lastPreviewScale;
-                        for (GuideLine guide : guides) {
-                            if (guide.containsPx(e.getX(), e.getY(), lastPageBounds.x, lastPageBounds.y, lastPageBounds.width, lastPageBounds.height, PREVIEW_RENDER_DPI, lastPreviewScale, 6)) {
-                                if (SwingUtilities.isRightMouseButton(e)) {
-                                    guides.remove(guide);
-                                    repaint();
-                                    return;
-                                }
-                                draggingGuide = guide;
-                                draggingGuideStartMm = guide.mmPos;
-                                return;
-                            }
-                        }
-                    }
-
-                    Point pagePoint = toPagePoint(e.getPoint());
-                    RectMm pageRect = toPageRectMm();
-                    if (pagePoint != null && pageRect != null) {
-                    double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
-                    double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
-                        LayoutElement clicked = layoutModel.findElementAtMm(xMm, yMm);
-                        if (clicked != null) {
-                            // Only allow resize if element is already selected; otherwise select+move first
-                            if (clicked.isSelected() && !clicked.isLocked()) {
-                                int handleIdx = hitTestHandle(clicked, pagePoint, pageRect);
-                                if (handleIdx >= 0) {
-                                    pushUndo(clicked, false);
-                                    activeResizeHandleIndex = handleIdx;
-                                    draggingLayoutElement = clicked;
-                                    dragStartPagePoint = pagePoint;
-                                    dragStartBoundsMm = new java.awt.geom.Rectangle2D.Double(
-                                        clicked.getBoundsMm().x, clicked.getBoundsMm().y,
-                                        clicked.getBoundsMm().width, clicked.getBoundsMm().height);
-                                    return;
-                                }
-                            }
-                            if (!clicked.isLocked()) {
-                                pushUndo(clicked, false);
-                                layoutModel.clearSelection();
-                                clicked.setSelected(true);
-                                draggingLayoutElement = clicked;
-                                dragStartPagePoint = pagePoint;
-                                dragStartBoundsMm = new java.awt.geom.Rectangle2D.Double(
-                                    clicked.getBoundsMm().x, clicked.getBoundsMm().y,
-                                    clicked.getBoundsMm().width, clicked.getBoundsMm().height);
-                                activeResizeHandleIndex = -1;
-                                refreshElementList();
-                                repaint();
-                                return;
-                            }
-                            layoutModel.clearSelection();
-                            clicked.setSelected(true);
-                            refreshElementList();
-                            repaint();
-                            return;
-                        }
-                        layoutModel.clearSelection();
-                    }
-
-                    if (interactionState.isMapFramePanToolActive() || interactionState.isMapFrameZoomToolActive()) {
-                        activeResizeHandle = ResizeHandle.NONE;
-                        activeResizeElement = null;
-                        activeResizeCustomItemId = null;
-                        if (pagePoint == null || !isInsideElement(LayoutElementType.MAP_CONTENT, pagePoint)) {
-                            lastDragPagePoint = null;
-                            setCursor(Cursor.getDefaultCursor());
-                            statusLabel.setText(interactionState.isMapFramePanToolActive()
-                                    ? "Pan mapa activo. Haz clic dentro del frame para desplazar solo el contenido interno."
-                                    : "Lupa mapa activa. Usa la rueda dentro del frame para cambiar el zoom interno.");
-                            repaint();
-                            return;
-                        }
-                        interactionState.select(LayoutElementType.MAP_CONTENT);
-                        selectCatmapItemInList(null);
-                        syncLayoutStructureSelection();
-                        lastDragPagePoint = interactionState.isMapFramePanToolActive() ? pagePoint : null;
-                        setCursor(interactionState.isMapFramePanToolActive()
-                                ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                                : Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-                        statusLabel.setText(interactionState.isMapFramePanToolActive()
-                                ? "Pan mapa activo. Arrastra para mover solo el contenido interno."
-                                : "Lupa mapa activa. Usa la rueda para acercar o alejar el contenido interno.");
-                        repaint();
-                        return;
-                    }
-                    if (pagePoint == null || lastRenderResult == null) {
-                        interactionState.select(null);
-                        activeResizeHandle = ResizeHandle.NONE;
-                        activeResizeElement = null;
-                        activeResizeCustomItemId = null;
-                        selectCatmapItemInList(null);
-                        repaint();
-                        return;
-                    }
-                    ResizeTarget resizeTarget = findResizeTarget(pagePoint);
-                    if (resizeTarget != null) {
-                        if (resizeTarget.customItemId() != null) {
-                            interactionState.selectCustomItem(resizeTarget.customItemId());
-                            selectCatmapItemInList(resizeTarget.customItemId());
-                            CatmapLayoutItem item = getCatmapItemById(resizeTarget.customItemId());
-                            if (item != null && item.isLocked()) {
-                                lastDragPagePoint = null;
-                                activeResizeHandle = ResizeHandle.NONE;
-                                activeResizeElement = null;
-                                activeResizeCustomItemId = null;
-                                statusLabel.setText("Elemento CATMAP bloqueado. Liberalo desde el inspector para redimensionarlo.");
-                                repaint();
-                                return;
-                            }
-                        } else {
-                            interactionState.select(resizeTarget.elementType());
-                            selectCatmapItemInList(null);
-                            if (interactionState.isElementLocked(resizeTarget.elementType())) {
-                                lastDragPagePoint = null;
-                                activeResizeHandle = ResizeHandle.NONE;
-                                activeResizeElement = null;
-                                activeResizeCustomItemId = null;
-                                statusLabel.setText(layoutElementLabel(resizeTarget.elementType()) + " bloqueado. Liberalo desde la estructura para redimensionarlo.");
-                                repaint();
-                                return;
-                            }
-                        }
-                        activeResizeElement = resizeTarget.elementType();
-                        activeResizeCustomItemId = resizeTarget.customItemId();
-                        activeResizeHandle = resizeTarget.handle();
-                        lastDragPagePoint = pagePoint;
-                        setCursor(cursorForHandle(activeResizeHandle));
-                        statusLabel.setText("Redimensionando " + elementLabel(activeResizeElement) + " con el mouse.");
-                        repaint();
-                        return;
-                    }
-                    LayoutElementType hit = findElementAt(pagePoint);
-                    String customItemId = findCustomItemIdAt(pagePoint);
-                    if (customItemId != null) {
-                        interactionState.selectCustomItem(customItemId);
-                        selectCatmapItemInList(customItemId);
-                        CatmapLayoutItem item = getCatmapItemById(customItemId);
-                        if (item != null && item.isLocked()) {
-                            activeResizeHandle = ResizeHandle.NONE;
-                            activeResizeElement = null;
-                            activeResizeCustomItemId = null;
-                            lastDragPagePoint = null;
-                            setCursor(Cursor.getDefaultCursor());
-                            statusLabel.setText("Elemento CATMAP bloqueado. Podés editarlo desde el inspector, pero no moverlo.");
-                            repaint();
-                            return;
-                        }
-                    } else {
-                        interactionState.select(hit);
-                        selectCatmapItemInList(null);
-                        if (interactionState.isElementLocked(hit)) {
-                            activeResizeHandle = ResizeHandle.NONE;
-                            activeResizeElement = null;
-                            activeResizeCustomItemId = null;
-                            lastDragPagePoint = null;
-                            setCursor(Cursor.getDefaultCursor());
-                            statusLabel.setText(layoutElementLabel(hit) + " bloqueado. Podés seleccionarlo, pero no moverlo.");
-                            repaint();
-                            return;
-                        }
-                    }
-                    activeResizeHandle = ResizeHandle.NONE;
-                    activeResizeElement = null;
-                    activeResizeCustomItemId = null;
-                    lastDragPagePoint = hit != null ? pagePoint : null;
-                    boolean selected = hit != null || customItemId != null;
-                    lastDragPagePoint = selected ? pagePoint : null;
-                    setCursor(resolveWorkCursor(pagePoint, selected));
-                    statusLabel.setText(resolveSelectionStatus(hit, customItemId, selected));
-                    repaint();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    if (drawingShape != null) {
-                        if (drawingStart != null) {
-                            Point end = toPagePoint(e.getPoint());
-                            if (end != null) finishDrawing(end);
-                            else cancelDrawing();
-                        } else {
-                            cancelDrawing();
-                        }
-                        return;
-                    }
-                    if (draggingGuide != null) {
-                        draggingGuide = null;
-                        setCursor(Cursor.getDefaultCursor());
-                        repaint();
-                        return;
-                    }
-                    if (e.isPopupTrigger()) {
-                        handleRightClick(e);
-                        return;
-                    }
-                    if (draggingLayoutElement != null) {
-                        draggingLayoutElement = null;
-                        dragStartPagePoint = null;
-                        dragStartBoundsMm = null;
-                        setCursor(Cursor.getDefaultCursor());
-                        repaint();
-                    }
-                    lastDragPagePoint = null;
-                    activeResizeHandle = ResizeHandle.NONE;
-                    activeResizeElement = null;
-                    activeResizeCustomItemId = null;
-                    clearSnapGuides();
-                    setCursor(Cursor.getDefaultCursor());
-                    repaint();
-                }
-
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    if (drawingShape != null && drawingStart != null) {
-                        repaint(); // will draw preview rectangle in paintComponent
-                        return;
-                    }
-                    if (draggingGuide != null) {
-                        LayoutSettings settings = buildSettings();
-                        double mmPerPx = 25.4 / PREVIEW_RENDER_DPI / lastPreviewScale;
-                        if (draggingGuide.orientation == GuideLine.Orientation.VERTICAL) {
-                            double delta = (e.getX() - lastPageBounds.x) - (e.getX() - lastPageBounds.x);
-                            double newMm = (e.getX() - lastPageBounds.x) * mmPerPx;
-                            newMm = Math.max(0, Math.min(newMm, settings.pageSize().widthMm));
-                            draggingGuide.mmPos = newMm;
-                        } else {
-                            double newMm = (e.getY() - lastPageBounds.y) * mmPerPx;
-                            newMm = Math.max(0, Math.min(newMm, settings.pageSize().heightMm));
-                            draggingGuide.mmPos = newMm;
-                        }
-                        repaint();
-                        return;
-                    }
-                    if (draggingLayoutElement != null && dragStartPagePoint != null && dragStartBoundsMm != null) {
-                        Point p = toPagePoint(e.getPoint());
-                        if (p != null) {
-                            RectMm r = toPageRectMm();
-                            if (r != null) {
-                                double sc = r.pxToMmScale;
-                                if (activeResizeHandleIndex >= 0) {
-                                    resizeElement(activeResizeHandleIndex, p.x - dragStartPagePoint.x, p.y - dragStartPagePoint.y);
-                } else {
-                    double newX = dragStartBoundsMm.x + (p.x - dragStartPagePoint.x) * sc;
-                    double newY = dragStartBoundsMm.y + (p.y - dragStartPagePoint.y) * sc;
-                    // Smart snap to other element edges (conditional)
-                    if (snapToElements) {
-                    double snapTol = 2.0;
-                    for (LayoutElement other : layoutModel.getElements()) {
-                        if (other == draggingLayoutElement || !other.isVisible()) continue;
-                        double ox = other.getBoundsMm().x, oy = other.getBoundsMm().y;
-                        double ow = other.getBoundsMm().width, oh = other.getBoundsMm().height;
-                        double ex = newX, ey = newY, ew = dragStartBoundsMm.width, eh = dragStartBoundsMm.height;
-                        if (Math.abs(ex - ox) < snapTol) newX = ox;
-                        if (Math.abs(ex + ew - ox - ow) < snapTol) newX = ox + ow - ew;
-                        if (Math.abs(ex + ew/2 - ox - ow/2) < snapTol) newX = ox + ow/2 - ew/2;
-                        if (Math.abs(ey - oy) < snapTol) newY = oy;
-                        if (Math.abs(ey + eh - oy - oh) < snapTol) newY = oy + oh - eh;
-                        if (Math.abs(ey + eh/2 - oy - oh/2) < snapTol) newY = oy + oh/2 - eh/2;
-                    }
-                    }
-                    // Snap to grid (5mm, conditional)
-                    if (snapToGrid) {
-                    double gridSize = 5.0;
-                    newX = Math.round(newX / gridSize) * gridSize;
-                    newY = Math.round(newY / gridSize) * gridSize;
-                    }
-                    draggingLayoutElement.setBoundsMm(newX, newY, dragStartBoundsMm.width, dragStartBoundsMm.height);
-                                }
-                            }
-                        }
-                        repaint();
-                        return;
-                    }
-                    if (lastDragPagePoint == null || interactionState.getSelectedElement() == null) {
-                        return;
-                    }
-                    if (interactionState.isMapFrameZoomToolActive()) {
-                        return;
-                    }
-                    Point pagePoint = toPagePoint(e.getPoint());
-                    if (pagePoint == null) {
-                        return;
-                    }
-                    int dx = pagePoint.x - lastDragPagePoint.x;
-                    int dy = pagePoint.y - lastDragPagePoint.y;
-                    if (dx == 0 && dy == 0) {
-                        return;
-                    }
-                    if (activeResizeElement != null && activeResizeHandle != ResizeHandle.NONE) {
-                        Rectangle currentBounds = activeResizeElement == LayoutElementType.CATMAP_ITEM
-                                ? (lastRenderResult != null ? lastRenderResult.customItemBounds().get(activeResizeCustomItemId) : null)
-                                : (lastRenderResult != null ? lastRenderResult.elementBounds().get(activeResizeElement) : null);
-                        if (currentBounds != null) {
-                            if (activeResizeElement == LayoutElementType.CATMAP_ITEM && activeResizeCustomItemId != null) {
-                                resizeCatmapItem(activeResizeCustomItemId, activeResizeHandle, dx, dy, currentBounds);
-                            } else {
-                                interactionState.resize(
-                                        activeResizeElement,
-                                        activeResizeHandle,
-                                        dx,
-                                        dy,
-                                        currentBounds.width,
-                                        currentBounds.height,
-                                        activeResizeElement == LayoutElementType.MAP_CONTENT ? 260 : 160,
-                                        activeResizeElement == LayoutElementType.MAP_CONTENT ? 180 : 100
-                                );
-                            }
-                        }
-                    } else if (interactionState.getSelectedElement() == LayoutElementType.MAP_CONTENT && interactionState.isMapFrameMoveToolActive()) {
-                        interactionState.translate(LayoutElementType.MAP_CONTENT, dx, dy);
-                    } else if (interactionState.getSelectedElement() == LayoutElementType.MAP_CONTENT && interactionState.isMapFramePanToolActive()) {
-                        interactionState.panMap(dx, dy);
-                    } else if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM) {
-                        translateCatmapItem(interactionState.getSelectedCustomItemId(), dx, dy);
-                    } else if (!interactionState.isElementLocked(interactionState.getSelectedElement())) {
-                        interactionState.translate(interactionState.getSelectedElement(), dx, dy);
-                    }
-                    lastDragPagePoint = pagePoint;
-                    repaint();
-                }
-
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    Point pagePoint = toPagePoint(e.getPoint());
-                    RectMm pageRect = toPageRectMm();
-                    LayoutElement oldHover = hoveredElement;
-                    hoveredElement = null;
-                    if (pagePoint != null && pageRect != null && layoutModel.size() > 0) {
-                        double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
-                        double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
-                        hoveredElement = layoutModel.findHoverAtMm(xMm, yMm);
-                        if (hoveredElement != null) {
-                            if (hoveredElement.isLocked()) {
-                                setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-                            } else {
-                                boolean overMapContent = hoveredElement instanceof ar.com.catgis.layout.LayoutMap;
-                                if (overMapContent && interactionState.isMapFrameZoomToolActive()) {
-                                    setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-                                } else if (overMapContent && interactionState.isMapFramePanToolActive()) {
-                                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                                } else {
-                                    setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-                                }
-                            }
-                            setToolTipText(hoveredElement.getName());
-                        } else {
-                            setCursor(Cursor.getDefaultCursor());
-                            setToolTipText(null);
-                        }
-                    } else {
-                        setCursor(Cursor.getDefaultCursor());
-                        setToolTipText(null);
-                    }
-                    if (oldHover != hoveredElement) repaint();
-                }
-
-                @Override
-                public void mouseWheelMoved(MouseWheelEvent e) {
-                    if (lastRenderResult == null) {
-                        return;
-                    }
-                    Point pagePoint = toPagePoint(e.getPoint());
-                    boolean overMap = pagePoint != null && isInsideElement(LayoutElementType.MAP_CONTENT, pagePoint);
-                    double factor = e.getWheelRotation() < 0 ? 1.12d : (1d / 1.12d);
-                    if (overMap && interactionState.isMapFrameZoomToolActive()) {
-                        interactionState.zoomMap(factor);
-                        statusLabel.setText("Zoom del mapa dentro del layout: " + Math.round(interactionState.getMapZoom() * 100d) + "%");
-                    } else {
-                        interactionState.zoomPreview(factor);
-                        statusLabel.setText("Zoom del compositor actualizado para trabajar la maquetacion.");
-                    }
-                    revalidate();
-                    repaint();
-                }
-            };
-            addMouseListener(adapter);
-            addMouseMotionListener(adapter);
-            addMouseWheelListener(adapter);
-        }
-
-        private void selectElementForPopup(Point panelPoint) {
-            Point pagePoint = toPagePoint(panelPoint);
-            if (pagePoint == null || lastRenderResult == null) {
-                return;
-            }
-            String customItemId = findCustomItemIdAt(pagePoint);
-            if (customItemId != null) {
-                interactionState.selectCustomItem(customItemId);
-                selectCatmapItemInList(customItemId);
-                syncLayoutStructureSelection();
-                repaint();
-                return;
-            }
-            LayoutElementType hit = findElementAt(pagePoint);
-            if (hit != null) {
-                interactionState.select(hit);
-                selectCatmapItemInList(null);
-                syncLayoutStructureSelection();
-                repaint();
-            }
-        }
-
-        private void beginInlineTitleEdit() {
-            if (lastRenderResult == null) {
-                return;
-            }
-            Rectangle headerBounds = lastRenderResult.elementBounds().get(LayoutElementType.HEADER);
-            if (headerBounds == null) {
-                return;
-            }
-            int editorX = lastPageBounds.x + (int) Math.round((headerBounds.x + 2) * lastPreviewScale);
-            int editorY = lastPageBounds.y + (int) Math.round((headerBounds.y + 6) * lastPreviewScale);
-            int editorWidth = Math.max(180, (int) Math.round(Math.min(headerBounds.width * 0.72d, 460) * lastPreviewScale));
-            int editorHeight = Math.max(28, (int) Math.round(34 * lastPreviewScale));
-            inlineTitleEditor.setText(titleField.getText());
-            inlineTitleEditor.setBounds(editorX, editorY, editorWidth, editorHeight);
-            inlineTitleEditor.setVisible(true);
-            inlineTitleEditor.requestFocusInWindow();
-            inlineTitleEditor.selectAll();
-        }
-
-        private void commitInlineTitleEdit() {
-            if (!inlineTitleEditor.isVisible()) {
-                return;
-            }
-            String updated = inlineTitleEditor.getText() != null ? inlineTitleEditor.getText().trim() : "";
-            if (!updated.isBlank()) {
-                titleField.setText(updated);
-            }
-            inlineTitleEditor.setVisible(false);
-            repaint();
-        }
-
-        private void beginInlineCartoucheEdit() {
-            if (lastRenderResult == null) {
-                return;
-            }
-            Rectangle cartoucheBounds = lastRenderResult.elementBounds().get(LayoutElementType.CARTOUCHE);
-            if (cartoucheBounds == null) {
-                return;
-            }
-            inlineCartoucheStudyField.setText(studyField.getText());
-            inlineCartoucheProjectField.setText(cartoucheProjectField.getText());
-            inlineCartoucheCompanyField.setText(companyField.getText());
-            inlineCartoucheCartographerField.setText(cartographerField.getText());
-            inlineCartoucheSourceField.setText(imageSourceField.getText());
-            inlineCartoucheCrsField.setText(coordinateReferenceField.getText());
-            placeInlineCartoucheEditor(cartoucheBounds);
-            inlineCartoucheEditor.setVisible(true);
-            inlineCartoucheEditor.requestFocusInWindow();
-            inlineCartoucheStudyField.requestFocusInWindow();
-            inlineCartoucheStudyField.selectAll();
-            statusLabel.setText("Editando cartucho directamente sobre el layout. Aplicar confirma los cambios.");
-        }
-
-        private void placeInlineCartoucheEditor(Rectangle cartoucheBounds) {
-            int editorX = lastPageBounds.x + (int) Math.round((cartoucheBounds.x + 4) * lastPreviewScale);
-            int editorY = lastPageBounds.y + (int) Math.round((cartoucheBounds.y + 4) * lastPreviewScale);
-            int editorWidth = Math.max(300, (int) Math.round(Math.max(cartoucheBounds.width - 8, 420) * lastPreviewScale));
-            int editorHeight = Math.max(190, inlineCartoucheEditor.getPreferredSize().height);
-            editorWidth = Math.min(editorWidth, Math.max(320, getWidth() - editorX - 24));
-            editorHeight = Math.min(editorHeight, Math.max(170, getHeight() - editorY - 24));
-            inlineCartoucheEditor.setBounds(editorX, editorY, editorWidth, editorHeight);
-        }
-
-        private void commitInlineCartoucheEdit() {
-            if (!inlineCartoucheEditor.isVisible()) {
-                return;
-            }
-            studyField.setText(safeTrim(inlineCartoucheStudyField.getText()));
-            cartoucheProjectField.setText(safeTrim(inlineCartoucheProjectField.getText()));
-            companyField.setText(safeTrim(inlineCartoucheCompanyField.getText()));
-            cartographerField.setText(safeTrim(inlineCartoucheCartographerField.getText()));
-            imageSourceField.setText(safeTrim(inlineCartoucheSourceField.getText()));
-            coordinateReferenceField.setText(safeTrim(inlineCartoucheCrsField.getText()));
-            inlineCartoucheEditor.setVisible(false);
-            statusLabel.setText("Datos cartograficos actualizados desde el layout.");
-            repaint();
-        }
-
-        private void cancelInlineCartoucheEdit() {
-            inlineCartoucheEditor.setVisible(false);
-            statusLabel.setText("Edicion directa del cartucho cancelada.");
-            repaint();
-        }
-
-        private String elementLabel(LayoutElementType type) {
-            return switch (type) {
-                case HEADER -> "encabezado";
-                case MAP_CONTENT -> "mapa";
-                case LEGEND -> "leyenda";
-                case NORTH -> "norte";
-                case SCALE -> "escala";
-                case CARTOUCHE -> "cartucho";
-                case PROFILE_IMAGE -> I18n.t("imagen del perfil");
-                case CATMAP_ITEM -> "elemento CATMAP";
-            };
-        }
-
-        private Cursor resolveWorkCursor(Point pagePoint, boolean selected) {
-            if (!selected) {
-                return Cursor.getDefaultCursor();
-            }
-            boolean overMap = pagePoint != null && isInsideElement(LayoutElementType.MAP_CONTENT, pagePoint);
-            if (overMap && interactionState.getSelectedElement() == LayoutElementType.MAP_CONTENT) {
-                if (interactionState.isMapFrameZoomToolActive()) {
-                    return Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
-                }
-                if (interactionState.isMapFramePanToolActive()) {
-                    return Cursor.getPredefinedCursor(Cursor.HAND_CURSOR);
-                }
-                if (interactionState.isMapFrameMoveToolActive()) {
-                    return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
-                }
-            }
-            return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
-        }
-
-        private String resolveSelectionStatus(LayoutElementType hit, String customItemId, boolean selected) {
-            if (!selected) {
-                return "Haz clic sobre un elemento del layout para moverlo.";
-            }
-            if (customItemId != null) {
-                return "Elemento CATMAP seleccionado. Arrastralo para reubicarlo o usa el inspector para editarlo.";
-            }
-            if (hit == LayoutElementType.MAP_CONTENT) {
-                if (interactionState.isMapFrameMoveToolActive()) {
-                    return "Mover layout activo. Arrastra el bloque completo del mapa sin cambiar el contenido interno.";
-                }
-                if (interactionState.isMapFramePanToolActive()) {
-                    return "Pan mapa activo. Arrastra para mover solo el contenido interno.";
-                }
-                if (interactionState.isMapFrameZoomToolActive()) {
-                    return "Lupa de mapa activa. Usa la rueda para cambiar el zoom interno sin mover el bloque.";
-                }
-            }
-            return "Elemento seleccionado: " + elementLabel(hit) + ". Arrastra con el mouse para reubicar.";
-        }
-
-        private LayoutElementType findElementAt(Point pagePoint) {
-            if (findCustomItemIdAt(pagePoint) != null) {
-                return LayoutElementType.CATMAP_ITEM;
-            }
-            LayoutElementType[] order = {
-                    LayoutElementType.PROFILE_IMAGE,
-                    LayoutElementType.LEGEND,
-                    LayoutElementType.NORTH,
-                    LayoutElementType.SCALE,
-                    LayoutElementType.CARTOUCHE,
-                    LayoutElementType.HEADER,
-                    LayoutElementType.MAP_CONTENT
-            };
-            for (LayoutElementType type : order) {
-                if (isInsideElement(type, pagePoint)) {
-                    return type;
-                }
-            }
-            return null;
-        }
-
-        private ResizeTarget findResizeTarget(Point pagePoint) {
-            if (lastRenderResult != null) {
-                java.util.List<String> ids = new ArrayList<>(lastRenderResult.customItemBounds().keySet());
-                for (int i = ids.size() - 1; i >= 0; i--) {
-                    String id = ids.get(i);
-                    Rectangle bounds = lastRenderResult.customItemBounds().get(id);
-                    ResizeHandle handle = bounds != null ? resolveResizeHandle(bounds, pagePoint) : ResizeHandle.NONE;
-                    if (handle != ResizeHandle.NONE) {
-                        return new ResizeTarget(LayoutElementType.CATMAP_ITEM, handle, id);
-                    }
-                }
-            }
-            for (LayoutElementType type : new LayoutElementType[]{
-                    LayoutElementType.PROFILE_IMAGE,
-                    LayoutElementType.LEGEND,
-                    LayoutElementType.NORTH,
-                    LayoutElementType.SCALE,
-                    LayoutElementType.CARTOUCHE,
-                    LayoutElementType.HEADER,
-                    LayoutElementType.MAP_CONTENT
-            }) {
-                if (type == LayoutElementType.MAP_CONTENT && !interactionState.isMapFrameMoveToolActive()) {
-                    continue;
-                }
-                if (interactionState.isElementLocked(type)) {
-                    continue;
-                }
-                Rectangle bounds = lastRenderResult != null ? lastRenderResult.elementBounds().get(type) : null;
-                ResizeHandle handle = bounds != null ? resolveResizeHandle(bounds, pagePoint) : ResizeHandle.NONE;
-                if (handle != ResizeHandle.NONE) {
-                    return new ResizeTarget(type, handle, null);
-                }
-            }
-            return null;
-        }
-
-        private ResizeHandle resolveResizeHandle(Rectangle bounds, Point point) {
-            int tolerance = Math.max(6, (int) Math.round(8d / Math.max(0.4d, lastPreviewScale)));
-            boolean left = Math.abs(point.x - bounds.x) <= tolerance;
-            boolean right = Math.abs(point.x - (bounds.x + bounds.width)) <= tolerance;
-            boolean top = Math.abs(point.y - bounds.y) <= tolerance;
-            boolean bottom = Math.abs(point.y - (bounds.y + bounds.height)) <= tolerance;
-            boolean insideY = point.y >= bounds.y - tolerance && point.y <= bounds.y + bounds.height + tolerance;
-            boolean insideX = point.x >= bounds.x - tolerance && point.x <= bounds.x + bounds.width + tolerance;
-
-            if (left && top) return ResizeHandle.NORTH_WEST;
-            if (right && top) return ResizeHandle.NORTH_EAST;
-            if (left && bottom) return ResizeHandle.SOUTH_WEST;
-            if (right && bottom) return ResizeHandle.SOUTH_EAST;
-            if (left && insideY) return ResizeHandle.WEST;
-            if (right && insideY) return ResizeHandle.EAST;
-            if (top && insideX) return ResizeHandle.NORTH;
-            if (bottom && insideX) return ResizeHandle.SOUTH;
-            return ResizeHandle.NONE;
-        }
-
-        private Cursor cursorForHandle(ResizeHandle handle) {
-            return switch (handle) {
-                case NORTH -> Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR);
-                case SOUTH -> Cursor.getPredefinedCursor(Cursor.S_RESIZE_CURSOR);
-                case EAST -> Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
-                case WEST -> Cursor.getPredefinedCursor(Cursor.W_RESIZE_CURSOR);
-                case NORTH_EAST -> Cursor.getPredefinedCursor(Cursor.NE_RESIZE_CURSOR);
-                case NORTH_WEST -> Cursor.getPredefinedCursor(Cursor.NW_RESIZE_CURSOR);
-                case SOUTH_EAST -> Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR);
-                case SOUTH_WEST -> Cursor.getPredefinedCursor(Cursor.SW_RESIZE_CURSOR);
-                default -> Cursor.getDefaultCursor();
-            };
-        }
-
-        private boolean isInsideElement(LayoutElementType type, Point pagePoint) {
-            Rectangle bounds = type == LayoutElementType.CATMAP_ITEM && lastRenderResult != null
-                    ? lastRenderResult.customItemBounds().get(interactionState.getSelectedCustomItemId())
-                    : (lastRenderResult != null ? lastRenderResult.elementBounds().get(type) : null);
-            return bounds != null && bounds.contains(pagePoint);
-        }
-
-        private String findCustomItemIdAt(Point pagePoint) {
-            if (pagePoint == null || lastRenderResult == null) {
-                return null;
-            }
-            java.util.List<String> ids = new ArrayList<>(lastRenderResult.customItemBounds().keySet());
-            for (int i = ids.size() - 1; i >= 0; i--) {
-                String id = ids.get(i);
-                Rectangle bounds = lastRenderResult.customItemBounds().get(id);
-                if (bounds != null && bounds.contains(pagePoint)) {
-                    return id;
-                }
-            }
-            return null;
-        }
-
-        private void translateCatmapItem(String itemId, int dx, int dy) {
-            CatmapLayoutItem item = getCatmapItemById(itemId);
-            if (item == null || item.isLocked() || !item.isVisible()) {
-                return;
-            }
-            Rectangle proposed = new Rectangle(item.getX() + dx, item.getY() + dy, item.getWidth(), item.getHeight());
-            SnapResult snapped = snapCatmapRectangle(proposed, itemId);
-            applySnapResultToItem(item, snapped);
-            persistCatmapItems();
-        }
-
-        private void resizeCatmapItem(String itemId, ResizeHandle handle, int dx, int dy, Rectangle currentBounds) {
-            CatmapLayoutItem item = getCatmapItemById(itemId);
-            if (item == null || item.isLocked() || !item.isVisible() || handle == null || handle == ResizeHandle.NONE) {
-                return;
-            }
-            int x = item.getX();
-            int y = item.getY();
-            int width = Math.max(20, currentBounds.width);
-            int height = Math.max(20, currentBounds.height);
-
-            switch (handle) {
-                case EAST -> width = Math.max(40, width + dx);
-                case SOUTH -> height = Math.max(30, height + dy);
-                case SOUTH_EAST -> {
-                    width = Math.max(40, width + dx);
-                    height = Math.max(30, height + dy);
-                }
-                case WEST -> {
-                    int targetWidth = Math.max(40, width - dx);
-                    x += width - targetWidth;
-                    width = targetWidth;
-                }
-                case NORTH -> {
-                    int targetHeight = Math.max(30, height - dy);
-                    y += height - targetHeight;
-                    height = targetHeight;
-                }
-                case NORTH_WEST -> {
-                    int targetWidth = Math.max(40, width - dx);
-                    int targetHeight = Math.max(30, height - dy);
-                    x += width - targetWidth;
-                    y += height - targetHeight;
-                    width = targetWidth;
-                    height = targetHeight;
-                }
-                case NORTH_EAST -> {
-                    int targetWidth = Math.max(40, width + dx);
-                    int targetHeight = Math.max(30, height - dy);
-                    y += height - targetHeight;
-                    width = targetWidth;
-                    height = targetHeight;
-                }
-                case SOUTH_WEST -> {
-                    int targetWidth = Math.max(40, width - dx);
-                    int targetHeight = Math.max(30, height + dy);
-                    x += width - targetWidth;
-                    width = targetWidth;
-                    height = targetHeight;
-                }
-                default -> {
-                }
-            }
-            SnapResult snapped = snapCatmapRectangle(new Rectangle(x, y, width, height), itemId);
-            applySnapResultToItem(item, snapped);
-            persistCatmapItems();
-        }
-
-        private void applySnapResultToItem(CatmapLayoutItem item, SnapResult snapped) {
-            if (item == null || snapped == null) {
-                return;
-            }
-            Rectangle bounds = snapped.bounds();
-            item.setX(bounds.x);
-            item.setY(bounds.y);
-            item.setWidth(bounds.width);
-            item.setHeight(bounds.height);
-            activeGuideXs.clear();
-            activeGuideXs.addAll(snapped.guideXs());
-            activeGuideYs.clear();
-            activeGuideYs.addAll(snapped.guideYs());
-        }
-
-        private void drawPersistentGuides(Graphics2D g2, int pageX, int pageY, double scale, int drawWidth, int drawHeight, LayoutSettings settings) {
-            if (guides.isEmpty() || lastRenderResult == null) return;
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(new Color(0x3388FF));
-                copy.setStroke(new BasicStroke(1.0f));
-                for (GuideLine guide : guides) {
-                    guide.render(copy, pageX, pageY, drawWidth, drawHeight, PREVIEW_RENDER_DPI, scale);
-                }
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private void handleRightClick(MouseEvent e) {
-            Point pagePoint = toPagePoint(e.getPoint());
-            RectMm pageRect = toPageRectMm();
-            LayoutElement rightClicked = null;
-            if (pagePoint != null && pageRect != null && layoutModel.size() > 0) {
-            double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
-            double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
-            rightClicked = layoutModel.findTopmostElementAtMm(xMm, yMm);
-            }
-            JPopupMenu menu = new JPopupMenu();
-            if (rightClicked != null) {
-                boolean selWas = rightClicked.isSelected();
-                layoutModel.clearSelection();
-                rightClicked.setSelected(true);
-                refresh(null);
-                final LayoutElement rce = rightClicked;
-                menu.add(item("Propiedades", () -> openElementProperties(rce)));
-                menu.addSeparator();
-                menu.add(item("Traer al frente", () -> { layoutModel.moveToFront(rce); refresh(null); }));
-                menu.add(item("Enviar atras", () -> { layoutModel.moveToBack(rce); refresh(null); }));
-                menu.add(item("Subir", () -> { layoutModel.moveUp(rce); refresh(null); }));
-                menu.add(item("Bajar", () -> { layoutModel.moveDown(rce); refresh(null); }));
-                menu.addSeparator();
-                menu.add(item(rce.isLocked() ? "Desbloquear" : "Bloquear", () -> { rce.setLocked(!rce.isLocked()); refresh(null); }));
-                menu.add(item(rce.isVisible() ? "Ocultar" : "Mostrar", () -> { rce.setVisible(!rce.isVisible()); refresh(null); }));
-                menu.addSeparator();
-                menu.add(item("Duplicar", () -> {
-                    LayoutElement dup = duplicateElement(rce);
-                    if (dup != null) refresh(null);
-                }));
-                menu.add(item("Renombrar...", () -> {
-                    String newName = JOptionPane.showInputDialog(LayoutPreviewPanel.this, "Nuevo nombre:", rce.getName());
-                    if (newName != null && !newName.isBlank()) { rce.setName(newName.trim()); refresh(null); }
-                }));
-                menu.addSeparator();
-                menu.add(item("Eliminar", () -> { layoutModel.removeElement(rce.getId()); refresh(null); }));
-                if (rce instanceof LayoutLegend) {
-                    menu.addSeparator();
-                    menu.add(item("Actualizar desde capas", () -> {
-                        populateLegendFromProject((LayoutLegend) rce);
-                        refresh(null);
-                    }));
-                    menu.add(item("Excluir mapas base", () -> {
-                        LayoutLegend leg = (LayoutLegend) rce;
-                        leg.getItems().removeIf(item -> LayoutLegend.isBasemapName(item.displayName));
-                        refresh(null);
-                    }));
-                }
-                if (rce instanceof LayoutMap) {
-                    menu.addSeparator();
-                    menu.add(item("Actualizar desde vista actual", () -> refresh(null)));
-                }
-                if (!selWas) {
-                    rightClicked = rce;
-                }
-            } else {
-                menu.add(item("Pegar", () -> {})).setEnabled(false);
-            }
-            menu.show(LayoutPreviewPanel.this, e.getX(), e.getY());
-        }
-
-        private void openElementProperties(LayoutElement el) {
-            if (el instanceof LayoutLabel) { showTextPopup((LayoutLabel) el); return; }
-            if (el instanceof LayoutLegend) { showLegendPopup((LayoutLegend) el); return; }
-            if (el instanceof LayoutCartouche) { showCartouchePopup((LayoutCartouche) el); return; }
-            if (el instanceof LayoutScaleBar) { showScalePopup((LayoutScaleBar) el); return; }
-            if (el instanceof LayoutNorthArrow) { showNorthPopup((LayoutNorthArrow) el); return; }
-            if (el instanceof LayoutMap) { showMapPropsPopup((LayoutMap) el); return; }
-            refreshPropertiesPanel();
-        }
-
-        void showTextPopup(LayoutLabel label) {
-            JDialog popup = new JDialog((Frame) SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Formato de texto", true);
-            popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-            Font originalFont = label.getFont();
-            Color originalColor = label.getColor();
-            float originalHaloWidth = label.getHaloWidth();
-            Color originalHaloColor = label.getHaloColor();
-            boolean originalUnderline = label.isUnderlined();
-            String originalText = label.getText();
-
-            JPanel panel = new JPanel(new BorderLayout(10, 10));
-            panel.setBorder(BorderFactory.createEmptyBorder(14, 16, 12, 16));
-            panel.setBackground(Color.WHITE);
-
-            JPanel form = new JPanel(new GridBagLayout());
-            form.setOpaque(false);
-            GridBagConstraints g = new GridBagConstraints();
-            g.insets = new Insets(3, 3, 3, 3);
-            g.anchor = GridBagConstraints.WEST;
-            g.fill = GridBagConstraints.HORIZONTAL;
-            g.weightx = 1;
-            int row = 0;
-
-            JTextField contentField = new JTextField(label.getText() != null ? label.getText() : "", 24);
-            addPopupRow(form, g, row++, "Contenido", contentField);
-
-            JComboBox<String> fontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
-            fontCombo.setSelectedItem(originalFont.getFamily());
-            addPopupRow(form, g, row++, "Fuente", fontCombo);
-
-            Integer[] sizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 42, 48, 56, 64, 72};
-            JComboBox<Integer> sizeCombo = new JComboBox<>(sizes);
-            sizeCombo.setEditable(true);
-            sizeCombo.setSelectedItem(originalFont.getSize());
-            addPopupRow(form, g, row++, "Tamaño", sizeCombo);
-
-            JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-            styleRow.setOpaque(false);
-            JToggleButton boldBtn = new JToggleButton("N", originalFont.isBold());
-            boldBtn.setFont(boldBtn.getFont().deriveFont(Font.BOLD));
-            JToggleButton italicBtn = new JToggleButton("K", originalFont.isItalic());
-            italicBtn.setFont(italicBtn.getFont().deriveFont(Font.ITALIC));
-            JToggleButton underlineBtn = new JToggleButton("S", originalUnderline);
-            styleRow.add(boldBtn);
-            styleRow.add(italicBtn);
-            styleRow.add(underlineBtn);
-            addPopupRow(form, g, row++, "Estilo", styleRow);
-
-            JButton colorBtn = colorSwatchButton(label.getColor(), null);
-            addPopupRow(form, g, row++, "Color", colorBtn);
-
-            JCheckBox haloCheck = new JCheckBox("Activar halo", originalHaloWidth > 0);
-            haloCheck.setOpaque(false);
-            Integer[] haloVals = {1, 2, 3, 4, 5};
-            JComboBox<Integer> haloWidthCombo = new JComboBox<>(haloVals);
-            haloWidthCombo.setSelectedItem(Math.max(1, (int) originalHaloWidth));
-            JButton haloColorBtn = colorSwatchButton(originalHaloColor, null);
-            JPanel haloRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-            haloRow.setOpaque(false);
-            haloRow.add(haloCheck);
-            haloRow.add(new JLabel("Ancho"));
-            haloRow.add(haloWidthCombo);
-            haloRow.add(new JLabel("Color"));
-            haloRow.add(haloColorBtn);
-            addPopupRow(form, g, row++, "Halo", haloRow);
-
-            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            buttons.setOpaque(false);
-            JButton acceptBtn = new JButton("Aceptar");
-            JButton cancelBtn = new JButton("Cancelar");
-            buttons.add(acceptBtn);
-            buttons.add(cancelBtn);
-
-            Runnable applyChanges = () -> {
-                label.setText(contentField.getText());
-                int style = Font.PLAIN;
-                if (boldBtn.isSelected()) style |= Font.BOLD;
-                if (italicBtn.isSelected()) style |= Font.ITALIC;
-                int size = parsePopupInt(sizeCombo.getSelectedItem(), originalFont.getSize());
-                label.setFont(new Font((String) fontCombo.getSelectedItem(), style, size));
-                label.setColor(colorBtn.getBackground());
-                label.setUnderlined(underlineBtn.isSelected());
-                if (haloCheck.isSelected()) {
-                    label.setHaloWidth(parsePopupInt(haloWidthCombo.getSelectedItem(), 2));
-                    label.setHaloColor(haloColorBtn.getBackground());
-                } else {
-                    label.setHaloWidth(0f);
-                }
-                previewPanel.repaint();
-                refreshElementList();
-            };
-
-            acceptBtn.addActionListener(e -> {
-                applyChanges.run();
-                popup.dispose();
-            });
-            cancelBtn.addActionListener(e -> {
-                label.setFont(originalFont);
-                label.setColor(originalColor);
-                label.setHaloWidth(originalHaloWidth);
-                label.setHaloColor(originalHaloColor);
-                label.setUnderlined(originalUnderline);
-                label.setText(originalText);
-                popup.dispose();
-            });
-
-            panel.add(form, BorderLayout.CENTER);
-            panel.add(buttons, BorderLayout.SOUTH);
-            popup.setContentPane(panel);
-            popup.pack();
-            popup.setResizable(false);
-            popup.getRootPane().setDefaultButton(acceptBtn);
-            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "cancel");
-            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() {
-                @Override public void actionPerformed(java.awt.event.ActionEvent e) { cancelBtn.doClick(); }
-            });
-            popup.setLocationRelativeTo(LayoutPreviewPanel.this);
-            popup.setVisible(true);
-        }
-
-        void showLegendPopup(LayoutLegend legend) {
-            JDialog popup = new JDialog((Frame) SwingUtilities.getWindowAncestor(LayoutPreviewPanel.this), "Propiedades de leyenda", true);
-            popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-
-            String originalTitle = legend.getTitle();
-            Font originalTitleFont = legend.getTitleFont();
-            Font originalItemFont = legend.getItemFont();
-            Color originalTitleColor = legend.getTitleColor();
-            Color originalItemColor = legend.getItemColor();
-            boolean originalBg = legend.isShowBackground();
-            Color originalBgColor = legend.getBgColor();
-            float originalBgOpacity = legend.getBgOpacity();
-            boolean originalBorder = legend.isShowBorder();
-            Color originalBorderColor = legend.getBorderColor();
-            int originalColumns = legend.getColumns();
-            boolean originalAutoHeight = legend.isAutoHeight();
-
-            JPanel panel = new JPanel(new BorderLayout(10, 10));
-            panel.setBorder(BorderFactory.createEmptyBorder(14, 16, 12, 16));
-            panel.setBackground(Color.WHITE);
-
-            JPanel form = new JPanel(new GridBagLayout());
-            form.setOpaque(false);
-            GridBagConstraints g = new GridBagConstraints();
-            g.insets = new Insets(3, 3, 3, 3);
-            g.anchor = GridBagConstraints.WEST;
-            g.fill = GridBagConstraints.HORIZONTAL;
-            g.weightx = 1;
-            int row = 0;
-
-            JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 22);
-            addPopupRow(form, g, row++, "Título", titleField);
-
-            JComboBox<String> titleFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
-            titleFontCombo.setSelectedItem(legend.getTitleFont().getFamily());
-            addPopupRow(form, g, row++, "Fuente título", titleFontCombo);
-
-            Integer[] titleSizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36};
-            JComboBox<Integer> titleSize = new JComboBox<>(titleSizes);
-            titleSize.setEditable(true);
-            titleSize.setSelectedItem(legend.getTitleFont().getSize());
-            addPopupRow(form, g, row++, "Tam. título", titleSize);
-
-            JComboBox<String> itemFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
-            itemFontCombo.setSelectedItem(legend.getItemFont().getFamily());
-            addPopupRow(form, g, row++, "Fuente ítems", itemFontCombo);
-
-            Integer[] itemSizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20};
-            JComboBox<Integer> itemSize = new JComboBox<>(itemSizes);
-            itemSize.setEditable(true);
-            itemSize.setSelectedItem(legend.getItemFont().getSize());
-            addPopupRow(form, g, row++, "Tam. ítems", itemSize);
-
-            JButton titleColorBtn = colorSwatchButton(legend.getTitleColor(), null);
-            addPopupRow(form, g, row++, "Color título", titleColorBtn);
-
-            JButton itemColorBtn = colorSwatchButton(legend.getItemColor(), null);
-            addPopupRow(form, g, row++, "Color ítems", itemColorBtn);
-
-            JCheckBox bgCheck = new JCheckBox("Mostrar fondo", legend.isShowBackground());
-            bgCheck.setOpaque(false);
-            JButton bgColorBtn = colorSwatchButton(legend.getBgColor(), null);
-            JSpinner opacitySpinner = new JSpinner(new SpinnerNumberModel((int) Math.round(legend.getBgOpacity() * 100d), 0, 100, 5));
-            JPanel bgRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-            bgRow.setOpaque(false);
-            bgRow.add(bgCheck);
-            bgRow.add(new JLabel("Color"));
-            bgRow.add(bgColorBtn);
-            bgRow.add(new JLabel("Opacidad"));
-            bgRow.add(opacitySpinner);
-            addPopupRow(form, g, row++, "Fondo", bgRow);
-
-            JCheckBox borderCheck = new JCheckBox("Mostrar borde", legend.isShowBorder());
-            borderCheck.setOpaque(false);
-            JButton borderColorBtn = colorSwatchButton(legend.getBorderColor(), null);
-            JPanel borderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-            borderRow.setOpaque(false);
-            borderRow.add(borderCheck);
-            borderRow.add(new JLabel("Color"));
-            borderRow.add(borderColorBtn);
-            addPopupRow(form, g, row++, "Borde", borderRow);
-
-            JComboBox<Integer> colCombo = new JComboBox<>(new Integer[]{1, 2, 3, 4});
-            colCombo.setSelectedItem(legend.getColumns());
-            addPopupRow(form, g, row++, "Columnas", colCombo);
-
-            JCheckBox autoHeightCheck = new JCheckBox("Auto alto", legend.isAutoHeight());
-            autoHeightCheck.setOpaque(false);
-            addPopupRow(form, g, row++, "Ajuste", autoHeightCheck);
-
-            JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-            buttons.setOpaque(false);
-            JButton refreshBtn = new JButton("Actualizar capas");
-            JButton acceptBtn = new JButton("Aceptar");
-            JButton cancelBtn = new JButton("Cancelar");
-            buttons.add(refreshBtn);
-            buttons.add(acceptBtn);
-            buttons.add(cancelBtn);
-
-            refreshBtn.addActionListener(e -> {
-                populateLegendFromProject(legend);
-                previewPanel.repaint();
-            });
-
-            Runnable applyChanges = () -> {
-                legend.setTitle(titleField.getText().trim());
-                legend.setTitleFont(new Font((String) titleFontCombo.getSelectedItem(), Font.BOLD, parsePopupInt(titleSize.getSelectedItem(), originalTitleFont.getSize())));
-                legend.setItemFont(new Font((String) itemFontCombo.getSelectedItem(), Font.PLAIN, parsePopupInt(itemSize.getSelectedItem(), originalItemFont.getSize())));
-                legend.setTitleColor(titleColorBtn.getBackground());
-                legend.setItemColor(itemColorBtn.getBackground());
-                legend.setShowBackground(bgCheck.isSelected());
-                legend.setBgColor(bgColorBtn.getBackground());
-                legend.setBgOpacity(((Integer) opacitySpinner.getValue()) / 100f);
-                legend.setShowBorder(borderCheck.isSelected());
-                legend.setBorderColor(borderColorBtn.getBackground());
-                legend.setColumns((Integer) colCombo.getSelectedItem());
-                legend.setAutoHeight(autoHeightCheck.isSelected());
-                previewPanel.repaint();
-                refreshElementList();
-            };
-
-            acceptBtn.addActionListener(e -> {
-                applyChanges.run();
-                popup.dispose();
-            });
-            cancelBtn.addActionListener(e -> {
-                legend.setTitle(originalTitle);
-                legend.setTitleFont(originalTitleFont);
-                legend.setItemFont(originalItemFont);
-                legend.setTitleColor(originalTitleColor);
-                legend.setItemColor(originalItemColor);
-                legend.setShowBackground(originalBg);
-                legend.setBgColor(originalBgColor);
-                legend.setBgOpacity(originalBgOpacity);
-                legend.setShowBorder(originalBorder);
-                legend.setBorderColor(originalBorderColor);
-                legend.setColumns(originalColumns);
-                legend.setAutoHeight(originalAutoHeight);
-                popup.dispose();
-            });
-
-            panel.add(form, BorderLayout.CENTER);
-            panel.add(buttons, BorderLayout.SOUTH);
-            popup.setContentPane(panel);
-            popup.pack();
-            popup.setResizable(false);
-            popup.getRootPane().setDefaultButton(acceptBtn);
-            panel.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "cancel");
-            panel.getActionMap().put("cancel", new javax.swing.AbstractAction() {
-                @Override public void actionPerformed(java.awt.event.ActionEvent e) { cancelBtn.doClick(); }
-            });
-            popup.setLocationRelativeTo(LayoutPreviewPanel.this);
-            popup.setVisible(true);
-        }
-
-        private void addPopupRow(JPanel form, GridBagConstraints g, int row, String label, Component field) {
-            JLabel lbl = new JLabel(label);
-            lbl.setFont(lbl.getFont().deriveFont(Font.PLAIN, 11f));
-            g.gridx = 0;
-            g.gridy = row;
-            g.gridwidth = 1;
-            g.weightx = 0;
-            form.add(lbl, g);
-            g.gridx = 1;
-            g.weightx = 1;
-            form.add(field, g);
-        }
-
-        private JButton colorSwatchButton(Color initial, java.util.function.Consumer<Color> onColor) {
-            JButton btn = new JButton();
-            btn.setPreferredSize(new Dimension(34, 22));
-            colorBtnSet(btn, initial != null ? initial : Color.BLACK);
-            btn.addActionListener(e -> {
-                Color chosen = JColorChooser.showDialog(LayoutPreviewPanel.this, "Elegir color", btn.getBackground());
-                if (chosen != null) {
-                    colorBtnSet(btn, chosen);
-                    if (onColor != null) {
-                        onColor.accept(chosen);
-                    }
-                }
-            });
-            return btn;
-        }
-
-        private void colorBtnSet(JButton button, Color color) {
-            button.setBackground(color);
-            button.setOpaque(true);
-            button.setBorderPainted(true);
-        }
-
-        private int parsePopupInt(Object value, int fallback) {
-            if (value instanceof Number number) {
-                return number.intValue();
-            }
-            try {
-                return Integer.parseInt(String.valueOf(value).trim());
-            } catch (Exception ex) {
-                return fallback;
-            }
-        }
-
-        private LayoutElement duplicateElement(LayoutElement src) {
-            duplicateLayoutElement(src);
-            return null;
-        }
-
-        private void refresh(Boolean unused) { refreshElementList(); previewPanel.repaint(); }
-
-        private void startDrawing(String shape) {
-            drawingShape = shape;
-            drawingStart = null;
-            setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-            layoutModel.clearSelection();
-            refreshElementList();
-            repaint();
-            statusLabel.setText("Dibujando " + shape + ". Click y arrastra en el canvas. Esc para cancelar.");
-        }
-
-        private void cancelDrawing() {
-            drawingShape = null;
-            drawingStart = null;
-            setCursor(Cursor.getDefaultCursor());
-            repaint();
-            statusLabel.setText("Dibujo cancelado.");
-        }
-
-        private void finishDrawing(Point pageEnd) {
-            if (drawingStart == null || drawingShape == null) return;
-            RectMm pr = toPageRectMm();
-            if (pr == null) return;
-            double sc = pr.pxToMmScale;
-            double x1 = Math.min(drawingStart.x, pageEnd.x) * sc;
-            double y1 = Math.min(drawingStart.y, pageEnd.y) * sc;
-            double x2 = Math.max(drawingStart.x, pageEnd.x) * sc;
-            double y2 = Math.max(drawingStart.y, pageEnd.y) * sc;
-            double w = x2 - x1, h = y2 - y1;
-            if (w < 2 && h < 2) { w = 20; h = 15; }
-
-            if ("rect".equals(drawingShape)) {
-                LayoutRectangle r = new LayoutRectangle(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
-                r.setZOrder(layoutModel.nextZ()); r.setName("Rectangulo " + countOfType("Rectangulo"));
-                layoutModel.addElement(r);
-            } else if ("ellipse".equals(drawingShape)) {
-                LayoutEllipse e = new LayoutEllipse(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
-                e.setZOrder(layoutModel.nextZ()); e.setName("Elipse " + countOfType("Elipse"));
-                layoutModel.addElement(e);
-            } else if ("line".equals(drawingShape)) {
-                LayoutLine l = new LayoutLine(drawingShape + "-" + System.currentTimeMillis(), x1, y1, x2, y2);
-                l.setZOrder(layoutModel.nextZ()); l.setName("Linea " + countOfType("Linea"));
-                layoutModel.addElement(l);
-            }
-            drawingShape = null; drawingStart = null;
-            setCursor(Cursor.getDefaultCursor());
-            refreshElementList();
-            repaint();
-            statusLabel.setText("Forma creada.");
-        }
-
-        private JMenuItem item(String text, Runnable action) {
-            JMenuItem mi = new JMenuItem(text);
-            mi.addActionListener(e -> action.run());
-            return mi;
-        }
-
-        private void drawDrawingPreview(Graphics2D g2, int pageX, int pageY, double scale) {
-            if (drawingShape == null || drawingStart == null) return;
-            PointerInfo pi = MouseInfo.getPointerInfo();
-            if (pi == null) return;
-            Point screenPt = pi.getLocation();
-            SwingUtilities.convertPointFromScreen(screenPt, LayoutPreviewPanel.this);
-            Point pageEnd = toPagePoint(screenPt);
-            if (pageEnd == null) return;
-            int x1 = pageX + (int)(Math.min(drawingStart.x, pageEnd.x) * scale);
-            int y1 = pageY + (int)(Math.min(drawingStart.y, pageEnd.y) * scale);
-            int w = (int)(Math.abs(pageEnd.x - drawingStart.x) * scale);
-            int h = (int)(Math.abs(pageEnd.y - drawingStart.y) * scale);
-            g2.setColor(new Color(25, 118, 210, 100));
-            g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{6f, 4f}, 0f));
-            g2.drawRect(x1, y1, Math.max(1, w), Math.max(1, h));
-        }
-
-        private void clearSnapGuides() {
-            activeGuideXs.clear();
-            activeGuideYs.clear();
-        }
-
-        private SnapResult snapCatmapRectangle(Rectangle proposed, String movingItemId) {
-            if (proposed == null || lastRenderResult == null) {
-                return new SnapResult(proposed != null ? new Rectangle(proposed) : new Rectangle(), new ArrayList<>(), new ArrayList<>());
-            }
-            Rectangle snapped = new Rectangle(proposed);
-            List<Integer> guideXs = new ArrayList<>();
-            List<Integer> guideYs = new ArrayList<>();
-            int tolerance = 8;
-
-            SnapAxisResult xAxis = snapAxis(
-                    snapped.x,
-                    snapped.x + snapped.width / 2,
-                    snapped.x + snapped.width,
-                    collectSnapCandidates(true, movingItemId),
-                    tolerance
-            );
-            snapped.x += xAxis.delta();
-            if (xAxis.guide() != null) {
-                guideXs.add(xAxis.guide());
-            }
-
-            SnapAxisResult yAxis = snapAxis(
-                    snapped.y,
-                    snapped.y + snapped.height / 2,
-                    snapped.y + snapped.height,
-                    collectSnapCandidates(false, movingItemId),
-                    tolerance
-            );
-            snapped.y += yAxis.delta();
-            if (yAxis.guide() != null) {
-                guideYs.add(yAxis.guide());
-            }
-            return new SnapResult(snapped, guideXs, guideYs);
-        }
-
-        private List<Integer> collectSnapCandidates(boolean horizontal, String movingItemId) {
-            List<Integer> candidates = new ArrayList<>();
-            if (lastRenderResult == null || lastRenderResult.image() == null) {
-                return candidates;
-            }
-            int max = horizontal ? lastRenderResult.image().getWidth() : lastRenderResult.image().getHeight();
-            candidates.add(0);
-            candidates.add(max / 2);
-            candidates.add(max);
-
-            for (Rectangle bounds : lastRenderResult.elementBounds().values()) {
-                if (bounds == null) {
-                    continue;
-                }
-                candidates.add(horizontal ? bounds.x : bounds.y);
-                candidates.add(horizontal ? bounds.x + bounds.width / 2 : bounds.y + bounds.height / 2);
-                candidates.add(horizontal ? bounds.x + bounds.width : bounds.y + bounds.height);
-            }
-            for (java.util.Map.Entry<String, Rectangle> entry : lastRenderResult.customItemBounds().entrySet()) {
-                if (entry.getKey() == null || entry.getKey().equals(movingItemId) || entry.getValue() == null) {
-                    continue;
-                }
-                Rectangle bounds = entry.getValue();
-                candidates.add(horizontal ? bounds.x : bounds.y);
-                candidates.add(horizontal ? bounds.x + bounds.width / 2 : bounds.y + bounds.height / 2);
-                candidates.add(horizontal ? bounds.x + bounds.width : bounds.y + bounds.height);
-            }
-            return candidates;
-        }
-
-        private SnapAxisResult snapAxis(int start, int center, int end, List<Integer> candidates, int tolerance) {
-            int bestDelta = 0;
-            Integer bestGuide = null;
-            int bestDistance = tolerance + 1;
-            for (Integer candidate : candidates) {
-                if (candidate == null) {
-                    continue;
-                }
-                int[] deltas = new int[]{candidate - start, candidate - center, candidate - end};
-                for (int delta : deltas) {
-                    int distance = Math.abs(delta);
-                    if (distance <= tolerance && distance < bestDistance) {
-                        bestDistance = distance;
-                        bestDelta = delta;
-                        bestGuide = candidate;
-                    }
-                }
-            }
-            return new SnapAxisResult(bestDelta, bestGuide);
-        }
-
-        private Point toPagePoint(Point panelPoint) {
-            if (lastRenderResult == null || lastPageBounds.width <= 0 || lastPageBounds.height <= 0 || lastPreviewScale <= 0) {
-                return null;
-            }
-            if (!lastPageBounds.contains(panelPoint)) {
-                return null;
-            }
-            int pageX = (int) Math.round((panelPoint.x - lastPageBounds.x) / lastPreviewScale);
-            int pageY = (int) Math.round((panelPoint.y - lastPageBounds.y) / lastPreviewScale);
-            return new Point(pageX, pageY);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            syncHardcodedLayoutFlagsFromModel();
-            LayoutSettings settings = buildSettings();
-            LayoutSnapshot currentSnapshot = getSnapshot();
-            if (settings == null || currentSnapshot == null) return;
-
-            Dimension previewSize = settings.pageSize().pixelSize(settings.orientation(), PREVIEW_RENDER_DPI);
-            lastRenderResult = LayoutRenderer.renderResult(
-                    settings,
-                    currentSnapshot,
-                    previewSize.width,
-                    previewSize.height,
-                    interactionState,
-                    PREVIEW_RENDER_DPI
-            );
-            SwingUtilities.invokeLater(() -> updateScaleUiState(lastRenderResult.exactScaleDenominator()));
-            BufferedImage page = lastRenderResult.image();
-
-            Graphics2D g2 = (Graphics2D) g.create();
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                Dimension viewportSize = resolvePreviewViewportSize();
-                int availableWidth = Math.max(80, viewportSize.width - 40);
-                int availableHeight = Math.max(80, viewportSize.height - 40);
-                double fitPageScale = Math.min(availableWidth / (double) page.getWidth(), availableHeight / (double) page.getHeight());
-                double fitWidthScale = availableWidth / (double) page.getWidth();
-                double scale = interactionState.resolvePreviewScale(fitPageScale, fitWidthScale);
-                scale = Math.max(0.08d, scale);
-                int drawWidth = (int) Math.round(page.getWidth() * scale);
-                int drawHeight = (int) Math.round(page.getHeight() * scale);
-                int rulerSz = RulerRenderer.getRulerSize();
-                int x = Math.max(rulerSz + 4, (getWidth() - drawWidth) / 2);
-                int y = Math.max(rulerSz + 4, (getHeight() - drawHeight) / 2);
-
-                lastPageBounds = new Rectangle(x, y, drawWidth, drawHeight);
-                lastPreviewScale = scale;
-
-                g2.setColor(new Color(200, 205, 212));
-                g2.fillRoundRect(x + 10, y + 10, drawWidth, drawHeight, 18, 18);
-                // Stronger page shadow (ArcMap-style)
-                g2.setColor(new Color(140, 145, 155));
-                g2.fillRoundRect(x + 6, y + 6, drawWidth, drawHeight, 14, 14);
-                g2.setColor(new Color(170, 175, 185));
-                g2.fillRoundRect(x + 4, y + 4, drawWidth, drawHeight, 14, 14);
-                // White page
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(x, y, drawWidth, drawHeight, 4, 4);
-                // Page grid dots (5mm spacing)
-                g2.setColor(new Color(210, 215, 225));
-                double gridMm = 5;
-                double pxPerMmGrid = PREVIEW_RENDER_DPI / 25.4 * scale;
-                for (double gx = 0; gx <= settings.pageSize().widthMm; gx += gridMm) {
-                    int px = x + (int)(gx * pxPerMmGrid);
-                    for (double gy = 0; gy <= settings.pageSize().heightMm; gy += gridMm) {
-                        int py = y + (int)(gy * pxPerMmGrid);
-                        if (px >= x && py >= y && px <= x + drawWidth && py <= y + drawHeight)
-                            g2.fillRect(px, py, 2, 2);
-                    }
-                }
-                g2.drawImage(page, x, y, drawWidth, drawHeight, null);
-                // Subtle page border on dark canvas
-                g2.setColor(new Color(200, 205, 212));
-                g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(x, y, drawWidth, drawHeight, 4, 4);
-                drawLayoutModelOverlay(g2, settings, x, y, scale);
-                // Render dynamic layout elements via CanvasRenderer
-                canvasRenderer.setScale(scale);
-                canvasRenderer.render(g2);
-                drawSnapGuides(g2, x, y, scale, drawWidth, drawHeight);
-                drawPersistentGuides(g2, x, y, scale, drawWidth, drawHeight, settings);
-                drawDrawingPreview(g2, x, y, scale);
-                RulerRenderer.render(g2, 0, 0, getWidth(), getHeight(), settings.pageSize().widthMm, settings.pageSize().heightMm, PREVIEW_RENDER_DPI, scale);
-                SwingUtilities.invokeLater(() -> refreshElementList());
-                drawSelectionOverlay(g2, x, y, scale);
-                if (inlineTitleEditor.isVisible()) {
-                    Rectangle headerBounds = lastRenderResult.elementBounds().get(LayoutElementType.HEADER);
-                    if (headerBounds != null) {
-                        inlineTitleEditor.setBounds(
-                                lastPageBounds.x + (int) Math.round((headerBounds.x + 2) * lastPreviewScale),
-                                lastPageBounds.y + (int) Math.round((headerBounds.y + 6) * lastPreviewScale),
-                                Math.max(180, (int) Math.round(Math.min(headerBounds.width * 0.72d, 460) * lastPreviewScale)),
-                                Math.max(28, (int) Math.round(34 * lastPreviewScale))
-                        );
-                    }
-                }
-                if (inlineCartoucheEditor.isVisible()) {
-                    Rectangle cartoucheBounds = lastRenderResult.elementBounds().get(LayoutElementType.CARTOUCHE);
-                    if (cartoucheBounds != null) {
-                        placeInlineCartoucheEditor(cartoucheBounds);
-                    }
-                }
-
-                g2.setColor(new Color(57, 67, 82));
-                g2.setFont(getFont().deriveFont(Font.BOLD, 12f));
-                String label = settings.pageSize() + " - " + settings.orientation() + " | " + settings.template();
-                g2.drawString(label, x + 12, Math.max(18, y - 10));
-            } finally {
-                g2.dispose();
-            }
-        }
-
-        private void drawSelectionOverlay(Graphics2D g2, int pageX, int pageY, double scale) {
-            LayoutElementType selected = interactionState.getSelectedElement();
-            if (selected == null || lastRenderResult == null) {
-                return;
-            }
-            Rectangle bounds = selected == LayoutElementType.CATMAP_ITEM
-                    ? lastRenderResult.customItemBounds().get(interactionState.getSelectedCustomItemId())
-                    : lastRenderResult.elementBounds().get(selected);
-            if (bounds == null) {
-                return;
-            }
-            int x = pageX + (int) Math.round(bounds.x * scale);
-            int y = pageY + (int) Math.round(bounds.y * scale);
-            int w = Math.max(18, (int) Math.round(bounds.width * scale));
-            int h = Math.max(18, (int) Math.round(bounds.height * scale));
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                Color fill = new Color(37, 99, 235, 26);
-                Color stroke = new Color(37, 99, 235);
-                if (selected == LayoutElementType.MAP_CONTENT && interactionState.isMapFramePanToolActive()) {
-                    fill = new Color(16, 185, 129, 28);
-                    stroke = new Color(5, 150, 105);
-                } else if (selected == LayoutElementType.MAP_CONTENT && interactionState.isMapFrameZoomToolActive()) {
-                    fill = new Color(245, 158, 11, 28);
-                    stroke = new Color(217, 119, 6);
-                }
-                copy.setColor(fill);
-                copy.fillRoundRect(x, y, w, h, 12, 12);
-                copy.setColor(stroke);
-                copy.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{7f, 5f}, 0f));
-                copy.drawRoundRect(x, y, w, h, 12, 12);
-                boolean showHandles = selected == LayoutElementType.MAP_CONTENT
-                        ? interactionState.isMapFrameMoveToolActive()
-                        : (selected == LayoutElementType.HEADER
-                        || selected == LayoutElementType.LEGEND
-                        || selected == LayoutElementType.NORTH
-                        || selected == LayoutElementType.SCALE
-                        || selected == LayoutElementType.CARTOUCHE
-                        || selected == LayoutElementType.PROFILE_IMAGE
-                        || selected == LayoutElementType.CATMAP_ITEM);
-                if (showHandles) {
-                    drawResizeHandle(copy, x, y);
-                    drawResizeHandle(copy, x + w / 2, y);
-                    drawResizeHandle(copy, x + w, y);
-                    drawResizeHandle(copy, x, y + h / 2);
-                    drawResizeHandle(copy, x + w, y + h / 2);
-                    drawResizeHandle(copy, x, y + h);
-                    drawResizeHandle(copy, x + w / 2, y + h);
-                    drawResizeHandle(copy, x + w, y + h);
-                }
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private void drawSnapGuides(Graphics2D g2, int pageX, int pageY, double scale, int drawWidth, int drawHeight) {
-            if ((activeGuideXs.isEmpty() && activeGuideYs.isEmpty()) || lastRenderResult == null) {
-                return;
-            }
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(new Color(14, 116, 144, 170));
-                copy.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{4f, 4f}, 0f));
-                for (Integer guideX : activeGuideXs) {
-                    int x = pageX + (int) Math.round(guideX * scale);
-                    copy.drawLine(x, pageY, x, pageY + drawHeight);
-                }
-                for (Integer guideY : activeGuideYs) {
-                    int y = pageY + (int) Math.round(guideY * scale);
-                    copy.drawLine(pageX, y, pageX + drawWidth, y);
-                }
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private void drawResizeHandle(Graphics2D g2, int centerX, int centerY) {
-            int size = 8;
-            g2.setColor(Color.WHITE);
-            g2.fillRect(centerX - size / 2, centerY - size / 2, size, size);
-            g2.setColor(new Color(37, 99, 235));
-            g2.setStroke(new BasicStroke(1.2f));
-            g2.drawRect(centerX - size / 2, centerY - size / 2, size, size);
-        }
-
-        private record ResizeTarget(LayoutElementType elementType, ResizeHandle handle, String customItemId) {
-        }
-
-        private record SnapResult(Rectangle bounds, List<Integer> guideXs, List<Integer> guideYs) {
-        }
-
-        private record SnapAxisResult(int delta, Integer guide) {
-        }
-    }
-
-    static class LayoutRenderer {
-
-        private LayoutRenderer() {
-        }
-
-        private static BufferedImage render(LayoutSettings settings, LayoutSnapshot snapshot, int width, int height, LayoutInteractionState interactionState, int renderDpi) {
-            return renderResult(settings, snapshot, width, height, interactionState, renderDpi).image();
-        }
-
-        private static boolean isRenderableElementVisible(LayoutInteractionState interactionState, LayoutElementType type) {
-            return !isFixedLayoutElement(type) || interactionState == null || interactionState.isElementVisible(type);
-        }
-
-        private static LayoutRenderResult renderResult(LayoutSettings settings, LayoutSnapshot snapshot, int width, int height, LayoutInteractionState interactionState, int renderDpi) {
-            BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-            EnumMap<LayoutElementType, Rectangle> elementBounds = new EnumMap<>(LayoutElementType.class);
-            java.util.LinkedHashMap<String, Rectangle> customItemBounds = new java.util.LinkedHashMap<>();
-            BufferedImage layoutImage = loadImageAsset(settings.layoutImagePath());
-            MapFrameGeometry mapFrame = null;
-            Graphics2D g2 = image.createGraphics();
-            try {
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                g2.setColor(Color.WHITE);
-                g2.fillRect(0, 0, width, height);
-
-                int margin = Math.max(40, width / 36);
-                int headerHeight = Math.max(112, height / 8);
-                int footerHeight = Math.max(150, height / 6);
-                if (settings.template() == LayoutTemplate.CLEAN_CENTERED) {
-                    headerHeight = Math.max(CLEAN_HEADER_MIN_HEIGHT, (int) Math.round(height * CLEAN_HEADER_HEIGHT_RATIO));
-                    footerHeight = Math.max(CLEAN_FOOTER_MIN_HEIGHT, (int) Math.round(height * CLEAN_FOOTER_HEIGHT_RATIO));
-                } else if (settings.template() == LayoutTemplate.STRONG_CARTOUCHE) {
-                    footerHeight = Math.max(180, height / 5);
-                } else if (settings.template() == LayoutTemplate.BOTTOM_REFERENCE) {
-                    headerHeight = Math.max(108, height / 9);
-                }
-                if (layoutImage != null) {
-                    footerHeight = Math.max(220, footerHeight + 70);
-                }
-                boolean showHeader = isRenderableElementVisible(interactionState, LayoutElementType.HEADER);
-                boolean showMapContent = isRenderableElementVisible(interactionState, LayoutElementType.MAP_CONTENT);
-                boolean showNorth = settings.showNorth() && isRenderableElementVisible(interactionState, LayoutElementType.NORTH);
-                boolean showScale = settings.showScale() && isRenderableElementVisible(interactionState, LayoutElementType.SCALE);
-                boolean showLegend = settings.showLegend() && isRenderableElementVisible(interactionState, LayoutElementType.LEGEND);
-                boolean legendOutsideRight = showLegend && settings.legendPlacement() == LegendPlacement.RIGHT_PANEL;
-                boolean legendBottom = showLegend && settings.legendPlacement() == LegendPlacement.BOTTOM_PANEL;
-                int legendWidth = legendOutsideRight ? Math.max(260, width / 5) : 0;
-                int legendHeight = legendBottom ? Math.max(140, height / 5) : 0;
-                int gap = showLegend ? Math.max(18, width / 60) : 0;
-                int mapX = margin;
-                int mapY = margin + headerHeight;
-                int mapW = Math.max(200, width - (margin * 2) - legendWidth - gap);
-                int mapH = Math.max(220, height - mapY - footerHeight - margin - (legendBottom ? legendHeight + gap : 0));
-
-                Rectangle headerBounds = applyElementAdjustment(new Rectangle(margin, margin, width - (margin * 2), headerHeight - 14), interactionState, LayoutElementType.HEADER);
-                if (showHeader) {
-                    drawHeader(g2, settings, snapshot, headerBounds);
-                    elementBounds.put(LayoutElementType.HEADER, new Rectangle(headerBounds));
-                }
-
-                Rectangle requestedMapBounds = applyElementAdjustment(new Rectangle(mapX, mapY, mapW, mapH), interactionState, LayoutElementType.MAP_CONTENT);
-                if (!interactionState.hasCustomSize(LayoutElementType.MAP_CONTENT)) {
-                    requestedMapBounds = optimizeMapFrame(requestedMapBounds, snapshot.mapImage(), settings.template());
-                }
-                if (showMapContent) {
-                    mapFrame = drawMapFrame(g2, snapshot, requestedMapBounds, interactionState);
-                    elementBounds.put(LayoutElementType.MAP_CONTENT, new Rectangle(mapFrame.frameBounds()));
-                } else {
-                    Rectangle hiddenMapBounds = new Rectangle(requestedMapBounds);
-                    mapFrame = new MapFrameGeometry(hiddenMapBounds, hiddenMapBounds, 0d);
-                }
-                if (showMapContent && settings.showGrid()) {
-                    drawGrid(g2, settings, mapFrame);
-                }
-
-                if (showNorth) {
-                    Rectangle northBounds = applyElementAdjustment(new Rectangle(
-                            mapFrame.frameBounds().x + mapFrame.frameBounds().width - 92,
-                            mapFrame.frameBounds().y + 20,
-                            Math.max(54, width / 22),
-                            Math.max(54, width / 22)
-                    ), interactionState, LayoutElementType.NORTH);
-                    int northSize = Math.max(32, Math.min(northBounds.width, northBounds.height));
-                    Rectangle northVisualBounds = new Rectangle(northBounds.x, northBounds.y, northSize, northSize);
-                    drawNorthArrow(g2, settings.northStyle(), northVisualBounds.x, northVisualBounds.y, northVisualBounds.width);
-                    elementBounds.put(LayoutElementType.NORTH, northVisualBounds);
-                }
-                if (showScale && showMapContent) {
-                    int scaleMaxW = settings.template() == LayoutTemplate.CLEAN_CENTERED
-                            ? Math.min(160, mapFrame.frameBounds().width / 5)
-                            : Math.min(240, mapFrame.frameBounds().width / 3);
-                    Rectangle scaleBounds = applyElementAdjustment(new Rectangle(
-                            mapFrame.frameBounds().x + 8,
-                            mapFrame.frameBounds().y + mapFrame.frameBounds().height - 74,
-                            scaleMaxW,
-                            54
-                    ), interactionState, LayoutElementType.SCALE);
-                    drawScaleBar(g2, settings, snapshot, mapFrame, scaleBounds.x + 14, scaleBounds.y + 18, renderDpi);
-                    elementBounds.put(LayoutElementType.SCALE, scaleBounds);
-                }
-                if (showLegend) {
-                    Rectangle legendBounds = resolveLegendBounds(settings, width, margin, gap, legendWidth, legendHeight, mapFrame, mapFrame.frameBounds().y + mapFrame.frameBounds().height);
-                    legendBounds = applyElementAdjustment(legendBounds, interactionState, LayoutElementType.LEGEND);
-                    drawLegend(g2, settings, snapshot.visibleLayers(), legendBounds.x, legendBounds.y, legendBounds.width, legendBounds.height, interactionState);
-                    elementBounds.put(LayoutElementType.LEGEND, legendBounds);
-                }
-
-                FooterRenderResult footerResult = drawFooter(g2, settings, snapshot, width, height, margin, footerHeight, mapFrame, interactionState, layoutImage, renderDpi);
-                if (footerResult.cartoucheBounds() != null) {
-                    elementBounds.put(LayoutElementType.CARTOUCHE, footerResult.cartoucheBounds());
-                }
-                if (footerResult.profileImageBounds() != null) {
-                    elementBounds.put(LayoutElementType.PROFILE_IMAGE, footerResult.profileImageBounds());
-                }
-                drawCatmapItems(g2, settings.catmapItems(), customItemBounds);
-            } finally {
-                g2.dispose();
-            }
-            double exactScaleDenominator = estimateScaleDenominator(mapFrame, renderDpi);
-            return new LayoutRenderResult(image, elementBounds, customItemBounds, exactScaleDenominator);
-        }
-
-        private static void exportPdf(LayoutSettings settings, LayoutSnapshot snapshot, File file, LayoutInteractionState interactionState) throws Exception {
-            try (PDDocument document = new PDDocument()) {
-                PDRectangle rectangle = settings.pageSize().toPdfRectangle(settings.orientation());
-                PDPage page = new PDPage(rectangle);
-                document.addPage(page);
-
-                Dimension size = settings.pageSize().pixelSize(settings.orientation(), settings.dpi());
-                BufferedImage layoutArgb = render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
-                BufferedImage layout = new BufferedImage(layoutArgb.getWidth(), layoutArgb.getHeight(), BufferedImage.TYPE_INT_RGB);
-                Graphics2D rgbG2 = layout.createGraphics();
-                try {
-                    rgbG2.setColor(Color.WHITE);
-                    rgbG2.fillRect(0, 0, layout.getWidth(), layout.getHeight());
-                    rgbG2.drawImage(layoutArgb, 0, 0, null);
-                } finally {
-                    rgbG2.dispose();
-                }
-                PDImageXObject pdfImage = LosslessFactory.createFromImage(document, layout);
-
-                try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-                    content.drawImage(pdfImage, 0, 0, rectangle.getWidth(), rectangle.getHeight());
-                }
-                document.save(file);
-            }
-        }
-
-        private static Rectangle resolveLegendBounds(LayoutSettings settings, int width, int margin, int gap, int legendWidth, int legendHeight, MapFrameGeometry mapFrame, int bottomY) {
-            return switch (settings.legendPlacement()) {
-                case BOTTOM_PANEL -> new Rectangle(margin, bottomY + gap, width - (margin * 2), legendHeight);
-                case MAP_TOP_RIGHT -> new Rectangle(
-                        mapFrame.frameBounds().x + mapFrame.frameBounds().width - Math.max(180, mapFrame.frameBounds().width / 4),
-                        mapFrame.frameBounds().y + 18,
-                        Math.max(180, mapFrame.frameBounds().width / 4),
-                        Math.max(120, mapFrame.frameBounds().height / 4)
-                );
-                case MAP_BOTTOM_RIGHT -> {
-                    int maxW = Math.max(180, mapFrame.frameBounds().width / 4);
-                    int maxH = Math.max(120, mapFrame.frameBounds().height / 4);
-                    if (settings.template() == LayoutTemplate.CLEAN_CENTERED) {
-                        maxW = Math.max(maxW, mapFrame.frameBounds().width / 5);
-                        maxH = Math.max(maxH, mapFrame.frameBounds().height / 4);
-                    }
-                    yield new Rectangle(
-                            mapFrame.frameBounds().x + mapFrame.frameBounds().width - maxW - 12,
-                            mapFrame.frameBounds().y + mapFrame.frameBounds().height - maxH - 12,
-                            maxW,
-                            maxH
-                    );
-                }
-                case MAP_BOTTOM_LEFT -> new Rectangle(
-                        mapFrame.frameBounds().x + 18,
-                        mapFrame.frameBounds().y + mapFrame.frameBounds().height - Math.max(120, mapFrame.frameBounds().height / 4) - 18,
-                        Math.max(180, mapFrame.frameBounds().width / 4),
-                        Math.max(120, mapFrame.frameBounds().height / 4)
-                );
-                default -> new Rectangle(
-                        mapFrame.frameBounds().x + mapFrame.frameBounds().width + gap,
-                        mapFrame.frameBounds().y,
-                        legendWidth,
-                        mapFrame.frameBounds().height
-                );
-            };
-        }
-
-        private static Rectangle applyOffset(Rectangle source, Point offset) {
-            Rectangle result = new Rectangle(source);
-            if (offset != null) {
-                result.translate(offset.x, offset.y);
-            }
-            return result;
-        }
-
-        private static Rectangle applyElementAdjustment(Rectangle source, LayoutInteractionState interactionState, LayoutElementType type) {
-            Rectangle result = new Rectangle(source);
-            if (interactionState == null || type == null) {
-                return result;
-            }
-            Point offset = interactionState.getOffset(type);
-            Dimension sizeAdjustment = interactionState.getSizeAdjustment(type);
-            result.translate(offset.x, offset.y);
-            int minWidth = switch (type) {
-                case NORTH -> 32;
-                case SCALE -> 96;
-                case HEADER -> 180;
-                case MAP_CONTENT -> 260;
-                default -> 80;
-            };
-            int minHeight = switch (type) {
-                case NORTH -> 32;
-                case SCALE -> 34;
-                case HEADER -> 56;
-                case MAP_CONTENT -> 180;
-                default -> 60;
-            };
-            result.width = Math.max(minWidth, result.width + sizeAdjustment.width);
-            result.height = Math.max(minHeight, result.height + sizeAdjustment.height);
-            return result;
-        }
-
-        private static Rectangle optimizeMapFrame(Rectangle availableBounds, BufferedImage mapImage, LayoutTemplate template) {
-            if (template == LayoutTemplate.CLEAN_CENTERED) {
-                return new Rectangle(availableBounds);
-            }
-            if (mapImage == null || availableBounds.width <= 0 || availableBounds.height <= 0) {
-                return new Rectangle(availableBounds);
-            }
-            double mapAspect = mapImage.getWidth() / (double) Math.max(1, mapImage.getHeight());
-            double availableAspect = availableBounds.getWidth() / Math.max(1d, availableBounds.getHeight());
-            Rectangle adjusted = new Rectangle(availableBounds);
-
-            if (Math.abs(mapAspect - availableAspect) < 0.02d) {
-                return adjusted;
-            }
-
-            if (mapAspect > availableAspect) {
-                int targetHeight = Math.max(180, (int) Math.round(adjusted.width / mapAspect));
-                if (targetHeight < adjusted.height) {
-                    int anchorY = template == LayoutTemplate.CLEAN_CENTERED
-                            ? adjusted.y + Math.max(0, (adjusted.height - targetHeight) / 2)
-                            : adjusted.y;
-                    adjusted = new Rectangle(adjusted.x, anchorY, adjusted.width, targetHeight);
-                }
-            } else {
-                int targetWidth = Math.max(220, (int) Math.round(adjusted.height * mapAspect));
-                if (targetWidth < adjusted.width) {
-                    adjusted = new Rectangle(
-                            adjusted.x + Math.max(0, (adjusted.width - targetWidth) / 2),
-                            adjusted.y,
-                            targetWidth,
-                            adjusted.height
-                    );
-                }
-            }
-            return adjusted;
-        }
-
-        private static void drawHeader(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, Rectangle bounds) {
-            boolean cleanTemplate = settings.template() == LayoutTemplate.CLEAN_CENTERED;
-            int titleFontSize = cleanTemplate ? Math.max(22, bounds.width / 48) : Math.max(28, bounds.width / 34);
-            int subtitleFontSize = cleanTemplate ? Math.max(12, bounds.width / 110) : Math.max(15, bounds.width / 90);
-            int metaFontSize = cleanTemplate ? Math.max(11, bounds.width / 120) : Math.max(13, bounds.width / 100);
-            int titleY = bounds.y + Math.max(22, bounds.height / 5);
-            int rowGap = cleanTemplate ? 24 : 30;
-
-            g2.setColor(new Color(27, 38, 56));
-            g2.setFont(new Font("SansSerif", Font.BOLD, titleFontSize));
-            String title = !settings.title().isBlank() ? settings.title() : snapshot.projectName();
-            java.awt.FontMetrics titleMetrics = g2.getFontMetrics();
-            if (cleanTemplate && titleMetrics.stringWidth(title) > bounds.width - 10) {
-                title = clipText(title, (bounds.width - 10) / Math.max(1, (int) Math.round(titleMetrics.stringWidth("W"))));
-            }
-            g2.drawString(title, bounds.x, titleY);
-
-            if (cleanTemplate) {
-                g2.setFont(new Font("SansSerif", Font.PLAIN, metaFontSize));
-                g2.setColor(new Color(105, 114, 126));
-                String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
-                g2.drawString(meta, bounds.x, titleY + rowGap);
-            } else {
-                g2.setFont(new Font("SansSerif", Font.PLAIN, subtitleFontSize));
-                g2.setColor(new Color(91, 103, 120));
-                String subtitle = !settings.subtitle().isBlank() ? settings.subtitle() : "Salida cartografica del proyecto actual";
-                g2.drawString(subtitle, bounds.x, titleY + rowGap);
-
-                g2.setFont(new Font("SansSerif", Font.PLAIN, metaFontSize));
-                g2.setColor(new Color(105, 114, 126));
-                String meta = snapshot.projectName() + " | " + snapshot.projectCrsLabel();
-                g2.drawString(meta, bounds.x, titleY + rowGap * 2);
-            }
-
-        }
-
-        private static void drawChip(Graphics2D g2, int x, int y, String text) {
-            Font chipFont = new Font("SansSerif", Font.BOLD, 11);
-            g2.setFont(chipFont);
-            java.awt.FontMetrics metrics = g2.getFontMetrics();
-            int width = metrics.stringWidth(text) + 18;
-            g2.setColor(new Color(239, 244, 251));
-            g2.fillRoundRect(x, y, width, 24, 12, 12);
-            g2.setColor(new Color(197, 210, 227));
-            g2.drawRoundRect(x, y, width, 24, 12, 12);
-            g2.setColor(new Color(58, 71, 90));
-            g2.drawString(text, x + 9, y + 16);
-        }
-
-        private static MapFrameGeometry drawMapFrame(Graphics2D g2, LayoutSnapshot snapshot, Rectangle requestedBounds, LayoutInteractionState interactionState) {
-            int x = requestedBounds.x;
-            int y = requestedBounds.y;
-            int w = requestedBounds.width;
-            int h = requestedBounds.height;
-            g2.setColor(new Color(255, 255, 255));
-            g2.fillRoundRect(x, y, w, h, 12, 12);
-            g2.setColor(new Color(180, 190, 204));
-            g2.setStroke(new BasicStroke(0.7f));
-            g2.drawRoundRect(x, y, w, h, 12, 12);
-
-            int innerPadding = Math.max(12, Math.min(w, h) / 50);
-            int contentX = x + innerPadding;
-            int contentY = y + innerPadding;
-            int contentW = w - (innerPadding * 2);
-            int contentH = h - (innerPadding * 2);
-
-            g2.setColor(new Color(255, 255, 255));
-            g2.fillRect(contentX, contentY, contentW, contentH);
-
-            BufferedImage mapImage = snapshot != null ? snapshot.mapImage() : null;
-            double shownGroundMeters = snapshot != null ? snapshot.representativeMeters() : 0d;
-            if (snapshot != null && ctxMapPanel() != null && snapshot.basePixelWidth() > 0 && snapshot.basePixelHeight() > 0) {
-                double zoomMultiplier = interactionState != null ? Math.max(0.02d, interactionState.getMapZoom()) : 1d;
-                double targetZoom = Math.max(0.000001d, snapshot.baseZoomFactor() * zoomMultiplier);
-                double baseWorldWidth = snapshot.basePixelWidth() / Math.max(snapshot.baseZoomFactor(), 0.000001d);
-                double baseWorldHeight = snapshot.basePixelHeight() / Math.max(snapshot.baseZoomFactor(), 0.000001d);
-                double baseCenterX = snapshot.baseViewMinX() + (baseWorldWidth / 2d);
-                double baseCenterY = snapshot.baseViewMinY() + (baseWorldHeight / 2d);
-                double offsetWorldX = (interactionState != null ? interactionState.getMapOffsetX() : 0d) / targetZoom;
-                double offsetWorldY = (interactionState != null ? interactionState.getMapOffsetY() : 0d) / targetZoom;
-                double currentWorldWidth = Math.max(1d, contentW) / targetZoom;
-                double currentWorldHeight = Math.max(1d, contentH) / targetZoom;
-                double viewCenterX = baseCenterX - offsetWorldX;
-                double viewCenterY = baseCenterY + offsetWorldY;
-                double viewMinX = viewCenterX - (currentWorldWidth / 2d);
-                double viewMinY = viewCenterY - (currentWorldHeight / 2d);
-                BufferedImage rendered = ctxMapPanel().renderMapViewImage(viewMinX, viewMinY, targetZoom, contentW, contentH);
-                if (rendered != null) {
-                    mapImage = rendered;
-                }
-                shownGroundMeters = convertWorldWidthToMeters(snapshot, currentWorldWidth, viewCenterY);
-            }
-            if (mapImage == null) {
-                mapImage = new BufferedImage(Math.max(1, contentW), Math.max(1, contentH), BufferedImage.TYPE_INT_ARGB);
-            }
-            double visibleGroundMeters = shownGroundMeters;
-            Graphics2D imageGraphics = (Graphics2D) g2.create();
-            try {
-                imageGraphics.setClip(contentX, contentY, contentW, contentH);
-                imageGraphics.drawImage(mapImage, contentX, contentY, contentW, contentH, null);
-            } finally {
-                imageGraphics.dispose();
-            }
-
-            g2.setColor(new Color(157, 169, 184));
-            g2.drawRect(contentX, contentY, contentW, contentH);
-
-            g2.setColor(new Color(103, 112, 124, 88));
-            g2.drawLine(contentX + contentW / 2, contentY, contentX + contentW / 2, contentY + contentH);
-            g2.drawLine(contentX, contentY + contentH / 2, contentX + contentW, contentY + contentH / 2);
-
-            return new MapFrameGeometry(new Rectangle(contentX, contentY, contentW, contentH), new Rectangle(contentX, contentY, contentW, contentH), visibleGroundMeters);
-        }
-
-        private static void drawGrid(Graphics2D g2, LayoutSettings settings, MapFrameGeometry mapFrame) {
-            int cols = Math.max(2, settings.gridColumns());
-            int rows = Math.max(2, settings.gridRows());
-            Rectangle bounds = mapFrame.imageBounds();
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(new Color(37, 99, 235, 110));
-                copy.setStroke(new BasicStroke(1.1f));
-                for (int col = 1; col < cols; col++) {
-                    int x = bounds.x + (int) Math.round(bounds.width * (col / (double) cols));
-                    copy.drawLine(x, bounds.y, x, bounds.y + bounds.height);
-                }
-                for (int row = 1; row < rows; row++) {
-                    int y = bounds.y + (int) Math.round(bounds.height * (row / (double) rows));
-                    copy.drawLine(bounds.x, y, bounds.x + bounds.width, y);
-                }
-
-                if (settings.showGridLabels()) {
-                    copy.setFont(new Font("SansSerif", Font.BOLD, 11));
-                    copy.setColor(new Color(29, 78, 216));
-                    for (int col = 0; col < cols; col++) {
-                        int centerX = bounds.x + (int) Math.round(bounds.width * ((col + 0.5d) / cols));
-                        copy.drawString(letterLabel(col + 1), centerX - 4, bounds.y - 6);
-                    }
-                    for (int row = 0; row < rows; row++) {
-                        int centerY = bounds.y + (int) Math.round(bounds.height * ((row + 0.5d) / rows));
-                        copy.drawString(String.valueOf(row + 1), bounds.x - 18, centerY + 4);
-                    }
-                }
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static String letterLabel(int index) {
-            int value = Math.max(1, index);
-            StringBuilder label = new StringBuilder();
-            while (value > 0) {
-                value--;
-                label.insert(0, (char) ('A' + (value % 26)));
-                value /= 26;
-            }
-            return label.toString();
-        }
-
-        private static void drawNorthArrow(Graphics2D g2, NorthStyle style, int x, int y, int size) {
-            paintNorthSymbol(g2, style, x, y, size);
-        }
-
-    private static ImageIcon createNorthPreviewIcon(NorthStyle style, int size) {
-        int iconSize = Math.max(18, size);
-        BufferedImage image = new BufferedImage(iconSize, iconSize, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = image.createGraphics();
-        try {
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            paintNorthSymbol(g2, style, 0, 0, iconSize);
-        } finally {
-            g2.dispose();
-        }
-        return new ImageIcon(image);
-    }
-
-    private static void paintNorthSymbol(Graphics2D g2, NorthStyle style, int x, int y, int size) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                NorthStyle resolved = style != null ? style : NorthStyle.CLASSIC;
-                int centerX = x + size / 2;
-                int top = y + 10;
-                int bottom = y + size - 12;
-
-                if (resolved == NorthStyle.SIMPLE) {
-                    copy.setColor(new Color(255, 255, 255, 220));
-                    copy.fillRoundRect(x + 6, y + 4, size - 12, size - 8, 14, 14);
-                    copy.setColor(new Color(34, 44, 60));
-                    copy.setFont(new Font("SansSerif", Font.BOLD, Math.max(14, size / 3)));
-                    copy.drawString("N", centerX - 5, y + 18);
-                    copy.setStroke(new BasicStroke(2f));
-                    copy.drawLine(centerX, y + 22, centerX, bottom);
-                    copy.drawLine(centerX, y + 22, centerX - 8, y + 34);
-                    copy.drawLine(centerX, y + 22, centerX + 8, y + 34);
-                    return;
-                }
-
-                if (resolved == NorthStyle.TECHNICAL) {
-                    copy.setColor(new Color(255, 255, 255, 232));
-                    copy.fillRoundRect(x + 3, y + 3, size - 6, size - 6, 12, 12);
-                    copy.setColor(new Color(196, 205, 216));
-                    copy.drawRoundRect(x + 3, y + 3, size - 6, size - 6, 12, 12);
-                    copy.setColor(new Color(31, 41, 55));
-                    copy.setStroke(new BasicStroke(Math.max(1.8f, size / 20f)));
-                    copy.drawLine(centerX, y + 12, centerX, bottom - 2);
-                    copy.drawLine(x + 14, y + size / 2, x + size - 14, y + size / 2);
-                    Path2D head = new Path2D.Double();
-                    head.moveTo(centerX, y + 8);
-                    head.lineTo(centerX + size / 9d, y + size / 3d);
-                    head.lineTo(centerX - size / 9d, y + size / 3d);
-                    head.closePath();
-                    copy.setColor(new Color(14, 116, 144));
-                    copy.fill(head);
-                    copy.setColor(new Color(31, 41, 55));
-                    copy.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, size / 4)));
-                    copy.drawString("N", centerX - 5, y + 18);
-                    return;
-                }
-
-                copy.setColor(new Color(255, 255, 255, 226));
-                copy.fill(new Ellipse2D.Double(x, y, size, size));
-                copy.setColor(new Color(207, 214, 224));
-                copy.draw(new Ellipse2D.Double(x, y, size, size));
-
-                if (resolved == NorthStyle.ROSE) {
-                    copy.setColor(new Color(241, 245, 249));
-                    copy.fill(new Ellipse2D.Double(x + size * 0.16, y + size * 0.16, size * 0.68, size * 0.68));
-                    copy.setColor(new Color(207, 214, 224));
-                    copy.draw(new Ellipse2D.Double(x + size * 0.16, y + size * 0.16, size * 0.68, size * 0.68));
-                    Path2D northNeedle = new Path2D.Double();
-                    northNeedle.moveTo(centerX, top);
-                    northNeedle.lineTo(centerX + size / 9d, centerX);
-                    northNeedle.lineTo(centerX, bottom - size / 4d);
-                    northNeedle.lineTo(centerX - size / 9d, centerX);
-                    northNeedle.closePath();
-                    Path2D southNeedle = new Path2D.Double();
-                    southNeedle.moveTo(centerX, bottom);
-                    southNeedle.lineTo(centerX + size / 10d, centerX);
-                    southNeedle.lineTo(centerX, top + size / 3d);
-                    southNeedle.lineTo(centerX - size / 10d, centerX);
-                    southNeedle.closePath();
-                    copy.setColor(new Color(15, 23, 42));
-                    copy.fill(northNeedle);
-                    copy.setColor(new Color(245, 158, 11));
-                    copy.fill(southNeedle);
-                    copy.setColor(new Color(14, 116, 144));
-                    copy.fillPolygon(
-                            new int[]{centerX, x + size - 12, centerX, x + 12},
-                            new int[]{y + size / 2, y + size / 2, y + size / 2 + 6, y + size / 2},
-                            4
-                    );
-                    copy.setColor(new Color(28, 38, 54));
-                    copy.setFont(new Font("SansSerif", Font.BOLD, Math.max(14, size / 3)));
-                    copy.drawString("N", centerX - 6, top - 2);
-                    return;
-                }
-
-                Path2D arrow = new Path2D.Double();
-                arrow.moveTo(centerX, top);
-                arrow.lineTo(centerX + size / 7d, bottom - size / 5d);
-                arrow.lineTo(centerX, bottom - size / 3d);
-                arrow.lineTo(centerX - size / 7d, bottom - size / 5d);
-                arrow.closePath();
-
-                if (resolved == NorthStyle.MODERN) {
-                    copy.setColor(new Color(15, 23, 42));
-                    copy.fill(arrow);
-                    copy.setColor(new Color(96, 165, 250));
-                    copy.fillPolygon(new int[]{centerX, centerX + 6, centerX}, new int[]{top + 6, bottom - 10, bottom - 18}, 3);
-                } else {
-                    copy.setPaint(new GradientPaint(x, y, new Color(22, 94, 188), x + size, y + size, new Color(8, 54, 117)));
-                    copy.fill(arrow);
-                }
-                copy.setColor(new Color(28, 38, 54));
-                copy.setFont(new Font("SansSerif", Font.BOLD, Math.max(14, size / 3)));
-                copy.drawString("N", centerX - 6, top - 2);
-            } finally {
-                copy.dispose();
-            }
-    }
-
-        private static void drawScaleBar(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, MapFrameGeometry mapFrame, int x, int y, int renderDpi) {
-            if (mapFrame.shownGroundMeters() <= 0 || mapFrame.imageBounds().width <= 0) {
-                return;
-            }
-
-            double metersPerPixel = mapFrame.shownGroundMeters() / Math.max(1d, mapFrame.imageBounds().width);
-            double maxMeters = metersPerPixel * Math.min(drawScaleBarMaxMetricMeters(mapFrame), mapFrame.imageBounds().width * 0.28d);
-            double roundedMeters = settings.scaleRule().roundValue(maxMeters);
-            int barWidth = (int) Math.max(72, Math.round(roundedMeters / metersPerPixel));
-            int maxBarPx = (int) (mapFrame.imageBounds().width * 0.30d);
-            barWidth = Math.min(barWidth, maxBarPx);
-            int segmentCount = barWidth >= 160 ? 4 : 2;
-            int segmentWidth = Math.max(1, barWidth / segmentCount);
-
-            double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
-            String scaleText = exactDenominator > 0
-                    ? formatScaleDenominator(exactDenominator)
-                    : snapshot.scaleLabel();
-
-            if (settings.scaleStyle() == ScaleStyle.NUMERIC) {
-                g2.setColor(new Color(255, 255, 255, 218));
-                g2.fillRoundRect(x - 12, y - 26, 138, 36, 14, 14);
-                g2.setColor(new Color(70, 80, 96));
-                g2.setFont(new Font("SansSerif", Font.BOLD, 14));
-                g2.drawString(scaleText, x, y - 3);
-                return;
-            }
-
-            g2.setColor(new Color(255, 255, 255, 218));
-            g2.fillRoundRect(x - 12, y - 34, barWidth + 110, 50, 14, 14);
-            g2.setColor(new Color(70, 80, 96));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-            g2.drawString(scaleText, x, y - 14);
-
-            if (settings.scaleStyle() == ScaleStyle.SIMPLE_BAR) {
-                g2.setColor(Color.BLACK);
-                g2.fillRect(x, y + 2, barWidth, 7);
-                g2.drawString("0", x - 4, y + 28);
-                g2.drawString(formatDistance(roundedMeters), x + barWidth - 12, y + 28);
-                return;
-            }
-
-            for (int i = 0; i < segmentCount; i++) {
-                g2.setColor(i % 2 == 0 ? Color.BLACK : Color.WHITE);
-                int segmentX = x + (i * segmentWidth);
-                int width = i == segmentCount - 1 ? barWidth - (segmentWidth * i) : segmentWidth;
-                g2.fillRect(segmentX, y, width, 12);
-                g2.setColor(Color.BLACK);
-                g2.drawRect(segmentX, y, width, 12);
-            }
-            g2.drawString("0", x - 4, y + 28);
-            g2.drawString(formatDistance(roundedMeters), x + barWidth - 12, y + 28);
-        }
-
-        private static double drawScaleBarMaxMetricMeters(MapFrameGeometry mapFrame) {
-            if (mapFrame == null || mapFrame.imageBounds().width <= 0) {
-                return 120d;
-            }
-            double aspectRatio = mapFrame.imageBounds().width / Math.max(1d, mapFrame.imageBounds().height);
-            if (aspectRatio > 1.6d) {
-                return 96d;
-            }
-            if (aspectRatio < 1.1d) {
-                return 150d;
-            }
-            return 120d;
-        }
-
-        private static void drawLegend(Graphics2D g2, LayoutSettings settings, List<Layer> layers, int x, int y, int width, int height, LayoutInteractionState interactionState) {
-            List<LegendItem> items = buildLegendItems(layers);
-
-            boolean userResized = interactionState != null && !interactionState.getSizeAdjustment(LayoutElementType.LEGEND).equals(new java.awt.Dimension(0, 0));
-
-            int fontSizeTitle;
-            int fontSizeSub;
-            int fontSizeItem;
-            int itemH;
-            int headerH;
-            int padBottom;
-            int padX;
-
-            if (userResized) {
-                fontSizeTitle = Math.max(12, Math.min(22, height / 8));
-                fontSizeSub = Math.max(10, Math.min(16, height / 12));
-                fontSizeItem = Math.max(10, Math.min(16, height / 12));
-                padX = Math.max(10, Math.min(20, width / 18));
-                headerH = Math.max(40, height / 4);
-                itemH = Math.max(22, Math.min(40, (height - headerH - 14) / Math.max(1, items.size())));
-                padBottom = Math.max(10, height / 16);
-            } else {
-                fontSizeTitle = 14;
-                fontSizeSub = 12;
-                fontSizeItem = 12;
-                padX = 14;
-                headerH = 56;
-                itemH = 28;
-                padBottom = 16;
-                int needed = headerH + (items.size() * itemH) + padBottom;
-                if (needed < height) {
-                    int diff = height - needed;
-                    y += diff / 2;
-                    height = needed;
-                }
-            }
-
-            if (items.isEmpty()) {
-                height = Math.max(56, headerH + padBottom);
-            }
-
-            g2.setColor(new Color(250, 252, 255));
-            g2.fillRoundRect(x, y, width, height, 14, 14);
-            g2.setColor(new Color(210, 216, 224));
-            g2.drawRoundRect(x, y, width, height, 14, 14);
-
-            g2.setColor(new Color(26, 36, 52));
-            g2.setFont(new Font("SansSerif", Font.BOLD, fontSizeTitle));
-            String legendTitle = !settings.legendTitle().isBlank() ? settings.legendTitle() : "Referencias";
-            g2.drawString(legendTitle, x + padX, y + fontSizeTitle + 6);
-
-            g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
-            g2.setColor(new Color(103, 114, 128));
-            String legendSubtitle = !settings.legendSubtitle().isBlank() ? settings.legendSubtitle() : "Capas del mapa";
-            g2.drawString(legendSubtitle, x + padX, y + fontSizeTitle + fontSizeSub + 12);
-
-            if (items.isEmpty()) {
-                g2.drawString("Sin capas para mostrar.", x + padX, y + headerH);
-                return;
-            }
-
-            int itemY = y + headerH;
-            int count = 0;
-            for (LegendItem item : items) {
-                if (itemY + itemH > y + height - padBottom) {
-                    int remaining = Math.max(0, items.size() - count);
-                    g2.setFont(new Font("SansSerif", Font.PLAIN, fontSizeSub));
-                    g2.setColor(new Color(108, 116, 128));
-                    g2.drawString("+" + remaining + " mas", x + padX, y + height - 6);
-                    break;
-                }
-                drawLegendItemScaled(g2, item, x + padX, itemY, width - (padX * 2), fontSizeItem, userResized);
-                itemY += itemH;
-                count++;
-            }
-        }
-
-        private static void drawLegendItemScaled(Graphics2D g2, LegendItem item, int x, int y, int availableWidth, int fontSize, boolean scaled) {
-            Layer layer = item.layer();
-            ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
-            String geometryFamily = VectorLayerUtils.resolveGeometryFamily(data);
-
-            int symSize = scaled ? Math.max(12, fontSize + 4) : 20;
-
-            if (layer instanceof RasterLayer || layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) {
-                g2.setPaint(new GradientPaint(x, y, new Color(96, 165, 250), x + symSize, y + symSize, new Color(59, 130, 246)));
-                g2.fillRect(x, y - symSize/2, symSize, symSize/2 + 4);
-                g2.setColor(new Color(30, 41, 59));
-                g2.drawRect(x, y - symSize/2, symSize, symSize/2 + 4);
-            } else if ("POINT".equalsIgnoreCase(item.geometryType())) {
-                drawPointSymbolPreview(g2, layer, x, y, item.categoryRule());
-            } else if ("LINE".equalsIgnoreCase(item.geometryType())) {
-                drawLineSymbolPreview(g2, layer, x, y, item.categoryRule());
-            } else if ("POLYGON".equalsIgnoreCase(item.geometryType())) {
-                drawPolygonSymbolPreview(g2, layer, x, y, item.categoryRule());
-            } else if ("POINT".equalsIgnoreCase(geometryFamily)) {
-                drawPointSymbolPreview(g2, layer, x, y, null);
-            } else if ("LINE".equalsIgnoreCase(geometryFamily)) {
-                drawLineSymbolPreview(g2, layer, x, y, null);
-            } else {
-                drawPolygonSymbolPreview(g2, layer, x, y, null);
-            }
-
-            g2.setFont(new Font("SansSerif", Font.BOLD, fontSize));
-            g2.setColor(new Color(37, 45, 58));
-            String name = item.label() != null ? item.label() : "Capa";
-            int maxChars = Math.max(8, (availableWidth - 30) / (fontSize / 2));
-            if (name.length() > maxChars) {
-                name = name.substring(0, Math.max(1, maxChars - 3)) + "...";
-            }
-            g2.drawString(name, x + 32, y + (fontSize / 3));
-
-            g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(9, fontSize - 1)));
-            g2.setColor(new Color(107, 114, 128));
-            String detail = item.subtitle() != null ? item.subtitle() : layerTypeLabel(layer);
-            if (detail.length() > maxChars) {
-                detail = detail.substring(0, Math.max(1, maxChars - 3)) + "...";
-            }
-            g2.drawString(detail, x + 32, y + fontSize + 2);
-        }
-
-        private static List<LegendItem> buildLegendItems(List<Layer> layers) {
-            List<LegendItem> automaticItems = buildAutomaticLegendItems(layers);
-            if (automaticItems.isEmpty()) {
-                return automaticItems;
-            }
-
-            List<CatmapLegendItem> automaticEntries = new ArrayList<>();
-            java.util.Map<String, LegendItem> automaticByKey = new java.util.LinkedHashMap<>();
-            for (LegendItem item : automaticItems) {
-                automaticEntries.add(new CatmapLegendItem(
-                        item.key(),
-                        item.label(),
-                        item.subtitle(),
-                        CatmapLegendSupport.isLegendVisibleByDefault(item.layer())
-                ));
-                automaticByKey.put(item.key(), item);
-            }
-
-            List<CatmapLegendItem> configuredEntries = CatmapLegendSupport.mergeEntries(
-                    automaticEntries,
-                    ctxProject() != null ? ctxProject().getCatmapLegendItems() : null
-            );
-
-            List<LegendItem> mergedItems = new ArrayList<>();
-            for (CatmapLegendItem configured : configuredEntries) {
-                if (configured == null || !configured.isVisible()) {
-                    continue;
-                }
-                LegendItem automatic = automaticByKey.get(configured.getKey());
-                if (automatic == null) {
-                    continue;
-                }
-                mergedItems.add(new LegendItem(
-                        automatic.key(),
-                        !configured.getLabel().isBlank() ? configured.getLabel() : automatic.label(),
-                        !configured.getSubtitle().isBlank() ? configured.getSubtitle() : automatic.subtitle(),
-                        automatic.layer(),
-                        automatic.categoryRule(),
-                        automatic.geometryType()
-                ));
-            }
-            return mergedItems;
-        }
-
-        private static List<LegendItem> buildAutomaticLegendItems(List<Layer> layers) {
-            List<LegendItem> items = new ArrayList<>();
-            if (layers == null) {
-                return items;
-            }
-            for (Layer layer : layers) {
-                if (layer == null) {
-                    continue;
-                }
-                if (layer.getPointCategorizedSymbology().isConfigured()) {
-                    for (CategoryStyleRule rule : layer.getPointCategorizedSymbology().getRules().values()) {
-                        items.add(new LegendItem(
-                                CatmapLegendSupport.buildKey(layer, rule, "POINT"),
-                                rule.getValue(),
-                                layer.getName(),
-                                layer,
-                                rule,
-                                "POINT"
-                        ));
-                    }
-                    continue;
-                }
-                if (layer.getLineCategorizedSymbology().isConfigured()) {
-                    for (CategoryStyleRule rule : layer.getLineCategorizedSymbology().getRules().values()) {
-                        items.add(new LegendItem(
-                                CatmapLegendSupport.buildKey(layer, rule, "LINE"),
-                                rule.getValue(),
-                                layer.getName(),
-                                layer,
-                                rule,
-                                "LINE"
-                        ));
-                    }
-                    continue;
-                }
-                if (layer.getPolygonCategorizedSymbology().isConfigured()) {
-                    for (CategoryStyleRule rule : layer.getPolygonCategorizedSymbology().getRules().values()) {
-                        items.add(new LegendItem(
-                                CatmapLegendSupport.buildKey(layer, rule, "POLYGON"),
-                                rule.getValue(),
-                                layer.getName(),
-                                layer,
-                                rule,
-                                "POLYGON"
-                        ));
-                    }
-                    continue;
-                }
-                String geometryType = CatmapLegendSupport.resolveLegendGeometryType(layer);
-                items.add(new LegendItem(
-                        CatmapLegendSupport.buildKey(layer, null, geometryType),
-                        layer.getName(),
-                        CatmapLegendSupport.resolveLayerTypeLabel(layer),
-                        layer,
-                        null,
-                        geometryType
-                ));
-            }
-            return items;
-        }
-
-        private static void drawLegendItem(Graphics2D g2, LegendItem item, int x, int y, int availableWidth) {
-            Layer layer = item.layer();
-            ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
-            String geometryFamily = VectorLayerUtils.resolveGeometryFamily(data);
-            if (layer instanceof RasterLayer || layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) {
-                g2.setPaint(new GradientPaint(x, y, new Color(96, 165, 250), x + 18, y + 18, new Color(59, 130, 246)));
-                g2.fillRect(x, y - 12, 20, 16);
-                g2.setColor(new Color(30, 41, 59));
-                g2.drawRect(x, y - 12, 20, 16);
-            } else if ("POINT".equalsIgnoreCase(item.geometryType())) {
-                drawPointSymbolPreview(g2, layer, x, y, item.categoryRule());
-            } else if ("LINE".equalsIgnoreCase(item.geometryType())) {
-                drawLineSymbolPreview(g2, layer, x, y, item.categoryRule());
-            } else if ("POLYGON".equalsIgnoreCase(item.geometryType())) {
-                drawPolygonSymbolPreview(g2, layer, x, y, item.categoryRule());
-            } else if ("POINT".equalsIgnoreCase(geometryFamily)) {
-                drawPointSymbolPreview(g2, layer, x, y, null);
-            } else if ("LINE".equalsIgnoreCase(geometryFamily)) {
-                drawLineSymbolPreview(g2, layer, x, y, null);
-            } else {
-                drawPolygonSymbolPreview(g2, layer, x, y, null);
-            }
-
-            g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-            g2.setColor(new Color(37, 45, 58));
-            String name = item.label() != null ? item.label() : "Capa";
-            int labelWidth = Math.max(60, availableWidth - 30);
-            if (name.length() > 34) {
-                name = name.substring(0, 31) + "...";
-            }
-            g2.drawString(name, x + 30, y - 1);
-
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-            g2.setColor(new Color(107, 114, 128));
-            String detail = item.subtitle() != null ? item.subtitle() : layerTypeLabel(layer);
-            if (detail.length() > labelWidth / 6) {
-                detail = detail.substring(0, Math.max(0, labelWidth / 6 - 3)) + "...";
-            }
-            g2.drawString(detail, x + 30, y + 13);
-        }
-
-        private static FooterRenderResult drawFooter(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, int width, int height, int margin, int footerHeight, MapFrameGeometry mapFrame, LayoutInteractionState interactionState, BufferedImage layoutImage, int renderDpi) {
-            int top = height - margin - footerHeight;
-            boolean showCartouche = isRenderableElementVisible(interactionState, LayoutElementType.CARTOUCHE);
-            boolean showProfileImage = layoutImage != null && isRenderableElementVisible(interactionState, LayoutElementType.PROFILE_IMAGE);
-
-            boolean cleanTemplate = settings.template() == LayoutTemplate.CLEAN_CENTERED;
-
-            if (showCartouche || showProfileImage) {
-                g2.setColor(new Color(200, 208, 218));
-                g2.setStroke(new BasicStroke(0.5f));
-                g2.drawLine(margin, top, width - margin, top);
-                g2.setStroke(new BasicStroke(1.0f));
-            }
-
-            if (cleanTemplate && showCartouche) {
-                java.awt.FontMetrics baseMetrics = g2.getFontMetrics(g2.getFont().deriveFont(Font.PLAIN, Math.max(11, width / 130)));
-                int lineHeight = baseMetrics.getHeight() + 2;
-
-                int logoAreaW = 0;
-                BufferedImage logoImage = loadImageAsset(settings.logoPath());
-                if (logoImage != null) {
-                    int logoMaxH = footerHeight - 18;
-                    double s = Math.min(1d, logoMaxH / (double) Math.max(1, logoImage.getHeight()));
-                    int logoW = Math.max(1, (int) Math.round(logoImage.getWidth() * s));
-                    int logoH = Math.max(1, (int) Math.round(logoImage.getHeight() * s));
-                    int logoX = width - margin - logoW;
-                    int logoY = top + (footerHeight - logoH) / 2;
-                    g2.drawImage(logoImage, logoX, logoY, logoW, logoH, null);
-                    logoAreaW = logoW + 14;
-                }
-
-                g2.setColor(new Color(27, 38, 56));
-                g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, width / 120)));
-                g2.drawString("Datos cartograficos", margin, top + 18);
-
-                g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(11, width / 130)));
-                int rowY = top + 20 + lineHeight;
-
-                int col1x = margin;
-                int availW = (width - (margin * 2) - logoAreaW);
-                int colW3 = availW / 3;
-                int col2x = margin + colW3;
-                int col3x = margin + colW3 * 2;
-
-                String projName = blankOr(settings.cartoucheProjectName(), snapshot.projectName());
-                drawCompactFooterRow(g2, "Estudio", blankOr(settings.studyName(), projName), col1x, rowY, colW3 - 6);
-                drawCompactFooterRow(g2, "Proyecto", projName, col2x, rowY, colW3 - 6);
-                String genText = "Fecha: " + FOOTER_DATE.format(LocalDateTime.now());
-                drawCompactFooterRow(g2, genText, "", col3x, rowY, colW3 - 6);
-                rowY += lineHeight + 2;
-
-                drawCompactFooterRow(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), col1x, rowY, colW3 - 6);
-                drawCompactFooterRow(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), col2x, rowY, colW3 - 6);
-                double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
-                String scaleText = settings.showScale()
-                        ? "Escala: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
-                        : "Escala: —";
-                drawCompactFooterRow(g2, scaleText, "", col3x, rowY, colW3 - 6);
-                rowY += lineHeight + 2;
-
-                drawCompactFooterRow(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), col1x, rowY, colW3 - 6);
-                drawCompactFooterRow(g2, "CRS", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), col2x, rowY, colW3 - 6);
-                drawCompactFooterRow(g2, "Generado en CATGIS Desktop", "", col3x, rowY, colW3 - 6);
-
-                return new FooterRenderResult(
-                        new Rectangle(margin, top + 4, width - (margin * 2), footerHeight - 12),
-                        null
-                );
-            }
-
-            int baseCartoucheWidth = switch (settings.template()) {
-                case CLEAN_CENTERED -> Math.min(width / 2, 420);
-                case STRONG_CARTOUCHE -> Math.min((int) (width * 0.58d), 660);
-                default -> Math.min(width / 2, 520);
-            };
-            Rectangle cartoucheBounds = showCartouche ? applyElementAdjustment(
-                    new Rectangle(margin, top + 14, baseCartoucheWidth, footerHeight - 24),
-                    interactionState,
-                    LayoutElementType.CARTOUCHE
-            ) : null;
-            if (showCartouche) {
-                drawCartouche(g2, settings, snapshot, cartoucheBounds);
-            }
-
-            int infoX = cartoucheBounds != null ? cartoucheBounds.x + cartoucheBounds.width + 26 : margin;
-            if (showCartouche) {
-                g2.setColor(new Color(37, 45, 58));
-                g2.setFont(new Font("SansSerif", Font.BOLD, Math.max(12, width / 108)));
-                String footer = !settings.footer().isBlank() ? settings.footer() : "Generado desde CATGIS Desktop";
-                g2.drawString(footer, infoX, top + 34);
-
-                g2.setFont(new Font("SansSerif", Font.PLAIN, Math.max(12, width / 115)));
-                g2.setColor(new Color(99, 110, 124));
-                String reference = "Proyecto: " + snapshot.projectName() + " | CRS: " + snapshot.projectCrsLabel();
-                g2.drawString(reference, infoX, top + 54);
-
-                java.awt.FontMetrics metrics = g2.getFontMetrics();
-                String generation = "Fecha de salida: " + FOOTER_DATE.format(LocalDateTime.now());
-                g2.drawString(generation, width - margin - metrics.stringWidth(generation), top + 34);
-
-                double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
-                String scale = settings.showScale()
-                        ? "Escala tecnica: " + (exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
-                        : "Escala grafica oculta";
-                g2.drawString(scale, width - margin - metrics.stringWidth(scale), top + 54);
-            }
-            Rectangle profileImageBounds = null;
-            if (showProfileImage) {
-                Rectangle baseImageBounds = new Rectangle(
-                        infoX,
-                        top + 86,
-                        Math.max(200, width - margin - infoX),
-                        Math.max(110, footerHeight - 104)
-                );
-                profileImageBounds = applyElementAdjustment(baseImageBounds, interactionState, LayoutElementType.PROFILE_IMAGE);
-                drawLayoutImage(g2, profileImageBounds, layoutImage);
-            }
-            return new FooterRenderResult(cartoucheBounds, profileImageBounds);
-        }
-
-        private static void drawCompactFooterRow(Graphics2D g2, String label, String value, int x, int y, int maxWidth) {
-            g2.setColor(new Color(58, 68, 84));
-            g2.setFont(g2.getFont().deriveFont(Font.BOLD));
-            String line;
-            if (value != null && !value.isBlank()) {
-                line = label + ": " + clipText(value, Math.max(8, maxWidth / 8));
-            } else {
-                line = label;
-            }
-            java.awt.FontMetrics fm = g2.getFontMetrics();
-            if (fm.stringWidth(line) > maxWidth) {
-                line = clipText(line, Math.max(4, (int) Math.round(maxWidth / (fm.stringWidth("W") + 1))));
-            }
-            g2.drawString(line, x, y + fm.getAscent());
-        }
-
-        private static void drawCartouche(Graphics2D g2, LayoutSettings settings, LayoutSnapshot snapshot, Rectangle bounds) {
-            g2.setColor(new Color(248, 250, 253));
-            g2.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18);
-            g2.setColor(new Color(201, 210, 222));
-            g2.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18);
-
-            java.awt.Shape clip = g2.getClip();
-            g2.clip(new java.awt.geom.RoundRectangle2D.Double(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18));
-
-            int contentX = bounds.x + 16;
-            int contentY = bounds.y + 18;
-            int textX = contentX;
-            BufferedImage logoImage = loadImageAsset(settings.logoPath());
-            if (logoImage != null) {
-                int logoBoxW = 84;
-                int logoBoxH = Math.min(bounds.height - 28, 72);
-                int logoX = contentX;
-                int logoY = bounds.y + 16;
-                double scale = Math.min(logoBoxW / (double) logoImage.getWidth(), logoBoxH / (double) logoImage.getHeight());
-                int drawW = Math.max(1, (int) Math.round(logoImage.getWidth() * scale));
-                int drawH = Math.max(1, (int) Math.round(logoImage.getHeight() * scale));
-                g2.drawImage(logoImage, logoX, logoY + (logoBoxH - drawH) / 2, drawW, drawH, null);
-                textX += logoBoxW + 14;
-            }
-
-            int fontTitleSize = bounds.height >= 160 ? 13 : 11;
-            int fontRowSize = bounds.height >= 160 ? 11 : 10;
-            int rowSpacing = bounds.height >= 160 ? 16 : 13;
-
-            g2.setColor(new Color(27, 38, 56));
-            g2.setFont(new Font("SansSerif", Font.BOLD, fontTitleSize));
-            g2.drawString("Datos cartograficos", textX, contentY);
-
-            g2.setFont(new Font("SansSerif", Font.PLAIN, fontRowSize));
-            g2.setColor(new Color(86, 96, 110));
-            int rowY = contentY + 20;
-            drawCartoucheRowScaled(g2, "Estudio", blankOr(settings.studyName(), snapshot.projectName()), textX, rowY, fontRowSize);
-            rowY += rowSpacing;
-            drawCartoucheRowScaled(g2, "Proyecto", blankOr(settings.cartoucheProjectName(), snapshot.projectName()), textX, rowY, fontRowSize);
-            rowY += rowSpacing;
-            drawCartoucheRowScaled(g2, "Empresa", blankOr(settings.companyName(), "No especificada"), textX, rowY, fontRowSize);
-            rowY += rowSpacing;
-            drawCartoucheRowScaled(g2, "Cartografo", blankOr(settings.cartographerName(), "No especificado"), textX, rowY, fontRowSize);
-            rowY += rowSpacing;
-            drawCartoucheRowScaled(g2, "Fuente", blankOr(settings.imageSource(), "Vista actual del proyecto"), textX, rowY, fontRowSize);
-            rowY += rowSpacing;
-            drawCartoucheRowScaled(g2, "Coord.", blankOr(settings.coordinateReference(), snapshot.projectCrsLabel()), textX, rowY, fontRowSize);
-
-            g2.setClip(clip);
-        }
-
-        private static void drawCartoucheRowScaled(Graphics2D g2, String label, String value, int x, int y, int fontSize) {
-            g2.setColor(new Color(28, 38, 54));
-            g2.setFont(new Font("SansSerif", Font.BOLD, fontSize));
-            g2.drawString(label + ":", x, y);
-            g2.setColor(new Color(86, 96, 110));
-            g2.setFont(new Font("SansSerif", Font.PLAIN, fontSize));
-            int maxChars = fontSize >= 11 ? 38 : 30;
-            int offsetX = fontSize >= 11 ? 62 : 54;
-            g2.drawString(clipText(value, maxChars), x + offsetX, y);
-        }
-
-        private static void drawCartoucheRow(Graphics2D g2, String label, String value, int x, int y) {
-            drawCartoucheRowScaled(g2, label, value, x, y, 11);
-        }
-
-        private static void drawLayoutImage(Graphics2D g2, Rectangle bounds, BufferedImage image) {
-            if (bounds == null || image == null) {
-                return;
-            }
-            g2.setColor(new Color(248, 250, 253));
-            g2.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18);
-            g2.setColor(new Color(201, 210, 222));
-            g2.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 18, 18);
-
-            g2.setColor(new Color(27, 38, 56));
-            g2.setFont(new Font("SansSerif", Font.BOLD, 12));
-            g2.drawString("Perfil / imagen cartografica", bounds.x + 14, bounds.y + 18);
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
-            g2.setColor(new Color(96, 105, 118));
-            g2.drawString("Movelo o redimensionalo desde el layout", bounds.x + 14, bounds.y + 31);
-
-            int innerX = bounds.x + 12;
-            int innerY = bounds.y + 40;
-            int innerW = Math.max(40, bounds.width - 24);
-            int innerH = Math.max(40, bounds.height - 52);
-            g2.setColor(Color.WHITE);
-            g2.fillRect(innerX, innerY, innerW, innerH);
-            g2.setColor(new Color(214, 220, 228));
-            g2.drawRect(innerX, innerY, innerW, innerH);
-
-            double scale = Math.min(innerW / (double) Math.max(1, image.getWidth()), innerH / (double) Math.max(1, image.getHeight()));
-            int drawW = Math.max(1, (int) Math.round(image.getWidth() * scale));
-            int drawH = Math.max(1, (int) Math.round(image.getHeight() * scale));
-            int drawX = innerX + (innerW - drawW) / 2;
-            int drawY = innerY + (innerH - drawH) / 2;
-            g2.drawImage(image, drawX, drawY, drawW, drawH, null);
-        }
-
-        private static void drawCatmapItems(Graphics2D g2, List<CatmapLayoutItem> items, java.util.Map<String, Rectangle> customItemBounds) {
-            if (items == null || items.isEmpty()) {
-                return;
-            }
-            for (CatmapLayoutItem item : items) {
-                if (item == null || !item.isVisible()) {
-                    continue;
-                }
-                Rectangle bounds = new Rectangle(item.getX(), item.getY(), Math.max(24, item.getWidth()), Math.max(24, item.getHeight()));
-                customItemBounds.put(item.getId(), bounds);
-                switch (item.getKind()) {
-                    case TEXT -> drawCatmapText(g2, item, bounds);
-                    case IMAGE -> drawCatmapImage(g2, item, bounds);
-                    case RECTANGLE -> drawCatmapRectangle(g2, item, bounds);
-                    case ELLIPSE -> drawCatmapEllipse(g2, item, bounds);
-                    case LINE -> drawCatmapLine(g2, item, bounds);
-                }
-                if (item.isLocked()) {
-                    drawCatmapLockBadge(g2, bounds);
-                }
-            }
-        }
-
-        private static void drawCatmapLockBadge(Graphics2D g2, Rectangle bounds) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                int badgeSize = 18;
-                int badgeX = bounds.x + Math.max(4, bounds.width - badgeSize - 4);
-                int badgeY = bounds.y + 4;
-                copy.setColor(new Color(30, 41, 59, 210));
-                copy.fillRoundRect(badgeX, badgeY, badgeSize, badgeSize, 8, 8);
-                copy.setColor(Color.WHITE);
-                copy.setFont(new Font("SansSerif", Font.BOLD, 10));
-                FontMetrics metrics = copy.getFontMetrics();
-                String text = "B";
-                int tx = badgeX + (badgeSize - metrics.stringWidth(text)) / 2;
-                int ty = badgeY + ((badgeSize - metrics.getHeight()) / 2) + metrics.getAscent();
-                copy.drawString(text, tx, ty);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static void drawCatmapText(Graphics2D g2, CatmapLayoutItem item, Rectangle bounds) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                Color fill = item.getFillColor();
-                if (fill.getAlpha() > 0) {
-                    copy.setColor(fill);
-                    copy.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 14, 14);
-                }
-                copy.setColor(item.getTextColor());
-                int style = Font.PLAIN;
-                if (item.isBold()) {
-                    style |= Font.BOLD;
-                }
-                if (item.isItalic()) {
-                    style |= Font.ITALIC;
-                }
-                copy.setFont(new Font("SansSerif", style, item.getFontSize()));
-                copy.setClip(bounds.x + 6, bounds.y + 6, Math.max(12, bounds.width - 12), Math.max(12, bounds.height - 12));
-                FontMetrics metrics = copy.getFontMetrics();
-                List<String> lines = wrapText(item.getText().isBlank() ? item.getLabel() : item.getText(), metrics, Math.max(40, bounds.width - 12));
-                int lineHeight = metrics.getHeight();
-                int textY = bounds.y + 8 + metrics.getAscent();
-                for (String line : lines) {
-                    int drawX = switch (item.getAlign()) {
-                        case CENTER -> bounds.x + Math.max(6, (bounds.width - metrics.stringWidth(line)) / 2);
-                        case RIGHT -> bounds.x + Math.max(6, bounds.width - metrics.stringWidth(line) - 8);
-                        default -> bounds.x + 8;
-                    };
-                    copy.drawString(line, drawX, textY);
-                    textY += lineHeight;
-                    if (textY > bounds.y + bounds.height - 4) {
-                        break;
-                    }
-                }
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static void drawCatmapImage(Graphics2D g2, CatmapLayoutItem item, Rectangle bounds) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(new Color(248, 250, 253));
-                copy.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 14, 14);
-                copy.setColor(new Color(203, 213, 225));
-                copy.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 14, 14);
-                BufferedImage image = loadImageAsset(item.getImagePath());
-                if (image == null) {
-                    copy.setColor(new Color(100, 116, 139));
-                    copy.setFont(new Font("SansSerif", Font.BOLD, 12));
-                    copy.drawString(item.getLabel().isBlank() ? "Imagen" : item.getLabel(), bounds.x + 10, bounds.y + 18);
-                    copy.setFont(new Font("SansSerif", Font.PLAIN, 11));
-                    copy.drawString("Selecciona un archivo valido", bounds.x + 10, bounds.y + 34);
-                    return;
-                }
-                int innerBoxX = bounds.x + 8;
-                int innerBoxY = bounds.y + 8;
-                int innerBoxW = Math.max(1, bounds.width - 16);
-                int innerBoxH = Math.max(1, bounds.height - 16);
-                double scaleValue = Math.min(innerBoxW / (double) Math.max(1, image.getWidth()), innerBoxH / (double) Math.max(1, image.getHeight()));
-                int drawW = Math.max(1, (int) Math.round(image.getWidth() * scaleValue));
-                int drawH = Math.max(1, (int) Math.round(image.getHeight() * scaleValue));
-                int drawX = innerBoxX + Math.max(0, (innerBoxW - drawW) / 2);
-                int drawY = innerBoxY + Math.max(0, (innerBoxH - drawH) / 2);
-                copy.drawImage(image, drawX, drawY, drawW, drawH, null);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static void drawCatmapRectangle(Graphics2D g2, CatmapLayoutItem item, Rectangle bounds) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(item.getFillColor());
-                if (item.getFillColor().getAlpha() > 0) {
-                    copy.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-                }
-                copy.setColor(item.getStrokeColor());
-                copy.setStroke(new BasicStroke(item.getLineWidth()));
-                copy.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static void drawCatmapEllipse(Graphics2D g2, CatmapLayoutItem item, Rectangle bounds) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                Ellipse2D ellipse = new Ellipse2D.Double(bounds.x, bounds.y, bounds.width, bounds.height);
-                copy.setColor(item.getFillColor());
-                if (item.getFillColor().getAlpha() > 0) {
-                    copy.fill(ellipse);
-                }
-                copy.setColor(item.getStrokeColor());
-                copy.setStroke(new BasicStroke(item.getLineWidth()));
-                copy.draw(ellipse);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static void drawCatmapLine(Graphics2D g2, CatmapLayoutItem item, Rectangle bounds) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(item.getStrokeColor());
-                copy.setStroke(new BasicStroke(item.getLineWidth(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                copy.drawLine(bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static List<String> wrapText(String text, FontMetrics metrics, int maxWidth) {
-            List<String> lines = new ArrayList<>();
-            String content = text != null ? text : "";
-            for (String paragraph : content.split("\\R", -1)) {
-                String current = "";
-                for (String word : paragraph.split(" ")) {
-                    if (word.isBlank()) {
-                        continue;
-                    }
-                    String candidate = current.isBlank() ? word : current + " " + word;
-                    if (!current.isBlank() && metrics.stringWidth(candidate) > maxWidth) {
-                        lines.add(current);
-                        current = word;
-                    } else {
-                        current = candidate;
-                    }
-                }
-                if (!current.isBlank()) {
-                    lines.add(current);
-                } else if (paragraph.isBlank()) {
-                    lines.add("");
-                }
-            }
-            if (lines.isEmpty()) {
-                lines.add("");
-            }
-            return lines;
-        }
-
-        private static BufferedImage loadImageAsset(String path) {
-            if (path == null || path.isBlank()) {
-                return null;
-            }
-            try {
-                File file = new File(path);
-                if (!file.isFile()) {
-                    return null;
-                }
-                return ImageIO.read(file);
-            } catch (Exception ex) {
-                return null;
-            }
-        }
-
-        private static String blankOr(String primary, String fallback) {
-            return primary != null && !primary.isBlank() ? primary : fallback;
-        }
-
-        private static String clipText(String value, int max) {
-            if (value == null) {
-                return "";
-            }
-            return value.length() > max ? value.substring(0, Math.max(0, max - 3)) + "..." : value;
-        }
-
-        private static Color colorOr(Color color, Color fallback) {
-            return color != null ? color : fallback;
-        }
-
-        private static double estimateScaleDenominator(MapFrameGeometry mapFrame, int renderDpi) {
-            if (mapFrame == null || mapFrame.shownGroundMeters() <= 0 || renderDpi <= 0) {
-                return 0;
-            }
-            double shownGroundMeters = mapFrame.shownGroundMeters();
-            double mapWidthMetersOnPaper = (mapFrame.imageBounds().width / (double) renderDpi) * 0.0254d;
-            if (mapWidthMetersOnPaper <= 0) {
-                return 0;
-            }
-            return shownGroundMeters / mapWidthMetersOnPaper;
-        }
-
-        private static double convertWorldWidthToMeters(LayoutSnapshot snapshot, double worldWidthUnits, double centerY) {
-            if (snapshot == null || worldWidthUnits <= 0) {
-                return 0d;
-            }
-            String projectCrs = CRSDefinitions.normalizeCode(snapshot.projectCrsCode());
-            if (isGeographicCrs(projectCrs)) {
-                double metersPerDegreeLon = 111320d * Math.cos(Math.toRadians(centerY));
-                metersPerDegreeLon = Math.max(0.0001d, Math.abs(metersPerDegreeLon));
-                return worldWidthUnits * metersPerDegreeLon;
-            }
-            return worldWidthUnits;
-        }
-
-        private static boolean isGeographicCrs(String projectCrs) {
-            return "EPSG:4326".equalsIgnoreCase(projectCrs)
-                    || "EPSG:4258".equalsIgnoreCase(projectCrs)
-                    || "EPSG:4269".equalsIgnoreCase(projectCrs)
-                    || "EPSG:4674".equalsIgnoreCase(projectCrs)
-                    || "EPSG:4190".equalsIgnoreCase(projectCrs)
-                    || "EPSG:4221".equalsIgnoreCase(projectCrs);
-        }
-
-        private static void drawPointSymbolPreview(Graphics2D g2, Layer layer, int x, int y, CategoryStyleRule categoryRule) {
-            Color color = colorOr(categoryRule != null ? categoryRule.getPrimaryColor() : layer.getPointColor(), new Color(59, 130, 246));
-            int left = x + 3;
-            int top = y - 11;
-            int size = Math.max(12, categoryRule != null ? categoryRule.getPointSize() + 2 : 12);
-            String catId = categoryRule != null ? categoryRule.getCatalogSymbolId() : layer.getCatalogSymbolId();
-            if (catId != null && !catId.isEmpty() && !"circle".equals(catId)) {
-                PointSymbolCatalog.render(g2, catId, left + size/2, top + size/2, size + 2, color, color.darker(), 1.2f);
-                return;
-            }
-            if (categoryRule == null && PointGraphicSymbolSupport.paintLayerSymbol(g2, layer, left + (size / 2), top + (size / 2), 18)) {
-                return;
-            }
-            Layer.PointSymbolStyle style = categoryRule != null ? categoryRule.getPointSymbolStyle() : layer.getPointSymbolStyle();
-            if (style == null) {
-                style = Layer.PointSymbolStyle.CIRCLE;
-            }
-            PointSymbolRenderer.paint(g2, style, left + (size / 2), top + (size / 2), size, color, new Color(33, 33, 33));
-        }
-
-        private static void drawLineSymbolPreview(Graphics2D g2, Layer layer, int x, int y, CategoryStyleRule categoryRule) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                copy.setColor(colorOr(categoryRule != null ? categoryRule.getPrimaryColor() : layer.getLineColor(), new Color(16, 185, 129)));
-                float previewWidth = categoryRule != null ? categoryRule.getLineWidth() : layer.getLineWidth();
-                copy.setStroke(LineSymbolRenderer.buildStroke(categoryRule != null ? categoryRule.getLineStyle() : layer.getLineSymbolStyle(), Math.max(1.8f, previewWidth)));
-                copy.drawLine(x, y - 4, x + 20, y - 4);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static void drawPolygonSymbolPreview(Graphics2D g2, Layer layer, int x, int y, CategoryStyleRule categoryRule) {
-            Graphics2D copy = (Graphics2D) g2.create();
-            try {
-                Rectangle bounds = new Rectangle(x, y - 12, 20, 16);
-                Layer.PolygonFillStyle style = categoryRule != null
-                        ? categoryRule.getPolygonFillStyle()
-                        : layer.getPolygonFillStyle() != null ? layer.getPolygonFillStyle() : Layer.PolygonFillStyle.SOLID;
-                if (style != Layer.PolygonFillStyle.OUTLINE_ONLY) {
-                    copy.setPaint(buildPolygonPreviewPaint(layer, bounds, categoryRule));
-                    copy.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-                }
-                copy.setPaint(null);
-                copy.setColor(colorOr(categoryRule != null ? categoryRule.getSecondaryColor() : layer.getBorderColor(), new Color(146, 64, 14)));
-                copy.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-            } finally {
-                copy.dispose();
-            }
-        }
-
-        private static Paint buildPolygonPreviewPaint(Layer layer, Rectangle bounds, CategoryStyleRule categoryRule) {
-            Color fill = colorOr(categoryRule != null ? categoryRule.getPrimaryColor() : layer.getFillColor(), new Color(251, 191, 36));
-            Layer.PolygonFillStyle style = categoryRule != null
-                    ? categoryRule.getPolygonFillStyle()
-                    : layer.getPolygonFillStyle() != null ? layer.getPolygonFillStyle() : Layer.PolygonFillStyle.SOLID;
-            if (style == Layer.PolygonFillStyle.SOLID) {
-                return fill;
-            }
-
-            BufferedImage img = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            try {
-                g.setColor(new Color(fill.getRed(), fill.getGreen(), fill.getBlue(), 60));
-                g.fillRect(0, 0, 10, 10);
-                g.setColor(colorOr(categoryRule != null ? categoryRule.getSecondaryColor() : layer.getBorderColor(), new Color(146, 64, 14)));
-                switch (style) {
-                    case DIAGONAL_HATCH -> {
-                        g.drawLine(-2, 9, 9, -2);
-                        g.drawLine(2, 11, 11, 2);
-                    }
-                    case CROSS_HATCH -> {
-                        g.drawLine(0, 5, 10, 5);
-                        g.drawLine(5, 0, 5, 10);
-                    }
-                    case DOTS -> {
-                        g.fillOval(2, 2, 2, 2);
-                        g.fillOval(6, 6, 2, 2);
-                    }
-                    default -> {
-                    }
-                }
-            } finally {
-                g.dispose();
-            }
-            return new java.awt.TexturePaint(img, bounds);
-        }
-
-        private static Path2D buildStar(double cx, double cy, double outer, double inner) {
-            Path2D path = new Path2D.Double();
-            for (int i = 0; i < 10; i++) {
-                double radius = i % 2 == 0 ? outer : inner;
-                double angle = Math.toRadians(-90 + (i * 36));
-                double x = cx + Math.cos(angle) * radius;
-                double y = cy + Math.sin(angle) * radius;
-                if (i == 0) {
-                    path.moveTo(x, y);
-                } else {
-                    path.lineTo(x, y);
-                }
-            }
-            path.closePath();
-            return path;
-        }
-
-        private static String layerTypeLabel(Layer layer) {
-            if (layer instanceof OnlineTileLayer) {
-                return "Mapa base online";
-            }
-            if (layer instanceof OnlineWmsLayer) {
-                return "WMS";
-            }
-            if (layer instanceof RasterLayer) {
-                return TopographyWorkflowSupport.isDemLikeRaster(layer) ? "DEM raster" : "Raster";
-            }
-            if (layer instanceof OnlineWfsLayer) {
-                return "WFS";
-            }
-            if (layer instanceof PostgisLayer) {
-                return "PostGIS";
-            }
-            if (layer instanceof GeoPackageLayer) {
-                return "GeoPackage";
-            }
-            if (layer instanceof GpxLayer gpxLayer) {
-                return "GPX " + gpxLayer.getContentKind().getLabel();
-            }
-            String geometryFamily = VectorLayerUtils.resolveGeometryFamily(
-                    ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null
-            );
-            if ("POINT".equalsIgnoreCase(geometryFamily)) {
-                return "Punto";
-            }
-            if ("LINE".equalsIgnoreCase(geometryFamily)) {
-                return "Linea";
-            }
-            if ("POLYGON".equalsIgnoreCase(geometryFamily)) {
-                return "Poligono";
-            }
-            String type = layer.getType();
-            if (type == null || type.isBlank()) {
-                return "Vectorial";
-            }
-            return type;
-        }
-
-        private static double chooseRoundedDistance(double targetMeters) {
-            if (targetMeters <= 0) {
-                return 0;
-            }
-            double exponent = Math.pow(10, Math.floor(Math.log10(targetMeters)));
-            double normalized = targetMeters / exponent;
-            double rounded;
-            if (normalized < 1.5d) {
-                rounded = 1d;
-            } else if (normalized < 3.5d) {
-                rounded = 2d;
-            } else if (normalized < 7.5d) {
-                rounded = 5d;
-            } else {
-                rounded = 10d;
-            }
-            return rounded * exponent;
-        }
-    }
-
-    private static class ImagePrintable implements Printable {
-        private final BufferedImage image;
-
-        private ImagePrintable(BufferedImage image) {
-            this.image = image;
-        }
-
-        @Override
-        public int print(Graphics graphics, PageFormat pageFormat, int pageIndex) {
-            if (pageIndex > 0 || image == null) {
-                return NO_SUCH_PAGE;
-            }
-
-            Graphics2D g2 = (Graphics2D) graphics.create();
-            try {
-                double availableWidth = pageFormat.getImageableWidth();
-                double availableHeight = pageFormat.getImageableHeight();
-                double scale = Math.min(availableWidth / image.getWidth(), availableHeight / image.getHeight());
-                AffineTransform transform = new AffineTransform();
-                transform.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-                transform.scale(scale, scale);
-                g2.drawImage(image, transform, null);
-                return PAGE_EXISTS;
-            } finally {
-                g2.dispose();
-            }
-        }
-    }
-
-    private void drawLayoutModelOverlay(Graphics2D g2, LayoutSettings settings, int pageX, int pageY, double scale) {
+    void drawLayoutModelOverlay(Graphics2D g2, LayoutSettings settings, int pageX, int pageY, double scale) {
         if (layoutModel.size() == 0) return;
         double dpi = settings.dpi();
         PageSizePreset ps = settings.pageSize();
@@ -8593,7 +4745,7 @@ public class MapLayoutComposerDialog extends JFrame {
         }
     }
 
-    private RectMm toPageRectMm() {
+    RectMm toPageRectMm() {
         if (previewPanel.lastRenderResult == null || previewPanel.lastPageBounds == null || previewPanel.lastPreviewScale <= 0) return null;
         LayoutSettings settings = buildSettings();
         PageSizePreset ps = settings.pageSize();
@@ -8602,8 +4754,6 @@ public class MapLayoutComposerDialog extends JFrame {
         if (settings.orientation() == PageOrientation.LANDSCAPE) { double tmp = wMm; wMm = hMm; hMm = tmp; }
         return new RectMm(0, 0, wMm, hMm, 25.4 / PREVIEW_RENDER_DPI);
     }
-
-    private static class RectMm { final double xMm, yMm, wMm, hMm, pxToMmScale; RectMm(double x, double y, double w, double h, double s) { xMm = x; yMm = y; wMm = w; hMm = h; pxToMmScale = s; } }
 
     private JPanel buildPropertiesPanel() {
         JPanel panel = new JPanel(new BorderLayout(4, 4));
@@ -8754,7 +4904,7 @@ public class MapLayoutComposerDialog extends JFrame {
         JButton tmplBtn = new JButton("Plantillas...");
         tmplBtn.setFont(tmplBtn.getFont().deriveFont(Font.PLAIN, 10f));
         tmplBtn.setMargin(new Insets(3, 6, 3, 6));
-        tmplBtn.setToolTipText("Abrir galería de plantillas con vista preliminar.");
+        tmplBtn.setToolTipText("Abrir galerÃ­a de plantillas con vista preliminar.");
         tmplBtn.addActionListener(e -> showTemplatePicker());
         actionBar.add(tmplBtn);
         actionBar.add(miniBtn("Duplicar", "Duplicar seleccionado (Ctrl+D)", e -> {
@@ -8904,7 +5054,7 @@ public class MapLayoutComposerDialog extends JFrame {
         return s.trim();
     }
 
-    private void duplicateLayoutElement(LayoutElement src) {
+    void duplicateLayoutElement(LayoutElement src) {
         if (src instanceof LayoutMap) { LayoutMap m = new LayoutMap("map-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); m.setZOrder(layoutModel.nextZ()); m.setName(src.getName() + " copia"); layoutModel.addElement(m); return; }
         if (src instanceof LayoutLegend) { LayoutLegend l = new LayoutLegend("legend-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); l.setAutoHeight(true); l.setItems(((LayoutLegend)src).getItems()); layoutModel.addElement(l); return; }
         if (src instanceof LayoutNorthArrow) { LayoutNorthArrow n = new LayoutNorthArrow("north-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); n.setZOrder(layoutModel.nextZ()); n.setName(src.getName() + " copia"); layoutModel.addElement(n); return; }
@@ -8999,7 +5149,7 @@ public class MapLayoutComposerDialog extends JFrame {
         previewPanel.repaint();
     }
 
-    private int countOfType(String prefix) {
+    int countOfType(String prefix) {
         int c = 1;
         for (LayoutElement e : layoutModel.getElements()) {
             if (e.getName() != null && e.getName().startsWith(prefix)) {
@@ -9050,7 +5200,7 @@ public class MapLayoutComposerDialog extends JFrame {
 
     private LayoutElement findEl(String id) { for (LayoutElement e : layoutModel.getElements()) if (e.getId().equals(id)) return e; return null; }
 
-    private void refreshElementList() {
+    void refreshElementList() {
         if (elementListModel == null) return;
         elementListModel.clear();
         List<LayoutElement> elems = new ArrayList<>(layoutModel.getElements());
@@ -9117,7 +5267,7 @@ public class MapLayoutComposerDialog extends JFrame {
         } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
     }
 
-    private int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
+    int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
         double sc = pageRect.pxToMmScale;
         int px = (int)(el.getBoundsMm().x / sc);
         int py = (int)(el.getBoundsMm().y / sc);
@@ -9132,7 +5282,7 @@ public class MapLayoutComposerDialog extends JFrame {
         return -1;
     }
 
-    private void resizeElement(int idx, int dx, int dy) {
+    void resizeElement(int idx, int dx, int dy) {
         double s = 25.4 / PREVIEW_RENDER_DPI;
         double dmmx = dx * s, dmmy = dy * s;
         double x = dragStartBoundsMm.x, y = dragStartBoundsMm.y, w = dragStartBoundsMm.width, h = dragStartBoundsMm.height;
@@ -9144,7 +5294,7 @@ public class MapLayoutComposerDialog extends JFrame {
         draggingLayoutElement.setBoundsMm(x, y, w, h);
     }
 
-    private void pushUndo(LayoutElement el, boolean isDelete) {
+    void pushUndo(LayoutElement el, boolean isDelete) {
         layoutModel.saveSnapshot();
     }
 
@@ -9200,7 +5350,7 @@ public class MapLayoutComposerDialog extends JFrame {
         layoutModel.saveSnapshot();
     }
 
-    private void refreshPropertiesPanel() {
+    void refreshPropertiesPanel() {
         if (propertiesInfoLabel == null || propertiesCardPanel == null) return;
         LayoutElement sel = layoutModel.getSelected();
         java.awt.CardLayout cl = (java.awt.CardLayout) propertiesCardPanel.getLayout();

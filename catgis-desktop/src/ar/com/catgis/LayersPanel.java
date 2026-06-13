@@ -86,7 +86,7 @@ import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 public class LayersPanel extends JPanel {
 
     private final DefaultListModel<Object> model;
-    private final JList<Object> layerList;
+    final JList<Object> layerList;
     private final JButton newGroupButton;
     private final JTextField layerFilterField;
     private final List<Object> unfilteredItems = new ArrayList<>();
@@ -94,6 +94,7 @@ public class LayersPanel extends JPanel {
     private final JButton scrollBottomButton;
     private final JScrollPane layerScrollPane;
     private final JLabel emptyStateLabel;
+    private final LayerContextMenuBuilder contextMenuBuilder;
     private java.awt.CardLayout tocCardLayout;
     private int dragSourceIndex = -1;
     private int dragTargetInsertIndex = -1;
@@ -105,7 +106,8 @@ public class LayersPanel extends JPanel {
         model = new DefaultListModel<>();
         layerList = new JList<>(model);
         layerList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        layerList.setCellRenderer(new LayerCellRenderer());
+        layerList.setCellRenderer(new LayerCellRenderer(this));
+        contextMenuBuilder = new LayerContextMenuBuilder(this);
         layerList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 CatgisDesktopApp.syncFloatingVectorEditToolbar();
@@ -206,7 +208,7 @@ public class LayersPanel extends JPanel {
                 int index = layerList.locationToIndex(e.getPoint());
                 if (index < 0) {
                     if (e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger()) {
-                        showEmptyAreaPopup(e);
+                        contextMenuBuilder.showEmptyAreaPopup(e);
                     }
                     return;
                 }
@@ -214,7 +216,7 @@ public class LayersPanel extends JPanel {
                 Rectangle bounds = layerList.getCellBounds(index, index);
                 if (bounds == null || !bounds.contains(e.getPoint())) {
                     if (e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger()) {
-                        showEmptyAreaPopup(e);
+                        contextMenuBuilder.showEmptyAreaPopup(e);
                     }
                     return;
                 }
@@ -269,11 +271,11 @@ public class LayersPanel extends JPanel {
                 if (e.getButton() == MouseEvent.BUTTON3 || e.isPopupTrigger()) {
                     updateSelectionForPopup(index);
                     if (selectedGroup != null) {
-                        showGroupPopup(e, selectedGroup);
+                        contextMenuBuilder.showGroupPopup(e, selectedGroup);
                     } else if (selectedLayer != null) {
-                        showLayerPopup(e, selectedLayer);
+                        contextMenuBuilder.showLayerPopup(e, selectedLayer);
                     } else {
-                        showEmptyAreaPopup(e);
+                        contextMenuBuilder.showEmptyAreaPopup(e);
                     }
                 }
             }
@@ -288,7 +290,7 @@ public class LayersPanel extends JPanel {
                     if (index >= 0) {
                         Rectangle bounds = layerList.getCellBounds(index, index);
                         if (bounds == null || !bounds.contains(e.getPoint())) {
-                            showEmptyAreaPopup(e);
+                            contextMenuBuilder.showEmptyAreaPopup(e);
                             return;
                         }
                         updateSelectionForPopup(index);
@@ -296,12 +298,12 @@ public class LayersPanel extends JPanel {
                         Layer layer = asLayer(value);
                         LayerGroup group = asGroup(value);
                         if (group != null) {
-                            showGroupPopup(e, group);
+                            contextMenuBuilder.showGroupPopup(e, group);
                         } else if (layer != null) {
-                            showLayerPopup(e, layer);
+                            contextMenuBuilder.showLayerPopup(e, layer);
                         }
                     } else {
-                        showEmptyAreaPopup(e);
+                        contextMenuBuilder.showEmptyAreaPopup(e);
                     }
                     return;
                 }
@@ -344,7 +346,7 @@ public class LayersPanel extends JPanel {
                     if (index >= 0) {
                         Rectangle bounds = layerList.getCellBounds(index, index);
                         if (bounds == null || !bounds.contains(e.getPoint())) {
-                            showEmptyAreaPopup(e);
+                            contextMenuBuilder.showEmptyAreaPopup(e);
                             return;
                         }
                         updateSelectionForPopup(index);
@@ -352,12 +354,12 @@ public class LayersPanel extends JPanel {
                         Layer layer = asLayer(value);
                         LayerGroup group = asGroup(value);
                         if (group != null) {
-                            showGroupPopup(e, group);
+                            contextMenuBuilder.showGroupPopup(e, group);
                         } else if (layer != null) {
-                            showLayerPopup(e, layer);
+                            contextMenuBuilder.showLayerPopup(e, layer);
                         }
                     } else {
-                        showEmptyAreaPopup(e);
+                        contextMenuBuilder.showEmptyAreaPopup(e);
                     }
                 }
             }
@@ -764,536 +766,15 @@ public class LayersPanel extends JPanel {
             layerList.setSelectedIndex(index);
         }
     }
-
-    private void showLayerPopup(MouseEvent e, Layer selectedLayer) {
-        if (selectedLayer == null) {
-            return;
-        }
-
-        JPopupMenu popupMenu = isRasterLayer(selectedLayer)
-                ? buildRasterPopup(selectedLayer)
-                : buildVectorPopup(selectedLayer);
-
-        popupMenu.show(layerList, e.getX(), e.getY());
-    }
-
-    private void showGroupPopup(MouseEvent e, LayerGroup selectedGroup) {
-        if (selectedGroup == null) {
-            return;
-        }
-
-        JPopupMenu popupMenu = new JPopupMenu();
-
-        JMenuItem titleItem = createMenuItem(selectedGroup.getName(), AppIcons.openIcon());
-        titleItem.setEnabled(false);
-        popupMenu.add(titleItem);
-        popupMenu.addSeparator();
-
-        JMenuItem toggleVisibilityItem = createMenuItem(
-                selectedGroup.isVisible() ? "Ocultar grupo" : "Mostrar grupo",
-                selectedGroup.isVisible() ? AppIcons.hiddenIcon() : AppIcons.visibleIcon()
-        );
-        toggleVisibilityItem.addActionListener(ev -> {
-            selectedGroup.setVisible(!selectedGroup.isVisible());
-            CatgisDesktopApp.markProjectDirty();
-            refreshLayerList();
-            AppContext.mapPanel().repaint();
-        });
-        popupMenu.add(toggleVisibilityItem);
-
-        JMenuItem expandItem = createMenuItem(
-                selectedGroup.isExpanded() ? "Contraer grupo" : "Expandir grupo",
-                selectedGroup.isExpanded() ? AppIcons.downIcon() : AppIcons.openIcon()
-        );
-        expandItem.addActionListener(ev -> {
-            selectedGroup.setExpanded(!selectedGroup.isExpanded());
-            CatgisDesktopApp.markProjectDirty();
-            refreshLayerList();
-        });
-        popupMenu.add(expandItem);
-
-        JMenuItem renameItem = createMenuItem("Renombrar grupo", AppIcons.renameIcon());
-        renameItem.addActionListener(ev -> renameGroup(selectedGroup));
-        popupMenu.add(renameItem);
-
-        JMenuItem moveUpItem = createMenuItem("Subir grupo", AppIcons.upIcon());
-        moveUpItem.addActionListener(ev -> moveGroup(selectedGroup, -1));
-        popupMenu.add(moveUpItem);
-
-        JMenuItem moveDownItem = createMenuItem("Bajar grupo", AppIcons.downIcon());
-        moveDownItem.addActionListener(ev -> moveGroup(selectedGroup, 1));
-        popupMenu.add(moveDownItem);
-
-        popupMenu.addSeparator();
-
-        JMenuItem removeItem = createMenuItem("Quitar grupo (mantener capas)", AppIcons.removeIcon());
-        removeItem.addActionListener(ev -> removeGroup(selectedGroup));
-        popupMenu.add(removeItem);
-
-        popupMenu.show(layerList, e.getX(), e.getY());
-    }
-
-    private void showEmptyAreaPopup(MouseEvent e) {
-        JPopupMenu popupMenu = new JPopupMenu();
-        JMenuItem newGroupItem = createMenuItem("Nuevo grupo", AppIcons.openIcon());
-        newGroupItem.addActionListener(ev -> createNewGroupFromSelection());
-        popupMenu.add(newGroupItem);
-        popupMenu.show(layerList, e.getX(), e.getY());
-    }
-
-    private JPopupMenu buildVectorPopup(Layer selectedLayer) {
-        JPopupMenu popupMenu = new JPopupMenu();
-        boolean readOnlyVector = VectorLayerUtils.isReadOnlyVectorLayer(selectedLayer);
-
-        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.imageryIcon());
-        propertiesItem.setEnabled(false);
-        popupMenu.add(propertiesItem);
-        popupMenu.addSeparator();
-
-        addCommonTopItems(popupMenu, selectedLayer, "Ocultar capa", "Mostrar capa");
-
-        JMenuItem displayItem = createMenuItem("Ajustes de visualizacion...", AppIcons.attrEditIcon());
-        displayItem.addActionListener(ev -> openVectorDisplaySettings(selectedLayer));
-        popupMenu.add(displayItem);
-
-        JMenuItem editItem = createMenuItem(readOnlyVector ? "Capa en solo lectura" : "Editar vector", AppIcons.attrEditIcon());
-        editItem.setEnabled(!readOnlyVector);
-        editItem.addActionListener(ev -> openVectorEditing(selectedLayer));
-        popupMenu.add(editItem);
-
-        JMenuItem copyToEditingItem = createMenuItem("Copiar seleccionadas a capa en edicion", AppIcons.attrCopyIcon());
-        boolean canCopyToEditing = AppContext.mapPanel() != null
-                && AppContext.mapPanel().canCopySelectedFeaturesFromLayerToEditingLayer(selectedLayer);
-        copyToEditingItem.setEnabled(canCopyToEditing);
-        copyToEditingItem.addActionListener(ev -> {
-            if (AppContext.mapPanel() != null
-                    && AppContext.mapPanel().copySelectedFeaturesFromLayerToEditingLayer(selectedLayer)) {
-                refreshLayerList();
-                AppContext.mapPanel().repaint();
-            }
-        });
-        popupMenu.add(copyToEditingItem);
-
-        JMenu simbologiaMenu = new JMenu("Simbologia");
-        simbologiaMenu.setIcon(AppIcons.propertiesIcon());
-
-        JMenuItem styleItem = createMenuItem("Cambiar estilo...", AppIcons.propertiesIcon());
-        styleItem.addActionListener(ev -> LayerPropertiesDialog.open(selectedLayer));
-        simbologiaMenu.add(styleItem);
-
-        JMenuItem labelsItem = createMenuItem("Etiquetas...", AppIcons.labelsIcon());
-        labelsItem.addActionListener(ev -> LayerPropertiesDialog.open(selectedLayer));
-        simbologiaMenu.add(labelsItem);
-
-        JMenuItem clearLabelsItem = createMenuItem("Quitar etiquetas", AppIcons.labelsIcon());
-        clearLabelsItem.addActionListener(ev -> {
-            selectedLayer.setLabelsVisible(false);
-            selectedLayer.setLabelField(null);
-            refreshLayerList();
-            AppContext.mapPanel().repaint();
-        });
-        simbologiaMenu.add(clearLabelsItem);
-
-        popupMenu.add(simbologiaMenu);
-
-        // Heatmap toggle (point layers only)
-        JCheckBoxMenuItem heatmapItem = new JCheckBoxMenuItem("Mapa de calor (heatmap)", selectedLayer.isHeatmapEnabled());
-        heatmapItem.addActionListener(ev -> {
-            selectedLayer.setHeatmapEnabled(!selectedLayer.isHeatmapEnabled());
-            AppContext.mapPanel().repaint();
-        });
-        popupMenu.add(heatmapItem);
-
-        JCheckBoxMenuItem clusterItem = new JCheckBoxMenuItem("Agrupar puntos (clustering)", selectedLayer.isClusteringEnabled());
-        clusterItem.addActionListener(ev -> {
-            selectedLayer.setClusteringEnabled(!selectedLayer.isClusteringEnabled());
-            AppContext.mapPanel().repaint();
-        });
-        popupMenu.add(clusterItem);
-
-        // Environmental area marking
-        JMenuItem envMarkItem = createMenuItem("Marcar como área de influencia...", AppIcons.propertiesIcon());
-        envMarkItem.addActionListener(ev -> {
-            ar.com.catgis.climate.EnvironmentalAreaMarker.markSingleLayer(
-                SwingUtilities.getWindowAncestor(this), selectedLayer);
-            ar.com.catgis.climate.EnvironmentalAreaMarker.showMarkDialog(
-                SwingUtilities.getWindowAncestor(this));
-        });
-        popupMenu.add(envMarkItem);
-        popupMenu.addSeparator();
-
-        JMenu advancedMenu = new JMenu("Configuracion avanzada");
-        advancedMenu.setIcon(AppIcons.crsIcon());
-
-        JMenuItem propertiesRealItem = createMenuItem("Propiedades", AppIcons.propertiesIcon());
-        propertiesRealItem.addActionListener(ev -> LayerPropertiesDialog.open(selectedLayer));
-        advancedMenu.add(propertiesRealItem);
-
-        JMenuItem viewCRSItem = createMenuItem("Ver CRS de capa", AppIcons.crsIcon());
-        viewCRSItem.addActionListener(ev -> showLayerCRS(selectedLayer));
-        advancedMenu.add(viewCRSItem);
-
-        JMenuItem setCRSItem = createMenuItem("Definir CRS de capa", AppIcons.crsIcon());
-        setCRSItem.addActionListener(ev -> defineLayerCRS(selectedLayer));
-        advancedMenu.add(setCRSItem);
-
-        if (CadLayerSupport.isCadLayer(selectedLayer)) {
-            JMenuItem cadGeorefItem = createMenuItem("Georreferenciar CAD por puntos...", AppIcons.crsIcon());
-            cadGeorefItem.addActionListener(ev -> georeferenceCadLayer(selectedLayer));
-            advancedMenu.add(cadGeorefItem);
-
-            JMenuItem cadPlacementItem = createMenuItem("Ajuste CAD...", AppIcons.moveFeatureIcon());
-            cadPlacementItem.addActionListener(ev -> editCadPlacement(selectedLayer));
-            advancedMenu.add(cadPlacementItem);
-
-            JMenuItem cadDragPlacementItem = createMenuItem("Arrastrar CAD en mapa...", AppIcons.moveFeatureIcon());
-            cadDragPlacementItem.addActionListener(ev -> CadWorkflowSupport.openCadDragPlacementWorkflow(this, selectedLayer));
-            advancedMenu.add(cadDragPlacementItem);
-
-            JMenuItem cadInternalLayersItem = createMenuItem("Capas internas CAD...", AppIcons.tableIcon());
-            cadInternalLayersItem.addActionListener(ev -> CadWorkflowSupport.openCadInternalLayers(this, selectedLayer));
-            advancedMenu.add(cadInternalLayersItem);
-
-            JMenuItem cadDiagItem = createMenuItem("Diagnostico DWG/CAD...", AppIcons.propertiesIcon());
-            cadDiagItem.addActionListener(ev -> CadIntegrationDialog.open());
-            advancedMenu.add(cadDiagItem);
-
-            JMenuItem exportCadAdjustedItem = createMenuItem("Exportar CAD georreferenciado...", AppIcons.exportIcon());
-            exportCadAdjustedItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
-            advancedMenu.add(exportCadAdjustedItem);
-        }
-
-        JMenuItem exportItem = createMenuItem("Exportar capa", AppIcons.exportIcon());
-        exportItem.addActionListener(ev -> ExportVectorLayerAction.exportLayer(selectedLayer));
-        advancedMenu.add(exportItem);
-
-        if (selectedLayer != null && "VECTOR".equalsIgnoreCase(selectedLayer.getType())) {
-            JMenuItem exportDxfItem = createMenuItem("Exportar a DXF...", AppIcons.exportIcon());
-            exportDxfItem.addActionListener(ev -> DxfExportEngine.exportLayerWithDialog(null, selectedLayer));
-            advancedMenu.add(exportDxfItem);
-        }
-
-        JMenuItem sendPostgisItem = createMenuItem("Enviar a CATSERVER...", AppIcons.tableIcon());
-        sendPostgisItem.addActionListener(ev -> PostgisDataSourceAction.exportLayerToPostgis(selectedLayer));
-        advancedMenu.add(sendPostgisItem);
-
-        if (selectedLayer instanceof OnlineWfsLayer) {
-            JMenuItem infoItem = createMenuItem("Informacion del servicio...", AppIcons.propertiesIcon());
-            infoItem.addActionListener(ev -> showOnlineWfsInfo((OnlineWfsLayer) selectedLayer));
-            advancedMenu.add(infoItem);
-        } else if (selectedLayer instanceof PostgisLayer) {
-            if (!readOnlyVector) {
-                JMenuItem savePostgisItem = createMenuItem("Guardar cambios en CATSERVER", AppIcons.saveIcon());
-                savePostgisItem.addActionListener(ev -> PostgisDataSourceAction.savePostgisLayerChanges((PostgisLayer) selectedLayer));
-                advancedMenu.add(savePostgisItem);
-            }
-            JMenuItem infoItem = createMenuItem("Informacion de la conexion...", AppIcons.propertiesIcon());
-            infoItem.addActionListener(ev -> showPostgisInfo((PostgisLayer) selectedLayer));
-            advancedMenu.add(infoItem);
-        } else if (selectedLayer instanceof GeoPackageLayer) {
-            JMenuItem infoItem = createMenuItem("Informacion GeoPackage...", AppIcons.propertiesIcon());
-            infoItem.addActionListener(ev -> showGeoPackageInfo((GeoPackageLayer) selectedLayer));
-            advancedMenu.add(infoItem);
-        }
-
-        JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
-        renameItem.addActionListener(ev -> renameLayer(selectedLayer));
-        advancedMenu.add(renameItem);
-
-        popupMenu.add(advancedMenu);
-        popupMenu.addSeparator();
-
-        JMenuItem fieldsItem = createMenuItem("Ver/Editar campos...", AppIcons.fieldsIcon());
-        fieldsItem.addActionListener(ev -> OpenAttributeTableAction.openFieldsConfig(selectedLayer));
-        popupMenu.add(fieldsItem);
-
-        JMenuItem attributeTableItem = createMenuItem("Ver/Editar atributos...", AppIcons.tableIcon());
-        attributeTableItem.addActionListener(ev -> OpenAttributeTableAction.openTable(selectedLayer));
-        popupMenu.add(attributeTableItem);
-
-        JMenuItem queryBuilderItem = createMenuItem("Constructor de consultas...", AppIcons.identifyIcon());
-        queryBuilderItem.addActionListener(ev -> QueryBuilderDialog.open(selectedLayer));
-        popupMenu.add(queryBuilderItem);
-
-        popupMenu.addSeparator();
-        addCommonBottomItems(popupMenu, selectedLayer);
-        return popupMenu;
-    }
-
-    private JPopupMenu buildRasterPopup(Layer selectedLayer) {
-        if (selectedLayer instanceof OnlineTileLayer || selectedLayer instanceof OnlineWmsLayer) {
-            return buildOnlineRasterPopup(selectedLayer);
-        }
-
-        JPopupMenu popupMenu = new JPopupMenu();
-
-        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.propertiesIcon());
-        propertiesItem.setEnabled(false);
-        popupMenu.add(propertiesItem);
-        popupMenu.addSeparator();
-
-        addCommonTopItems(popupMenu, selectedLayer, "Ocultar raster", "Mostrar raster");
-
-        JMenuItem rasterInfoItem = createMenuItem("Informacion raster...", AppIcons.identifyIcon());
-        rasterInfoItem.addActionListener(ev -> showRasterInfo(selectedLayer));
-        popupMenu.add(rasterInfoItem);
-
-        if (selectedLayer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer)) {
-            JMenuItem proInfoItem = createMenuItem("Informacion raster avanzada...", AppIcons.imageryIcon());
-            proInfoItem.addActionListener(ev -> showProRasterInfo(rasterLayer));
-            popupMenu.add(proInfoItem);
-
-            JMenuItem exportProReportItem = createMenuItem("Exportar ficha raster...", AppIcons.exportIcon());
-            exportProReportItem.addActionListener(ev -> exportProRasterReport(rasterLayer));
-            popupMenu.add(exportProReportItem);
-        }
-
-        JMenuItem displayItem = createMenuItem("Ajustes de visualizacion...", AppIcons.attrEditIcon());
-        displayItem.addActionListener(ev -> openRasterDisplaySettings(selectedLayer));
-        popupMenu.add(displayItem);
-
-        boolean derivedRaster = isDerivedRasterLayer(selectedLayer);
-        if (selectedLayer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer) && !derivedRaster) {
-            JMenu proOutputsMenu = new JMenu("Salidas raster avanzadas");
-            proOutputsMenu.setIcon(AppIcons.imageryIcon());
-
-            JMenuItem thematicItem = createMenuItem("Generar mapa tematico raster", AppIcons.imageryIcon());
-            thematicItem.setEnabled(ProRasterDerivedService.supportsThematicOutput(rasterLayer));
-            thematicItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, false));
-            proOutputsMenu.add(thematicItem);
-
-            JMenuItem qaItem = createMenuItem(ProRasterDerivedService.qaMenuLabel(rasterLayer), AppIcons.propertiesIcon());
-            qaItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, true));
-            proOutputsMenu.add(qaItem);
-
-            if (ProRasterDerivedService.supportsLandsatQaPixelMasks(rasterLayer)) {
-                JMenu landsatMasksMenu = new JMenu("Mascaras Landsat QA_PIXEL");
-                landsatMasksMenu.setIcon(AppIcons.propertiesIcon());
-
-                JMenuItem cloudsMaskItem = createMenuItem(
-                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS),
-                        AppIcons.propertiesIcon()
-                );
-                cloudsMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS));
-                landsatMasksMenu.add(cloudsMaskItem);
-
-                JMenuItem shadowMaskItem = createMenuItem(
-                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW),
-                        AppIcons.propertiesIcon()
-                );
-                shadowMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW));
-                landsatMasksMenu.add(shadowMaskItem);
-
-                JMenuItem snowMaskItem = createMenuItem(
-                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW),
-                        AppIcons.propertiesIcon()
-                );
-                snowMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW));
-                landsatMasksMenu.add(snowMaskItem);
-
-                JMenuItem waterMaskItem = createMenuItem(
-                        ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER),
-                        AppIcons.propertiesIcon()
-                );
-                waterMaskItem.addActionListener(ev -> generateProDerivedRaster(rasterLayer, ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER));
-                landsatMasksMenu.add(waterMaskItem);
-
-                proOutputsMenu.add(landsatMasksMenu);
-            }
-
-            JMenuItem compareItem = createMenuItem("Comparar con otra fecha...", AppIcons.attrRefreshIcon());
-            compareItem.addActionListener(ev -> compareProRasterWithAnotherDate(rasterLayer));
-            compareItem.setEnabled(findComparableProLayers(rasterLayer).size() > 0);
-            proOutputsMenu.add(compareItem);
-
-            popupMenu.add(proOutputsMenu);
-        }
-
-        String currentMode = getRasterMode(selectedLayer);
-        JMenuItem currentModeItem = createMenuItem("Modo actual: " + getRasterModeLabel(currentMode), AppIcons.zoomLayerIcon());
-        currentModeItem.setEnabled(false);
-        popupMenu.add(currentModeItem);
-
-        JMenuItem quickItem = createMenuItem("Vista rapida", AppIcons.zoomOutIcon());
-        quickItem.setEnabled(!derivedRaster && !RasterImageLoader.MODE_PREVIEW.equalsIgnoreCase(currentMode));
-        quickItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_PREVIEW));
-        popupMenu.add(quickItem);
-
-        JMenuItem virtualItem = createMenuItem("Zoom virtual", AppIcons.zoomLayerIcon());
-        virtualItem.setEnabled(!derivedRaster && !RasterImageLoader.MODE_VIRTUAL.equalsIgnoreCase(currentMode));
-        virtualItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_VIRTUAL));
-        popupMenu.add(virtualItem);
-
-        JMenuItem realItem = createMenuItem("Zoom real", AppIcons.zoomInIcon());
-        realItem.setEnabled(!derivedRaster && !RasterImageLoader.MODE_REAL.equalsIgnoreCase(currentMode));
-        realItem.addActionListener(ev -> reloadRasterMode(selectedLayer, RasterImageLoader.MODE_REAL));
-        popupMenu.add(realItem);
-
-        JMenuItem contourItem = createMenuItem(I18n.t("Generar curvas de nivel..."), AppIcons.propertiesIcon());
-        contourItem.addActionListener(ev -> ContourGenerationDialog.open(selectedLayer));
-        popupMenu.add(contourItem);
-
-        JMenuItem drainageItem = createMenuItem(I18n.t("Generar escorrentias..."), AppIcons.drainageIcon());
-        drainageItem.addActionListener(ev -> DrainageExtractionDialog.open(selectedLayer));
-        popupMenu.add(drainageItem);
-
-        JMenuItem terrainAnalysisItem = createMenuItem(I18n.t("Analisis topohidrologico..."), AppIcons.terrainAnalysisIcon());
-        terrainAnalysisItem.addActionListener(ev -> TerrainHydrologyAnalysisDialog.open(selectedLayer));
-        popupMenu.add(terrainAnalysisItem);
-
-        JMenuItem basinOutletItem = createMenuItem(I18n.t("Cuenca desde outlet..."), AppIcons.pointIcon());
-        basinOutletItem.addActionListener(ev -> BasinFromOutletDialog.open(selectedLayer));
-        popupMenu.add(basinOutletItem);
-
-        popupMenu.addSeparator();
-
-        // Climate visualization
-        JMenu climateMenu = new JMenu("Clima y ambiente");
-        climateMenu.setIcon(AppIcons.imageryIcon());
-
-        JMenuItem climateSymbologyItem = createMenuItem("Aplicar simbología climática...", AppIcons.attrEditIcon());
-        climateSymbologyItem.setEnabled(selectedLayer instanceof RasterLayer);
-        climateSymbologyItem.addActionListener(ev -> {
-            if (selectedLayer instanceof RasterLayer rl) {
-                ar.com.catgis.climate.ClimateVisualizationDialog.open(
-                    SwingUtilities.getWindowAncestor(this), rl);
-            }
-        });
-        climateMenu.add(climateSymbologyItem);
-
-        JMenuItem areaAnalysisItem = createMenuItem("Análisis climático por áreas (AID/AII)...", AppIcons.propertiesIcon());
-        areaAnalysisItem.addActionListener(ev -> {
-            ar.com.catgis.climate.ClimateAreaAnalysisDialog.open(
-                SwingUtilities.getWindowAncestor(this));
-        });
-        climateMenu.add(areaAnalysisItem);
-
-        JMenuItem windRoseItem = createMenuItem("Rosa de los vientos...", AppIcons.attrRefreshIcon());
-        windRoseItem.addActionListener(ev -> {
-            ar.com.catgis.climate.WindRoseDialog.open(
-                SwingUtilities.getWindowAncestor(this));
-        });
-        climateMenu.add(windRoseItem);
-
-        popupMenu.add(climateMenu);
-        popupMenu.addSeparator();
-
-        JMenu advancedMenu = new JMenu("Configuracion avanzada");
-        advancedMenu.setIcon(AppIcons.toolboxIcon());
-
-        JMenuItem viewCRSItem = createMenuItem("Ver CRS de capa", AppIcons.crsIcon());
-        viewCRSItem.addActionListener(ev -> showLayerCRS(selectedLayer));
-        advancedMenu.add(viewCRSItem);
-
-        JMenuItem setCRSItem = createMenuItem("Definir CRS de capa", AppIcons.crsIcon());
-        setCRSItem.addActionListener(ev -> defineLayerCRS(selectedLayer));
-        advancedMenu.add(setCRSItem);
-
-        JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
-        renameItem.addActionListener(ev -> renameLayer(selectedLayer));
-        advancedMenu.add(renameItem);
-
-        popupMenu.add(advancedMenu);
-        popupMenu.addSeparator();
-        addCommonBottomItems(popupMenu, selectedLayer);
-        return popupMenu;
-    }
-
-    private JPopupMenu buildOnlineRasterPopup(Layer selectedLayer) {
-        JPopupMenu popupMenu = new JPopupMenu();
-
-        JMenuItem propertiesItem = createMenuItem(selectedLayer.getName(), AppIcons.imageryIcon());
-        propertiesItem.setEnabled(false);
-        popupMenu.add(propertiesItem);
-        popupMenu.addSeparator();
-
-        addCommonTopItems(popupMenu, selectedLayer, "Ocultar capa online", "Mostrar capa online");
-
-        JMenuItem infoItem = createMenuItem("Informacion de servicio...", AppIcons.identifyIcon());
-        infoItem.addActionListener(ev -> showRasterInfo(selectedLayer));
-        popupMenu.add(infoItem);
-
-        JMenu advancedMenu = new JMenu("Configuracion");
-        advancedMenu.setIcon(AppIcons.toolboxIcon());
-
-        JMenuItem renameItem = createMenuItem("Renombrar", AppIcons.renameIcon());
-        renameItem.addActionListener(ev -> renameLayer(selectedLayer));
-        advancedMenu.add(renameItem);
-
-        popupMenu.add(advancedMenu);
-        popupMenu.addSeparator();
-        addCommonBottomItems(popupMenu, selectedLayer);
-        return popupMenu;
-    }
-
-    private void addCommonTopItems(JPopupMenu popupMenu, Layer selectedLayer, String hideText, String showText) {
-        JMenuItem zoomToLayerItem = createMenuItem("Zoom a la capa", AppIcons.zoomLayerIcon());
-        zoomToLayerItem.addActionListener(ev -> AppContext.mapPanel().zoomToLayer(selectedLayer));
-        popupMenu.add(zoomToLayerItem);
-
-        JMenuItem toggleVisibilityItem = createMenuItem(
-                selectedLayer.isVisible() ? hideText : showText,
-                selectedLayer.isVisible() ? AppIcons.hiddenIcon() : AppIcons.visibleIcon()
-        );
-        toggleVisibilityItem.addActionListener(ev -> {
-            selectedLayer.setVisible(!selectedLayer.isVisible());
-            CatgisDesktopApp.markProjectDirty();
-            refreshLayerList();
-            AppContext.mapPanel().repaint();
-        });
-        popupMenu.add(toggleVisibilityItem);
-    }
-
-    private void addCommonBottomItems(JPopupMenu popupMenu, Layer selectedLayer) {
-        List<Layer> popupTargetLayers = resolvePopupTargetLayers(selectedLayer);
-        boolean multipleSelection = popupTargetLayers.size() > 1;
-
-        JMenuItem newGroupItem = createMenuItem(
-                multipleSelection ? I18n.format("Crear grupo con seleccion ({0})", popupTargetLayers.size()) : "Crear grupo con capa",
-                AppIcons.openIcon()
-        );
-        newGroupItem.addActionListener(ev -> createNewGroupForLayers(popupTargetLayers));
-        popupMenu.add(newGroupItem);
-
-        JMenu moveToGroupMenu = new JMenu("Mover a grupo");
-        moveToGroupMenu.setIcon(AppIcons.openIcon());
-        populateMoveToGroupMenu(moveToGroupMenu, popupTargetLayers);
-        popupMenu.add(moveToGroupMenu);
-
-        JMenuItem ungroupItem = createMenuItem("Sacar del grupo", AppIcons.removeIcon());
-        ungroupItem.setEnabled(popupTargetLayers.stream().anyMatch(Layer::isInGroup));
-        ungroupItem.addActionListener(ev -> removeLayersFromGroup(popupTargetLayers));
-        popupMenu.add(ungroupItem);
-
-        popupMenu.addSeparator();
-
-        JMenuItem moveUpItem = createMenuItem("Subir", AppIcons.upIcon());
-        moveUpItem.addActionListener(ev -> moveLayerUp(selectedLayer));
-        moveUpItem.setEnabled(!multipleSelection);
-        popupMenu.add(moveUpItem);
-
-        JMenuItem moveDownItem = createMenuItem("Bajar", AppIcons.downIcon());
-        moveDownItem.addActionListener(ev -> moveLayerDown(selectedLayer));
-        moveDownItem.setEnabled(!multipleSelection);
-        popupMenu.add(moveDownItem);
-
-        String removeLabel = multipleSelection
-                ? I18n.format("Quitar seleccionadas ({0})", popupTargetLayers.size())
-                : I18n.t("Quitar");
-        JMenuItem removeItem = createMenuItem(removeLabel, AppIcons.removeIcon());
-        removeItem.addActionListener(ev -> removeLayersFromProject(popupTargetLayers));
-        popupMenu.add(removeItem);
-    }
-
-    private JMenuItem createMenuItem(String text, javax.swing.Icon icon) {
+    JMenuItem createMenuItem(String text, javax.swing.Icon icon) {
         return new JMenuItem(text, icon);
     }
 
-    private Layer asLayer(Object value) {
+    Layer asLayer(Object value) {
         return value instanceof Layer ? (Layer) value : null;
     }
 
-    private LayerGroup asGroup(Object value) {
+    LayerGroup asGroup(Object value) {
         return value instanceof LayerGroup ? (LayerGroup) value : null;
     }
 
@@ -1323,11 +804,11 @@ public class LayersPanel extends JPanel {
         }
     }
 
-    private void createNewGroupFromSelection() {
+    void createNewGroupFromSelection() {
         createNewGroupForLayers(getSelectedLayers());
     }
 
-    private void createNewGroupForLayers(List<Layer> layers) {
+    void createNewGroupForLayers(List<Layer> layers) {
         if (AppContext.project() == null) {
             return;
         }
@@ -1350,7 +831,7 @@ public class LayersPanel extends JPanel {
         refreshLayerList();
     }
 
-    private void populateMoveToGroupMenu(JMenu menu, List<Layer> layers) {
+    void populateMoveToGroupMenu(JMenu menu, List<Layer> layers) {
         if (AppContext.project() == null) {
             menu.setEnabled(false);
             return;
@@ -1380,7 +861,7 @@ public class LayersPanel extends JPanel {
         AppContext.mapPanel().repaint();
     }
 
-    private void removeLayersFromGroup(List<Layer> layers) {
+    void removeLayersFromGroup(List<Layer> layers) {
         if (AppContext.project() == null || layers == null || layers.isEmpty()) {
             return;
         }
@@ -1393,7 +874,7 @@ public class LayersPanel extends JPanel {
         refreshLayerList();
     }
 
-    private void renameGroup(LayerGroup group) {
+    void renameGroup(LayerGroup group) {
         if (group == null || AppContext.project() == null) {
             return;
         }
@@ -1410,7 +891,7 @@ public class LayersPanel extends JPanel {
         refreshLayerList();
     }
 
-    private void removeGroup(LayerGroup group) {
+    void removeGroup(LayerGroup group) {
         if (group == null || AppContext.project() == null) {
             return;
         }
@@ -1429,7 +910,7 @@ public class LayersPanel extends JPanel {
         refreshLayerList();
     }
 
-    private void moveGroup(LayerGroup group, int delta) {
+    void moveGroup(LayerGroup group, int delta) {
         if (group == null || AppContext.project() == null) {
             return;
         }
@@ -1452,7 +933,7 @@ public class LayersPanel extends JPanel {
         refreshLayerList();
     }
 
-    private boolean isRasterLayer(Layer layer) {
+    boolean isRasterLayer(Layer layer) {
         if (layer == null) {
             return false;
         }
@@ -1475,7 +956,7 @@ public class LayersPanel extends JPanel {
                 || p.endsWith(".img") || p.endsWith(".ecw");
     }
 
-    private void openVectorEditing(Layer layer) {
+    void openVectorEditing(Layer layer) {
         if (layer == null || isRasterLayer(layer)) {
             return;
         }
@@ -1495,7 +976,7 @@ public class LayersPanel extends JPanel {
         }
     }
 
-    private void showLayerCRS(Layer layer) {
+    void showLayerCRS(Layer layer) {
         String source = (layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank())
                 ? CRSDefinitions.getLabelForCode(layer.getSourceCRS())
                 : "Desconocido";
@@ -1515,7 +996,7 @@ public class LayersPanel extends JPanel {
         showScrollableInfoDialog("CRS de capa", text.toString());
     }
 
-    private void showScrollableInfoDialog(String title, String content) {
+    void showScrollableInfoDialog(String title, String content) {
         JTextArea infoArea = new JTextArea(content != null ? content : "");
         infoArea.setEditable(false);
         infoArea.setLineWrap(false);
@@ -1540,7 +1021,7 @@ public class LayersPanel extends JPanel {
         JOptionPane.showMessageDialog(this, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void defineLayerCRS(Layer layer) {
+    void defineLayerCRS(Layer layer) {
         if (CadLayerSupport.isCadLayer(layer)) {
             CadCrsAssignmentDialog.Result result = CadCrsAssignmentDialog.chooseForLayer(this, layer);
             if (result.selectorRequested()) {
@@ -1566,7 +1047,7 @@ public class LayersPanel extends JPanel {
         });
     }
 
-    private void editCadPlacement(Layer layer) {
+    void editCadPlacement(Layer layer) {
         java.awt.Frame owner = CatgisDesktopApp.getMainFrame();
         CadPlacementSupport.Result result = CadPlacementDialog.open(owner, layer);
         if (!result.approved()) {
@@ -1585,7 +1066,7 @@ public class LayersPanel extends JPanel {
         }
     }
 
-    private void georeferenceCadLayer(Layer layer) {
+    void georeferenceCadLayer(Layer layer) {
         CadWorkflowSupport.openGeoreferenceWorkflow(this, layer);
     }
 
@@ -1608,7 +1089,7 @@ public class LayersPanel extends JPanel {
         }
     }
 
-    private void renameLayer(Layer layer) {
+    void renameLayer(Layer layer) {
         String newName = JOptionPane.showInputDialog(this, "Nuevo nombre para la capa:", layer.getName());
         if (newName != null && !newName.trim().isEmpty()) {
             layer.setName(newName.trim());
@@ -1618,11 +1099,11 @@ public class LayersPanel extends JPanel {
         }
     }
 
-    private void moveLayerUp(Layer layer) {
+    void moveLayerUp(Layer layer) {
         moveLayerWithinGroup(layer, -1);
     }
 
-    private void moveLayerDown(Layer layer) {
+    void moveLayerDown(Layer layer) {
         moveLayerWithinGroup(layer, 1);
     }
 
@@ -1861,7 +1342,7 @@ public class LayersPanel extends JPanel {
         removeLayersFromProject(List.of(layer));
     }
 
-    private List<Layer> resolvePopupTargetLayers(Layer selectedLayer) {
+    List<Layer> resolvePopupTargetLayers(Layer selectedLayer) {
         List<Layer> selectedLayers = getOrderedSelectedLayers();
         if (selectedLayer != null && selectedLayers.size() > 1 && selectedLayers.contains(selectedLayer)) {
             return selectedLayers;
@@ -1886,7 +1367,7 @@ public class LayersPanel extends JPanel {
         removeLayersFromProject(getOrderedSelectedLayers());
     }
 
-    private void removeLayersFromProject(Collection<Layer> layersToRemove) {
+    void removeLayersFromProject(Collection<Layer> layersToRemove) {
         removeLayersFromProject(layersToRemove, true);
     }
 
@@ -1973,7 +1454,7 @@ public class LayersPanel extends JPanel {
         layerList.ensureIndexIsVisible(normalized);
     }
 
-    private void showRasterInfo(Layer layer) {
+    void showRasterInfo(Layer layer) {
         if (layer instanceof OnlineTileLayer) {
             showOnlineTileInfo((OnlineTileLayer) layer);
             return;
@@ -2015,7 +1496,7 @@ public class LayersPanel extends JPanel {
         showScrollableInfoDialog("Informacion raster", sb.toString());
     }
 
-    private void showProRasterInfo(RasterLayer rasterLayer) {
+    void showProRasterInfo(RasterLayer rasterLayer) {
         if (rasterLayer == null) {
             return;
         }
@@ -2026,7 +1507,7 @@ public class LayersPanel extends JPanel {
         showScrollableInfoDialog("Informacion raster avanzada", sb.toString());
     }
 
-    private void exportProRasterReport(RasterLayer rasterLayer) {
+    void exportProRasterReport(RasterLayer rasterLayer) {
         if (rasterLayer == null) {
             return;
         }
@@ -2241,7 +1722,7 @@ public class LayersPanel extends JPanel {
         }
     }
 
-    private boolean hasProRasterMetadata(RasterLayer rasterLayer) {
+    boolean hasProRasterMetadata(RasterLayer rasterLayer) {
         return false;
     }
 
@@ -2265,7 +1746,7 @@ public class LayersPanel extends JPanel {
         return value != null && !value.isBlank() ? value : fallback;
     }
 
-    private void openVectorDisplaySettings(Layer layer) {
+    void openVectorDisplaySettings(Layer layer) {
         try {
             Class<?> dialogClass = Class.forName("ar.com.catgis.RasterDisplaySettingsDialog");
             Constructor<?> ctor = dialogClass.getConstructor(java.awt.Component.class, Layer.class);
@@ -2280,7 +1761,7 @@ public class LayersPanel extends JPanel {
         );
     }
 
-    private void openRasterDisplaySettings(Layer layer) {
+    void openRasterDisplaySettings(Layer layer) {
         if (!isRasterLayer(layer)) {
             JOptionPane.showMessageDialog(
                     this,
@@ -2330,7 +1811,7 @@ public class LayersPanel extends JPanel {
         );
     }
 
-    private String getRasterMode(Layer layer) {
+    String getRasterMode(Layer layer) {
         if (isDerivedRasterLayer(layer)) {
             return "derived";
         }
@@ -2350,7 +1831,7 @@ public class LayersPanel extends JPanel {
         return RasterImageLoader.MODE_PREVIEW;
     }
 
-    private String getRasterModeLabel(String mode) {
+    String getRasterModeLabel(String mode) {
         if ("derived".equalsIgnoreCase(mode)) {
             return "Derivado";
         }
@@ -2363,7 +1844,7 @@ public class LayersPanel extends JPanel {
         return "Vista rapida";
     }
 
-    private void reloadRasterMode(Layer layer, String mode) {
+    void reloadRasterMode(Layer layer, String mode) {
         reloadRasterMode(layer, mode, false, false);
     }
 
@@ -2395,7 +1876,7 @@ public class LayersPanel extends JPanel {
         if (path == null || path.isBlank()) {
             JOptionPane.showMessageDialog(
                     this,
-                    "La capa no tiene una ruta de archivo válida.",
+                    "La capa no tiene una ruta de archivo vÃƒÂ¡lida.",
                     "Raster",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -2406,7 +1887,7 @@ public class LayersPanel extends JPanel {
         if (!rasterFile.exists()) {
             JOptionPane.showMessageDialog(
                     this,
-                    "No se encontró el archivo raster original:\n" + rasterFile.getAbsolutePath(),
+                    "No se encontrÃƒÂ³ el archivo raster original:\n" + rasterFile.getAbsolutePath(),
                     "Raster",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -2476,11 +1957,11 @@ public class LayersPanel extends JPanel {
         progressDialog.setVisible(true);
     }
 
-    private boolean isDerivedRasterLayer(Layer layer) {
+    boolean isDerivedRasterLayer(Layer layer) {
         return layer instanceof RasterLayer rasterLayer && rasterLayer.isDerivedLayer();
     }
 
-    private void generateProDerivedRaster(RasterLayer sourceLayer, boolean qaMask) {
+    void generateProDerivedRaster(RasterLayer sourceLayer, boolean qaMask) {
         generateProDerivedRaster(
                 sourceLayer,
                 qaMask
@@ -2489,7 +1970,7 @@ public class LayersPanel extends JPanel {
         );
     }
 
-    private void generateProDerivedRaster(RasterLayer sourceLayer, String explicitOperation) {
+    void generateProDerivedRaster(RasterLayer sourceLayer, String explicitOperation) {
         if (sourceLayer == null) {
             return;
         }
@@ -2546,7 +2027,7 @@ public class LayersPanel extends JPanel {
         progressDialog.setVisible(true);
     }
 
-    private void compareProRasterWithAnotherDate(RasterLayer sourceLayer) {
+    void compareProRasterWithAnotherDate(RasterLayer sourceLayer) {
         if (sourceLayer == null) {
             return;
         }
@@ -2630,7 +2111,7 @@ public class LayersPanel extends JPanel {
         progressDialog.setVisible(true);
     }
 
-    private List<RasterLayer> findComparableProLayers(RasterLayer sourceLayer) {
+    List<RasterLayer> findComparableProLayers(RasterLayer sourceLayer) {
         List<RasterLayer> candidates = new ArrayList<>();
         if (sourceLayer == null || AppContext.project() == null) {
             return candidates;
@@ -2790,7 +2271,7 @@ public class LayersPanel extends JPanel {
         showScrollableInfoDialog("Informacion WMS", sb.toString());
     }
 
-    private void showOnlineWfsInfo(OnlineWfsLayer layer) {
+    void showOnlineWfsInfo(OnlineWfsLayer layer) {
         StringBuilder sb = new StringBuilder();
         sb.append("Capa: ").append(layer.getName()).append("\n");
         sb.append("Tipo: WFS remoto\n");
@@ -2807,7 +2288,7 @@ public class LayersPanel extends JPanel {
         showScrollableInfoDialog("Informacion WFS", sb.toString());
     }
 
-    private void showPostgisInfo(PostgisLayer layer) {
+    void showPostgisInfo(PostgisLayer layer) {
         String geometryLabel = layer.getGeometryTypeLabel();
         if (geometryLabel == null || geometryLabel.isBlank()) {
             geometryLabel = layer.getType() != null ? layer.getType() : "-";
@@ -2827,7 +2308,7 @@ public class LayersPanel extends JPanel {
         showScrollableInfoDialog("Informacion de la conexion", sb.toString());
     }
 
-    private void showGeoPackageInfo(GeoPackageLayer layer) {
+    void showGeoPackageInfo(GeoPackageLayer layer) {
         String geometryLabel = layer.getGeometryTypeLabel();
         if (geometryLabel == null || geometryLabel.isBlank()) {
             geometryLabel = layer.getType() != null ? layer.getType() : "-";
@@ -2865,421 +2346,4 @@ public class LayersPanel extends JPanel {
         return s == null ? "" : s.toUpperCase();
     }
 
-    private class LayerCellRenderer extends DefaultListCellRenderer {
-        private final JPanel panel = new JPanel(new BorderLayout(8, 4));
-        private final JCheckBox visibleCheck = new JCheckBox();
-        private final JLabel iconLabel = new JLabel();
-        private final JLabel nameLabel = new JLabel();
-        private final JLabel metaLabel = new JLabel();
-        private final JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 6));
-        private final JPanel centerPanel = new JPanel(new BorderLayout(2, 2));
-        private final Icon pointLayerIcon = createPointLayerIcon();
-        private final Icon lineLayerIcon = createLineLayerIcon();
-        private final Icon polygonLayerIcon = createPolygonLayerIcon();
-        private final Icon rasterLayerIcon = createRasterLayerIcon();
-
-        public LayerCellRenderer() {
-            visibleCheck.setOpaque(false);
-            visibleCheck.setFocusable(false);
-            visibleCheck.setPreferredSize(new Dimension(18, 18));
-
-            iconLabel.setPreferredSize(new Dimension(20, 20));
-            iconLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
-            nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD, 13f));
-            metaLabel.setFont(metaLabel.getFont().deriveFont(Font.PLAIN, 11f));
-
-            leftPanel.setOpaque(false);
-            centerPanel.setOpaque(false);
-            panel.setBorder(BorderFactory.createEmptyBorder(5, 6, 5, 6));
-
-            leftPanel.add(visibleCheck);
-            leftPanel.add(iconLabel);
-            centerPanel.add(nameLabel, BorderLayout.NORTH);
-            centerPanel.add(metaLabel, BorderLayout.SOUTH);
-            panel.add(leftPanel, BorderLayout.WEST);
-            panel.add(centerPanel, BorderLayout.CENTER);
-        }
-
-        @Override
-        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-            if (value instanceof LayerGroup group) {
-                boolean groupVisible = group.isVisible();
-                int memberCount = AppContext.project() != null
-                        ? AppContext.project().getLayersForGroup(group.getName()).size()
-                        : 0;
-
-                Color bg = isSelected ? new Color(217, 231, 251) : new Color(236, 244, 253);
-                Color fg = new Color(30, 38, 52);
-                Color metaFg = new Color(95, 106, 122);
-                Color accent = isSelected ? new Color(53, 105, 189) : new Color(138, 171, 214);
-
-                panel.setBackground(bg);
-                leftPanel.setBackground(bg);
-                centerPanel.setBackground(bg);
-
-                visibleCheck.setSelected(groupVisible);
-                iconLabel.setIcon(AppIcons.openIcon());
-                nameLabel.setText((group.isExpanded() ? "▾ " : "▸ ") + group.getName());
-                nameLabel.setForeground(fg);
-                metaLabel.setText("Grupo | " + memberCount + " capas" + (groupVisible ? "" : " | Oculto"));
-                metaLabel.setForeground(metaFg);
-
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createCompoundBorder(
-                                BorderFactory.createMatteBorder(1, 6, 1, 1, accent),
-                                BorderFactory.createLineBorder(isSelected ? new Color(113, 147, 201) : new Color(196, 210, 229))
-                        ),
-                        BorderFactory.createEmptyBorder(6, 8, 6, 6)
-                ));
-                return panel;
-            }
-
-            Layer layer = (Layer) value;
-            boolean missingCrs = hasMissingCRS(layer);
-            boolean editingLayer = AppContext.mapPanel() != null && AppContext.mapPanel().isLayerArmedForEditing(layer);
-            boolean effectiveVisible = AppContext.project() == null
-                    ? layer.isVisible()
-                    : AppContext.project().isLayerEffectivelyVisible(layer);
-            boolean layerInGroup = layer.isInGroup();
-
-            Color bg = editingLayer
-                    ? new Color(255, 239, 239)
-                    : (isSelected ? new Color(220, 235, 255) : (layerInGroup ? new Color(248, 251, 255) : Color.WHITE));
-            Color fg = editingLayer ? new Color(170, 24, 24) : new Color(30, 30, 30);
-            Color metaFg = missingCrs
-                    ? new Color(170, 70, 20)
-                    : (editingLayer
-                    ? new Color(185, 48, 48)
-                    : (isSelected ? new Color(50, 70, 100) : new Color(110, 110, 110)));
-
-            panel.setBackground(bg);
-            leftPanel.setBackground(bg);
-            centerPanel.setBackground(bg);
-
-            visibleCheck.setSelected(layer.isVisible());
-            iconLabel.setIcon(resolveLayerIcon(layer));
-            nameLabel.setText((layerInGroup ? "  - " : "") + layer.getName());
-            nameLabel.setForeground(effectiveVisible ? fg : new Color(120, 120, 120));
-            String metaText = buildMetaText(layer);
-            if (layerInGroup && layer.getGroupName() != null && !layer.getGroupName().isBlank()) {
-                metaText = "Carpeta: " + layer.getGroupName() + " | " + metaText;
-            }
-            metaLabel.setText(metaText);
-            metaLabel.setForeground(metaFg);
-
-            if (layerInGroup) {
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createCompoundBorder(
-                                BorderFactory.createMatteBorder(1, 14, 1, 1, isSelected ? new Color(78, 125, 198) : new Color(184, 206, 240)),
-                                BorderFactory.createLineBorder(editingLayer
-                                        ? new Color(220, 90, 90)
-                                        : (isSelected ? new Color(120, 160, 220) : new Color(220, 228, 239)))
-                        ),
-                        BorderFactory.createEmptyBorder(5, 14, 5, 6)
-                ));
-            } else {
-                panel.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(editingLayer
-                                ? new Color(220, 90, 90)
-                                : (isSelected ? new Color(120, 160, 220) : new Color(230, 230, 230))),
-                        BorderFactory.createEmptyBorder(5, 6, 5, 6)
-                ));
-            }
-
-            return panel;
-        }
-
-        private String buildMetaText(Layer layer) {
-            String crsInfo = formatCRSInfo(layer);
-            if (layer instanceof OnlineTileLayer) {
-                OnlineTileLayer online = (OnlineTileLayer) layer;
-                String hidden = buildVisibilitySuffix(layer);
-                return "Mapa base online | " + (online.getProviderName() != null && !online.getProviderName().isBlank() ? online.getProviderName() : layer.getName())
-                        + " | " + crsInfo + hidden;
-            }
-            if (layer instanceof OnlineWmsLayer) {
-                OnlineWmsLayer wms = (OnlineWmsLayer) layer;
-                String hidden = buildVisibilitySuffix(layer);
-                return "WMS | " + (wms.getProviderName() != null && !wms.getProviderName().isBlank() ? wms.getProviderName() : layer.getName())
-                        + " | " + crsInfo + hidden;
-            }
-            if (layer instanceof OnlineWfsLayer) {
-                OnlineWfsLayer wfs = (OnlineWfsLayer) layer;
-                String hidden = buildVisibilitySuffix(layer);
-                return "WFS | " + resolveGeometryTypeLabel(layer) + " | " + layer.getFeatureCount()
-                        + " elementos | " + crsInfo + " | Solo lectura"
-                        + (wfs.getProviderName() != null && !wfs.getProviderName().isBlank() ? " | " + wfs.getProviderName() : "")
-                        + hidden;
-            }
-            if (layer instanceof GeoPackageLayer) {
-                GeoPackageLayer geoPackage = (GeoPackageLayer) layer;
-                String hidden = buildVisibilitySuffix(layer);
-                return "GeoPackage | " + resolveGeometryTypeLabel(layer) + " | " + layer.getFeatureCount()
-                        + " elementos | " + crsInfo + " | Solo lectura"
-                        + (geoPackage.getTableName() != null && !geoPackage.getTableName().isBlank() ? " | " + geoPackage.getTableName() : "")
-                        + hidden;
-            }
-            if (isRasterLayer(layer)) {
-                String hidden = buildVisibilitySuffix(layer);
-                if (layer instanceof RasterLayer rasterLayer && hasProRasterMetadata(rasterLayer)) {
-                    String variable = rasterLayer.getProVariableName() != null && !rasterLayer.getProVariableName().isBlank()
-                            ? rasterLayer.getProVariableName()
-                            : "variable";
-                    String time = rasterLayer.getProAcquisitionStart() != null && !rasterLayer.getProAcquisitionStart().isBlank()
-                            ? " | " + rasterLayer.getProAcquisitionStart()
-                            : "";
-                    return "Raster Pro | " + variable + time + " | " + crsInfo + hidden;
-                }
-                return "Raster | " + crsInfo + hidden;
-            }
-            if (CadLayerSupport.isCadLayer(layer)) {
-                String hidden = buildVisibilitySuffix(layer);
-                return resolveGeometryTypeLabel(layer) + " CAD | " + layer.getFeatureCount() + " elementos | "
-                        + crsInfo + " | " + CadGeoreferenceSupport.buildDetailedSummary(layer)
-                        + " | " + CadPlacementSupport.buildPlacementSummary(layer)
-                        + " | " + CadLayerSupport.buildCadInternalLayerFilterLabel(layer) + hidden;
-            }
-
-            String type = resolveGeometryTypeLabel(layer);
-            int count = layer.getFeatureCount();
-            String labelInfo = layer.isLabelsVisible()
-                    ? " | Etiquetas: " + (layer.getLabelField() != null ? layer.getLabelField() : "Si")
-                    : "";
-            String hidden = buildVisibilitySuffix(layer);
-            String editing = (AppContext.mapPanel() != null && AppContext.mapPanel().isLayerArmedForEditing(layer))
-                    ? " | En edicion"
-                    : "";
-            return type + " | " + count + " elementos | " + crsInfo + editing + labelInfo + hidden;
-        }
-
-        private String buildVisibilitySuffix(Layer layer) {
-            if (layer == null) {
-                return "";
-            }
-            if (!layer.isVisible()) {
-                return " | Oculta";
-            }
-            if (AppContext.project() != null && !AppContext.project().isLayerEffectivelyVisible(layer)) {
-                return " | Oculta por grupo";
-            }
-            return "";
-        }
-
-        private String formatCRSInfo(Layer layer) {
-            String crs = layer.getSourceCRS();
-            if (crs == null || crs.isBlank()) {
-                return "Sin CRS definido";
-            }
-            return crs;
-        }
-
-        private boolean hasMissingCRS(Layer layer) {
-            return layer == null || layer.getSourceCRS() == null || layer.getSourceCRS().isBlank();
-        }
-
-        private javax.swing.Icon resolveLayerIcon(Layer layer) {
-            if (isRasterLayer(layer)) {
-                return rasterLayerIcon;
-            }
-            String type = resolveGeometryTypeLabel(layer);
-            if ("PUNTO".equals(type)) {
-                return pointLayerIcon;
-            }
-            if ("LINEA".equals(type)) {
-                return lineLayerIcon;
-            }
-            if ("POLIGONO".equals(type)) {
-                return polygonLayerIcon;
-            }
-            return AppIcons.genericLayerIcon();
-        }
-
-        private String resolveGeometryTypeLabel(Layer layer) {
-            if (layer == null) {
-                return "-";
-            }
-            if (isRasterLayer(layer)) {
-                return "Raster";
-            }
-
-            String geometryType = resolveGeometryTypeFromData(layer);
-            if (geometryType != null) {
-                return geometryType;
-            }
-
-            if (layer instanceof GeoPackageLayer) {
-                String geometryLabel = ((GeoPackageLayer) layer).getGeometryTypeLabel();
-                if (geometryLabel != null && !geometryLabel.isBlank()) {
-                    String upper = geometryLabel.toUpperCase();
-                    if (upper.contains("POINT") || upper.contains("PUNTO")) {
-                        return "PUNTO";
-                    }
-                    if (upper.contains("LINE")) {
-                        return "LINEA";
-                    }
-                    if (upper.contains("POLYGON") || upper.contains("POLIG")) {
-                        return "POLIGONO";
-                    }
-                }
-            }
-
-            if (layer instanceof PostgisLayer) {
-                String geometryLabel = ((PostgisLayer) layer).getGeometryTypeLabel();
-                if (geometryLabel != null && !geometryLabel.isBlank()) {
-                    String upper = geometryLabel.toUpperCase();
-                    if (upper.contains("POINT") || upper.contains("PUNTO")) {
-                        return "PUNTO";
-                    }
-                    if (upper.contains("LINE")) {
-                        return "LINEA";
-                    }
-                    if (upper.contains("POLYGON") || upper.contains("POLIG")) {
-                        return "POLIGONO";
-                    }
-                }
-            }
-
-            String rawType = layer.getType() != null ? layer.getType().toUpperCase() : "";
-            if (rawType.contains("POINT") || rawType.contains("PUNTO")) {
-                return "PUNTO";
-            }
-            if (rawType.contains("LINE")) {
-                return "LINEA";
-            }
-            if (rawType.contains("POLYGON") || rawType.contains("POLIG")) {
-                return "POLIGONO";
-            }
-            return layer.getType() != null ? layer.getType() : "-";
-        }
-
-        private String resolveGeometryTypeFromData(Layer layer) {
-            if (layer == null || AppContext.mapPanel() == null) {
-                return null;
-            }
-
-            ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
-            if (data == null) {
-                return null;
-            }
-
-            SimpleFeatureCollection featureCollection = data.getFeatureCollection();
-            if (featureCollection != null) {
-                SimpleFeatureType schema = featureCollection.getSchema();
-                if (schema != null && schema.getGeometryDescriptor() != null) {
-                    String byBinding = resolveGeometryTypeFromBinding(
-                            schema.getGeometryDescriptor().getType().getBinding()
-                    );
-                    if (byBinding != null) {
-                        return byBinding;
-                    }
-                }
-            }
-
-            List<SimpleFeature> features = data.getFeatures();
-            if (features != null) {
-                for (SimpleFeature feature : features) {
-                    if (feature == null) {
-                        continue;
-                    }
-                    Object geometry = feature.getDefaultGeometry();
-                    if (geometry instanceof Geometry) {
-                        String byGeometry = resolveGeometryTypeFromGeometry((Geometry) geometry);
-                        if (byGeometry != null) {
-                            return byGeometry;
-                        }
-                    }
-                }
-            }
-            return null;
-        }
-
-        private String resolveGeometryTypeFromBinding(Class<?> binding) {
-            if (binding == null) {
-                return null;
-            }
-            if (Point.class.isAssignableFrom(binding) || MultiPoint.class.isAssignableFrom(binding)) {
-                return "PUNTO";
-            }
-            if (LineString.class.isAssignableFrom(binding) || MultiLineString.class.isAssignableFrom(binding)) {
-                return "LINEA";
-            }
-            if (Polygon.class.isAssignableFrom(binding) || MultiPolygon.class.isAssignableFrom(binding)) {
-                return "POLIGONO";
-            }
-            return null;
-        }
-
-        private String resolveGeometryTypeFromGeometry(Geometry geometry) {
-            if (geometry == null) {
-                return null;
-            }
-            if (geometry instanceof Point || geometry instanceof MultiPoint) {
-                return "PUNTO";
-            }
-            if (geometry instanceof LineString || geometry instanceof MultiLineString) {
-                return "LINEA";
-            }
-            if (geometry instanceof Polygon || geometry instanceof MultiPolygon) {
-                return "POLIGONO";
-            }
-            return null;
-        }
-
-        private Icon createPointLayerIcon() {
-            BufferedImage img = new BufferedImage(18, 18, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(new Color(37, 99, 235));
-            g.fillOval(6, 6, 6, 6);
-            g.setColor(Color.WHITE);
-            g.setStroke(new BasicStroke(1.4f));
-            g.drawOval(6, 6, 6, 6);
-            g.dispose();
-            return new ImageIcon(img);
-        }
-
-        private Icon createLineLayerIcon() {
-            BufferedImage img = new BufferedImage(18, 18, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(new Color(22, 163, 74));
-            g.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g.drawLine(3, 12, 7, 8);
-            g.drawLine(7, 8, 11, 10);
-            g.drawLine(11, 10, 15, 5);
-            g.dispose();
-            return new ImageIcon(img);
-        }
-
-        private Icon createPolygonLayerIcon() {
-            BufferedImage img = new BufferedImage(18, 18, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(new Color(251, 191, 36, 170));
-            g.fillRoundRect(4, 4, 10, 10, 2, 2);
-            g.setColor(new Color(180, 83, 9));
-            g.setStroke(new BasicStroke(1.5f));
-            g.drawRoundRect(4, 4, 10, 10, 2, 2);
-            g.dispose();
-            return new ImageIcon(img);
-        }
-
-        private Icon createRasterLayerIcon() {
-            BufferedImage img = new BufferedImage(18, 18, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setColor(new Color(226, 232, 240));
-            g.fillRoundRect(2, 3, 14, 12, 2, 2);
-            g.setColor(new Color(100, 116, 139));
-            g.setStroke(new BasicStroke(1.2f));
-            g.drawRoundRect(2, 3, 14, 12, 2, 2);
-            g.setColor(new Color(59, 130, 246));
-            g.drawLine(4, 11, 7, 8);
-            g.drawLine(7, 8, 10, 10);
-            g.drawLine(10, 10, 13, 6);
-            g.dispose();
-            return new ImageIcon(img);
-        }
-    }
 }
