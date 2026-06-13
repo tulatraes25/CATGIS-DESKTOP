@@ -145,7 +145,7 @@ public class CatgisDesktopApp extends JFrame {
         JPanel topContainer = new JPanel();
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setOpaque(true);
-        topContainer.setBackground(new Color(0xF7F8FA));
+        topContainer.setBackground(new Color(241, 245, 249));
 
         JPanel mainToolsRow = new JPanel(new BorderLayout());
         mainToolsRow.setOpaque(false);
@@ -163,11 +163,11 @@ public class CatgisDesktopApp extends JFrame {
     private JPanel buildModuleTabPane() {
         JPanel panel = new JPanel(new BorderLayout(0, 0));
         panel.setOpaque(true);
-        panel.setBackground(new Color(0xF7F8FA));
+        panel.setBackground(new Color(241, 245, 249));
 
         JPanel selectorBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         selectorBar.setOpaque(true);
-        selectorBar.setBackground(new Color(0xF7F8FA));
+        selectorBar.setBackground(new Color(241, 245, 249));
         selectorBar.setPreferredSize(new Dimension(Integer.MAX_VALUE, 32));
         selectorBar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(0, 4, 0, 4),
@@ -177,7 +177,7 @@ public class CatgisDesktopApp extends JFrame {
         moduleCardLayout = new CardLayout();
         moduleCards = new JPanel(moduleCardLayout);
         moduleCards.setOpaque(true);
-        moduleCards.setBackground(new Color(0xF7F8FA));
+        moduleCards.setBackground(new Color(241, 245, 249));
         moduleCards.setPreferredSize(new Dimension(Integer.MAX_VALUE, 36));
         moduleCards.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xE0E0E0)));
 
@@ -189,7 +189,7 @@ public class CatgisDesktopApp extends JFrame {
         datosInner.add(buildCatserverButton());
         JPanel datosCard = new JPanel(new BorderLayout());
         datosCard.setOpaque(true);
-        datosCard.setBackground(new Color(0xF7F8FA));
+        datosCard.setBackground(new Color(241, 245, 249));
         datosCard.add(datosInner, BorderLayout.WEST);
 
         JPanel edicionStrip = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
@@ -231,7 +231,7 @@ public class CatgisDesktopApp extends JFrame {
         salidaInner.add(cartographyToolbar);
         JPanel salidaCard = new JPanel(new BorderLayout());
         salidaCard.setOpaque(true);
-        salidaCard.setBackground(new Color(0xF7F8FA));
+        salidaCard.setBackground(new Color(241, 245, 249));
         salidaCard.add(salidaInner, BorderLayout.WEST);
 
         moduleCards.add(datosCard, "Datos");
@@ -290,10 +290,10 @@ public class CatgisDesktopApp extends JFrame {
         btn.setContentAreaFilled(false);
         btn.setOpaque(true);
         btn.setBorderPainted(true);
-        btn.setBackground(new Color(0xF7F8FA));
-        btn.setForeground(new Color(0x555555));
+        btn.setBackground(new Color(241, 245, 249));
+        btn.setForeground(new Color(100, 116, 139));
         btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0xF7F8FA)),
+                BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(241, 245, 249)),
                 BorderFactory.createEmptyBorder(5, 16, 5, 16)
         ));
         btn.addActionListener(e -> selectModule(index));
@@ -331,11 +331,11 @@ public class CatgisDesktopApp extends JFrame {
             if (buttons[i] != null) {
                 boolean sel = i == index;
                 buttons[i].setSelected(sel);
-                buttons[i].setBackground(sel ? Color.WHITE : new Color(0xF7F8FA));
-                buttons[i].setForeground(sel ? new Color(0x1976D2) : new Color(0x555555));
+                buttons[i].setBackground(sel ? Color.WHITE : new Color(241, 245, 249));
+                buttons[i].setForeground(sel ? new Color(30, 58, 138) : new Color(100, 116, 139));
                 buttons[i].setFont(buttons[i].getFont().deriveFont(sel ? Font.BOLD : Font.PLAIN, 11f));
                 buttons[i].setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, sel ? 2 : 1, 0, sel ? new Color(0x1976D2) : new Color(0xF7F8FA)),
+                        BorderFactory.createMatteBorder(0, 0, sel ? 2 : 0, 0, sel ? new Color(217, 164, 47) : new Color(241, 245, 249)),
                         BorderFactory.createEmptyBorder(5, 16, 5, 16)
                 ));
             }
@@ -346,7 +346,7 @@ public class CatgisDesktopApp extends JFrame {
     private JPanel buildCenterContainer() {
         JPanel centerContainer = new JPanel(new BorderLayout(0, 0));
         centerContainer.setOpaque(true);
-        centerContainer.setBackground(new Color(0xE8E8E8));
+        centerContainer.setBackground(new Color(226, 232, 240));
 
         quickStylePanel.setVisible(false);
         quickStylePanel.setPreferredSize(new java.awt.Dimension(260, 100));
@@ -369,7 +369,7 @@ public class CatgisDesktopApp extends JFrame {
         splitPane.setDividerSize(4);
         splitPane.setResizeWeight(0.0);
         splitPane.setOpaque(true);
-        splitPane.setBackground(new Color(0xE8E8E8));
+        splitPane.setBackground(new Color(226, 232, 240));
         splitPane.setContinuousLayout(true);
         splitPane.setOneTouchExpandable(true);
 
@@ -380,7 +380,7 @@ public class CatgisDesktopApp extends JFrame {
     private JPanel buildLeftSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout(0, 4));
         sidebar.setOpaque(true);
-        sidebar.setBackground(new Color(0xFAFAFA));
+        sidebar.setBackground(new Color(248, 250, 252));
         sidebar.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         sidebar.setPreferredSize(new Dimension(280, 100));
 
@@ -401,12 +401,12 @@ public class CatgisDesktopApp extends JFrame {
 
         sidebarTitleLabel = new JLabel(I18n.t("Capas"));
         sidebarTitleLabel.setFont(sidebarTitleLabel.getFont().deriveFont(Font.BOLD, 11f));
-        sidebarTitleLabel.setForeground(new Color(0x333333));
+        sidebarTitleLabel.setForeground(new Color(15, 23, 42));
         sidebarTitleLabel.setAlignmentX(LEFT_ALIGNMENT);
 
         JLabel subtitle = new JLabel(I18n.t("Gestion visual de capas"));
         subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 10f));
-        subtitle.setForeground(new Color(0x999999));
+        subtitle.setForeground(new Color(100, 116, 139));
         subtitle.setAlignmentX(LEFT_ALIGNMENT);
         sidebarSubtitleLabel = subtitle;
 
@@ -446,11 +446,11 @@ public class CatgisDesktopApp extends JFrame {
 
         mapTitleLabel = new JLabel(I18n.t("Mapa"));
         mapTitleLabel.setFont(mapTitleLabel.getFont().deriveFont(Font.BOLD, 11f));
-        mapTitleLabel.setForeground(new Color(0x333333));
+        mapTitleLabel.setForeground(new Color(15, 23, 42));
 
         mapSubtitleLabel = new JLabel(I18n.t("Exploracion y edicion visual"));
         mapSubtitleLabel.setFont(mapSubtitleLabel.getFont().deriveFont(Font.PLAIN, 10f));
-        mapSubtitleLabel.setForeground(new Color(0x999999));
+        mapSubtitleLabel.setForeground(new Color(100, 116, 139));
 
         JPanel left = new JPanel();
         left.setOpaque(false);
@@ -534,7 +534,7 @@ public class CatgisDesktopApp extends JFrame {
                 : "EPSG:4326";
         String dirtyPrefix = currentProject.isModified() ? "* " : "";
 
-        frame.setTitle(I18n.format("CATGIS Desktop - {0}{1} - {2}", dirtyPrefix, projectName, CRSDefinitions.getLabelForCode(crs)));
+        frame.setTitle(I18n.format("CATGIS \u2014 {0}{1} | {2}", dirtyPrefix, projectName, CRSDefinitions.getLabelForCode(crs)));
         refreshProjectHeader();
     }
 

@@ -1,12 +1,16 @@
 package ar.com.catgis;
 
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JWindow;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -37,12 +41,7 @@ public class SplashScreenWindow extends JWindow {
         if (image != null) {
             add(new ImagePanel(image, splashSize), BorderLayout.CENTER);
         } else {
-            JLabel fallback = new JLabel("CATGIS Desktop", SwingConstants.CENTER);
-            fallback.setOpaque(true);
-            fallback.setBackground(new Color(9, 34, 52));
-            fallback.setForeground(Color.WHITE);
-            fallback.setPreferredSize(splashSize);
-            add(fallback, BorderLayout.CENTER);
+            add(new GradientSplashPanel(splashSize), BorderLayout.CENTER);
         }
 
         installDismissInteraction();
@@ -122,6 +121,63 @@ public class SplashScreenWindow extends JWindow {
         int width = Math.max(720, (int) Math.round(imgW * scale));
         int height = Math.max(480, (int) Math.round(imgH * scale));
         return new Dimension(width, height);
+    }
+
+    private static class GradientSplashPanel extends JPanel {
+        private final Dimension prefSize;
+
+        GradientSplashPanel(Dimension prefSize) {
+            this.prefSize = new Dimension(prefSize);
+            setPreferredSize(prefSize);
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+
+            int w = getWidth(), h = getHeight();
+
+            // Deep gradient background
+            GradientPaint bg = new GradientPaint(0, 0, new Color(15, 23, 42), w, h, new Color(30, 58, 138));
+            g2.setPaint(bg);
+            g2.fillRoundRect(0, 0, w, h, 16, 16);
+
+            // Subtle grid pattern
+            g2.setColor(new Color(255, 255, 255, 12));
+            g2.setStroke(new BasicStroke(0.5f));
+            for (int x = 0; x < w; x += 30) g2.drawLine(x, 0, x, h);
+            for (int y = 0; y < h; y += 30) g2.drawLine(0, y, w, y);
+
+            // Gold accent line
+            g2.setColor(new Color(217, 164, 47));
+            g2.fillRect(w / 2 - 60, h / 2 + 60, 120, 3);
+
+            // Title
+            g2.setFont(new Font("SansSerif", Font.BOLD, 42));
+            g2.setColor(Color.WHITE);
+            String title = "CATGIS";
+            java.awt.FontMetrics fm = g2.getFontMetrics();
+            g2.drawString(title, (w - fm.stringWidth(title)) / 2, h / 2 - 20);
+
+            // Subtitle
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
+            g2.setColor(new Color(148, 163, 184));
+            String sub = "Sistema de Informaci\u00F3n Geogr\u00E1fica";
+            fm = g2.getFontMetrics();
+            g2.drawString(sub, (w - fm.stringWidth(sub)) / 2, h / 2 + 10);
+
+            // Version
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
+            g2.setColor(new Color(100, 116, 139));
+            String ver = "v" + AppBranding.getAppVersion();
+            fm = g2.getFontMetrics();
+            g2.drawString(ver, (w - fm.stringWidth(ver)) / 2, h / 2 + 35);
+
+            g2.dispose();
+        }
     }
 
     private static class ImagePanel extends JLabel {

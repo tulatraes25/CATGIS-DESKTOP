@@ -181,21 +181,21 @@ public class MainToolBar extends JToolBar {
         labeled.setPreferredSize(new Dimension(52, 48));
         labeled.setOpaque(true);
         labeled.setContentAreaFilled(true);
-        labeled.setBackground(new Color(0xF7F8FA));
+        labeled.setBackground(new Color(241, 245, 249));
         labeled.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
         labeled.addActionListener(original.getActionListeners().length > 0 ? original.getActionListeners()[0] : null);
 
         // Hover shadow effect
         labeled.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent e) {
-                labeled.setBackground(new Color(0xE0E7EE));
+                labeled.setBackground(new Color(226, 232, 240));
                 labeled.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(0xB0BEC5), 1),
+                    BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
                     BorderFactory.createEmptyBorder(1, 3, 1, 3)
                 ));
             }
             public void mouseExited(java.awt.event.MouseEvent e) {
-                labeled.setBackground(new Color(0xF7F8FA));
+                labeled.setBackground(new Color(241, 245, 249));
                 labeled.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
             }
         });
@@ -211,7 +211,7 @@ public class MainToolBar extends JToolBar {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 if (status == 1) {
-                    g2.setColor(new Color(46, 204, 113));
+                    g2.setColor(new Color(34, 197, 94));
                 } else {
                     g2.setColor(new Color(149, 165, 166));
                 }
@@ -243,7 +243,7 @@ public class MainToolBar extends JToolBar {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(142, 68, 173));
+                g2.setColor(new Color(139, 92, 246));
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
                 g2.setColor(Color.WHITE);
                 g2.setFont(g2.getFont().deriveFont(Font.BOLD, 10f));
@@ -272,7 +272,7 @@ public class MainToolBar extends JToolBar {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(41, 128, 185));
+                g2.setColor(new Color(59, 130, 246));
                 g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
                 g2.setColor(Color.WHITE);
                 g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));

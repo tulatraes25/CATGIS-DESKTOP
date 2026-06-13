@@ -16,6 +16,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.Window;
 import java.util.List;
 
@@ -41,12 +45,21 @@ public class AboutCatgisDialog extends JDialog {
     }
 
     private JPanel buildHeader() {
-        JPanel panel = new JPanel(new BorderLayout(14, 0));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(214, 221, 232)),
-                BorderFactory.createEmptyBorder(18, 18, 18, 18)
-        ));
-        panel.setBackground(new Color(245, 249, 255));
+        JPanel panel = new JPanel(new BorderLayout(14, 0)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gp = new GradientPaint(0, 0, new Color(15, 23, 42), getWidth(), 0, new Color(30, 58, 138));
+                g2.setPaint(gp);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                // Gold bar at bottom
+                g2.setColor(new Color(217, 164, 47));
+                g2.fillRect(0, getHeight() - 3, getWidth(), 3);
+                g2.dispose();
+            }
+        };
+        panel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
 
         JLabel iconLabel = new JLabel(CatgisAppInfo.getApplicationIcon(72));
         panel.add(iconLabel, BorderLayout.WEST);
@@ -56,37 +69,22 @@ public class AboutCatgisDialog extends JDialog {
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
 
         JLabel title = new JLabel(CatgisAppInfo.getApplicationName());
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
-        title.setForeground(new Color(22, 37, 68));
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setForeground(Color.WHITE);
 
         JLabel version = new JLabel(I18n.format("Version {0}", CatgisAppInfo.getDisplayVersion()));
-        version.setFont(version.getFont().deriveFont(Font.BOLD, 12.5f));
-        version.setForeground(new Color(35, 120, 210));
+        version.setFont(version.getFont().deriveFont(Font.BOLD, 13f));
+        version.setForeground(new Color(217, 164, 47));
 
         JLabel tagline = new JLabel(CatgisAppInfo.getTagline());
         tagline.setFont(tagline.getFont().deriveFont(Font.PLAIN, 12.5f));
-        tagline.setForeground(new Color(89, 98, 112));
-
-        JLabel author = new JLabel("<html><span style='color:#2e3f5d;'>" + escape(CatgisAppInfo.getAuthorLine()) + "</span></html>");
-        author.setFont(author.getFont().deriveFont(Font.PLAIN, 11.5f));
-
-        JLabel collaborator = new JLabel("<html><span style='color:#4b5563;'>" + escape(CatgisAppInfo.getCollaboratorLine()) + "</span></html>");
-        collaborator.setFont(collaborator.getFont().deriveFont(Font.PLAIN, 11.2f));
-
-        JLabel revision = new JLabel("<html><span style='color:#4b5563;'>" + escape(CatgisAppInfo.getRevisionCycleLine()) + "</span></html>");
-        revision.setFont(revision.getFont().deriveFont(Font.PLAIN, 11.2f));
+        tagline.setForeground(new Color(148, 163, 184));
 
         textPanel.add(title);
-        textPanel.add(Box.createVerticalStrut(4));
-        textPanel.add(version);
         textPanel.add(Box.createVerticalStrut(6));
-        textPanel.add(tagline);
+        textPanel.add(version);
         textPanel.add(Box.createVerticalStrut(8));
-        textPanel.add(author);
-        textPanel.add(Box.createVerticalStrut(4));
-        textPanel.add(collaborator);
-        textPanel.add(Box.createVerticalStrut(2));
-        textPanel.add(revision);
+        textPanel.add(tagline);
 
         panel.add(textPanel, BorderLayout.CENTER);
         return panel;
@@ -116,10 +114,15 @@ public class AboutCatgisDialog extends JDialog {
 
     private JPanel buildFooter() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 224, 230)));
-        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(226, 232, 240)));
+        panel.setBackground(new Color(248, 250, 252));
 
         JButton closeButton = new JButton(I18n.t("Cerrar"));
+        closeButton.setFont(new Font("SansSerif", Font.BOLD, 12));
+        closeButton.setBackground(new Color(59, 130, 246));
+        closeButton.setForeground(Color.WHITE);
+        closeButton.setFocusPainted(false);
+        closeButton.setBorder(BorderFactory.createEmptyBorder(6, 20, 6, 20));
         closeButton.addActionListener(e -> dispose());
         panel.add(closeButton);
         return panel;

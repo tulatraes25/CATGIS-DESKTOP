@@ -34,7 +34,7 @@ public final class CatgisAppInfo {
     }
 
     public static String getTagline() {
-        return I18n.t("GIS de escritorio para edicion, analisis visual, datos remotos y composicion cartografica.");
+        return I18n.t("Plataforma GIS profesional para edicion, analisis espacial, servicios geograficos y cartografia avanzada.");
     }
 
     public static String getAuthorLine() {
@@ -46,15 +46,15 @@ public final class CatgisAppInfo {
     }
 
     public static String getStatusLine() {
-        return "Estado actual del release: beta final funcional sin firma digital de distribucion.";
+        return "Estado actual del release: version estable funcional sin firma digital de distribucion.";
     }
 
     public static String getFocusLine() {
-        return I18n.t("Enfoque: trabajo GIS diario con una base moderna, integrada y mantenible sobre Windows.");
+        return I18n.t("Enfoque: plataforma GIS integral para trabajo cartografico, analisis espacial y gestion territorial sobre Windows.");
     }
 
     public static String getProfessionalNote() {
-        return I18n.t("Proyecto en evolucion con foco en presentar una experiencia profesional, clara y confiable para cartografia y gestion espacial.");
+        return I18n.t("Plataforma en evolucion continua con foco en experiencia profesional, escalabilidad y calidad cartografica de nivel institucional.");
     }
 
     public static String getRevisionCycleLine() {

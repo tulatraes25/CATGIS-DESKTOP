@@ -4,6 +4,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.GradientPaint;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -110,28 +111,54 @@ public final class AppBranding {
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
 
-            int arc = Math.max(8, size / 3);
-            g2.setColor(new Color(20, 96, 182));
+            int arc = Math.max(10, size / 3);
+
+            // Deep navy gradient background
+            GradientPaint bgGradient = new GradientPaint(0, 0, new Color(15, 23, 42), size, size, new Color(30, 58, 138));
+            g2.setPaint(bgGradient);
             g2.fillRoundRect(0, 0, size - 1, size - 1, arc, arc);
 
-            g2.setColor(new Color(255, 255, 255, 52));
-            g2.fillRoundRect(size / 10, size / 10, size - (size / 5), size / 3, arc, arc);
+            // Subtle top gloss
+            if (size >= 32) {
+                GradientPaint gloss = new GradientPaint(0, 0, new Color(255, 255, 255, 40), 0, size / 2f, new Color(255, 255, 255, 0));
+                g2.setPaint(gloss);
+                g2.fillRoundRect(0, 0, size - 1, size / 2, arc, arc);
+            }
 
-            g2.setColor(new Color(245, 158, 11));
-            g2.setStroke(new BasicStroke(Math.max(2f, size / 12f), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            int underlineY = (int) Math.round(size * 0.78);
-            g2.drawLine((int) Math.round(size * 0.18), underlineY, (int) Math.round(size * 0.82), underlineY);
+            // Gold crosshair/compass lines (subtle, behind text)
+            if (size >= 32) {
+                g2.setColor(new Color(217, 164, 47, 60));
+                g2.setStroke(new BasicStroke(Math.max(1f, size / 40f)));
+                int cx = size / 2, cy = size / 2;
+                int r = (int)(size * 0.32);
+                g2.drawLine(cx - r, cy, cx + r, cy);
+                g2.drawLine(cx, cy - r, cx, cy + r);
+                // Small diamond at center
+                int d = Math.max(2, size / 16);
+                g2.drawLine(cx - d, cy, cx, cy - d);
+                g2.drawLine(cx, cy - d, cx + d, cy);
+                g2.drawLine(cx + d, cy, cx, cy + d);
+                g2.drawLine(cx, cy + d, cx - d, cy);
+            }
 
-            String text = size >= 48 ? "CAT" : "C";
-            Font font = new Font("SansSerif", Font.BOLD, size >= 48 ? size / 3 : size / 2);
+            // CAT text
+            String text = size >= 48 ? "CAT" : (size >= 32 ? "CA" : "C");
+            float fontSize = size >= 48 ? size / 3.2f : size / 2.2f;
+            Font font = new Font("SansSerif", Font.BOLD, Math.round(fontSize));
             g2.setFont(font);
             FontMetrics metrics = g2.getFontMetrics();
             int x = (size - metrics.stringWidth(text)) / 2;
             int y = (size - metrics.getHeight()) / 2 + metrics.getAscent();
             g2.setColor(Color.WHITE);
-            g2.drawString(text, x, y);
+            g2.drawString(text, x, y - (size >= 48 ? 1 : 0));
+
+            // Gold accent bar at bottom
+            int barY = (int) Math.round(size * 0.80);
+            int barH = Math.max(2, size / 18);
+            g2.setColor(new Color(217, 164, 47));
+            g2.fillRoundRect((int)(size * 0.18), barY, (int)(size * 0.64), barH, barH, barH);
         } finally {
             g2.dispose();
         }

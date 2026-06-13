@@ -15,12 +15,14 @@ import javax.swing.JSeparator;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
@@ -42,13 +44,14 @@ import java.util.List;
  */
 public class WelcomePageDialog extends JDialog {
 
-    private static final Color BG_COLOR = new Color(248, 249, 250);
+    private static final Color BG_COLOR = new Color(248, 250, 252);
     private static final Color CARD_BG = Color.WHITE;
-    private static final Color ACCENT_BLUE = new Color(41, 128, 185);
-    private static final Color ACCENT_GREEN = new Color(39, 174, 96);
-    private static final Color ACCENT_ORANGE = new Color(230, 126, 34);
-    private static final Color TEXT_DARK = new Color(33, 37, 41);
-    private static final Color TEXT_MUTED = new Color(108, 117, 125);
+    private static final Color ACCENT_BLUE = new Color(59, 130, 246);
+    private static final Color ACCENT_GREEN = new Color(34, 197, 94);
+    private static final Color ACCENT_ORANGE = new Color(245, 158, 11);
+    private static final Color ACCENT_PURPLE = new Color(139, 92, 246);
+    private static final Color TEXT_DARK = new Color(15, 23, 42);
+    private static final Color TEXT_MUTED = new Color(100, 116, 139);
 
     public WelcomePageDialog() {
         setTitle("CATGIS Desktop");
@@ -78,24 +81,55 @@ public class WelcomePageDialog extends JDialog {
 
     private JPanel buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(9, 34, 52));
-        header.setBorder(new EmptyBorder(28, 32, 22, 32));
+        header.setPreferredSize(new Dimension(getWidth(), 140));
+        header.setBorder(new EmptyBorder(24, 32, 20, 32));
+
+        // Paint gradient via overridden paintComponent
+        JPanel gradientBg = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gp = new GradientPaint(0, 0, new Color(15, 23, 42), getWidth(), getHeight(), new Color(30, 58, 138));
+                g2.setPaint(gp);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                // Subtle grid
+                g2.setColor(new Color(255, 255, 255, 8));
+                g2.setStroke(new BasicStroke(0.5f));
+                for (int x = 0; x < getWidth(); x += 40) g2.drawLine(x, 0, x, getHeight());
+                for (int y = 0; y < getHeight(); y += 40) g2.drawLine(0, y, getWidth(), y);
+                // Gold bar at bottom
+                g2.setColor(new Color(217, 164, 47));
+                g2.fillRect(0, getHeight() - 3, getWidth(), 3);
+                g2.dispose();
+            }
+        };
+        gradientBg.setLayout(new BorderLayout());
+
+        JPanel textPanel = new JPanel(new BorderLayout(0, 4));
+        textPanel.setOpaque(false);
 
         JLabel title = new JLabel("CATGIS Desktop");
-        title.setFont(new Font("SansSerif", Font.BOLD, 26));
+        title.setFont(new Font("SansSerif", Font.BOLD, 32));
         title.setForeground(Color.WHITE);
 
-        JLabel subtitle = new JLabel("Sistema de Informacion Geografica — Analisis Espacial Profesional");
+        JLabel version = new JLabel("v" + AppBranding.getAppVersion());
+        version.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        version.setForeground(new Color(217, 164, 47));
+
+        JLabel subtitle = new JLabel("Plataforma GIS profesional \u2014 Edici\u00F3n, an\u00E1lisis espacial y cartograf\u00EDa avanzada");
         subtitle.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        subtitle.setForeground(new Color(150, 180, 210));
+        subtitle.setForeground(new Color(148, 163, 184));
 
-        JPanel textPanel = new JPanel(new BorderLayout());
-        textPanel.setOpaque(false);
-        textPanel.add(title, BorderLayout.CENTER);
-        textPanel.add(subtitle, BorderLayout.SOUTH);
+        textPanel.add(title, BorderLayout.NORTH);
+        JPanel subRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        subRow.setOpaque(false);
+        subRow.add(version);
+        subRow.add(subtitle);
+        textPanel.add(subRow, BorderLayout.CENTER);
 
-        header.add(textPanel, BorderLayout.CENTER);
-        return header;
+        gradientBg.add(textPanel, BorderLayout.WEST);
+        return gradientBg;
     }
 
     private JPanel buildCenter() {
@@ -171,7 +205,7 @@ public class WelcomePageDialog extends JDialog {
         gbc.gridy = 3; actions.add(createActionCard(
                 "Mapas online",
                 "Conecta con WMS, XYZ tiles y otros servicios",
-                new Color(142, 68, 173),
+                new Color(139, 92, 246),
                 () -> {
                     dispose();
                     OnlineBaseMapDialog.open(CatgisDesktopApp.getMainFrameSafe());
@@ -249,105 +283,112 @@ public class WelcomePageDialog extends JDialog {
     }
 
     private JPanel buildFooter() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 8));
-        footer.setBackground(new Color(233, 236, 239));
-
-        String version = "CATGIS Desktop v" + AppBranding.getAppVersion();
-        JLabel versionLabel = new JLabel(version);
-        versionLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        versionLabel.setForeground(TEXT_MUTED);
-        footer.add(versionLabel);
-
-        JLabel dateLabel = new JLabel(new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
-        dateLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        dateLabel.setForeground(TEXT_MUTED);
-        footer.add(dateLabel);
-
-        JButton closeBtn = new JButton("Comenzar");
-        closeBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
-        closeBtn.setBackground(ACCENT_BLUE);
-        closeBtn.setForeground(Color.WHITE);
-        closeBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_BLUE.darker(), 1),
-                BorderFactory.createEmptyBorder(4, 20, 4, 20)
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setBackground(new Color(241, 245, 249));
+        footer.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(226, 232, 240)),
+                new EmptyBorder(10, 24, 10, 24)
         ));
-        closeBtn.addActionListener(e -> dispose());
-        footer.add(closeBtn);
 
-        JButton skipBtn = new JButton("Saltar bienvenida");
+        // Left: version + stats
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
+        left.setOpaque(false);
+        JLabel ver = new JLabel("CATGIS Desktop v" + AppBranding.getAppVersion());
+        ver.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        ver.setForeground(new Color(100, 116, 139));
+        left.add(ver);
+
+        // Right: buttons
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+
+        JButton skipBtn = new JButton("No mostrar de nuevo");
         skipBtn.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        skipBtn.setForeground(TEXT_MUTED);
+        skipBtn.setForeground(new Color(100, 116, 139));
         skipBtn.setBorderPainted(false);
         skipBtn.setContentAreaFilled(false);
         skipBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        skipBtn.addActionListener(e -> {
-            AppBranding.setShowWelcomePage(false);
-            dispose();
-        });
-        footer.add(skipBtn);
+        skipBtn.addActionListener(e -> { AppBranding.setShowWelcomePage(false); dispose(); });
 
+        JButton startBtn = new JButton("Comenzar");
+        startBtn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        startBtn.setBackground(new Color(59, 130, 246));
+        startBtn.setForeground(Color.WHITE);
+        startBtn.setFocusPainted(false);
+        startBtn.setBorder(BorderFactory.createEmptyBorder(8, 24, 8, 24));
+        startBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        startBtn.addActionListener(e -> dispose());
+
+        right.add(skipBtn);
+        right.add(startBtn);
+
+        footer.add(left, BorderLayout.WEST);
+        footer.add(right, BorderLayout.EAST);
         return footer;
     }
 
     // --- Action Card ---
 
     private JPanel createActionCard(String title, String description, Color accent, Runnable onClick) {
-        JPanel card = new JPanel(new BorderLayout(8, 4));
+        JPanel card = new JPanel(new BorderLayout(10, 4));
         card.setBackground(CARD_BG);
         card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(222, 226, 230), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)
         ));
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Accent stripe
-        JPanel stripe = new JPanel() {
+        // Icon circle
+        JPanel iconCircle = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 25));
+                g2.fillOval(2, 2, 28, 28);
                 g2.setColor(accent);
-                g2.fillRoundRect(0, 2, 4, 16, 2, 2);
+                g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+                g2.drawString(Character.toString(title.charAt(0)), 10, 22);
                 g2.dispose();
             }
         };
-        stripe.setPreferredSize(new Dimension(6, 20));
-        stripe.setOpaque(false);
+        iconCircle.setPreferredSize(new Dimension(32, 32));
+        iconCircle.setOpaque(false);
 
-        JPanel textPanel = new JPanel(new BorderLayout(0, 2));
+        JPanel textPanel = new JPanel(new BorderLayout(0, 3));
         textPanel.setOpaque(false);
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
-        titleLabel.setForeground(TEXT_DARK);
-
+        titleLabel.setForeground(new Color(15, 23, 42));
         JLabel descLabel = new JLabel(description);
         descLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        descLabel.setForeground(TEXT_MUTED);
-
+        descLabel.setForeground(new Color(100, 116, 139));
         textPanel.add(titleLabel, BorderLayout.NORTH);
         textPanel.add(descLabel, BorderLayout.CENTER);
 
-        card.add(stripe, BorderLayout.WEST);
+        card.add(iconCircle, BorderLayout.WEST);
         card.add(textPanel, BorderLayout.CENTER);
 
-        // Hover effect
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                card.setBackground(new Color(240, 244, 248));
+                card.setBackground(new Color(241, 245, 249));
+                card.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(59, 130, 246, 80), 1),
+                        BorderFactory.createEmptyBorder(12, 14, 12, 14)
+                ));
             }
-
             @Override
             public void mouseExited(MouseEvent e) {
                 card.setBackground(CARD_BG);
+                card.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                        BorderFactory.createEmptyBorder(12, 14, 12, 14)
+                ));
             }
-
             @Override
-            public void mouseClicked(MouseEvent e) {
-                onClick.run();
-            }
+            public void mouseClicked(MouseEvent e) { onClick.run(); }
         });
-
         return card;
     }
 
@@ -363,8 +404,21 @@ public class WelcomePageDialog extends JDialog {
         card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // File type icon area
-        JLabel iconLabel = new JLabel("📁");
-        iconLabel.setFont(new Font("SansSerif", Font.PLAIN, 20));
+        JLabel iconLabel = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // Folder body
+                g2.setColor(new Color(245, 158, 11));
+                g2.fillRoundRect(2, 8, 18, 12, 3, 3);
+                // Folder tab
+                g2.setColor(new Color(217, 164, 47));
+                g2.fillRoundRect(2, 4, 8, 5, 2, 2);
+                g2.dispose();
+            }
+        };
+        iconLabel.setPreferredSize(new Dimension(24, 24));
 
         JPanel info = new JPanel(new BorderLayout(0, 2));
         info.setOpaque(false);

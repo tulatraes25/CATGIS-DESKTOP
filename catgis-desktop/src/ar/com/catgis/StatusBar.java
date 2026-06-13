@@ -27,7 +27,7 @@ public class StatusBar extends JPanel {
     public StatusBar() {
         setLayout(new BorderLayout(8, 0));
         setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(210, 216, 224)),
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(226, 232, 240)),
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)
         ));
         setBackground(new Color(248, 250, 252));
@@ -38,12 +38,12 @@ public class StatusBar extends JPanel {
         leftPanel.setOpaque(false);
 
         messageDotLabel = new JLabel("\u25CF");
-        messageDotLabel.setForeground(new Color(32, 158, 82));
+        messageDotLabel.setForeground(new Color(34, 197, 94));
         messageDotLabel.setFont(messageDotLabel.getFont().deriveFont(Font.BOLD, 11f));
 
         messageLabel = new JLabel(I18n.t("Listo"));
         messageLabel.setFont(messageLabel.getFont().deriveFont(Font.PLAIN, 11.5f));
-        messageLabel.setForeground(new Color(45, 55, 72));
+        messageLabel.setForeground(new Color(30, 41, 59));
 
         leftPanel.add(messageDotLabel);
         leftPanel.add(messageLabel);
@@ -90,7 +90,7 @@ public class StatusBar extends JPanel {
     private JLabel createInfoLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(label.getFont().deriveFont(Font.PLAIN, 11f));
-        label.setForeground(new Color(55, 65, 81));
+        label.setForeground(new Color(71, 85, 105));
         return label;
     }
 
@@ -100,11 +100,11 @@ public class StatusBar extends JPanel {
 
         String lower = text.toLowerCase();
         if (lower.contains("error")) {
-            messageDotLabel.setForeground(new Color(220, 38, 38));
+            messageDotLabel.setForeground(new Color(239, 68, 68));
         } else if (lower.contains("advert") || lower.contains("aviso") || lower.contains("atenci\u00F3n")) {
-            messageDotLabel.setForeground(new Color(234, 179, 8));
+            messageDotLabel.setForeground(new Color(245, 158, 11));
         } else {
-            messageDotLabel.setForeground(new Color(32, 158, 82));
+            messageDotLabel.setForeground(new Color(34, 197, 94));
         }
     }
 
