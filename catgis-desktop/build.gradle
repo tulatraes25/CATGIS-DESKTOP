@@ -94,6 +94,11 @@ sourceSets {
             includes = ['icons/**', 'help/**', 'crs/**', 'splash_catgis.png']
         }
     }
+    test {
+        resources {
+            srcDirs = ['src/test/resources']
+        }
+    }
 }
 
 application {
