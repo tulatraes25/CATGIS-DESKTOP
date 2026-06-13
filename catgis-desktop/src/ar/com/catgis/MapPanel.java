@@ -93,7 +93,7 @@ import ar.com.catgis.renderer.MapDecorationRenderer;
 import ar.com.catgis.renderer.labels.LabelExpressionEngine;
 import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 
-public class MapPanel extends JPanel implements SnapContext, MapViewportContext, UndoRedoContext {
+public class MapPanel extends JPanel implements SnapContext, MapViewportContext, UndoRedoContext, ScreenCoordinateContext {
 
     final Map<Layer, ShapefileData> shapefileLayers = new LinkedHashMap<>();
     final Map<Layer, LocalRasterData> rasterLayers = new LinkedHashMap<>();
@@ -126,6 +126,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     final MeasurementTool measurementTool = new MeasurementTool();
     private final FeatureRenderer featureRenderer = new FeatureRenderer(viewController);
     private final EditingEngine editingEngine = new EditingEngine();
+    final EditingGeometryOperations editingGeomOps = new EditingGeometryOperations(this);
     final LayerManager layerManager = new LayerManager(this);
     private final MapUtilities utilities = new MapUtilities(this);
     final DrawingToolManager drawingToolManager;
@@ -154,6 +155,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     String currentTool = "MOVE";
     MapTool activeTool = new MoveTool();
+    final EditingState editingState = new EditingState(this);
 
     Layer selectedLayer;
     SimpleFeature selectedFeature;
@@ -492,115 +494,33 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     private Cursor createBadgeCursor(String symbol, Color ink, Color badgeFill) {
-        return createToolCursor(symbol, ink, badgeFill, Color.WHITE);
+        return EditingCursorFactory.createBadgeCursor(symbol, ink, badgeFill);
     }
 
     private Cursor createToolCursor(String symbol, Color ink, Color badgeFill, Color halo) {
-        try {
-            int size = 32;
-            BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2 = image.createGraphics();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            drawCursorPointer(g2);
-
-            drawCursorBadge(g2, halo, badgeFill, ink);
-
-            g2.setFont(new java.awt.Font("SansSerif", java.awt.Font.BOLD, 12));
-            FontMetrics fm = g2.getFontMetrics();
-            int tx = 15 + ((12 - fm.stringWidth(symbol)) / 2);
-            int ty = 15 + (((12 - fm.getHeight()) / 2) + fm.getAscent()) - 1;
-            g2.drawString(symbol, tx, ty);
-            g2.dispose();
-            return Toolkit.getDefaultToolkit().createCustomCursor(image, new java.awt.Point(2, 1), "catgis-" + symbol);
-        } catch (Exception ex) {
-            return Cursor.getDefaultCursor();
-        }
+        return EditingCursorFactory.createToolCursor(symbol, ink, badgeFill, halo);
     }
 
     private Cursor createScissorCursor() {
-        try {
-            int size = 32;
-            BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2 = image.createGraphics();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            drawCursorPointer(g2);
-
-            drawCursorBadge(g2, new Color(219, 234, 254), new Color(219, 234, 254), new Color(35, 76, 155));
-            g2.setColor(new Color(35, 76, 155));
-            g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g2.drawOval(16, 16, 4, 4);
-            g2.drawOval(21, 20, 4, 4);
-            g2.drawLine(18, 18, 25, 14);
-            g2.drawLine(23, 22, 26, 25);
-            g2.drawLine(20, 18, 22, 21);
-            g2.drawLine(23, 17, 20, 22);
-            g2.dispose();
-
-            return Toolkit.getDefaultToolkit().createCustomCursor(image, new java.awt.Point(2, 1), "catgis-cut");
-        } catch (Exception ex) {
-            return Cursor.getDefaultCursor();
-        }
+        return EditingCursorFactory.createScissorCursor();
     }
 
     private Cursor createSelectionCursor() {
-        try {
-            int size = 32;
-            BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2 = image.createGraphics();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            drawCursorPointer(g2);
-            drawCursorBadge(g2, new Color(219, 234, 254), new Color(219, 234, 254), new Color(30, 64, 175));
-            drawSelectionBadge(g2, new Color(30, 64, 175));
-            g2.dispose();
-            return Toolkit.getDefaultToolkit().createCustomCursor(image, new java.awt.Point(2, 1), "catgis-select-edit");
-        } catch (Exception ex) {
-            return Cursor.getDefaultCursor();
-        }
+        Object geomObj = selectedFeature != null ? selectedFeature.getDefaultGeometry() : null;
+        return EditingCursorFactory.createSelectionCursor(geomObj);
     }
 
     private void drawCursorBadge(Graphics2D g2, Color halo, Color badgeFill, Color stroke) {
-        g2.setColor(halo);
-        g2.fillOval(13, 13, 16, 16);
-        g2.setColor(badgeFill);
-        g2.fillOval(14, 14, 14, 14);
-        g2.setColor(stroke);
-        g2.setStroke(new BasicStroke(1.3f));
-        g2.drawOval(14, 14, 14, 14);
+        EditingCursorFactory.drawCursorBadge(g2, halo, badgeFill, stroke);
     }
 
     private void drawSelectionBadge(Graphics2D g2, Color ink) {
         Object geomObj = selectedFeature != null ? selectedFeature.getDefaultGeometry() : null;
-        g2.setColor(ink);
-        g2.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        if (geomObj instanceof Point || geomObj instanceof MultiPoint) {
-            g2.fillOval(18, 18, 4, 4);
-            return;
-        }
-        if (geomObj instanceof Polygon || geomObj instanceof MultiPolygon) {
-            g2.drawRect(17, 17, 6, 6);
-            return;
-        }
-        g2.drawLine(17, 23, 24, 17);
+        EditingCursorFactory.drawSelectionBadge(g2, ink, geomObj);
     }
 
     private void drawCursorPointer(Graphics2D g2) {
-        Path2D.Double outline = new Path2D.Double();
-        outline.moveTo(2, 2);
-        outline.lineTo(2, 22);
-        outline.lineTo(7, 17);
-        outline.lineTo(10, 26);
-        outline.lineTo(13, 24);
-        outline.lineTo(10, 16);
-        outline.lineTo(16, 16);
-        outline.closePath();
-
-        g2.setColor(new Color(255, 255, 255, 245));
-        g2.fill(outline);
-        g2.setColor(new Color(30, 30, 34));
-        g2.setStroke(new BasicStroke(1.1f));
-        g2.draw(outline);
-        g2.drawLine(6, 18, 9, 24);
+        EditingCursorFactory.drawCursorPointer(g2);
     }
 
     public String getCurrentTool() {
@@ -612,6 +532,10 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     public SimpleFeature getSelectedFeatureRef() {
+        return selectedFeature;
+    }
+
+    public SimpleFeature getSelectedFeature() {
         return selectedFeature;
     }
 
@@ -1347,7 +1271,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         return MapMeasurementUtils.reprojectToMetric(geometry, sourceCRSCode);
     }
 
-    String chooseMetricCRSForMeasurement(String sourceCRSCode) {
+    public String chooseMetricCRSForMeasurement(String sourceCRSCode) {
         return MapMeasurementUtils.chooseMetricCRS(sourceCRSCode);
     }
 
@@ -3794,7 +3718,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         mapRenderer.drawEditableVertices(g2, feature, layer);
     }
 
-    Geometry getEditableDisplayGeometry(SimpleFeature feature, Layer layer) {
+    public Geometry getEditableDisplayGeometry(SimpleFeature feature, Layer layer) {
         if (feature == null || !isFeatureVisibleInLayer(layer, feature)) {
             return null;
         }
@@ -3808,7 +3732,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         return geometry != null && !geometry.isEmpty() ? geometry : null;
     }
 
-    Coordinate[] getEditableVertexCoordinates(Geometry geometry) {
+    public Coordinate[] getEditableVertexCoordinates(Geometry geometry) {
         List<Coordinate> vertices = new ArrayList<>();
 
         if (geometry instanceof LineString) {
@@ -3966,7 +3890,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
         Geometry displayGeometry = getEditableDisplayGeometry(selectedFeature, selectedLayer);
         Coordinate displayTarget = new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
-        LineSplitProjection projection = findEditableSegmentProjection(displayGeometry, displayTarget, screenX, screenY, EDIT_SEGMENT_TOLERANCE_PX);
+        LineSplitProjection projection = editingGeomOps.findEditableSegmentProjection(displayGeometry, displayTarget, screenX, screenY, EDIT_SEGMENT_TOLERANCE_PX);
         if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
             showCopiedMessage("No se encontrÃ³ un tramo cercano para agregar el vÃ©rtice.");
             return true;
@@ -3989,7 +3913,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return false;
         }
 
-        int vertexIndex = findEditableVertexIndex(screenX, screenY);
+        int vertexIndex = editingGeomOps.findEditableVertexIndex(screenX, screenY);
         if (vertexIndex < 0) {
             showCopiedMessage("No se encontrÃ³ un vÃ©rtice cercano para eliminar.");
             return true;
@@ -4015,7 +3939,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return false;
         }
 
-        List<Integer> vertexIndexes = collectEditableVertexIndexes(selectionBounds);
+        List<Integer> vertexIndexes = editingGeomOps.collectEditableVertexIndexes(selectionBounds);
         if (vertexIndexes.isEmpty()) {
             showCopiedMessage("No se encontrÃ³ ningÃºn vÃ©rtice dentro del rectÃ¡ngulo.");
             return true;
@@ -4039,7 +3963,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return false;
         }
 
-        int vertexIndex = findEditableVertexIndex(screenX, screenY);
+        int vertexIndex = editingGeomOps.findEditableVertexIndex(screenX, screenY);
         if (vertexIndex < 0) {
             showCopiedMessage("No se encontrÃ³ un vÃ©rtice cercano para unir.");
             return true;
@@ -4062,7 +3986,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return false;
         }
 
-        List<Integer> vertexIndexes = collectEditableVertexIndexes(selectionBounds);
+        List<Integer> vertexIndexes = editingGeomOps.collectEditableVertexIndexes(selectionBounds);
         if (vertexIndexes.isEmpty()) {
             showCopiedMessage("No se encontrÃ³ ningÃºn vÃ©rtice dentro del rectÃ¡ngulo.");
             return true;
@@ -4128,7 +4052,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
         Coordinate targetCoordinate = resolveInteractiveCoordinate(screenX, screenY, false);
         Coordinate sourceCoordinate = toSourceCoordinate(targetCoordinate.x, targetCoordinate.y, selectedLayer);
-        Geometry updated = buildAdjustedSelectedLineGeometry(geometry, sourceCoordinate, extend);
+        Geometry updated = buildAdjustedSelectedLineGeometry(geometry, sourceCoordinate, extend, cadReferenceFromStart);
         if (updated == null) {
             showCopiedMessage(extend
                     ? "El punto elegido no permite extender la linea en ese sentido."
@@ -4172,43 +4096,8 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         repaint();
     }
 
-    Geometry buildAdjustedSelectedLineGeometry(Geometry geometry, Coordinate targetCoordinate, boolean extend) {
-        if (geometry == null || targetCoordinate == null) {
-            return null;
-        }
-
-        Coordinate[] baseCoordinates = extractContinuableLineCoordinates(geometry);
-        if (baseCoordinates == null || baseCoordinates.length < 2) {
-            return null;
-        }
-
-        Coordinate[] updatedCoordinates = cloneCoordinates(baseCoordinates);
-        int endpointIndex = cadReferenceFromStart ? 0 : updatedCoordinates.length - 1;
-        int anchorIndex = cadReferenceFromStart ? 1 : updatedCoordinates.length - 2;
-        Coordinate endpoint = updatedCoordinates[endpointIndex];
-        Coordinate anchor = updatedCoordinates[anchorIndex];
-        double dx = endpoint.x - anchor.x;
-        double dy = endpoint.y - anchor.y;
-        double lengthSquared = (dx * dx) + (dy * dy);
-        if (lengthSquared <= 0.0000001) {
-            return null;
-        }
-
-        double factor = ((targetCoordinate.x - endpoint.x) * dx + (targetCoordinate.y - endpoint.y) * dy) / lengthSquared;
-        if (extend) {
-            if (factor <= 0.02) {
-                return null;
-            }
-        } else if (factor >= -0.02 || factor <= -0.98) {
-            return null;
-        }
-
-        updatedCoordinates[endpointIndex] = new Coordinate(
-                endpoint.x + (dx * factor),
-                endpoint.y + (dy * factor)
-        );
-        GeometryFactory factory = geometry.getFactory() != null ? geometry.getFactory() : new GeometryFactory();
-        return factory.createLineString(updatedCoordinates);
+    Geometry buildAdjustedSelectedLineGeometry(Geometry geometry, Coordinate targetCoordinate, boolean extend, boolean fromStart) {
+        return editingGeomOps.buildAdjustedSelectedLineGeometry(geometry, targetCoordinate, extend, fromStart);
     }
 
     private boolean handleParallelLineClick(int screenX, int screenY) {
@@ -4272,7 +4161,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     private boolean chooseCadReferenceSegment(int screenX, int screenY, Geometry sourceGeometry) {
         Geometry displayGeometry = getEditableDisplayGeometry(selectedFeature, selectedLayer);
         Coordinate displayTarget = new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
-        LineSplitProjection projection = findEditableSegmentProjection(
+        LineSplitProjection projection = editingGeomOps.findEditableSegmentProjection(
                 displayGeometry,
                 displayTarget,
                 screenX,
@@ -4297,55 +4186,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     Geometry buildParallelLineGeometry(Coordinate segmentStart, Coordinate segmentEnd, Coordinate sideCoordinate) {
-        if (segmentStart == null || segmentEnd == null || sideCoordinate == null) {
-            return null;
-        }
-
-        double dx = segmentEnd.x - segmentStart.x;
-        double dy = segmentEnd.y - segmentStart.y;
-        double length = Math.hypot(dx, dy);
-        if (length <= 0.0000001) {
-            return null;
-        }
-
-        double nx = -dy / length;
-        double ny = dx / length;
-        Coordinate midpoint = new Coordinate(
-                (segmentStart.x + segmentEnd.x) / 2.0,
-                (segmentStart.y + segmentEnd.y) / 2.0
-        );
-        double offset = ((sideCoordinate.x - midpoint.x) * nx) + ((sideCoordinate.y - midpoint.y) * ny);
-        if (Math.abs(offset) <= 0.0000001) {
-            return null;
-        }
-
-        GeometryFactory factory = new GeometryFactory();
-        return factory.createLineString(new Coordinate[]{
-                new Coordinate(segmentStart.x + (nx * offset), segmentStart.y + (ny * offset)),
-                new Coordinate(segmentEnd.x + (nx * offset), segmentEnd.y + (ny * offset))
-        });
+        return editingGeomOps.buildParallelLineGeometry(segmentStart, segmentEnd, sideCoordinate);
     }
 
     Geometry buildPerpendicularLineGeometry(Coordinate segmentStart, Coordinate segmentEnd, Coordinate targetCoordinate) {
-        if (segmentStart == null || segmentEnd == null || targetCoordinate == null) {
-            return null;
-        }
-
-        double dx = segmentEnd.x - segmentStart.x;
-        double dy = segmentEnd.y - segmentStart.y;
-        double lengthSquared = (dx * dx) + (dy * dy);
-        if (lengthSquared <= 0.0000001) {
-            return null;
-        }
-
-        double factor = ((targetCoordinate.x - segmentStart.x) * dx + (targetCoordinate.y - segmentStart.y) * dy) / lengthSquared;
-        Coordinate foot = new Coordinate(segmentStart.x + (dx * factor), segmentStart.y + (dy * factor));
-        if (foot.distance(targetCoordinate) <= 0.0000001) {
-            return null;
-        }
-
-        GeometryFactory factory = new GeometryFactory();
-        return factory.createLineString(new Coordinate[]{foot, new Coordinate(targetCoordinate)});
+        return editingGeomOps.buildPerpendicularLineGeometry(segmentStart, segmentEnd, targetCoordinate);
     }
 
     private boolean appendCadDerivedLine(Geometry geometry, String successMessage) {
@@ -4386,7 +4231,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         if (adjacentPolygonSegmentStart == null || adjacentPolygonSegmentEnd == null) {
             Geometry displayGeometry = getEditableDisplayGeometry(selectedFeature, selectedLayer);
             Coordinate displayTarget = new Coordinate(screenToWorldX(screenX), screenToWorldY(screenY));
-            LineSplitProjection projection = findEditableSegmentProjection(
+            LineSplitProjection projection = editingGeomOps.findEditableSegmentProjection(
                     displayGeometry,
                     displayTarget,
                     screenX,
@@ -4545,59 +4390,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     int findEditableVertexIndex(int screenX, int screenY) {
-        if (!featureEditMode || selectedFeature == null || selectedLayer == null) {
-            return -1;
-        }
-
-        Geometry geometry = getEditableDisplayGeometry(selectedFeature, selectedLayer);
-        Coordinate[] vertices = getEditableVertexCoordinates(geometry);
-        if (vertices == null || vertices.length == 0) {
-            return -1;
-        }
-
-        for (int i = 0; i < vertices.length; i++) {
-            Coordinate c = vertices[i];
-            int vx = worldToScreenX(c.x);
-            int vy = worldToScreenY(c.y);
-            double distance = Math.hypot(screenX - vx, screenY - vy);
-            if (distance <= EDIT_VERTEX_TOLERANCE_PX) {
-                return i;
-            }
-        }
-
-        return -1;
+        return editingGeomOps.findEditableVertexIndex(screenX, screenY);
     }
 
     private List<Integer> collectEditableVertexIndexes(Rectangle selectionBounds) {
-        List<Integer> indexes = new ArrayList<>();
-        if (!featureEditMode || selectedFeature == null || selectedLayer == null || selectionBounds == null) {
-            return indexes;
-        }
-
-        Geometry geometry = getEditableDisplayGeometry(selectedFeature, selectedLayer);
-        Coordinate[] vertices = getEditableVertexCoordinates(geometry);
-        if (vertices == null || vertices.length == 0) {
-            return indexes;
-        }
-
-        Rectangle expanded = new Rectangle(
-                selectionBounds.x - 2,
-                selectionBounds.y - 2,
-                selectionBounds.width + 4,
-                selectionBounds.height + 4
-        );
-        for (int i = 0; i < vertices.length; i++) {
-            Coordinate c = vertices[i];
-            if (c == null) {
-                continue;
-            }
-            int vx = worldToScreenX(c.x);
-            int vy = worldToScreenY(c.y);
-            if (expanded.contains(vx, vy)) {
-                indexes.add(i);
-            }
-        }
-        return indexes;
+        return editingGeomOps.collectEditableVertexIndexes(selectionBounds);
     }
 
     void moveSelectedVertex(double projectX, double projectY, int vertexIndex) {
@@ -5175,155 +4972,22 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     private Geometry buildBufferedPolygonGeometry(Geometry geometry, Layer layer, double distance) {
-        if (geometry == null || geometry.isEmpty()) {
-            return null;
-        }
-        if (!(geometry instanceof Polygon) && !(geometry instanceof MultiPolygon)) {
-            return null;
-        }
-
-        String sourceCode = layer != null ? layer.getSourceCRS() : "";
-        GeometryFactory factory = geometry.getFactory();
-        Geometry working = (Geometry) geometry.copy();
-        String metricCode = chooseMetricCRSForMeasurement(sourceCode);
-        boolean reprojectBack = sourceCode != null
-                && !sourceCode.isBlank()
-                && metricCode != null
-                && !metricCode.isBlank()
-                && !sourceCode.equalsIgnoreCase(metricCode);
-
-        if (reprojectBack) {
-            working = reprojectGeometry(working, sourceCode, metricCode);
-        }
-        if (working == null || working.isEmpty()) {
-            return null;
-        }
-
-        Geometry buffered;
-        try {
-            buffered = working.buffer(distance);
-        } catch (Exception ex) {
-            return null;
-        }
-        if (buffered == null || buffered.isEmpty()) {
-            return null;
-        }
-
-        if (reprojectBack) {
-            buffered = reprojectGeometry(buffered, metricCode, sourceCode);
-        }
-
-        return normalizePolygonalGeometry(buffered, factory);
+        return editingGeomOps.buildBufferedPolygonGeometry(geometry, layer, distance);
     }
 
     Coordinate[] getEditableSegmentCoordinates(Geometry geometry, int segmentIndex) {
-        if (geometry == null || segmentIndex < 0) {
-            return null;
-        }
-
-        if (geometry instanceof LineString lineString) {
-            return getSegmentCoordinates(lineString.getCoordinates(), segmentIndex);
-        }
-        if (geometry instanceof MultiLineString multiLineString) {
-            int offset = 0;
-            for (int i = 0; i < multiLineString.getNumGeometries(); i++) {
-                Coordinate[] coords = ((LineString) multiLineString.getGeometryN(i)).getCoordinates();
-                int segments = Math.max(0, coords.length - 1);
-                if (segmentIndex >= offset && segmentIndex < offset + segments) {
-                    return getSegmentCoordinates(coords, segmentIndex - offset);
-                }
-                offset += segments;
-            }
-            return null;
-        }
-        if (geometry instanceof Polygon polygon) {
-            return getSegmentCoordinates(polygon.getExteriorRing().getCoordinates(), segmentIndex);
-        }
-        if (geometry instanceof MultiPolygon multiPolygon) {
-            int offset = 0;
-            for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
-                Coordinate[] coords = ((Polygon) multiPolygon.getGeometryN(i)).getExteriorRing().getCoordinates();
-                int segments = Math.max(0, coords.length - 1);
-                if (segmentIndex >= offset && segmentIndex < offset + segments) {
-                    return getSegmentCoordinates(coords, segmentIndex - offset);
-                }
-                offset += segments;
-            }
-        }
-
-        return null;
+        return editingGeomOps.getEditableSegmentCoordinates(geometry, segmentIndex);
     }
 
     private Coordinate[] getSegmentCoordinates(Coordinate[] coordinates, int segmentIndex) {
-        if (coordinates == null || segmentIndex < 0 || segmentIndex >= coordinates.length - 1) {
-            return null;
-        }
-        return new Coordinate[]{
-                new Coordinate(coordinates[segmentIndex]),
-                new Coordinate(coordinates[segmentIndex + 1])
-        };
+        return editingGeomOps.getSegmentCoordinates(coordinates, segmentIndex);
     }
 
     Geometry buildAdjacentPolygonGeometry(Geometry sourceGeometry,
                                                   Coordinate segmentStart,
                                                   Coordinate segmentEnd,
                                                   Coordinate sideCoordinate) {
-        if (sourceGeometry == null || segmentStart == null || segmentEnd == null || sideCoordinate == null) {
-            return null;
-        }
-
-        double dx = segmentEnd.x - segmentStart.x;
-        double dy = segmentEnd.y - segmentStart.y;
-        double length = Math.hypot(dx, dy);
-        if (length <= 0.0000001) {
-            return null;
-        }
-
-        double nx1 = -dy / length;
-        double ny1 = dx / length;
-        double nx2 = dy / length;
-        double ny2 = -dx / length;
-
-        Coordinate midpoint = new Coordinate(
-                (segmentStart.x + segmentEnd.x) / 2.0,
-                (segmentStart.y + segmentEnd.y) / 2.0
-        );
-        double dot1 = ((sideCoordinate.x - midpoint.x) * nx1) + ((sideCoordinate.y - midpoint.y) * ny1);
-        double dot2 = ((sideCoordinate.x - midpoint.x) * nx2) + ((sideCoordinate.y - midpoint.y) * ny2);
-
-        double nx = Math.abs(dot1) >= Math.abs(dot2) ? nx1 : nx2;
-        double ny = Math.abs(dot1) >= Math.abs(dot2) ? ny1 : ny2;
-        double distance = Math.max(Math.abs(dot1), Math.abs(dot2));
-        if (distance <= 0.0000001) {
-            return null;
-        }
-
-        GeometryFactory factory = sourceGeometry.getFactory() != null ? sourceGeometry.getFactory() : new GeometryFactory();
-        Polygon candidate = buildAdjacentPolygonAlongSegment(factory, segmentStart, segmentEnd, nx, ny, distance);
-        if (candidate == null) {
-            return null;
-        }
-
-        Point interiorPoint = candidate.getInteriorPoint();
-        if (interiorPoint != null && sourceGeometry.covers(interiorPoint)) {
-            candidate = buildAdjacentPolygonAlongSegment(factory, segmentStart, segmentEnd, -nx, -ny, distance);
-            if (candidate == null) {
-                return null;
-            }
-        }
-
-        if (candidate.getArea() <= 0.0) {
-            return null;
-        }
-
-        try {
-            Geometry overlap = sourceGeometry.intersection(candidate);
-            if (overlap != null && overlap.getArea() > 0.0000001) {
-                return null;
-            }
-        } catch (Exception ignored) { CatgisLogger.warn("Error al verificar solapamiento de geometrias", ignored); }
-
-        return candidate;
+        return (Geometry) editingGeomOps.buildAdjacentPolygonGeometry(sourceGeometry, segmentStart, segmentEnd, sideCoordinate);
     }
 
     private Polygon buildAdjacentPolygonAlongSegment(GeometryFactory factory,
@@ -5332,26 +4996,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                                                      double nx,
                                                      double ny,
                                                      double distance) {
-        Coordinate offsetStart = new Coordinate(
-                segmentStart.x + (nx * distance),
-                segmentStart.y + (ny * distance)
-        );
-        Coordinate offsetEnd = new Coordinate(
-                segmentEnd.x + (nx * distance),
-                segmentEnd.y + (ny * distance)
-        );
-
-        Coordinate[] shell = MapGeometryUtils.normalizeRingCoordinates(new Coordinate[]{
-                new Coordinate(segmentStart),
-                new Coordinate(segmentEnd),
-                offsetEnd,
-                offsetStart,
-                new Coordinate(segmentStart)
-        });
-        if (shell == null) {
-            return null;
-        }
-        return factory.createPolygon(factory.createLinearRing(shell), null);
+        return editingGeomOps.buildAdjacentPolygonAlongSegment(factory, segmentStart, segmentEnd, nx, ny, distance);
     }
 
     private boolean appendAdjacentPolygonToSelectedLayer(Geometry adjacentGeometry) {
@@ -5389,762 +5034,88 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     private Geometry reprojectGeometry(Geometry geometry, String sourceCode, String targetCode) {
-        try {
-            if (geometry == null || geometry.isEmpty()) {
-                return geometry;
-            }
-            if (sourceCode == null || sourceCode.isBlank() || targetCode == null || targetCode.isBlank()) {
-                return geometry;
-            }
-            if (sourceCode.equalsIgnoreCase(targetCode)) {
-                return geometry;
-            }
-
-            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
-            MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-            return JTS.transform(geometry, transform);
-        } catch (Exception ex) {
-            return null;
-        }
+        return editingGeomOps.reprojectGeometry(geometry, sourceCode, targetCode);
     }
 
     private int findEditableSegmentIndex(Geometry geometry, int screenX, int screenY) {
-        if (geometry == null) {
-            return -1;
-        }
-
-        if (geometry instanceof LineString) {
-            return findNearestSegmentInCoordinates(((LineString) geometry).getCoordinates(), screenX, screenY, 0);
-        }
-        if (geometry instanceof MultiLineString) {
-            int offset = 0;
-            int bestIndex = -1;
-            double bestDistance = Double.MAX_VALUE;
-            MultiLineString multi = (MultiLineString) geometry;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Coordinate[] coords = ((LineString) multi.getGeometryN(i)).getCoordinates();
-                int local = findNearestSegmentInCoordinates(coords, screenX, screenY, offset);
-                if (local >= 0) {
-                    double distance = distanceToSegmentIndex(coords, screenX, screenY, local - offset);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestIndex = local;
-                    }
-                }
-                offset += Math.max(0, coords.length - 1);
-            }
-            return bestDistance <= 14.0 ? bestIndex : -1;
-        }
-        if (geometry instanceof Polygon) {
-            return findNearestSegmentInCoordinates(((Polygon) geometry).getExteriorRing().getCoordinates(), screenX, screenY, 0);
-        }
-        if (geometry instanceof MultiPolygon) {
-            int offset = 0;
-            int bestIndex = -1;
-            double bestDistance = Double.MAX_VALUE;
-            MultiPolygon multi = (MultiPolygon) geometry;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Coordinate[] coords = ((Polygon) multi.getGeometryN(i)).getExteriorRing().getCoordinates();
-                int local = findNearestSegmentInCoordinates(coords, screenX, screenY, offset);
-                if (local >= 0) {
-                    double distance = distanceToSegmentIndex(coords, screenX, screenY, local - offset);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestIndex = local;
-                    }
-                }
-                offset += Math.max(0, coords.length - 1);
-            }
-            return bestDistance <= 14.0 ? bestIndex : -1;
-        }
-
-        return -1;
+        return editingGeomOps.findEditableSegmentIndex(geometry, screenX, screenY);
     }
 
     @Override
     public LineSplitProjection findEditableSegmentProjection(Geometry geometry, Coordinate target, int screenX, int screenY, double maxDistancePx) {
-        if (geometry == null || target == null) {
-            return null;
-        }
-
-        if (geometry instanceof LineString) {
-            return projectLineSegmentProjection((LineString) geometry, target, screenX, screenY, maxDistancePx, 0);
-        }
-        if (geometry instanceof MultiLineString) {
-            int offset = 0;
-            LineSplitProjection best = null;
-            MultiLineString multi = (MultiLineString) geometry;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                LineString line = (LineString) multi.getGeometryN(i);
-                LineSplitProjection candidate = projectLineSegmentProjection(line, target, screenX, screenY, maxDistancePx, offset);
-                if (candidate != null && (best == null || candidate.distance < best.distance)) {
-                    best = candidate;
-                }
-                offset += Math.max(0, line.getCoordinates().length - 1);
-            }
-            return best;
-        }
-        if (geometry instanceof Polygon) {
-            LineString ring = ((Polygon) geometry).getExteriorRing();
-            return projectLineSegmentProjection(ring, target, screenX, screenY, maxDistancePx, 0);
-        }
-        if (geometry instanceof MultiPolygon) {
-            int offset = 0;
-            LineSplitProjection best = null;
-            MultiPolygon multi = (MultiPolygon) geometry;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Polygon polygon = (Polygon) multi.getGeometryN(i);
-                LineString ring = polygon.getExteriorRing();
-                LineSplitProjection candidate = projectLineSegmentProjection(ring, target, screenX, screenY, maxDistancePx, offset);
-                if (candidate != null && (best == null || candidate.distance < best.distance)) {
-                    best = candidate;
-                }
-                offset += Math.max(0, ring.getCoordinates().length - 1);
-            }
-            return best;
-        }
-
-        return null;
+        return editingGeomOps.findEditableSegmentProjection(geometry, target, screenX, screenY, maxDistancePx);
     }
 
     LineSplitProjection projectLineSegmentProjection(LineString line, Coordinate target, int screenX, int screenY, double maxDistancePx, int baseIndex) {
-        LineSplitProjection projection = projectCoordinateOntoLine(line, target);
-        if (projection == null || projection.projected == null) {
-            return null;
-        }
-
-        double distancePx = Math.hypot(worldToScreenX(projection.projected.x) - screenX, worldToScreenY(projection.projected.y) - screenY);
-        if (distancePx > maxDistancePx) {
-            return null;
-        }
-
-        return new LineSplitProjection(baseIndex + projection.segmentIndex, projection.projected, distancePx);
+        return editingGeomOps.projectLineSegmentProjection(line, target, screenX, screenY, maxDistancePx, baseIndex);
     }
 
     private int findNearestSegmentInCoordinates(Coordinate[] coords, int screenX, int screenY, int baseIndex) {
-        if (coords == null || coords.length < 2) {
-            return -1;
-        }
-
-        double bestDistance = Double.MAX_VALUE;
-        int bestIndex = -1;
-        for (int i = 0; i < coords.length - 1; i++) {
-            double distance = pointToSegmentDistance(
-                    screenX, screenY,
-                    worldToScreenX(coords[i].x), worldToScreenY(coords[i].y),
-                    worldToScreenX(coords[i + 1].x), worldToScreenY(coords[i + 1].y)
-            );
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                bestIndex = baseIndex + i;
-            }
-        }
-        return bestDistance <= 14.0 ? bestIndex : -1;
+        return editingGeomOps.findNearestSegmentInCoordinates(coords, screenX, screenY, baseIndex);
     }
 
     private double distanceToSegmentIndex(Coordinate[] coords, int screenX, int screenY, int localIndex) {
-        if (coords == null || localIndex < 0 || localIndex >= coords.length - 1) {
-            return Double.MAX_VALUE;
-        }
-        return pointToSegmentDistance(
-                screenX, screenY,
-                worldToScreenX(coords[localIndex].x), worldToScreenY(coords[localIndex].y),
-                worldToScreenX(coords[localIndex + 1].x), worldToScreenY(coords[localIndex + 1].y)
-        );
+        return editingGeomOps.distanceToSegmentIndex(coords, screenX, screenY, localIndex);
     }
 
-    private double pointToSegmentDistance(double px, double py, double x1, double y1, double x2, double y2) {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        if (dx == 0 && dy == 0) {
-            return Math.hypot(px - x1, py - y1);
-        }
-        double t = ((px - x1) * dx + (py - y1) * dy) / ((dx * dx) + (dy * dy));
-        t = Math.max(0, Math.min(1, t));
-        double projX = x1 + (t * dx);
-        double projY = y1 + (t * dy);
-        return Math.hypot(px - projX, py - projY);
+    static double pointToSegmentDistance(double px, double py, double x1, double y1, double x2, double y2) {
+        return EditingGeometryOperations.pointToSegmentDistance(px, py, x1, y1, x2, y2);
     }
 
     private Geometry buildGeometryWithMovedVertex(Geometry geometry, int vertexIndex, Coordinate newCoordinate) {
-        if (geometry instanceof LineString) {
-            Coordinate[] coords = geometry.getCoordinates().clone();
-            if (vertexIndex >= coords.length) {
-                return null;
-            }
-            coords[vertexIndex] = new Coordinate(newCoordinate);
-            return geometry.getFactory().createLineString(coords);
-        }
-
-        if (geometry instanceof Polygon) {
-            Polygon polygon = (Polygon) geometry;
-            Coordinate[] shellCoords = polygon.getExteriorRing().getCoordinates().clone();
-            if (shellCoords.length <= 3 || vertexIndex >= shellCoords.length - 1) {
-                return null;
-            }
-
-            shellCoords[vertexIndex] = new Coordinate(newCoordinate);
-            if (vertexIndex == 0) {
-                shellCoords[shellCoords.length - 1] = new Coordinate(newCoordinate);
-            }
-
-            LinearRing[] holes = new LinearRing[polygon.getNumInteriorRing()];
-            for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-                holes[i] = geometry.getFactory().createLinearRing(polygon.getInteriorRingN(i).getCoordinates());
-            }
-
-            return geometry.getFactory().createPolygon(
-                    geometry.getFactory().createLinearRing(shellCoords),
-                    holes
-            );
-        }
-
-        if (geometry instanceof MultiLineString) {
-            MultiLineString multi = (MultiLineString) geometry;
-            LineString[] lines = new LineString[multi.getNumGeometries()];
-            int offset = 0;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                LineString line = (LineString) multi.getGeometryN(i);
-                Coordinate[] coords = line.getCoordinates().clone();
-                if (vertexIndex >= offset && vertexIndex < offset + coords.length) {
-                    coords[vertexIndex - offset] = new Coordinate(newCoordinate);
-                }
-                lines[i] = geometry.getFactory().createLineString(coords);
-                offset += coords.length;
-            }
-            return geometry.getFactory().createMultiLineString(lines);
-        }
-
-        if (geometry instanceof MultiPolygon) {
-            MultiPolygon multi = (MultiPolygon) geometry;
-            Polygon[] polygons = new Polygon[multi.getNumGeometries()];
-            int offset = 0;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Polygon polygon = (Polygon) multi.getGeometryN(i);
-                Coordinate[] shellCoords = polygon.getExteriorRing().getCoordinates().clone();
-                int visibleVertices = Math.max(0, shellCoords.length - 1);
-                if (vertexIndex >= offset && vertexIndex < offset + visibleVertices) {
-                    int localIndex = vertexIndex - offset;
-                    shellCoords[localIndex] = new Coordinate(newCoordinate);
-                    if (localIndex == 0) {
-                        shellCoords[shellCoords.length - 1] = new Coordinate(newCoordinate);
-                    }
-                }
-                polygons[i] = geometry.getFactory().createPolygon(
-                        geometry.getFactory().createLinearRing(shellCoords),
-                        MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
-                );
-                offset += visibleVertices;
-            }
-            return geometry.getFactory().createMultiPolygon(polygons);
-        }
-
-        return null;
+        return editingGeomOps.buildGeometryWithMovedVertex(geometry, vertexIndex, newCoordinate);
     }
 
     private Geometry buildGeometryWithAddedVertex(Geometry geometry, int segmentIndex, Coordinate newCoordinate) {
-        if (geometry instanceof LineString) {
-            return geometry.getFactory().createLineString(MapGeometryUtils.insertCoordinate(((LineString) geometry).getCoordinates(), segmentIndex + 1, newCoordinate));
-        }
-
-        if (geometry instanceof Polygon) {
-            Polygon polygon = (Polygon) geometry;
-            Coordinate[] shell = MapGeometryUtils.insertCoordinate(polygon.getExteriorRing().getCoordinates(), segmentIndex + 1, newCoordinate);
-            return geometry.getFactory().createPolygon(
-                    geometry.getFactory().createLinearRing(shell),
-                    MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
-            );
-        }
-
-        if (geometry instanceof MultiLineString) {
-            MultiLineString multi = (MultiLineString) geometry;
-            LineString[] lines = new LineString[multi.getNumGeometries()];
-            int offset = 0;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                LineString line = (LineString) multi.getGeometryN(i);
-                Coordinate[] coords = line.getCoordinates();
-                int segments = Math.max(0, coords.length - 1);
-                if (segmentIndex >= offset && segmentIndex < offset + segments) {
-                    coords = MapGeometryUtils.insertCoordinate(coords, (segmentIndex - offset) + 1, newCoordinate);
-                }
-                lines[i] = geometry.getFactory().createLineString(coords);
-                offset += segments;
-            }
-            return geometry.getFactory().createMultiLineString(lines);
-        }
-
-        if (geometry instanceof MultiPolygon) {
-            MultiPolygon multi = (MultiPolygon) geometry;
-            Polygon[] polygons = new Polygon[multi.getNumGeometries()];
-            int offset = 0;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Polygon polygon = (Polygon) multi.getGeometryN(i);
-                Coordinate[] shell = polygon.getExteriorRing().getCoordinates();
-                int segments = Math.max(0, shell.length - 1);
-                if (segmentIndex >= offset && segmentIndex < offset + segments) {
-                    shell = MapGeometryUtils.insertCoordinate(shell, (segmentIndex - offset) + 1, newCoordinate);
-                }
-                polygons[i] = geometry.getFactory().createPolygon(
-                        geometry.getFactory().createLinearRing(shell),
-                        MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
-                );
-                offset += segments;
-            }
-            return geometry.getFactory().createMultiPolygon(polygons);
-        }
-
-        return null;
+        return editingGeomOps.buildGeometryWithAddedVertex(geometry, segmentIndex, newCoordinate);
     }
 
     private Geometry buildGeometryWithRemovedVertex(Geometry geometry, int vertexIndex) {
-        if (geometry instanceof LineString) {
-            Coordinate[] coords = ((LineString) geometry).getCoordinates();
-            if (coords.length <= 2 || vertexIndex >= coords.length) {
-                return null;
-            }
-            return geometry.getFactory().createLineString(MapGeometryUtils.removeCoordinate(coords, vertexIndex));
-        }
-
-        if (geometry instanceof Polygon) {
-            Polygon polygon = (Polygon) geometry;
-            Coordinate[] shell = polygon.getExteriorRing().getCoordinates();
-            if (shell.length <= 4 || vertexIndex >= shell.length - 1) {
-                return null;
-            }
-            shell = MapGeometryUtils.removeRingCoordinate(shell, vertexIndex);
-            return geometry.getFactory().createPolygon(
-                    geometry.getFactory().createLinearRing(shell),
-                    MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
-            );
-        }
-
-        if (geometry instanceof MultiLineString) {
-            MultiLineString multi = (MultiLineString) geometry;
-            LineString[] lines = new LineString[multi.getNumGeometries()];
-            int offset = 0;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Coordinate[] coords = ((LineString) multi.getGeometryN(i)).getCoordinates();
-                if (vertexIndex >= offset && vertexIndex < offset + coords.length) {
-                    if (coords.length <= 2) {
-                        return null;
-                    }
-                    coords = MapGeometryUtils.removeCoordinate(coords, vertexIndex - offset);
-                }
-                lines[i] = geometry.getFactory().createLineString(coords);
-                offset += coords.length;
-            }
-            return geometry.getFactory().createMultiLineString(lines);
-        }
-
-        if (geometry instanceof MultiPolygon) {
-            MultiPolygon multi = (MultiPolygon) geometry;
-            Polygon[] polygons = new Polygon[multi.getNumGeometries()];
-            int offset = 0;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Polygon polygon = (Polygon) multi.getGeometryN(i);
-                Coordinate[] shell = polygon.getExteriorRing().getCoordinates();
-                int visibleVertices = Math.max(0, shell.length - 1);
-                if (vertexIndex >= offset && vertexIndex < offset + visibleVertices) {
-                    if (shell.length <= 4) {
-                        return null;
-                    }
-                    shell = MapGeometryUtils.removeRingCoordinate(shell, vertexIndex - offset);
-                }
-                polygons[i] = geometry.getFactory().createPolygon(
-                        geometry.getFactory().createLinearRing(shell),
-                        MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
-                );
-                offset += visibleVertices;
-            }
-            return geometry.getFactory().createMultiPolygon(polygons);
-        }
-
-        return null;
+        return editingGeomOps.buildGeometryWithRemovedVertex(geometry, vertexIndex);
     }
 
     private Geometry buildGeometryWithRemovedVertices(Geometry geometry, List<Integer> vertexIndexes) {
-        if (geometry == null || vertexIndexes == null || vertexIndexes.isEmpty()) {
-            return geometry;
-        }
-
-        List<Integer> sortedIndexes = new ArrayList<>(vertexIndexes);
-        sortedIndexes.sort((a, b) -> Integer.compare(b, a));
-
-        Geometry updated = geometry;
-        for (Integer index : sortedIndexes) {
-            if (index == null) {
-                continue;
-            }
-            updated = buildGeometryWithRemovedVertex(updated, index);
-            if (updated == null) {
-                return null;
-            }
-        }
-        return updated;
+        return editingGeomOps.buildGeometryWithRemovedVertices(geometry, vertexIndexes);
     }
 
     private Geometry buildGeometryWithJoinedVertices(Geometry geometry, int targetVertexIndex, List<Integer> vertexIndexes) {
-        if (geometry == null || vertexIndexes == null || vertexIndexes.isEmpty()) {
-            return null;
-        }
-
-        if (geometry instanceof LineString line) {
-            return buildLineStringWithJoinedVertices(line, targetVertexIndex, vertexIndexes);
-        }
-        if (geometry instanceof Polygon polygon) {
-            return buildPolygonWithJoinedVertices(polygon, targetVertexIndex, vertexIndexes);
-        }
-        if (geometry instanceof MultiLineString multiLine) {
-            return buildMultiLineStringWithJoinedVertices(multiLine, targetVertexIndex, vertexIndexes);
-        }
-        if (geometry instanceof MultiPolygon multiPolygon) {
-            return buildMultiPolygonWithJoinedVertices(multiPolygon, targetVertexIndex, vertexIndexes);
-        }
-
-        return null;
+        return editingGeomOps.buildGeometryWithJoinedVertices(geometry, targetVertexIndex, vertexIndexes);
     }
 
     private Geometry buildLineStringWithJoinedVertices(LineString line, int targetVertexIndex, Collection<Integer> joinIndexes) {
-        Coordinate[] coords = MapGeometryUtils.copyCoordinates(line.getCoordinates());
-        if (coords.length < 2 || targetVertexIndex < 0 || targetVertexIndex >= coords.length) {
-            return null;
-        }
-
-        Coordinate anchor = new Coordinate(coords[targetVertexIndex]);
-        boolean changed = false;
-        for (Integer joinIndex : joinIndexes) {
-            if (joinIndex == null || joinIndex < 0 || joinIndex >= coords.length || joinIndex == targetVertexIndex) {
-                continue;
-            }
-            coords[joinIndex] = new Coordinate(anchor);
-            changed = true;
-        }
-        if (!changed) {
-            return null;
-        }
-
-        Coordinate[] normalized = MapGeometryUtils.collapseDuplicateLineCoordinates(coords);
-        if (normalized == null || normalized.length < 2) {
-            return null;
-        }
-        return line.getFactory().createLineString(normalized);
+        return editingGeomOps.buildLineStringWithJoinedVertices(line, targetVertexIndex, joinIndexes);
     }
 
     private Geometry buildPolygonWithJoinedVertices(Polygon polygon, int targetVertexIndex, Collection<Integer> joinIndexes) {
-        Coordinate[] shell = MapGeometryUtils.copyCoordinates(polygon.getExteriorRing().getCoordinates());
-        int visibleVertices = Math.max(0, shell.length - 1);
-        if (visibleVertices < 3 || targetVertexIndex < 0 || targetVertexIndex >= visibleVertices) {
-            return null;
-        }
-
-        Coordinate anchor = new Coordinate(shell[targetVertexIndex]);
-        boolean changed = false;
-        for (Integer joinIndex : joinIndexes) {
-            if (joinIndex == null || joinIndex < 0 || joinIndex >= visibleVertices || joinIndex == targetVertexIndex) {
-                continue;
-            }
-            shell[joinIndex] = new Coordinate(anchor);
-            changed = true;
-        }
-        if (!changed) {
-            return null;
-        }
-
-        Coordinate[] normalizedShell = MapGeometryUtils.normalizeRingCoordinates(shell);
-        if (normalizedShell == null) {
-            return null;
-        }
-        return polygon.getFactory().createPolygon(
-                polygon.getFactory().createLinearRing(normalizedShell),
-                MapGeometryUtils.copyInteriorRings(polygon.getFactory(), polygon)
-        );
+        return editingGeomOps.buildPolygonWithJoinedVertices(polygon, targetVertexIndex, joinIndexes);
     }
 
     private Geometry buildMultiLineStringWithJoinedVertices(MultiLineString multi, int targetVertexIndex, Collection<Integer> joinIndexes) {
-        int targetPart = -1;
-        int targetLocalIndex = -1;
-        int offset = 0;
-        for (int i = 0; i < multi.getNumGeometries(); i++) {
-            LineString line = (LineString) multi.getGeometryN(i);
-            int vertexCount = line.getCoordinates().length;
-            if (targetVertexIndex >= offset && targetVertexIndex < offset + vertexCount) {
-                targetPart = i;
-                targetLocalIndex = targetVertexIndex - offset;
-                break;
-            }
-            offset += vertexCount;
-        }
-        if (targetPart < 0) {
-            return null;
-        }
-
-        LineString[] parts = new LineString[multi.getNumGeometries()];
-        offset = 0;
-        for (int i = 0; i < multi.getNumGeometries(); i++) {
-            LineString line = (LineString) multi.getGeometryN(i);
-            int vertexCount = line.getCoordinates().length;
-            if (i == targetPart) {
-                List<Integer> localIndexes = new ArrayList<>();
-                for (Integer joinIndex : joinIndexes) {
-                    if (joinIndex != null && joinIndex >= offset && joinIndex < offset + vertexCount) {
-                        localIndexes.add(joinIndex - offset);
-                    }
-                }
-                Geometry updated = buildLineStringWithJoinedVertices(line, targetLocalIndex, localIndexes);
-                if (!(updated instanceof LineString updatedLine)) {
-                    return null;
-                }
-                parts[i] = updatedLine;
-            } else {
-                parts[i] = (LineString) line.copy();
-            }
-            offset += vertexCount;
-        }
-        return multi.getFactory().createMultiLineString(parts);
+        return editingGeomOps.buildMultiLineStringWithJoinedVertices(multi, targetVertexIndex, joinIndexes);
     }
 
     private Geometry buildMultiPolygonWithJoinedVertices(MultiPolygon multi, int targetVertexIndex, Collection<Integer> joinIndexes) {
-        int targetPart = -1;
-        int targetLocalIndex = -1;
-        int offset = 0;
-        for (int i = 0; i < multi.getNumGeometries(); i++) {
-            Polygon polygon = (Polygon) multi.getGeometryN(i);
-            int visibleVertices = Math.max(0, polygon.getExteriorRing().getCoordinates().length - 1);
-            if (targetVertexIndex >= offset && targetVertexIndex < offset + visibleVertices) {
-                targetPart = i;
-                targetLocalIndex = targetVertexIndex - offset;
-                break;
-            }
-            offset += visibleVertices;
-        }
-        if (targetPart < 0) {
-            return null;
-        }
-
-        Polygon[] parts = new Polygon[multi.getNumGeometries()];
-        offset = 0;
-        for (int i = 0; i < multi.getNumGeometries(); i++) {
-            Polygon polygon = (Polygon) multi.getGeometryN(i);
-            int visibleVertices = Math.max(0, polygon.getExteriorRing().getCoordinates().length - 1);
-            if (i == targetPart) {
-                List<Integer> localIndexes = new ArrayList<>();
-                for (Integer joinIndex : joinIndexes) {
-                    if (joinIndex != null && joinIndex >= offset && joinIndex < offset + visibleVertices) {
-                        localIndexes.add(joinIndex - offset);
-                    }
-                }
-                Geometry updated = buildPolygonWithJoinedVertices(polygon, targetLocalIndex, localIndexes);
-                if (!(updated instanceof Polygon updatedPolygon)) {
-                    return null;
-                }
-                parts[i] = updatedPolygon;
-            } else {
-                parts[i] = (Polygon) polygon.copy();
-            }
-            offset += visibleVertices;
-        }
-        return multi.getFactory().createMultiPolygon(parts);
+        return editingGeomOps.buildMultiPolygonWithJoinedVertices(multi, targetVertexIndex, joinIndexes);
     }
 
     private Geometry buildCutGeometryAtPoint(Geometry geometry, Coordinate coordinate) {
-        if (geometry instanceof LineString) {
-            return splitLineStringAtCoordinate((LineString) geometry, coordinate);
-        }
-
-        if (geometry instanceof MultiLineString) {
-            MultiLineString multi = (MultiLineString) geometry;
-            List<LineString> parts = new ArrayList<>();
-            boolean splitDone = false;
-            int closestIndex = -1;
-            double closestDistance = Double.MAX_VALUE;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                LineString line = (LineString) multi.getGeometryN(i);
-                LineSplitProjection projection = projectCoordinateOntoLine(line, coordinate);
-                if (projection != null && projection.distance < closestDistance) {
-                    closestDistance = projection.distance;
-                    closestIndex = i;
-                }
-            }
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                LineString line = (LineString) multi.getGeometryN(i);
-                if (!splitDone && i == closestIndex) {
-                    Geometry split = splitLineStringAtCoordinate(line, coordinate);
-                    if (split instanceof MultiLineString) {
-                        MultiLineString splitMulti = (MultiLineString) split;
-                        for (int j = 0; j < splitMulti.getNumGeometries(); j++) {
-                            parts.add((LineString) splitMulti.getGeometryN(j));
-                        }
-                        splitDone = true;
-                        continue;
-                    }
-                }
-                parts.add(line);
-            }
-            if (splitDone) {
-                return geometry.getFactory().createMultiLineString(parts.toArray(new LineString[0]));
-            }
-        }
-
-        return null;
+        return editingGeomOps.buildCutGeometryAtPoint(geometry, coordinate);
     }
 
     private Geometry splitLineStringAtCoordinate(LineString line, Coordinate coordinate) {
-        if (line == null || line.getNumPoints() < 2) {
-            return null;
-        }
-
-        LineSplitProjection projection = projectCoordinateOntoLine(line, coordinate);
-        if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
-            return null;
-        }
-
-        Coordinate[] coords = line.getCoordinates();
-        double tolerance = Math.max(1e-8, Math.max(line.getLength() * 0.00001, 0.0000001));
-        if (projection.projected.distance(coords[0]) <= tolerance
-                || projection.projected.distance(coords[coords.length - 1]) <= tolerance) {
-            return null;
-        }
-
-        List<Coordinate> firstCoords = new ArrayList<>();
-        for (int i = 0; i <= projection.segmentIndex; i++) {
-            appendCoordinateIfNeeded(firstCoords, coords[i], tolerance);
-        }
-        appendCoordinateIfNeeded(firstCoords, projection.projected, tolerance);
-
-        List<Coordinate> secondCoords = new ArrayList<>();
-        appendCoordinateIfNeeded(secondCoords, projection.projected, tolerance);
-        for (int i = projection.segmentIndex + 1; i < coords.length; i++) {
-            appendCoordinateIfNeeded(secondCoords, coords[i], tolerance);
-        }
-
-        if (firstCoords.size() < 2 || secondCoords.size() < 2) {
-            return null;
-        }
-
-        LineString first = line.getFactory().createLineString(firstCoords.toArray(new Coordinate[0]));
-        LineString second = line.getFactory().createLineString(secondCoords.toArray(new Coordinate[0]));
-        if (first.getLength() <= tolerance || second.getLength() <= tolerance) {
-            return null;
-        }
-
-        return line.getFactory().createMultiLineString(new LineString[]{first, second});
-    }
-
-    LineSplitProjection projectCoordinateOntoLine(LineString line, Coordinate target) {
-        return MapGeometryUtils.projectCoordinateOntoLine(line, target);
-    }
-
-    void appendCoordinateIfNeeded(List<Coordinate> coordinates, Coordinate candidate, double tolerance) {
-        MapGeometryUtils.appendCoordinateIfNeeded(coordinates, candidate, tolerance);
+        return editingGeomOps.splitLineStringAtCoordinate(line, coordinate);
     }
 
     private Geometry buildCutGeometryWithSketch(Geometry geometry, List<Coordinate> sketchCoordinates) {
-        if (geometry == null || sketchCoordinates == null || sketchCoordinates.size() < 2) {
-            return null;
-        }
-
-        if (geometry instanceof Polygon) {
-            return splitPolygonWithBlade((Polygon) geometry, sketchCoordinates);
-        }
-
-        if (geometry instanceof MultiPolygon) {
-            MultiPolygon multi = (MultiPolygon) geometry;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Polygon polygon = (Polygon) multi.getGeometryN(i);
-                Geometry split = splitPolygonWithBlade(polygon, sketchCoordinates);
-                if (split != null) {
-                    List<Polygon> splitPolygons = collectPolygons(split);
-                    if (!splitPolygons.isEmpty()) {
-                        List<Polygon> all = new ArrayList<>();
-                        for (int j = 0; j < i; j++) {
-                            all.add((Polygon) multi.getGeometryN(j));
-                        }
-                        all.addAll(splitPolygons);
-                        for (int j = i + 1; j < multi.getNumGeometries(); j++) {
-                            all.add((Polygon) multi.getGeometryN(j));
-                        }
-                        return geometry.getFactory().createMultiPolygon(all.toArray(new Polygon[0]));
-                    }
-                }
-            }
-        }
-
-        return null;
+        return editingGeomOps.buildCutGeometryWithSketch(geometry, sketchCoordinates);
     }
 
     private Geometry splitPolygonWithBlade(Polygon polygon, List<Coordinate> sketchCoordinates) {
-        try {
-            GeometryFactory factory = polygon.getFactory();
-            LineString blade = factory.createLineString(sketchCoordinates.toArray(new Coordinate[0]));
-            Geometry noded = polygon.getBoundary().union(blade);
-            Polygonizer polygonizer = new Polygonizer();
-            polygonizer.add(noded);
-
-            List<Polygon> parts = new ArrayList<>();
-            for (Object object : polygonizer.getPolygons()) {
-                if (object instanceof Polygon) {
-                    Polygon candidate = (Polygon) object;
-                    Point interiorPoint = candidate.getInteriorPoint();
-                    if (interiorPoint != null && polygon.covers(interiorPoint)) {
-                        parts.add(candidate);
-                    }
-                }
-            }
-
-            if (parts.size() < 2) {
-                return null;
-            }
-
-            return assemblePolygons(parts, factory);
-        } catch (Exception ex) {
-            return null;
-        }
+        return editingGeomOps.splitPolygonWithBlade(polygon, sketchCoordinates);
     }
 
     private Geometry buildGeometryWithHole(Geometry geometry, List<Coordinate> sketchCoordinates) {
-        if (geometry == null || sketchCoordinates == null || sketchCoordinates.size() < 3) {
-            return null;
-        }
-
-        GeometryFactory factory = geometry.getFactory();
-        Polygon holePolygon = buildPolygonFromCoordinates(sketchCoordinates, factory);
-        if (holePolygon == null) {
-            return null;
-        }
-
-        if (geometry instanceof Polygon) {
-            Polygon polygon = (Polygon) geometry;
-            if (!polygon.covers(holePolygon)) {
-                return null;
-            }
-            return normalizePolygonalGeometry(polygon.difference(holePolygon), factory);
-        }
-
-        if (geometry instanceof MultiPolygon) {
-            MultiPolygon multi = (MultiPolygon) geometry;
-            for (int i = 0; i < multi.getNumGeometries(); i++) {
-                Polygon polygon = (Polygon) multi.getGeometryN(i);
-                if (polygon.covers(holePolygon)) {
-                    Geometry diff = normalizePolygonalGeometry(polygon.difference(holePolygon), factory);
-                    List<Polygon> pieces = collectPolygons(diff);
-                    if (pieces.isEmpty()) {
-                        return null;
-                    }
-                    List<Polygon> all = new ArrayList<>();
-                    for (int j = 0; j < i; j++) {
-                        all.add((Polygon) multi.getGeometryN(j));
-                    }
-                    all.addAll(pieces);
-                    for (int j = i + 1; j < multi.getNumGeometries(); j++) {
-                        all.add((Polygon) multi.getGeometryN(j));
-                    }
-                    return factory.createMultiPolygon(all.toArray(new Polygon[0]));
-                }
-            }
-        }
-
-        return null;
+        return editingGeomOps.buildGeometryWithHole(geometry, sketchCoordinates);
     }
 
     Polygon buildPolygonFromCoordinates(List<Coordinate> coordinates, GeometryFactory factory) {
@@ -6216,50 +5187,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     Coordinate getLabelCoordinate(Geometry geometry) {
-        if (geometry == null || geometry.isEmpty()) {
-            return null;
-        }
-
-        if (geometry instanceof Point) {
-            return ((Point) geometry).getCoordinate();
-        }
-
-        if (geometry instanceof MultiPoint) {
-            MultiPoint mp = (MultiPoint) geometry;
-            if (mp.getNumGeometries() > 0 && mp.getGeometryN(0) instanceof Point) {
-                return ((Point) mp.getGeometryN(0)).getCoordinate();
-            }
-        }
-
-        if (geometry instanceof Polygon) {
-            Point p = ((Polygon) geometry).getInteriorPoint();
-            if (p != null) {
-                return p.getCoordinate();
-            }
-            return geometry.getCentroid().getCoordinate();
-        }
-
-        if (geometry instanceof MultiPolygon) {
-            Point p = geometry.getInteriorPoint();
-            if (p != null) {
-                return p.getCoordinate();
-            }
-            return geometry.getCentroid().getCoordinate();
-        }
-
-        if (geometry instanceof LineString || geometry instanceof MultiLineString) {
-            Point p = geometry.getCentroid();
-            if (p != null) {
-                return p.getCoordinate();
-            }
-        }
-
-        Point centroid = geometry.getCentroid();
-        if (centroid != null) {
-            return centroid.getCoordinate();
-        }
-
-        return null;
+        return editingGeomOps.getLabelCoordinate(geometry);
     }
 
     private void drawTextWithHalo(Graphics2D g2, String text, int x, int y) {

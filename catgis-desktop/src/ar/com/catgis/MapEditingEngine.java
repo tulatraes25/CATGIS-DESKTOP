@@ -485,7 +485,7 @@ class MapEditingEngine {
 
         Coordinate targetCoordinate = map.resolveInteractiveCoordinate(screenX, screenY, false);
         Coordinate sourceCoordinate = map.toSourceCoordinate(targetCoordinate.x, targetCoordinate.y, map.selectedLayer);
-        Geometry updated = buildAdjustedSelectedLineGeometry(geometry, sourceCoordinate, extend);
+        Geometry updated = map.editingGeomOps.buildAdjustedSelectedLineGeometry(geometry, sourceCoordinate, extend, map.cadReferenceFromStart);
         if (updated == null) {
             map.showCopiedMessage(extend
                     ? "El punto elegido no permite extender la linea en ese sentido."
@@ -529,45 +529,6 @@ class MapEditingEngine {
         map.repaint();
     }
 
-    Geometry buildAdjustedSelectedLineGeometry(Geometry geometry, Coordinate targetCoordinate, boolean extend) {
-        if (geometry == null || targetCoordinate == null) {
-            return null;
-        }
-
-        Coordinate[] baseCoordinates = map.extractContinuableLineCoordinates(geometry);
-        if (baseCoordinates == null || baseCoordinates.length < 2) {
-            return null;
-        }
-
-        Coordinate[] updatedCoordinates = map.cloneCoordinates(baseCoordinates);
-        int endpointIndex = map.cadReferenceFromStart ? 0 : updatedCoordinates.length - 1;
-        int anchorIndex = map.cadReferenceFromStart ? 1 : updatedCoordinates.length - 2;
-        Coordinate endpoint = updatedCoordinates[endpointIndex];
-        Coordinate anchor = updatedCoordinates[anchorIndex];
-        double dx = endpoint.x - anchor.x;
-        double dy = endpoint.y - anchor.y;
-        double lengthSquared = (dx * dx) + (dy * dy);
-        if (lengthSquared <= 0.0000001) {
-            return null;
-        }
-
-        double factor = ((targetCoordinate.x - endpoint.x) * dx + (targetCoordinate.y - endpoint.y) * dy) / lengthSquared;
-        if (extend) {
-            if (factor <= 0.02) {
-                return null;
-            }
-        } else if (factor >= -0.02 || factor <= -0.98) {
-            return null;
-        }
-
-        updatedCoordinates[endpointIndex] = new Coordinate(
-                endpoint.x + (dx * factor),
-                endpoint.y + (dy * factor)
-        );
-        GeometryFactory factory = geometry.getFactory() != null ? geometry.getFactory() : new GeometryFactory();
-        return factory.createLineString(updatedCoordinates);
-    }
-
     private boolean handleParallelLineClick(int screenX, int screenY) {
         if (!map.isSelectedFeatureLinear()) {
             map.showCopiedMessage("Paralela solo funciona tomando una linea como referencia.");
@@ -588,7 +549,7 @@ class MapEditingEngine {
 
         Coordinate targetCoordinate = map.resolveInteractiveCoordinate(screenX, screenY, false);
         Coordinate sourceCoordinate = map.toSourceCoordinate(targetCoordinate.x, targetCoordinate.y, map.selectedLayer);
-        Geometry derived = buildParallelLineGeometry(map.cadReferenceSegmentStart, map.cadReferenceSegmentEnd, sourceCoordinate);
+        Geometry derived = map.editingGeomOps.buildParallelLineGeometry(map.cadReferenceSegmentStart, map.cadReferenceSegmentEnd, sourceCoordinate);
         if (derived == null) {
             map.showCopiedMessage("No se pudo construir la paralela con ese desplazamiento.");
             return true;
@@ -617,7 +578,7 @@ class MapEditingEngine {
 
         Coordinate targetCoordinate = map.resolveInteractiveCoordinate(screenX, screenY, false);
         Coordinate sourceCoordinate = map.toSourceCoordinate(targetCoordinate.x, targetCoordinate.y, map.selectedLayer);
-        Geometry derived = buildPerpendicularLineGeometry(map.cadReferenceSegmentStart, map.cadReferenceSegmentEnd, sourceCoordinate);
+        Geometry derived = map.editingGeomOps.buildPerpendicularLineGeometry(map.cadReferenceSegmentStart, map.cadReferenceSegmentEnd, sourceCoordinate);
         if (derived == null) {
             map.showCopiedMessage("No se pudo construir la perpendicular con ese punto.");
             return true;
@@ -651,58 +612,6 @@ class MapEditingEngine {
         map.showCopiedMessage("Tramo base seleccionado. Ahora completa la herramienta con un segundo clic.");
         map.repaint();
         return true;
-    }
-
-    Geometry buildParallelLineGeometry(Coordinate segmentStart, Coordinate segmentEnd, Coordinate sideCoordinate) {
-        if (segmentStart == null || segmentEnd == null || sideCoordinate == null) {
-            return null;
-        }
-
-        double dx = segmentEnd.x - segmentStart.x;
-        double dy = segmentEnd.y - segmentStart.y;
-        double length = Math.hypot(dx, dy);
-        if (length <= 0.0000001) {
-            return null;
-        }
-
-        double nx = -dy / length;
-        double ny = dx / length;
-        Coordinate midpoint = new Coordinate(
-                (segmentStart.x + segmentEnd.x) / 2.0,
-                (segmentStart.y + segmentEnd.y) / 2.0
-        );
-        double offset = ((sideCoordinate.x - midpoint.x) * nx) + ((sideCoordinate.y - midpoint.y) * ny);
-        if (Math.abs(offset) <= 0.0000001) {
-            return null;
-        }
-
-        GeometryFactory factory = new GeometryFactory();
-        return factory.createLineString(new Coordinate[]{
-                new Coordinate(segmentStart.x + (nx * offset), segmentStart.y + (ny * offset)),
-                new Coordinate(segmentEnd.x + (nx * offset), segmentEnd.y + (ny * offset))
-        });
-    }
-
-    Geometry buildPerpendicularLineGeometry(Coordinate segmentStart, Coordinate segmentEnd, Coordinate targetCoordinate) {
-        if (segmentStart == null || segmentEnd == null || targetCoordinate == null) {
-            return null;
-        }
-
-        double dx = segmentEnd.x - segmentStart.x;
-        double dy = segmentEnd.y - segmentStart.y;
-        double lengthSquared = (dx * dx) + (dy * dy);
-        if (lengthSquared <= 0.0000001) {
-            return null;
-        }
-
-        double factor = ((targetCoordinate.x - segmentStart.x) * dx + (targetCoordinate.y - segmentStart.y) * dy) / lengthSquared;
-        Coordinate foot = new Coordinate(segmentStart.x + (dx * factor), segmentStart.y + (dy * factor));
-        if (foot.distance(targetCoordinate) <= 0.0000001) {
-            return null;
-        }
-
-        GeometryFactory factory = new GeometryFactory();
-        return factory.createLineString(new Coordinate[]{foot, new Coordinate(targetCoordinate)});
     }
 
     private boolean appendCadDerivedLine(Geometry geometry, String successMessage) {

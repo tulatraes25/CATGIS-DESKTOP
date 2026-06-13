@@ -440,9 +440,9 @@ class MapRenderer {
         }
 
         if (MapPanel.EDIT_OP_EXTEND_LINE.equals(map.featureEditOperation)) {
-            previewGeometry = map.buildAdjustedSelectedLineGeometry(selectedGeometry, sourcePreview, true);
+            previewGeometry = map.buildAdjustedSelectedLineGeometry(selectedGeometry, sourcePreview, true, map.cadReferenceFromStart);
         } else if (MapPanel.EDIT_OP_SHORTEN_LINE.equals(map.featureEditOperation)) {
-            previewGeometry = map.buildAdjustedSelectedLineGeometry(selectedGeometry, sourcePreview, false);
+            previewGeometry = map.buildAdjustedSelectedLineGeometry(selectedGeometry, sourcePreview, false, map.cadReferenceFromStart);
         } else if (MapPanel.EDIT_OP_PARALLEL.equals(map.featureEditOperation) && map.cadReferenceSegmentStart != null && map.cadReferenceSegmentEnd != null) {
             previewGeometry = map.buildParallelLineGeometry(map.cadReferenceSegmentStart, map.cadReferenceSegmentEnd, sourcePreview);
         } else if (MapPanel.EDIT_OP_PERPENDICULAR.equals(map.featureEditOperation) && map.cadReferenceSegmentStart != null && map.cadReferenceSegmentEnd != null) {
