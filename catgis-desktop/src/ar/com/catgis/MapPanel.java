@@ -157,7 +157,6 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     String currentTool = "MOVE";
     MapTool activeTool = new MoveTool();
-    final EditingState editingState = new EditingState(this);
 
     Layer selectedLayer;
     SimpleFeature selectedFeature;
