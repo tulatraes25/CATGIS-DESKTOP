@@ -236,8 +236,6 @@ public class MapLayoutComposerDialog extends JFrame {
     private DefaultListModel<String> elementListModel;
     private JLabel propertiesInfoLabel;
     private JPanel propertiesCardPanel;
-    private final java.util.ArrayDeque<LayoutUndoEntry> undoStack = new java.util.ArrayDeque<>();
-    private final java.util.ArrayDeque<LayoutUndoEntry> redoStack = new java.util.ArrayDeque<>();
 
     private MapLayoutComposerDialog(Window owner) {
         super("CATMAP - Workspace cartografico");
@@ -9145,92 +9143,27 @@ public class MapLayoutComposerDialog extends JFrame {
         draggingLayoutElement.setBoundsMm(x, y, w, h);
     }
 
-    private static class LayoutUndoEntry {
-        final String elId; final double x, y, w, h; final int zOrder; final boolean visible; final boolean locked;
-        final boolean isDelete; final String typeName; final String serializedProps;
-        LayoutUndoEntry(LayoutElement el, boolean isDelete) {
-            this.elId = el.getId(); this.isDelete = isDelete;
-            this.x = el.getBoundsMm().x; this.y = el.getBoundsMm().y; this.w = el.getBoundsMm().width; this.h = el.getBoundsMm().height;
-            this.zOrder = el.getZOrder(); this.visible = el.isVisible(); this.locked = el.isLocked();
-            this.typeName = el.getClass().getSimpleName();
-            this.serializedProps = serializeProps(el);
-        }
-    }
-
-    private static String serializeProps(LayoutElement el) {
-        if (el instanceof LayoutLabel) return ((LayoutLabel)el).getText();
-        if (el instanceof LayoutLegend) return ((LayoutLegend)el).getTitle();
-        return "";
-    }
-
     private void pushUndo(LayoutElement el, boolean isDelete) {
-        undoStack.push(new LayoutUndoEntry(el, isDelete));
-        redoStack.clear();
+        layoutModel.saveSnapshot();
     }
 
     private void undo() {
-        if (undoStack.isEmpty()) return;
-        LayoutUndoEntry entry = undoStack.pop();
-        redoStack.push(snapshotForRedo(entry.elId));
-        if (entry.isDelete) {
-            restoreElement(entry);
-        } else {
-            LayoutElement el = findElementById(entry.elId);
-            if (el != null) {
-                redoStack.pop();
-                redoStack.push(new LayoutUndoEntry(el, true));
-                layoutModel.removeElement(entry.elId);
-            }
+        if (layoutModel.canUndo()) {
+            layoutModel.undo();
+            refreshAll();
         }
-        refreshAll();
     }
 
     private void redo() {
-        if (redoStack.isEmpty()) return;
-        LayoutUndoEntry entry = redoStack.pop();
-        undoStack.push(snapshotForRedo(entry.elId));
-        if (entry.isDelete) {
-            LayoutElement el = findElementById(entry.elId);
-            if (el != null) {
-                undoStack.pop();
-                undoStack.push(new LayoutUndoEntry(el, true));
-                layoutModel.removeElement(entry.elId);
-            }
-        } else {
-            restoreElement(entry);
+        if (layoutModel.canRedo()) {
+            layoutModel.redo();
+            refreshAll();
         }
-        refreshAll();
-    }
-
-    private LayoutUndoEntry snapshotForRedo(String id) {
-        LayoutElement el = findElementById(id);
-        return el != null ? new LayoutUndoEntry(el, false) : null;
     }
 
     private LayoutElement findElementById(String id) {
         for (LayoutElement el : layoutModel.getElements()) if (el.getId().equals(id)) return el;
         return null;
-    }
-
-    private void restoreElement(LayoutUndoEntry e) {
-        LayoutElement existing = findElementById(e.elId);
-        if (existing == null) {
-            switch (e.typeName) {
-                case "LayoutLabel": existing = new LayoutLabel(e.elId, e.serializedProps, e.x, e.y, e.w, e.h); break;
-                case "LayoutLegend": existing = new LayoutLegend(e.elId, e.x, e.y, e.w, e.h); ((LayoutLegend)existing).setTitle(e.serializedProps); break;
-                case "LayoutMap": existing = new LayoutMap(e.elId, e.x, e.y, e.w, e.h); break;
-                case "LayoutScaleBar": existing = new LayoutScaleBar(e.elId, e.x, e.y, e.w, e.h); break;
-                case "LayoutNorthArrow": existing = new LayoutNorthArrow(e.elId, e.x, e.y, e.w, e.h); break;
-                default: return;
-            }
-            layoutModel.addElement(existing);
-        }
-        if (existing != null) {
-            existing.setBoundsMm(e.x, e.y, e.w, e.h);
-            existing.setZOrder(e.zOrder);
-            existing.setVisible(e.visible);
-            existing.setLocked(e.locked);
-        }
     }
 
     private void refreshAll() {
@@ -9263,8 +9196,7 @@ public class MapLayoutComposerDialog extends JFrame {
     }
 
     private void pushUndoGroup(java.util.List<LayoutElement> elements) {
-        for (LayoutElement el : elements) undoStack.push(new LayoutUndoEntry(el, false));
-        redoStack.clear();
+        layoutModel.saveSnapshot();
     }
 
     private void refreshPropertiesPanel() {
