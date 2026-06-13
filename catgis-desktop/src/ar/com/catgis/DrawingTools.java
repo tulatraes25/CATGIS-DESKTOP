@@ -655,7 +655,7 @@ public class DrawingTools {
         if (panel.drawingToolManager.drawingContinuationFromStart) {
             oriented = panel.reverseCoordinates(oriented);
         }
-        oriented = panel.collapseDuplicateLineCoordinates(oriented);
+        oriented = MapGeometryUtils.collapseDuplicateLineCoordinates(oriented);
         if (oriented == null || oriented.length < 2) {
             return null;
         }

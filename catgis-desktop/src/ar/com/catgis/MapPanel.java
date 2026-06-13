@@ -5341,7 +5341,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                 segmentEnd.y + (ny * distance)
         );
 
-        Coordinate[] shell = normalizeRingCoordinates(new Coordinate[]{
+        Coordinate[] shell = MapGeometryUtils.normalizeRingCoordinates(new Coordinate[]{
                 new Coordinate(segmentStart),
                 new Coordinate(segmentEnd),
                 offsetEnd,
@@ -5633,7 +5633,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                 }
                 polygons[i] = geometry.getFactory().createPolygon(
                         geometry.getFactory().createLinearRing(shellCoords),
-                        copyInteriorRings(geometry.getFactory(), polygon)
+                        MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
                 );
                 offset += visibleVertices;
             }
@@ -5645,15 +5645,15 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     private Geometry buildGeometryWithAddedVertex(Geometry geometry, int segmentIndex, Coordinate newCoordinate) {
         if (geometry instanceof LineString) {
-            return geometry.getFactory().createLineString(insertCoordinate(((LineString) geometry).getCoordinates(), segmentIndex + 1, newCoordinate));
+            return geometry.getFactory().createLineString(MapGeometryUtils.insertCoordinate(((LineString) geometry).getCoordinates(), segmentIndex + 1, newCoordinate));
         }
 
         if (geometry instanceof Polygon) {
             Polygon polygon = (Polygon) geometry;
-            Coordinate[] shell = insertCoordinate(polygon.getExteriorRing().getCoordinates(), segmentIndex + 1, newCoordinate);
+            Coordinate[] shell = MapGeometryUtils.insertCoordinate(polygon.getExteriorRing().getCoordinates(), segmentIndex + 1, newCoordinate);
             return geometry.getFactory().createPolygon(
                     geometry.getFactory().createLinearRing(shell),
-                    copyInteriorRings(geometry.getFactory(), polygon)
+                    MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
             );
         }
 
@@ -5666,7 +5666,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                 Coordinate[] coords = line.getCoordinates();
                 int segments = Math.max(0, coords.length - 1);
                 if (segmentIndex >= offset && segmentIndex < offset + segments) {
-                    coords = insertCoordinate(coords, (segmentIndex - offset) + 1, newCoordinate);
+                    coords = MapGeometryUtils.insertCoordinate(coords, (segmentIndex - offset) + 1, newCoordinate);
                 }
                 lines[i] = geometry.getFactory().createLineString(coords);
                 offset += segments;
@@ -5683,11 +5683,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                 Coordinate[] shell = polygon.getExteriorRing().getCoordinates();
                 int segments = Math.max(0, shell.length - 1);
                 if (segmentIndex >= offset && segmentIndex < offset + segments) {
-                    shell = insertCoordinate(shell, (segmentIndex - offset) + 1, newCoordinate);
+                    shell = MapGeometryUtils.insertCoordinate(shell, (segmentIndex - offset) + 1, newCoordinate);
                 }
                 polygons[i] = geometry.getFactory().createPolygon(
                         geometry.getFactory().createLinearRing(shell),
-                        copyInteriorRings(geometry.getFactory(), polygon)
+                        MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
                 );
                 offset += segments;
             }
@@ -5703,7 +5703,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             if (coords.length <= 2 || vertexIndex >= coords.length) {
                 return null;
             }
-            return geometry.getFactory().createLineString(removeCoordinate(coords, vertexIndex));
+            return geometry.getFactory().createLineString(MapGeometryUtils.removeCoordinate(coords, vertexIndex));
         }
 
         if (geometry instanceof Polygon) {
@@ -5712,10 +5712,10 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             if (shell.length <= 4 || vertexIndex >= shell.length - 1) {
                 return null;
             }
-            shell = removeRingCoordinate(shell, vertexIndex);
+            shell = MapGeometryUtils.removeRingCoordinate(shell, vertexIndex);
             return geometry.getFactory().createPolygon(
                     geometry.getFactory().createLinearRing(shell),
-                    copyInteriorRings(geometry.getFactory(), polygon)
+                    MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
             );
         }
 
@@ -5729,7 +5729,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                     if (coords.length <= 2) {
                         return null;
                     }
-                    coords = removeCoordinate(coords, vertexIndex - offset);
+                    coords = MapGeometryUtils.removeCoordinate(coords, vertexIndex - offset);
                 }
                 lines[i] = geometry.getFactory().createLineString(coords);
                 offset += coords.length;
@@ -5749,11 +5749,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                     if (shell.length <= 4) {
                         return null;
                     }
-                    shell = removeRingCoordinate(shell, vertexIndex - offset);
+                    shell = MapGeometryUtils.removeRingCoordinate(shell, vertexIndex - offset);
                 }
                 polygons[i] = geometry.getFactory().createPolygon(
                         geometry.getFactory().createLinearRing(shell),
-                        copyInteriorRings(geometry.getFactory(), polygon)
+                        MapGeometryUtils.copyInteriorRings(geometry.getFactory(), polygon)
                 );
                 offset += visibleVertices;
             }
@@ -5806,7 +5806,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     private Geometry buildLineStringWithJoinedVertices(LineString line, int targetVertexIndex, Collection<Integer> joinIndexes) {
-        Coordinate[] coords = copyCoordinates(line.getCoordinates());
+        Coordinate[] coords = MapGeometryUtils.copyCoordinates(line.getCoordinates());
         if (coords.length < 2 || targetVertexIndex < 0 || targetVertexIndex >= coords.length) {
             return null;
         }
@@ -5824,7 +5824,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return null;
         }
 
-        Coordinate[] normalized = collapseDuplicateLineCoordinates(coords);
+        Coordinate[] normalized = MapGeometryUtils.collapseDuplicateLineCoordinates(coords);
         if (normalized == null || normalized.length < 2) {
             return null;
         }
@@ -5832,7 +5832,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     private Geometry buildPolygonWithJoinedVertices(Polygon polygon, int targetVertexIndex, Collection<Integer> joinIndexes) {
-        Coordinate[] shell = copyCoordinates(polygon.getExteriorRing().getCoordinates());
+        Coordinate[] shell = MapGeometryUtils.copyCoordinates(polygon.getExteriorRing().getCoordinates());
         int visibleVertices = Math.max(0, shell.length - 1);
         if (visibleVertices < 3 || targetVertexIndex < 0 || targetVertexIndex >= visibleVertices) {
             return null;
@@ -5851,13 +5851,13 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return null;
         }
 
-        Coordinate[] normalizedShell = normalizeRingCoordinates(shell);
+        Coordinate[] normalizedShell = MapGeometryUtils.normalizeRingCoordinates(shell);
         if (normalizedShell == null) {
             return null;
         }
         return polygon.getFactory().createPolygon(
                 polygon.getFactory().createLinearRing(normalizedShell),
-                copyInteriorRings(polygon.getFactory(), polygon)
+                MapGeometryUtils.copyInteriorRings(polygon.getFactory(), polygon)
         );
     }
 
@@ -5945,34 +5945,6 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             offset += visibleVertices;
         }
         return multi.getFactory().createMultiPolygon(parts);
-    }
-
-    static Coordinate[] collapseDuplicateLineCoordinates(Coordinate[] coords) {
-        return MapGeometryUtils.collapseDuplicateLineCoordinates(coords);
-    }
-
-    private Coordinate[] normalizeRingCoordinates(Coordinate[] shell) {
-        return MapGeometryUtils.normalizeRingCoordinates(shell);
-    }
-
-    private Coordinate[] copyCoordinates(Coordinate[] coords) {
-        return MapGeometryUtils.copyCoordinates(coords);
-    }
-
-    private Coordinate[] insertCoordinate(Coordinate[] coords, int insertIndex, Coordinate coordinate) {
-        return MapGeometryUtils.insertCoordinate(coords, insertIndex, coordinate);
-    }
-
-    private Coordinate[] removeCoordinate(Coordinate[] coords, int removeIndex) {
-        return MapGeometryUtils.removeCoordinate(coords, removeIndex);
-    }
-
-    private Coordinate[] removeRingCoordinate(Coordinate[] shell, int removeVisibleIndex) {
-        return MapGeometryUtils.removeRingCoordinate(shell, removeVisibleIndex);
-    }
-
-    private LinearRing[] copyInteriorRings(GeometryFactory factory, Polygon polygon) {
-        return MapGeometryUtils.copyInteriorRings(factory, polygon);
     }
 
     private Geometry buildCutGeometryAtPoint(Geometry geometry, Coordinate coordinate) {
