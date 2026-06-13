@@ -28,107 +28,187 @@ import java.util.List;
  * Loader for FlatGeobuf (.fgb) files using the org.wololo.flatgeobuf library.
  * <p>
  * Supports streaming reads via memory-mapped files and full geometry/attribute
- * deserialization for all FlatGeobuf geometry types (Point, LineString, Polygon,
- * MultiPoint, MultiLineString, MultiPolygon).
- * </p>
+ * deserialization for all FlatGeobuf geometry types.
+ * <p>
+ * Validation is strict: corrupt or unsupported files throw
+ * {@link UnsupportedFormatException} with a clear user-facing message.
+ * Callers should invoke {@link #validateFile(File)} before loading to
+ * get a {@link ValidationResult} without throwing.
  *
  * @see <a href="https://flatgeobuf.org/docs/spec/">FlatGeobuf Specification</a>
  */
 public final class FlatGeobufLoader {
 
-    private FlatGeobufLoader() {}
+    private FlatGeobufLoader() {
+    }
 
     private static final GeometryFactory GEOM_FACTORY = new GeometryFactory();
+
+    // FlatGeobuf magic bytes as read by wololo library
+    private static final int FGB_MAGIC = 0x67666267;
+
+    // ---- Public API ----
+
+    /**
+     * Validate a FlatGeobuf file without loading its full contents.
+     *
+     * @param file the .fgb file to check
+     * @return validation result with status and message
+     */
+    public static ValidationResult validateFile(File file) {
+        if (file == null) {
+            return ValidationResult.invalid("Archivo no especificado.");
+        }
+        if (!file.exists()) {
+            return ValidationResult.invalid("El archivo no existe: " + file.getAbsolutePath());
+        }
+        if (!file.getName().toLowerCase().endsWith(".fgb")) {
+            return ValidationResult.invalid(
+                    "La extensión del archivo no es .fgb: " + file.getName());
+        }
+        if (file.length() < 8) {
+            return ValidationResult.invalid(
+                    "El archivo es demasiado pequeño para ser FlatGeobuf ("
+                            + file.length() + " bytes).");
+        }
+
+        try (FileInputStream fis = new FileInputStream(file);
+             FileChannel channel = fis.getChannel()) {
+
+            ByteBuffer magicBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+            if (channel.read(magicBuf) < 4) {
+                return ValidationResult.invalid("No se pudieron leer los bytes mágicos.");
+            }
+            magicBuf.flip();
+            int magic = magicBuf.getInt();
+            if (magic != FGB_MAGIC) {
+                return ValidationResult.invalid(
+                        "El archivo no es FlatGeobuf válido (magic incorrecto: 0x"
+                                + Integer.toHexString(magic) + ").");
+            }
+
+            ByteBuffer headerSizeBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+            if (channel.read(headerSizeBuf) < 4) {
+                return ValidationResult.invalid("No se pudo leer el tamaño del encabezado.");
+            }
+            headerSizeBuf.flip();
+            int headerSize = headerSizeBuf.getInt();
+            long fileSize = channel.size();
+            if (headerSize <= 0 || headerSize > fileSize - 8) {
+                return ValidationResult.invalid(
+                        "Tamaño de encabezado inválido: " + headerSize + " bytes.");
+            }
+
+            ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
+            if (channel.read(headerBuf) < headerSize) {
+                return ValidationResult.invalid("No se pudo leer el encabezado completo.");
+            }
+            headerBuf.flip();
+
+            HeaderMeta header = HeaderMeta.read(headerBuf);
+            if (header == null) {
+                return ValidationResult.invalid("No se pudo interpretar el encabezado FlatGeobuf.");
+            }
+
+            String geomType = GeometryType.name((short) header.geometryType);
+            long featureCount = header.featuresCount;
+
+            return ValidationResult.valid(
+                    "FlatGeobuf válido — geometría: " + geomType
+                            + ", features: " + featureCount
+                            + ", columnas: " + (header.columns != null ? header.columns.size() : 0));
+        } catch (IOException e) {
+            CatgisLogger.warn("validateFile I/O error: " + file.getAbsolutePath(), e);
+            return ValidationResult.invalid(
+                    "Error de lectura al validar el archivo: " + e.getMessage());
+        }
+    }
 
     /**
      * Load a FlatGeobuf file and return ShapefileData.
      *
      * @param file the .fgb file
      * @return parsed vector data
-     * @throws Exception on I/O errors or invalid format
+     * @throws UnsupportedFormatException if the file is invalid or corrupt
+     * @throws IOException                on I/O errors
      */
-    public static ShapefileData load(File file) throws Exception {
+    public static ShapefileData load(File file) throws UnsupportedFormatException, IOException {
         if (file == null || !file.exists()) {
-            throw new IllegalArgumentException("File does not exist: " + file);
+            throw new UnsupportedFormatException("El archivo no existe: " + file);
         }
-        if (!file.getName().toLowerCase().endsWith(".fgb")) {
-            throw new IllegalArgumentException("Not a FlatGeobuf file: " + file.getName());
+
+        CatgisLogger.debug("FlatGeobufLoader.load: " + file.getAbsolutePath()
+                + " (" + file.length() + " bytes)");
+
+        ValidationResult vr = validateFile(file);
+        if (!vr.isValid()) {
+            throw new UnsupportedFormatException(vr.message());
         }
 
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel channel = fis.getChannel()) {
 
             long fileSize = channel.size();
-            if (fileSize < 8) {
-                throw new IOException("File too small to be FlatGeobuf: " + fileSize + " bytes");
-            }
 
-            // Read magic bytes: FlatGeobuf magic = "gbfg"
-            // Bytes: 'g'=0x67 'b'=0x62 'f'=0x66 'g'=0x67 → LE int 0x67666267
+            // Skip magic (already validated)
             ByteBuffer magicBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
             channel.read(magicBuf);
-            magicBuf.flip();
-            int magic = magicBuf.getInt();
-            if (magic != 0x67666267) {
-                throw new IOException("Not a valid FlatGeobuf file (bad magic: 0x"
-                        + Integer.toHexString(magic) + ")");
-            }
 
             // Read header size
             ByteBuffer headerSizeBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
             channel.read(headerSizeBuf);
             headerSizeBuf.flip();
             int headerSize = headerSizeBuf.getInt();
-            if (headerSize <= 0 || headerSize > fileSize - 8) {
-                throw new IOException("Invalid header size: " + headerSize);
-            }
 
-            // Read header bytes
+            // Read header
             ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
             channel.read(headerBuf);
             headerBuf.flip();
 
             HeaderMeta header = HeaderMeta.read(headerBuf);
-            if (header == null) {
-                throw new IOException("Failed to parse FlatGeobuf header");
-            }
 
-            // Build schema from columns
+            CatgisLogger.debug("FlatGeobuf header: geometry="
+                    + GeometryType.name((short) header.geometryType)
+                    + ", features=" + header.featuresCount
+                    + ", columns=" + (header.columns != null ? header.columns.size() : 0)
+                    + ", indexNodeSize=" + header.indexNodeSize);
+
             SimpleFeatureType schema = buildSchema(header, file.getName());
             SimpleFeatureBuilder builder = new SimpleFeatureBuilder(schema);
 
-            // Determine the data offset and read features
             long featuresCount = header.featuresCount;
             int indexNodeSize = header.indexNodeSize;
 
             long dataOffset = 8 + headerSize; // magic(4) + headerSize(4) + header
             if (indexNodeSize > 0 && featuresCount > 0) {
-                // Skip spatial index: each index node is indexNodeSize bytes,
-                // and there are roughly (featuresCount / nodeSize) nodes
                 long indexBytes = estimateIndexSize(featuresCount, indexNodeSize);
                 dataOffset += indexBytes;
             }
 
-            // Map the data portion for streaming read
             long dataSize = fileSize - dataOffset;
             if (dataSize < 4) {
-                // No features
+                CatgisLogger.debug("FlatGeobuf: no feature data (dataSize=" + dataSize + ")");
                 return emptyResult(header, file.getName(), schema);
             }
 
-            List<SimpleFeature> features = new ArrayList<>((int) Math.min(featuresCount, Integer.MAX_VALUE));
+            int capacity = (int) Math.min(dataSize, Integer.MAX_VALUE);
+            List<SimpleFeature> features = new ArrayList<>(
+                    featuresCount > 0 ? (int) Math.min(featuresCount, Integer.MAX_VALUE) : 256);
+
+            int skipped = 0;
 
             try (FileChannel dataChannel = new FileInputStream(file).getChannel()) {
                 dataChannel.position(dataOffset);
-                ByteBuffer dataBuf = ByteBuffer.allocateDirect((int) Math.min(dataSize, Integer.MAX_VALUE));
+                ByteBuffer dataBuf = ByteBuffer.allocateDirect(capacity);
                 dataChannel.read(dataBuf);
                 dataBuf.flip();
                 dataBuf.order(ByteOrder.LITTLE_ENDIAN);
 
-                // Read features sequentially
                 while (dataBuf.remaining() >= 4) {
                     int featureSize = dataBuf.getInt();
                     if (featureSize <= 0 || featureSize > dataBuf.remaining()) {
+                        CatgisLogger.debug("FlatGeobuf: stopping feature read, featureSize="
+                                + featureSize + " remaining=" + dataBuf.remaining());
                         break;
                     }
 
@@ -144,27 +224,26 @@ public final class FlatGeobufLoader {
                             }
                         }
                     } catch (Exception e) {
-                        // Skip corrupt feature, continue
+                        skipped++;
+                        CatgisLogger.warn("FlatGeobuf: corrupt feature #" + (features.size() + skipped)
+                                + ", skipping", e);
                     }
 
                     dataBuf.position(pos + featureSize);
                     dataBuf.limit(dataBuf.capacity());
                 }
-            }
 
-            // Compute envelope
-            Envelope envelope = new Envelope();
-            if (header.envelope != null && !header.envelope.isNull()
-                    && (header.envelope.getWidth() > 0 || header.envelope.getHeight() > 0)) {
-                envelope = header.envelope;
-            } else {
-                for (SimpleFeature f : features) {
-                    Geometry g = (Geometry) f.getDefaultGeometry();
-                    if (g != null && !g.isEmpty()) {
-                        envelope.expandToInclude(g.getEnvelopeInternal());
-                    }
+                if (skipped > 0) {
+                    CatgisLogger.warn("FlatGeobuf: skipped " + skipped
+                            + " corrupt feature(s) in " + file.getName(), null);
                 }
             }
+
+            Envelope envelope = computeEnvelope(header, features);
+
+            CatgisLogger.info("FlatGeobuf loaded: " + file.getName()
+                    + " → " + features.size() + " features"
+                    + (skipped > 0 ? " (" + skipped + " skipped)" : ""));
 
             return new ShapefileData(
                     features, envelope, file.getName(), features.size(),
@@ -175,29 +254,43 @@ public final class FlatGeobufLoader {
     /**
      * Load a FlatGeobuf file from a path string.
      */
-    public static ShapefileData load(String path) throws Exception {
+    public static ShapefileData load(String path) throws UnsupportedFormatException, IOException {
         return load(new File(path));
     }
 
     // --- Private helpers ---
 
+    private static Envelope computeEnvelope(HeaderMeta header, List<SimpleFeature> features) {
+        Envelope envelope = new Envelope();
+        if (header.envelope != null && !header.envelope.isNull()
+                && (header.envelope.getWidth() > 0 || header.envelope.getHeight() > 0)) {
+            envelope = header.envelope;
+        } else {
+            for (SimpleFeature f : features) {
+                Geometry g = (Geometry) f.getDefaultGeometry();
+                if (g != null && !g.isEmpty()) {
+                    envelope.expandToInclude(g.getEnvelopeInternal());
+                }
+            }
+        }
+        return envelope;
+    }
+
     private static SimpleFeatureType buildSchema(HeaderMeta header, String sourceName) {
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
         String name = sourceName.replaceAll("[^a-zA-Z0-9_]", "_");
         typeBuilder.setName(name);
-
-        // Geometry column
         typeBuilder.add("the_geom", Geometry.class);
 
-        // Attribute columns
         List<ColumnMeta> columns = header.columns;
         if (columns != null) {
-            for (ColumnMeta col : columns) {
-                String colName = col.name != null ? col.name : "col_" + columns.indexOf(col);
-                // Sanitize column name for GeoTools
+            for (int i = 0; i < columns.size(); i++) {
+                ColumnMeta col = columns.get(i);
+                String colName = col.name != null ? col.name : "col_" + i;
                 colName = colName.replaceAll("[^a-zA-Z0-9_]", "_");
-                if (colName.isEmpty()) colName = "col";
-
+                if (colName.isEmpty()) {
+                    colName = "col_" + i;
+                }
                 Class<?> binding = columnTypeToClass(col.type);
                 typeBuilder.add(colName, binding);
             }
@@ -216,7 +309,11 @@ public final class FlatGeobufLoader {
             case org.wololo.flatgeobuf.generated.ColumnType.Float -> Float.class;
             case org.wololo.flatgeobuf.generated.ColumnType.Double -> Double.class;
             case org.wololo.flatgeobuf.generated.ColumnType.String -> String.class;
-            default -> String.class;
+            default -> {
+                CatgisLogger.debug("FlatGeobuf: unknown column type " + columnType
+                        + ", defaulting to String");
+                yield String.class;
+            }
         };
     }
 
@@ -225,7 +322,6 @@ public final class FlatGeobufLoader {
                                                  HeaderMeta header) {
         builder.reset();
 
-        // Convert geometry
         Geometry geometry = null;
         try {
             org.wololo.flatgeobuf.generated.Geometry fbGeom = fbFeature.geometry();
@@ -233,42 +329,41 @@ public final class FlatGeobufLoader {
                 geometry = GeometryConversions.deserialize(fbGeom, header.geometryType);
             }
         } catch (Exception e) {
-            geometry = null;
+            CatgisLogger.warn("FlatGeobuf: geometry deserialization failed for feature", e);
+            throw new RuntimeException("Failed to deserialize geometry", e);
         }
 
         if (geometry == null) {
+            CatgisLogger.debug("FlatGeobuf: null geometry in feature, using empty Point(0,0)");
             geometry = GEOM_FACTORY.createPoint(new Coordinate(0, 0));
         }
         builder.set("the_geom", geometry);
 
-        // Convert attributes
         List<ColumnMeta> columns = header.columns;
         if (columns != null) {
             for (int i = 0; i < columns.size(); i++) {
                 ColumnMeta col = columns.get(i);
                 String colName = col.name != null ? col.name : "col_" + i;
                 colName = colName.replaceAll("[^a-zA-Z0-9_]", "_");
-                if (colName.isEmpty()) colName = "col";
+                if (colName.isEmpty()) {
+                    colName = "col_" + i;
+                }
 
                 Object value = readColumnValue(fbFeature, i, col.type);
                 try {
                     builder.set(colName, value);
                 } catch (Exception e) {
+                    CatgisLogger.warn("FlatGeobuf: failed to set column '" + colName
+                            + "' (type=" + col.type + ")", e);
                     builder.set(colName, null);
                 }
             }
         }
 
-        return builder.buildFeature(String.valueOf(featuresCount(fbFeature)));
+        return builder.buildFeature(String.valueOf(featureIdCounter++));
     }
 
-    private static int featuresCount(Feature fbFeature) {
-        // Use a static counter for feature IDs
-        // FlatGeobuf features don't have built-in IDs
-        return featureIdCounter++;
-    }
-
-    private static int featureIdCounter = 0;
+    private static int featureIdCounter;
 
     private static Object readColumnValue(Feature fbFeature, int colIndex, byte columnType) {
         try {
@@ -282,24 +377,27 @@ public final class FlatGeobufLoader {
                 case org.wololo.flatgeobuf.generated.ColumnType.Float -> (float) raw;
                 case org.wololo.flatgeobuf.generated.ColumnType.Double -> raw;
                 case org.wololo.flatgeobuf.generated.ColumnType.String ->
-                        String.valueOf((long) raw); // offset into string table; best-effort
+                        String.valueOf((long) raw);
                 default -> raw;
             };
         } catch (Exception e) {
+            CatgisLogger.debug("FlatGeobuf: failed to read column " + colIndex
+                    + " (type=" + columnType + ")");
             return null;
         }
     }
 
     private static long estimateIndexSize(long featuresCount, int indexNodeSize) {
-        if (indexNodeSize <= 0 || featuresCount <= 0) return 0;
-        // Packed R-tree: floor((featuresCount + nodeSize - 1) / nodeSize) nodes
+        if (indexNodeSize <= 0 || featuresCount <= 0) {
+            return 0;
+        }
         long numNodes = (featuresCount + indexNodeSize - 1) / indexNodeSize;
-        // Each node: 4 bytes (offset) + (nodeSize * 40 bytes approx per item)
         return numNodes * (4L + (long) indexNodeSize * 40);
     }
 
     private static ShapefileData emptyResult(HeaderMeta header, String sourceName,
                                               SimpleFeatureType schema) {
+        CatgisLogger.debug("FlatGeobuf: returning empty result for " + sourceName);
         return new ShapefileData(
                 List.of(), new Envelope(), sourceName, 0,
                 "FlatGeobuf: " + header.name + " (0 features)", schema);

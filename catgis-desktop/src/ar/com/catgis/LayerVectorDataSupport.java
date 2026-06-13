@@ -66,6 +66,12 @@ final class LayerVectorDataSupport {
 
         if (layer instanceof SpatiaLiteLayer slLayer) {
             try {
+                File slFile = new File(slLayer.getPath());
+                ValidationResult vr = SpatiaLiteLoader.validateFile(slFile);
+                if (!vr.isValid()) {
+                    CatgisLogger.warn("SpatiaLite validation failed: " + vr.message(), null);
+                    return null;
+                }
                 data = SpatiaLiteLoader.loadLayerData(slLayer);
             } catch (Exception e) {
                 AppErrorSupport.logFailure("No se pudo cargar la capa SpatiaLite: " + slLayer.getTableName(), e);
@@ -128,6 +134,12 @@ final class LayerVectorDataSupport {
             return projectAndAttach(layer, data);
         }
         if (lowerPath.endsWith(".fgb")) {
+            File fgbFile = new File(path);
+            ValidationResult vr = FlatGeobufLoader.validateFile(fgbFile);
+            if (!vr.isValid()) {
+                CatgisLogger.warn("FlatGeobuf validation failed: " + vr.message(), null);
+                return null;
+            }
             data = FlatGeobufLoader.load(path);
             if (isBlank(layer.getSourceCRS())) {
                 layer.setSourceCRS("EPSG:4326");

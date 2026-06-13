@@ -21,7 +21,7 @@ class FlatGeobufLoaderRealTest {
 
     @Test
     void loadNonExistentFileThrows() {
-        assertThrows(Exception.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load(new File("/nonexistent/file.fgb"));
         });
     }
@@ -30,7 +30,7 @@ class FlatGeobufLoaderRealTest {
     void loadNonFgbFileThrows() throws IOException {
         File fakeFile = tempDir.resolve("test.txt").toFile();
         Files.writeString(fakeFile.toPath(), "not a flatgeobuf file");
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load(fakeFile);
         });
     }
@@ -39,21 +39,21 @@ class FlatGeobufLoaderRealTest {
     void loadEmptyFileThrows() throws IOException {
         File emptyFile = tempDir.resolve("empty.fgb").toFile();
         Files.writeString(emptyFile.toPath(), "");
-        assertThrows(Exception.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load(emptyFile);
         });
     }
 
     @Test
     void loadNullFileThrows() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load((File) null);
         });
     }
 
     @Test
     void loadStringPathDelegatesToFile() {
-        assertThrows(Exception.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load("/nonexistent/file.fgb");
         });
     }
@@ -63,7 +63,7 @@ class FlatGeobufLoaderRealTest {
         File badFile = tempDir.resolve("bad.fgb").toFile();
         byte[] badMagic = new byte[]{0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         Files.write(badFile.toPath(), badMagic);
-        assertThrows(Exception.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load(badFile);
         });
     }
@@ -81,8 +81,33 @@ class FlatGeobufLoaderRealTest {
         };
         File invalidFile = tempDir.resolve("invalid_header.fgb").toFile();
         Files.write(invalidFile.toPath(), data);
-        assertThrows(Exception.class, () -> {
+        assertThrows(UnsupportedFormatException.class, () -> {
             FlatGeobufLoader.load(invalidFile);
         });
+    }
+
+    @Test
+    void validateFileAcceptsNullGracefully() {
+        ValidationResult vr = FlatGeobufLoader.validateFile(null);
+        assertFalse(vr.isValid());
+        assertTrue(vr.message().contains("no especificado"));
+    }
+
+    @Test
+    void validateFileRejectsNonFgbExtension() throws IOException {
+        File fakeFile = tempDir.resolve("test.txt").toFile();
+        Files.writeString(fakeFile.toPath(), "not a flatgeobuf file");
+        ValidationResult vr = FlatGeobufLoader.validateFile(fakeFile);
+        assertFalse(vr.isValid());
+        assertTrue(vr.message().contains(".fgb"));
+    }
+
+    @Test
+    void validateFileRejectsTooSmall() throws IOException {
+        File smallFile = tempDir.resolve("small.fgb").toFile();
+        Files.write(smallFile.toPath(), new byte[]{0x00, 0x00, 0x00});
+        ValidationResult vr = FlatGeobufLoader.validateFile(smallFile);
+        assertFalse(vr.isValid());
+        assertTrue(vr.message().contains("pequeño"));
     }
 }

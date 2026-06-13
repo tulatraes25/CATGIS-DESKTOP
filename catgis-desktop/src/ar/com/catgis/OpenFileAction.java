@@ -77,6 +77,12 @@ public class OpenFileAction extends AbstractAction {
                 return GeoPackageDataSourceAction.openGeoPackageDataSource(file, parent);
             } else if (lowerName.endsWith(".spatialite") || lowerName.endsWith(".sl3") || lowerName.endsWith(".sl4") || lowerName.endsWith(".db")) {
                 // SpatiaLite: validate file and load first available table
+                ValidationResult vr = SpatiaLiteLoader.validateFile(file);
+                if (!vr.isValid()) {
+                    JOptionPane.showMessageDialog(parent, vr.message(),
+                            "SpatiaLite — archivo inválido", JOptionPane.WARNING_MESSAGE);
+                    return false;
+                }
                 SpatiaLiteConnectionInfo connInfo = new SpatiaLiteConnectionInfo();
                 connInfo.setFilePath(file.getAbsolutePath());
                 try {
@@ -130,6 +136,12 @@ public class OpenFileAction extends AbstractAction {
                 layerStorageFile = file;
                 layerDisplayName = file.getName();
             } else if (lowerName.endsWith(".fgb")) {
+                ValidationResult vr = FlatGeobufLoader.validateFile(file);
+                if (!vr.isValid()) {
+                    JOptionPane.showMessageDialog(parent, vr.message(),
+                            "FlatGeobuf — archivo inválido", JOptionPane.WARNING_MESSAGE);
+                    return false;
+                }
                 data = FlatGeobufLoader.load(file);
                 layerDisplayName = file.getName();
             } else if (lowerName.endsWith(".pmtiles")) {
