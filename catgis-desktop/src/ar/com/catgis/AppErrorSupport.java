@@ -1,6 +1,5 @@
 package ar.com.catgis;
 
-import javax.swing.JOptionPane;
 import java.awt.Component;
 
 public final class AppErrorSupport {
@@ -27,11 +26,10 @@ public final class AppErrorSupport {
     }
 
     public static void showErrorDialog(Component parent, String title, String intro, Throwable ex) {
-        JOptionPane.showMessageDialog(
+        NotificationManager.error(
                 parent,
-                buildDialogMessage(intro, ex),
                 title != null && !title.isBlank() ? title : "CATGIS",
-                JOptionPane.ERROR_MESSAGE
+                buildDialogMessage(intro, ex)
         );
     }
 

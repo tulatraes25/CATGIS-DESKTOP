@@ -236,7 +236,7 @@ public class BooleanRiskDialog extends JDialog {
         Layer demLayer = (Layer) demCombo.getSelectedItem();
         Layer soilLayer = (Layer) soilCombo.getSelectedItem();
         if (!(demLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir un DEM raster valido."));
+            NotificationManager.warn(this, I18n.t("Riesgo booleano"), I18n.t("Debes elegir un DEM raster valido."));
             return;
         }
         if (!isValidDemBaseLayer(demLayer)) {

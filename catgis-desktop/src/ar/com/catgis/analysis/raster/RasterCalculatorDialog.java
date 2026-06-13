@@ -8,6 +8,7 @@ import ar.com.catgis.AppContext;
 import ar.com.catgis.Main;
 import ar.com.catgis.LayersPanel;
 import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.NotificationManager;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -235,8 +236,8 @@ public class RasterCalculatorDialog extends JDialog {
                 try {
                     BufferedImage result = get();
                     // Save as new raster layer
-                    String name = JOptionPane.showInputDialog(RasterCalculatorDialog.this,
-                            "Nombre de la capa resultante:", "Resultado");
+                    String name = NotificationManager.inputText(RasterCalculatorDialog.this,
+                            "Resultado", "Nombre de la capa resultante:", null);
                     if (name == null || name.isBlank()) name = "calc_" + System.currentTimeMillis() % 10000;
 
                     LocalRasterData src = rasterMap.get(aSel);
@@ -248,13 +249,11 @@ public class RasterCalculatorDialog extends JDialog {
                         AppContext.addLayer(layer);
                         AppContext.mapPanel().addOrUpdateRasterLayer(layer, outData);
                         CatgisDesktopApp.markProjectDirty();
-                        JOptionPane.showMessageDialog(RasterCalculatorDialog.this,
-                                "Capa '" + name + "' creada correctamente.", "Exito",
-                                JOptionPane.INFORMATION_MESSAGE);
+                        NotificationManager.toastSuccess("Capa '" + name + "' creada correctamente.");
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(RasterCalculatorDialog.this,
-                            "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(RasterCalculatorDialog.this, "Error",
+                            "Error: " + ex.getMessage());
                 } finally {
                     progressBar.setVisible(false);
                     runButton.setEnabled(true);
