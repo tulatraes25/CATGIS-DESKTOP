@@ -179,43 +179,43 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private static MapLayoutComposerDialog openInstance;
 
     final JTextField titleField;
-    private final JTextField subtitleField;
-    private final JTextField footerField;
+    final JTextField subtitleField;
+    final JTextField footerField;
     final JTextField studyField;
     final JTextField cartoucheProjectField;
     final JTextField companyField;
     final JTextField cartographerField;
     final JTextField imageSourceField;
     final JTextField coordinateReferenceField;
-    private final JTextField legendTitleField;
-    private final JTextField legendSubtitleField;
-    private final JTextField logoPathField;
-    private final JTextField layoutImagePathField;
-    private final JTextField mapScaleField;
-    private final JComboBox<LayoutTemplate> templateCombo;
-    private final JComboBox<PageSizePreset> pageSizeCombo;
-    private final JComboBox<PageOrientation> orientationCombo;
-    private final JComboBox<Integer> dpiCombo;
-    private final JComboBox<LegendPlacement> legendPlacementCombo;
-    private final JComboBox<ScaleStyle> scaleStyleCombo;
-    private final JComboBox<ScaleRule> scaleRuleCombo;
-    private final JComboBox<NorthStyle> northStyleCombo;
-    private final JCheckBox northCheck;
-    private final JCheckBox scaleCheck;
-    private final JCheckBox legendCheck;
-    private final JCheckBox gridCheck;
-    private final JCheckBox gridLabelsCheck;
-    private final JSpinner gridColumnsSpinner;
-    private final JSpinner gridRowsSpinner;
+    final JTextField legendTitleField;
+    final JTextField legendSubtitleField;
+    final JTextField logoPathField;
+    final JTextField layoutImagePathField;
+    final JTextField mapScaleField;
+    final JComboBox<LayoutTemplate> templateCombo;
+    final JComboBox<PageSizePreset> pageSizeCombo;
+    final JComboBox<PageOrientation> orientationCombo;
+    final JComboBox<Integer> dpiCombo;
+    final JComboBox<LegendPlacement> legendPlacementCombo;
+    final JComboBox<ScaleStyle> scaleStyleCombo;
+    final JComboBox<ScaleRule> scaleRuleCombo;
+    final JComboBox<NorthStyle> northStyleCombo;
+    final JCheckBox northCheck;
+    final JCheckBox scaleCheck;
+    final JCheckBox legendCheck;
+    final JCheckBox gridCheck;
+    final JCheckBox gridLabelsCheck;
+    final JSpinner gridColumnsSpinner;
+    final JSpinner gridRowsSpinner;
     final LayoutInteractionState interactionState;
     final LayoutPreviewPanel previewPanel = new LayoutPreviewPanel(this);
     private final JLabel currentMapLabel;
     private final JLabel scaleInfoLabel;
     final JLabel statusLabel;
-    private final DefaultListModel<CatmapLayoutItem> layoutItemsModel;
-    private final JList<CatmapLayoutItem> layoutItemsList;
-    private final DefaultListModel<Layer> projectLayersModel;
-    private final JList<Layer> projectLayersList;
+    final DefaultListModel<CatmapLayoutItem> layoutItemsModel;
+    final JList<CatmapLayoutItem> layoutItemsList;
+    final DefaultListModel<Layer> projectLayersModel;
+    final JList<Layer> projectLayersList;
     private final JLabel projectLayersSummaryLabel;
     private final JLabel projectLayerDetailLabel;
     private final JLabel inspectorTypeValueLabel;
@@ -232,11 +232,11 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private final JCheckBox inspectorItalicCheck;
     private final JCheckBox inspectorVisibleCheck;
     private final JCheckBox inspectorLockedCheck;
-    private final JComboBox<CatmapLayoutItem.HorizontalAlign> inspectorAlignCombo;
+    final JComboBox<CatmapLayoutItem.HorizontalAlign> inspectorAlignCombo;
     private final CardLayout catmapElementsCardLayout;
     private final JPanel catmapElementsCardPanel;
-    private final DefaultTreeModel layoutStructureTreeModel;
-    private final JTree layoutStructureTree;
+    final DefaultTreeModel layoutStructureTreeModel;
+    final JTree layoutStructureTree;
     private JScrollPane controlsScrollPane;
     JScrollPane previewScrollPane;
     private JButton selectionToolButton;
@@ -1143,7 +1143,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return scrollPane;
     }
 
-    private void refreshPreviewWorkspace() {
+    void refreshPreviewWorkspace() {
         previewPanel.revalidate();
         previewPanel.repaint();
     }
@@ -1267,7 +1267,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
 
 
 
-    private void applyTemplateDefaults(LayoutTemplate template, boolean resetLayoutState) {
+    void applyTemplateDefaults(LayoutTemplate template, boolean resetLayoutState) {
         LayoutTemplate resolved = template != null ? template : LayoutTemplate.TECHNICAL_RIGHT;
         if (resetLayoutState) {
             interactionState.resetForTemplate(resolved);
@@ -1387,7 +1387,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         projectLayersSummaryLabel.setText("Capas en CATMAP: " + visibleCount + " visibles de " + total);
     }
 
-    private void refreshProjectLayerDetails() {
+    void refreshProjectLayerDetails() {
         Layer layer = projectLayersList.getSelectedValue();
         if (layer == null) {
             projectLayerDetailLabel.setText("<html>Selecciona una capa para controlar visibilidad y simbologia sin salir de CATMAP.</html>");
@@ -1430,7 +1430,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return AppIcons.genericLayerIcon();
     }
 
-    private void toggleProjectLayerVisibility(Layer layer) {
+    void toggleProjectLayerVisibility(Layer layer) {
         if (layer == null) {
             return;
         }
@@ -1451,7 +1451,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
                 : "Capa oculta en CATMAP: " + layer.getName());
     }
 
-    private void toggleSelectedProjectLayerVisibility() {
+    void toggleSelectedProjectLayerVisibility() {
         Layer layer = projectLayersList.getSelectedValue();
         if (layer == null) {
             NotificationManager.warn(this, null, "Selecciona una capa del panel derecho para cambiar su visibilidad.");
@@ -1460,7 +1460,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         toggleProjectLayerVisibility(layer);
     }
 
-    private void openSelectedProjectLayerAppearance() {
+    void openSelectedProjectLayerAppearance() {
         Layer layer = projectLayersList.getSelectedValue();
         if (layer == null) {
             NotificationManager.warn(this, null, "Selecciona una capa del panel derecho para editar su simbologia.");
@@ -1469,7 +1469,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         openProjectLayerAppearance(layer);
     }
 
-    private void openProjectLayerAppearance(Layer layer) {
+    void openProjectLayerAppearance(Layer layer) {
         if (layer == null) {
             return;
         }
@@ -1791,7 +1791,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    private void duplicateSelectedCatmapItem() {
+    void duplicateSelectedCatmapItem() {
         List<CatmapLayoutItem> selectedItems = getSelectedCatmapItems();
         if (selectedItems.isEmpty()) {
             NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para duplicar.");
@@ -1885,7 +1885,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         previewPanel.repaint();
     }
 
-    private void deleteSelectedLayoutObject() {
+    void deleteSelectedLayoutObject() {
         if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM || !getSelectedCatmapItems().isEmpty()) {
             removeSelectedCatmapItem();
             return;
@@ -1908,7 +1908,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    private void copySelectedCatmapItemsToClipboard() {
+    void copySelectedCatmapItemsToClipboard() {
         List<CatmapLayoutItem> selectedItems = getSelectedCatmapItems();
         if (selectedItems.isEmpty()) {
             statusLabel.setText("Selecciona un elemento CATMAP para copiar.");
@@ -1923,7 +1923,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         statusLabel.setText(catmapClipboard.size() > 1 ? "Elementos CATMAP copiados." : "Elemento CATMAP copiado.");
     }
 
-    private void cutSelectedCatmapItemsToClipboard() {
+    void cutSelectedCatmapItemsToClipboard() {
         copySelectedCatmapItemsToClipboard();
         if (!catmapClipboard.isEmpty()) {
             removeSelectedCatmapItem();
@@ -1931,7 +1931,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    private void pasteCatmapItemsFromClipboard() {
+    void pasteCatmapItemsFromClipboard() {
         if (catmapClipboard.isEmpty()) {
             statusLabel.setText("No hay elementos CATMAP copiados para pegar.");
             return;
@@ -2130,7 +2130,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         refreshInspectorFromSelection();
     }
 
-    private void refreshInspectorFromSelection() {
+    void refreshInspectorFromSelection() {
         CatmapLayoutItem item = layoutItemsList.getSelectedValue();
         boolean enabled = item != null;
         setInspectorEnabled(enabled);
@@ -2242,7 +2242,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return LayoutElementType.isFixed(type) && interactionState.isElementLocked(type);
     }
 
-    private void refreshLayoutStructureTree() {
+    void refreshLayoutStructureTree() {
         if (layoutStructureTreeModel == null) {
             return;
         }
@@ -2345,7 +2345,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return null;
     }
 
-    private void handleLayoutStructureSelectionChanged() {
+    void handleLayoutStructureSelectionChanged() {
         if (syncingLayoutStructureSelection) {
             return;
         }
@@ -2379,7 +2379,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         previewPanel.repaint();
     }
 
-    private void handleLayoutStructureDoubleClick() {
+    void handleLayoutStructureDoubleClick() {
         LayoutStructureNode data = selectedLayoutStructureNode();
         if (data == null) {
             return;
@@ -2436,7 +2436,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    private void handleLayoutItemsListPopup(MouseEvent e) {
+    void handleLayoutItemsListPopup(MouseEvent e) {
         if (!e.isPopupTrigger() && !SwingUtilities.isRightMouseButton(e)) {
             return;
         }
@@ -2450,7 +2450,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         showCatmapContextMenu(layoutItemsList, e.getX(), e.getY());
     }
 
-    private void handleLayoutStructurePopup(MouseEvent e) {
+    void handleLayoutStructurePopup(MouseEvent e) {
         if (!e.isPopupTrigger() && !SwingUtilities.isRightMouseButton(e)) {
             return;
         }
@@ -2720,7 +2720,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         statusLabel.setText(front ? "Elemento(s) CATMAP traidos al frente." : "Elemento(s) CATMAP enviados al fondo.");
     }
 
-    private void nudgeSelectedLayoutObject(int dx, int dy) {
+    void nudgeSelectedLayoutObject(int dx, int dy) {
         LayoutElementType selected = interactionState.getSelectedElement();
         if (selected == LayoutElementType.CATMAP_ITEM) {
             for (CatmapLayoutItem item : getUnlockedSelectedCatmapItems()) {
@@ -2879,176 +2879,10 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     private void installListeners() {
-        DocumentListener listener = new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                handleUpdate();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                handleUpdate();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                handleUpdate();
-            }
-
-            private void handleUpdate() {
-                pushProjectMetadataFromControls();
-                previewPanel.repaint();
-            }
-        };
-        titleField.getDocument().addDocumentListener(listener);
-        subtitleField.getDocument().addDocumentListener(listener);
-        footerField.getDocument().addDocumentListener(listener);
-        studyField.getDocument().addDocumentListener(listener);
-        companyField.getDocument().addDocumentListener(listener);
-        cartographerField.getDocument().addDocumentListener(listener);
-        imageSourceField.getDocument().addDocumentListener(listener);
-        coordinateReferenceField.getDocument().addDocumentListener(listener);
-        legendTitleField.getDocument().addDocumentListener(listener);
-        legendSubtitleField.getDocument().addDocumentListener(listener);
-        templateCombo.addActionListener(e -> {
-            LayoutTemplate template = (LayoutTemplate) templateCombo.getSelectedItem();
-            interactionState.setTemplate(template);
-            applyTemplateDefaults(template, true);
-            statusLabel.setText("Plantilla activa: " + (template != null ? template.toString() : "Tecnica"));
-            refreshPreviewWorkspace();
-        });
-        pageSizeCombo.addActionListener(e -> refreshPreviewWorkspace());
-        orientationCombo.addActionListener(e -> refreshPreviewWorkspace());
-        dpiCombo.addActionListener(e -> refreshPreviewWorkspace());
-        legendPlacementCombo.addActionListener(e -> previewPanel.repaint());
-        scaleStyleCombo.addActionListener(e -> previewPanel.repaint());
-        scaleRuleCombo.addActionListener(e -> previewPanel.repaint());
-        northStyleCombo.addActionListener(e -> previewPanel.repaint());
-        northStyleCombo.addActionListener(e -> pushCatmapNorthSettingsToProject());
-        northCheck.addActionListener(e -> {
-            pushCatmapNorthSettingsToProject();
-            refreshLayoutStructureTree();
-            previewPanel.repaint();
-        });
-        scaleCheck.addActionListener(e -> {
-            refreshLayoutStructureTree();
-            previewPanel.repaint();
-        });
-        legendCheck.addActionListener(e -> {
-            refreshLayoutStructureTree();
-            previewPanel.repaint();
-        });
-        gridCheck.addActionListener(e -> previewPanel.repaint());
-        gridLabelsCheck.addActionListener(e -> previewPanel.repaint());
-        gridColumnsSpinner.addChangeListener(e -> previewPanel.repaint());
-        gridRowsSpinner.addChangeListener(e -> previewPanel.repaint());
-        layoutItemsList.addListSelectionListener(e -> {
-            if (e.getValueIsAdjusting()) {
-                return;
-            }
-            List<CatmapLayoutItem> selectedItems = layoutItemsList.getSelectedValuesList();
-            CatmapLayoutItem selected = !selectedItems.isEmpty() ? selectedItems.get(0) : null;
-            refreshInspectorFromSelection();
-            if (selected != null) {
-                interactionState.selectCustomItem(selected.getId());
-                statusLabel.setText(selectedItems.size() > 1
-                        ? selectedItems.size() + " elementos CATMAP seleccionados. PodÃ©s alinear, distribuir o editar el principal."
-                        : "Elemento CATMAP seleccionado. Arrastralo o redimensionalo desde el layout.");
-            } else if (interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM) {
-                interactionState.select(null);
-            }
-            previewPanel.repaint();
-        });
-        layoutItemsList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && layoutItemsList.getSelectedValue() != null) {
-                    editSelectedCatmapItem();
-                }
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                handleLayoutItemsListPopup(e);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                handleLayoutItemsListPopup(e);
-            }
-        });
-        layoutStructureTree.addTreeSelectionListener(e -> handleLayoutStructureSelectionChanged());
-        layoutStructureTree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    handleLayoutStructureDoubleClick();
-                }
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                handleLayoutStructurePopup(e);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                handleLayoutStructurePopup(e);
-            }
-        });
-        projectLayersList.addListSelectionListener(e -> {
-            if (e.getValueIsAdjusting()) {
-                return;
-            }
-            Layer selectedLayer = projectLayersList.getSelectedValue();
-            refreshProjectLayerDetails();
-            if (selectedLayer != null) {
-                statusLabel.setText("Capa de proyecto seleccionada en CATMAP: " + selectedLayer.getName());
-            }
-        });
-        projectLayersList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int index = projectLayersList.locationToIndex(e.getPoint());
-                if (index < 0) {
-                    return;
-                }
-                Rectangle cellBounds = projectLayersList.getCellBounds(index, index);
-                if (cellBounds == null || !cellBounds.contains(e.getPoint())) {
-                    return;
-                }
-                Layer layer = projectLayersModel.get(index);
-                if (layer == null) {
-                    return;
-                }
-                projectLayersList.setSelectedIndex(index);
-                int relativeX = e.getPoint().x - cellBounds.x;
-                if (SwingUtilities.isLeftMouseButton(e) && relativeX <= 28) {
-                    toggleProjectLayerVisibility(layer);
-                    return;
-                }
-                if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    openProjectLayerAppearance(layer);
-                }
-            }
-        });
-        projectLayersList.getInputMap().put(javax.swing.KeyStroke.getKeyStroke("SPACE"), "toggle-layer-visible");
-        projectLayersList.getActionMap().put("toggle-layer-visible", new javax.swing.AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                toggleSelectedProjectLayerVisibility();
-            }
-        });
-        projectLayersList.getInputMap().put(javax.swing.KeyStroke.getKeyStroke("ENTER"), "edit-layer-appearance");
-        projectLayersList.getActionMap().put("edit-layer-appearance", new javax.swing.AbstractAction() {
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                openSelectedProjectLayerAppearance();
-            }
-        });
+        LayoutListenerWiring.wireAllListeners(this);
     }
 
-    private void pushProjectMetadataFromControls() {
+    void pushProjectMetadataFromControls() {
         if (ctxProject() == null) {
             return;
         }
@@ -3068,7 +2902,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    private void pushCatmapNorthSettingsToProject() {
+    void pushCatmapNorthSettingsToProject() {
         if (ctxProject() == null) {
             return;
         }
