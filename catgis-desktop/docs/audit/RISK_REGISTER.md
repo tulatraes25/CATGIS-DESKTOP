@@ -95,17 +95,14 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 ---
 
-## R-04: CatmapSerializer — fallos silenciosos de parseo
+## R-04: CatmapSerializer — fallos silenciosos de parseo ✅ CERRADO
 
 | Field | Value |
 |---|---|
 | **Severity** | 🟢 BAJA (era 🟡 MEDIA) |
-| **Status** | OPEN / mitigado |
+| **Status** | CLOSED |
 | **File** | `catmap/CatmapSerializer.java` |
-| **Evidence** | `parseDouble`/`parseInt` ahora loguean `CatgisLogger.warn` con valor inválido antes de retornar 0. `parseBoolean` valida estrictamente true/false con warn si no coincide. `parseElement` emite warning adicional si `w<=0 \|\| h<=0` con id+tipo. 10 tests en `CatmapSerializerTest` (commit `58484f0`). |
-| **Impacto** | Bajo — los parseos siguen retornando defaults para no romper la carga del resto del layout, pero ahora el usuario/desarrollador ve el warning en logs. |
-| **Riesgo residual** | `parseColor` (línea 355) retorna `Color.BLACK` sin log. `parseElement` retorna null con partes < 10 sin log del id. |
-| **Prioridad** | P3. |
+| **Evidence** | `parseDouble`, `parseInt`, `parseBoolean`, `parseColor` y `parseElement` ahora loguean `CatgisLogger.warn` con valor inválido antes de retornar defaults. IMAGE_DATA decode también loguea. 12 tests en `CatmapSerializerTest` (commits `58484f0`, `172d2fa`). Sin fallos silenciosos restantes. |
 
 ---
 
@@ -265,7 +262,7 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 | R-01 Plugin ClassLoader | 🔴 ALTA | OPEN |
 | R-02 pgRouting SQL injection | 🟢 BAJA | **CLOSED** (era ALTA) |
 | R-03 GribLoader empty catch | 🟡 MEDIA | OPEN |
-| R-04 CatmapSerializer silent | 🟢 BAJA | OPEN / mitigado |
+| R-04 CatmapSerializer silent | 🟢 BAJA | CLOSED |
 | R-05 4 empty catch blocks | 🟢 BAJA | OPEN |
 | R-06 External processes | 🟢 BAJA | CLOSED |
 | R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
