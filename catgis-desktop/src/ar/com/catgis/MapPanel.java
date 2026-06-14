@@ -1281,6 +1281,10 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     public void removeLayer(Layer layer) {
+        if (layer != null && rasterLayers.containsKey(layer)) {
+            LocalRasterData data = rasterLayers.get(layer);
+            if (data != null) data.dispose();
+        }
         layerManager.removeLayer(layer);
     }
 
@@ -1353,6 +1357,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     public void clearAllLayers() {
+        // Dispose raster images before clearing references
+        for (LocalRasterData data : rasterLayers.values()) {
+            if (data != null) data.dispose();
+        }
+
         shapefileLayers.clear();
         rasterLayers.clear();
         onlineTileLayers.clear();
