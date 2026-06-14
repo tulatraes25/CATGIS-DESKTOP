@@ -183,4 +183,42 @@ class CatmapSerializerTest {
         LayoutModel loaded = CatmapSerializer.load(file);
         assertEquals(2, loaded.getElements().size());
     }
+
+    @Test
+    void loadInvalidColorLogsWarning() throws Exception {
+        String corrupt = """
+                # CATMAP Layout v1
+                PAGE_SIZE=A4
+                PAGE_ORIENTATION=LANDSCAPE
+                ELEMENT|LayoutLabel|l1|Test|10.0|20.0|100.0|30.0|1|true|false|COLOR=notacolor
+                # End of layout
+                """;
+
+        File file = tempDir.resolve("badcolor.catmap").toFile();
+        Files.writeString(file.toPath(), corrupt, StandardCharsets.UTF_8);
+
+        LayoutModel loaded = CatmapSerializer.load(file);
+        assertEquals(1, loaded.getElements().size());
+        // Color falls back to BLACK — layout loads, warning is logged
+    }
+
+    @Test
+    void loadTruncatedLineIsSkipped() throws Exception {
+        String corrupt = """
+                # CATMAP Layout v1
+                PAGE_SIZE=A4
+                PAGE_ORIENTATION=LANDSCAPE
+                ELEMENT|LayoutLabel|l1|Good|10.0|20.0|100.0|30.0|1|true|false
+                ELEMENT|truncated
+                ELEMENT|LayoutLabel|l2|AlsoGood|50.0|60.0|120.0|25.0|3|true|false
+                # End of layout
+                """;
+
+        File file = tempDir.resolve("truncated.catmap").toFile();
+        Files.writeString(file.toPath(), corrupt, StandardCharsets.UTF_8);
+
+        LayoutModel loaded = CatmapSerializer.load(file);
+        assertEquals(2, loaded.getElements().size());
+        // Truncated line is skipped with warning, valid elements still load
+    }
 }

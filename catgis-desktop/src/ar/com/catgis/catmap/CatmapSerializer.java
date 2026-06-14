@@ -158,7 +158,11 @@ public final class CatmapSerializer {
 
     private static LayoutElement parseElement(String line) {
         String[] parts = line.split("\\|", -1);
-        if (parts.length < 10) return null;
+        if (parts.length < 10) {
+            CatgisLogger.warn("CatmapSerializer: linea malformada (partes=" + parts.length
+                    + "), omitiendo: " + (line.length() > 80 ? line.substring(0, 80) + "..." : line), null);
+            return null;
+        }
 
         String type = parts[1];
         String id = parts[2];
@@ -314,7 +318,9 @@ public final class CatmapSerializer {
                             byte[] bytes = Base64.getDecoder().decode(data);
                             BufferedImage bi = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
                             if (bi != null) img.setImage(bi);
-                        } catch (Exception ignored) { CatgisLogger.warn("CatmapSerializer: operation failed", ignored); }
+                        } catch (Exception ignored) {
+                            CatgisLogger.warn("CatmapSerializer: no se pudo decodificar IMAGE_DATA", null);
+                        }
                     }
                 }
             } else if (part.startsWith("FIELD_")) {
@@ -366,7 +372,9 @@ public final class CatmapSerializer {
                         Integer.parseInt(parts[2].trim())
                 );
             }
-        } catch (Exception ignored) { CatgisLogger.warn("CatmapSerializer: operation failed", ignored); }
+        } catch (Exception ignored) {
+            CatgisLogger.warn("CatmapSerializer: color invalido '" + s + "', usando negro", null);
+        }
         return Color.BLACK;
     }
 
