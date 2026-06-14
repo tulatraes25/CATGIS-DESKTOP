@@ -261,7 +261,7 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 | R-02 pgRouting SQL injection | 🟢 BAJA | **CLOSED** (era ALTA) |
 | R-03 GribLoader empty catch | 🟢 BAJA | CLOSED |
 | R-04 CatmapSerializer silent | 🟢 BAJA | CLOSED |
-| R-05 Empty/silent catch blocks | 🟢 BAJA | OPEN / mitigado |
+| R-05 Empty/silent catch blocks | 🟢 BAJA | CLOSED |
 | R-06 External processes | 🟢 BAJA | CLOSED |
 | R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
 | R-08 PostGIS pooling | 🟢 BAJA | CLOSED |
