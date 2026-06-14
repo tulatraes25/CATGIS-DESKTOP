@@ -195,12 +195,12 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 | Field | Value |
 |---|---|
-| **Severity** | 🟡 MEDIA |
+| **Severity** | 🟢 BAJA (era 🟡 MEDIA) |
+| **Status** | OPEN / mitigado |
 | **Files** | `MapPanel.java`, `data/raster/LocalRasterData.java` |
-| **Evidence** | `LocalRasterData.dispose()` agregado en commit `2222e4b` → `image.flush()`. `MapPanel.cleanup()` itera y disposea todos los rasters. Pero `cleanup()` es opt-in — debe llamarse explícitamente al cerrar proyecto. Si no se llama, los rasters se acumulan en heap. |
-| **Impacto** | Con uso prolongado y muchos rasters, la memoria crece. En JVM 32-bit puede causar OutOfMemoryError. |
-| **Recomendación** | Conectar `cleanup()` al flujo de cierre/cambio de proyecto. |
-| **Prioridad** | P2. |
+| **Evidence** | `LocalRasterData.dispose()` llama `image.flush()`. `clearAllLayers()` y `removeLayer()` llaman `dispose()` en cada raster antes de limpiar. `MapLayoutComposerDialog.dispose()` limpia preview panel. Caminos principales cubiertos: nuevo proyecto, abrir proyecto, quitar capa. Commits `2222e4b`, `9a28d0c`. |
+| **Riesgo residual** | `rasterDisplayCache` no se limpia en `removeLayer()` (solo en `clearAllLayers`). `cleanup()` es opt-in — si se agrega un flujo "cerrar proyecto" sin pasar por `NewProjectAction`, los rasters no se liberan. Sin tests automatizados. |
+| **Prioridad** | P3. |
 
 ---
 
@@ -266,7 +266,7 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 | R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
 | R-08 PostGIS pooling | 🟢 BAJA | CLOSED |
 | R-09 Real dataset tests | 🟢 BAJA | OPEN / mitigado (7/12 formatos 🟢 Alta) |
-| R-10 Raster memory | 🟡 MEDIA | OPEN |
+| R-10 Raster memory | 🟢 BAJA | OPEN / mitigado |
 | R-11 UI freeze | 🟢 BAJA | CLOSED |
 | R-12 Project corruption | 🟢 BAJA | OPEN / mitigado |
 | R-13 Notification migration | 🟢 BAJA | CLOSED |
