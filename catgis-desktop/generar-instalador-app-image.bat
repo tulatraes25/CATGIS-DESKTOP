@@ -8,7 +8,7 @@ set LOG_FILE=reportes\app-image.log
 echo [CATGIS] Generando app-image Windows...
 echo [CATGIS] Generando app-image Windows... > "%LOG_FILE%"
 
-call gradle --no-daemon packageWindowsAppImage >> "%LOG_FILE%" 2>&1
+call gradlew.bat --no-daemon packageWindowsAppImage >> "%LOG_FILE%" 2>&1
 if errorlevel 1 (
     echo [CATGIS] No se pudo generar la app-image. Revisar "%LOG_FILE%".
     exit /b 1

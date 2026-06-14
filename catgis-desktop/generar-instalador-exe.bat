@@ -8,7 +8,7 @@ set LOG_FILE=reportes\instalador-exe.log
 echo [CATGIS] Generando instalador EXE...
 echo [CATGIS] Generando instalador EXE... > "%LOG_FILE%"
 
-call gradle --no-daemon packageWindowsExeInstaller >> "%LOG_FILE%" 2>&1
+call gradlew.bat --no-daemon packageWindowsExeInstaller >> "%LOG_FILE%" 2>&1
 if errorlevel 1 (
     echo [CATGIS] No se pudo generar el instalador EXE. Revisar "%LOG_FILE%".
     exit /b 1
