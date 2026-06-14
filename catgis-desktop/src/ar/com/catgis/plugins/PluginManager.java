@@ -15,14 +15,19 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 /**
- * Plugin system for CATGIS with SPI-based plugin discovery.
+ * <strong>EXPERIMENTAL — Plugin system for CATGIS.</strong>
  * <p>
- * Plugins are JAR files placed in the 'plugins' directory. Each plugin
- * must implement {@link CatgisPlugin} and declare it via META-INF/services
- * or a manifest entry.
+ * Plugins are JAR files placed in the 'plugins' directory.
+ * Each plugin must implement {@link CatgisPlugin} and declare it via
+ * {@code META-INF/services} or a manifest entry.
  * </p>
  * <p>
- * Supports: hot-reload (rescan directory), enable/disable, sandbox classloader.
+ * <strong>Security:</strong> Plugins run with the same privileges as the
+ * application and can read/write files, access the network, and execute
+ * arbitrary code. Only install plugins from trusted sources.
+ * </p>
+ * <p>
+ * Supports: hot-reload (rescan directory), enable/disable, SPI discovery.
  * </p>
  */
 public final class PluginManager {
@@ -44,6 +49,8 @@ public final class PluginManager {
      * Initialize the plugin system. Called at startup.
      */
     public static void initialize() {
+        CatgisLogger.warn("PluginManager: los plugins se ejecutan con los mismos permisos "
+                + "que la aplicacion — solo instalar plugins de fuentes confiables.", null);
         File dir = new File(PLUGINS_DIR);
         if (!dir.exists()) dir.mkdirs();
         loadPlugins();
@@ -127,7 +134,7 @@ public final class PluginManager {
 
         // Create classloader with all JARs
         if (!jarUrls.isEmpty()) {
-            // Isolate plugins in their own classloader (sandbox)
+            // Isolate plugins in their own classloader (URLClassLoader, not a security sandbox)
             URLClassLoader oldLoader = pluginClassLoader instanceof URLClassLoader ucl ? ucl : null;
             pluginClassLoader = new URLClassLoader(
                     jarUrls.toArray(new URL[0]),

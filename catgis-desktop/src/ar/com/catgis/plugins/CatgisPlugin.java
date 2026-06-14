@@ -7,11 +7,17 @@ import java.util.List;
  * Service Provider Interface (SPI) for CATGIS plugins.
  * <p>
  * Plugins implement this interface and register via
- * META-INF/services/ar.com.catgis.plugins.CatgisPlugin
- * or jar manifest Plugin-Class entry.
+ * {@code META-INF/services/ar.com.catgis.plugins.CatgisPlugin}
+ * or jar manifest {@code Plugin-Class} entry.
  * </p>
  * <p>
- * Lifecycle: onEnable() → (plugin runs) → onDisable() → (gc)
+ * Lifecycle: {@code onEnable()} → (plugin runs) → {@code onDisable()} → (gc)
+ * </p>
+ * <p>
+ * <strong>Security:</strong> Plugins run with full application privileges.
+ * They can read/write files, access the network, and execute arbitrary code.
+ * CATGIS does not sandbox or restrict plugin code. Only install plugins
+ * from trusted sources.
  * </p>
  */
 public interface CatgisPlugin {
