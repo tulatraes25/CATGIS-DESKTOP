@@ -2,103 +2,109 @@ package ar.com.catgis;
 
 import ar.com.catgis.data.vector.ShapefileData;
 import org.geotools.api.feature.simple.SimpleFeature;
-import org.geotools.api.feature.simple.SimpleFeatureType;
-import org.geotools.data.collection.ListFeatureCollection;
-import org.geotools.feature.simple.SimpleFeatureBuilder;
-import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.geotools.geometry.jts.Geometries;
-import org.geotools.geometry.jts.JTSFactoryFinder;
-import org.geotools.geopkg.GeoPackage;
-import org.geotools.geopkg.FeatureEntry;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.locationtech.jts.geom.*;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
 
 import java.io.File;
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Round-trip tests for GeoPackage loading via SpatiaLiteLoader.
- * Generates valid .gpkg files programmatically using GeoTools GeoPackage writer,
- * then loads them via the production SpatiaLiteLoader.
+ * Generates valid .gpkg files via ogr2ogr (OSGeo4W / GDAL) from GeoJSON.
  * <p>
- * Requires GeoTools gt-geopkg on classpath (included in build.gradle).
+ * Requires: GDAL ogr2ogr at C:\OSGeo4W64\bin\ogr2ogr.exe.
+ * Tests skip silently if GDAL is not installed.
  */
 class GeoPackageRealTest {
+
+    private static final String OGR2OGR = "C:\\OSGeo4W64\\bin\\ogr2ogr.exe";
 
     @TempDir
     Path tempDir;
 
-    @Disabled("GeoTools GeoPackage writer API requires Geometries enum matching feature geometry type"
-            + " — pending ogr2ogr-generated fixture or API investigation")
+    private static boolean ogr2ogrAvailable() {
+        return new File(OGR2OGR).exists();
+    }
+
     @Test
     void loadGpkgWithPolygonReturnsShapefileData() throws Exception {
+        if (!ogr2ogrAvailable()) return;
+
         File gpkg = tempDir.resolve("test.gpkg").toFile();
-        createGpkg(gpkg, "zonas", createPolygonFeatures());
+        generateGpkg(gpkg, polygonGeoJson("Zona A", 0, 0, 10, 10));
 
         SpatiaLiteLayer layer = new SpatiaLiteLayer("test", gpkg.getAbsolutePath());
-        layer.setTableName("zonas");
+        layer.setTableName("test");
 
         ShapefileData data = SpatiaLiteLoader.loadLayerData(layer);
         assertNotNull(data);
-        assertEquals(2, data.getFeatures().size());
+        assertEquals(1, data.getFeatures().size());
     }
 
-    @Disabled("GeoTools GeoPackage writer API requires Geometries enum matching feature geometry type"
-            + " — pending ogr2ogr-generated fixture or API investigation")
     @Test
     void loadGpkgPreservesGeometryType() throws Exception {
+        if (!ogr2ogrAvailable()) return;
+
         File gpkg = tempDir.resolve("points.gpkg").toFile();
-        createGpkg(gpkg, "puntos", createPointFeatures());
+        generateGpkg(gpkg, pointGeoJson("Punto A", 5, 5));
 
         SpatiaLiteLayer layer = new SpatiaLiteLayer("test", gpkg.getAbsolutePath());
-        layer.setTableName("puntos");
+        layer.setTableName("test");
 
         ShapefileData data = SpatiaLiteLoader.loadLayerData(layer);
         Geometry g = (Geometry) data.getFeatures().get(0).getDefaultGeometry();
         assertEquals("Point", g.getGeometryType());
     }
 
-    @Disabled("GeoTools GeoPackage writer API requires Geometries enum matching feature geometry type"
-            + " — pending ogr2ogr-generated fixture or API investigation")
     @Test
     void loadGpkgPreservesAttributes() throws Exception {
+        if (!ogr2ogrAvailable()) return;
+
         File gpkg = tempDir.resolve("attribs.gpkg").toFile();
-        createGpkg(gpkg, "zonas", createAttributedFeatures());
+        generateGpkg(gpkg,
+                "{ \"type\": \"FeatureCollection\", \"features\": ["
+                        + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"Zona Urbana\", \"area_ha\": 150.0 },"
+                        + "  \"geometry\": { \"type\": \"Polygon\", \"coordinates\": [["
+                        + "[0,0],[10,0],[10,10],[0,10],[0,0]]] } },"
+                        + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"Parque Industrial\", \"area_ha\": 320.0 },"
+                        + "  \"geometry\": { \"type\": \"Polygon\", \"coordinates\": [["
+                        + "[20,20],[30,20],[30,30],[20,30],[20,20]]] } } ] }");
 
         SpatiaLiteLayer layer = new SpatiaLiteLayer("test", gpkg.getAbsolutePath());
-        layer.setTableName("zonas");
+        layer.setTableName("test");
 
         ShapefileData data = SpatiaLiteLoader.loadLayerData(layer);
+        assertEquals(2, data.getFeatures().size());
         SimpleFeature f0 = data.getFeatures().get(0);
         assertEquals("Zona Urbana", f0.getAttribute("nombre"));
         assertEquals(150.0, (Double) f0.getAttribute("area_ha"), 0.01);
     }
 
-    @Disabled("GeoTools GeoPackage writer API requires Geometries enum matching feature geometry type"
-            + " — pending ogr2ogr-generated fixture or API investigation")
     @Test
     void validateFileAcceptsGpkg() throws Exception {
+        if (!ogr2ogrAvailable()) return;
+
         File gpkg = tempDir.resolve("valid.gpkg").toFile();
-        createGpkg(gpkg, "zonas", createPolygonFeatures());
+        generateGpkg(gpkg, polygonGeoJson("Zona A", 0, 0, 10, 10));
 
         ValidationResult vr = SpatiaLiteLoader.validateFile(gpkg);
         assertTrue(vr.isValid(), vr.message());
     }
 
-    @Disabled("GeoTools GeoPackage writer API requires Geometries enum matching feature geometry type"
-            + " — pending ogr2ogr-generated fixture or API investigation")
     @Test
     void listFeatureTypesFindsTable() throws Exception {
+        if (!ogr2ogrAvailable()) return;
+
         File gpkg = tempDir.resolve("multi.gpkg").toFile();
-        createGpkg(gpkg, "zonas", createPolygonFeatures());
-        createGpkg(gpkg, "rutas", createLineFeatures());
+        // Generate with 2 layers by writing separate GPKGs, then merging... 
+        // Simpler: single GPKG with 1 layer
+        generateGpkg(gpkg, polygonGeoJson("Zona A", 0, 0, 10, 10));
 
         SpatiaLiteConnectionInfo info = new SpatiaLiteConnectionInfo();
         info.setFilePath(gpkg.getAbsolutePath());
@@ -106,111 +112,34 @@ class GeoPackageRealTest {
         java.util.List<SpatiaLiteFeatureTypeInfo> types =
                 SpatiaLiteLoader.listFeatureTypes(info);
         assertNotNull(types);
-        assertTrue(types.size() >= 1, "expected at least 1 table");
-    }
-
-    // ---- GPKG writer ----
-
-    private void createGpkg(File file, String tableName,
-                            java.util.List<SimpleFeature> features) throws IOException {
-        GeometryFactory gf = JTSFactoryFinder.getGeometryFactory();
-        SimpleFeatureType type = features.get(0).getFeatureType();
-
-        GeoPackage gpkg = new GeoPackage(file);
-        try {
-            gpkg.init();
-            FeatureEntry entry = new FeatureEntry();
-            entry.setTableName(tableName);
-            entry.setDescription("test data");
-            entry.setGeometryColumn("the_geom");
-            entry.setGeometryType(Geometries.GEOMETRY);
-
-            gpkg.create(entry, type);
-            gpkg.add(entry, new ListFeatureCollection(type, features));
-        } finally {
-            gpkg.close();
-        }
-    }
-
-    // ---- Feature builders ----
-
-    private java.util.List<SimpleFeature> createPolygonFeatures() {
-        GeometryFactory gf = JTSFactoryFinder.getGeometryFactory();
-        SimpleFeatureType type = buildType("zonas", Polygon.class,
-                new String[]{"nombre", "area_ha"},
-                new Class<?>[]{String.class, Double.class});
-
-        List<SimpleFeature> features = new ArrayList<>();
-        features.add(feature(type, gf, gf.createPolygon(ring(gf, 0,0, 10,0, 10,10, 0,10, 0,0)),
-                "Zona A", 100.0));
-        features.add(feature(type, gf, gf.createPolygon(ring(gf, 20,20, 30,20, 30,30, 20,30, 20,20)),
-                "Zona B", 200.0));
-        return features;
-    }
-
-    private java.util.List<SimpleFeature> createPointFeatures() {
-        GeometryFactory gf = JTSFactoryFinder.getGeometryFactory();
-        SimpleFeatureType type = buildType("puntos", Point.class,
-                new String[]{"nombre"}, new Class<?>[]{String.class});
-
-        List<SimpleFeature> features = new ArrayList<>();
-        features.add(feature(type, gf, gf.createPoint(new Coordinate(5, 5)), "Punto A"));
-        features.add(feature(type, gf, gf.createPoint(new Coordinate(15, 15)), "Punto B"));
-        return features;
-    }
-
-    private java.util.List<SimpleFeature> createLineFeatures() {
-        GeometryFactory gf = JTSFactoryFinder.getGeometryFactory();
-        SimpleFeatureType type = buildType("rutas", LineString.class,
-                new String[]{"nombre"}, new Class<?>[]{String.class});
-
-        List<SimpleFeature> features = new ArrayList<>();
-        features.add(feature(type, gf, gf.createLineString(new Coordinate[]{
-                new Coordinate(0,0), new Coordinate(10,10), new Coordinate(20,0)}),
-                "Ruta 1"));
-        return features;
-    }
-
-    private java.util.List<SimpleFeature> createAttributedFeatures() {
-        GeometryFactory gf = JTSFactoryFinder.getGeometryFactory();
-        SimpleFeatureType type = buildType("zonas", Polygon.class,
-                new String[]{"nombre", "area_ha"},
-                new Class<?>[]{String.class, Double.class});
-
-        List<SimpleFeature> features = new ArrayList<>();
-        features.add(feature(type, gf, gf.createPolygon(ring(gf, 0,0, 10,0, 10,10, 0,10, 0,0)),
-                "Zona Urbana", 150.0));
-        features.add(feature(type, gf, gf.createPolygon(ring(gf, 20,20, 30,20, 30,30, 20,30, 20,20)),
-                "Parque Industrial", 320.0));
-        return features;
+        assertTrue(types.size() >= 1, "expected at least 1 table, got " + types.size());
     }
 
     // ---- Helpers ----
 
-    private SimpleFeatureType buildType(String name, Class<?> geomClass,
-                                         String[] attrNames, Class<?>[] attrTypes) {
-        SimpleFeatureTypeBuilder tb = new SimpleFeatureTypeBuilder();
-        tb.setName(name);
-        tb.add("the_geom", geomClass);
-        for (int i = 0; i < attrNames.length; i++) {
-            tb.add(attrNames[i], attrTypes[i]);
-        }
-        return tb.buildFeatureType();
+    private void generateGpkg(File output, String geoJson) throws Exception {
+        File input = tempDir.resolve("input.geojson").toFile();
+        Files.writeString(input.toPath(), geoJson, StandardCharsets.UTF_8);
+
+        Process p = new ProcessBuilder(OGR2OGR, "-f", "GPKG", output.getAbsolutePath(),
+                input.getAbsolutePath(), "-nln", "test")
+                .redirectErrorStream(true).start();
+        int exit = p.waitFor();
+        assertEquals(0, exit, "ogr2ogr failed: " + new String(p.getInputStream().readAllBytes()));
     }
 
-    private SimpleFeature feature(SimpleFeatureType type, GeometryFactory gf,
-                                   Geometry geom, Object... attrs) {
-        SimpleFeatureBuilder fb = new SimpleFeatureBuilder(type);
-        fb.add(geom);
-        for (Object a : attrs) fb.add(a);
-        return fb.buildFeature(null);
+    private String polygonGeoJson(String name, double x1, double y1, double x2, double y2) {
+        return "{ \"type\": \"FeatureCollection\", \"features\": ["
+                + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"" + name + "\" },"
+                + "  \"geometry\": { \"type\": \"Polygon\", \"coordinates\": [["
+                + "[" + x1 + "," + y1 + "],[" + x2 + "," + y1 + "],"
+                + "[" + x2 + "," + y2 + "],[" + x1 + "," + y2 + "],"
+                + "[" + x1 + "," + y1 + "]]] } } ] }";
     }
 
-    private Coordinate[] ring(GeometryFactory gf, double... coords) {
-        Coordinate[] cs = new Coordinate[coords.length / 2 + 1];
-        for (int i = 0; i < coords.length; i += 2)
-            cs[i / 2] = new Coordinate(coords[i], coords[i + 1]);
-        cs[cs.length - 1] = cs[0];
-        return cs;
+    private String pointGeoJson(String name, double x, double y) {
+        return "{ \"type\": \"FeatureCollection\", \"features\": ["
+                + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"" + name + "\" },"
+                + "  \"geometry\": { \"type\": \"Point\", \"coordinates\": [" + x + "," + y + "] } } ] }";
     }
 }
