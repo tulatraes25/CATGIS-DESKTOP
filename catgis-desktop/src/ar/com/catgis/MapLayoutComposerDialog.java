@@ -120,6 +120,7 @@ import ar.com.catgis.layout.LayoutImage;
 import ar.com.catgis.layout.LayoutRectangle;
 import ar.com.catgis.layout.LayoutMap;
 import ar.com.catgis.layout.MapFrameViewport;
+import ar.com.catgis.layout.LayoutController;
 import ar.com.catgis.layout.LayoutModel;
 import ar.com.catgis.layout.LayoutNorthArrow;
 import ar.com.catgis.layout.LayoutRenderContext;
@@ -246,6 +247,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private boolean syncingLayoutStructureSelection;
     private final List<CatmapLayoutItem> catmapClipboard = new ArrayList<>();
     final LayoutModel layoutModel = new LayoutModel();
+    final LayoutController layoutController = new LayoutController(layoutModel);
     final ar.com.catgis.layout.CanvasRenderer canvasRenderer
             = new ar.com.catgis.layout.CanvasRenderer(layoutModel, new java.awt.Rectangle(0, 0, 800, 600));
     final ar.com.catgis.layout.LayoutSelectionManager selectionManager
@@ -266,8 +268,11 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
 
-        snapshot = captureSnapshot();
         interactionState = new LayoutInteractionState();
+        layoutController.setInteractionState(interactionState);
+
+        snapshot = layoutController.captureSnapshot();
+        layoutController.setSnapshot(snapshot);
 
         titleField = new JTextField(defaultTitle(), 24);
         subtitleField = new JTextField(defaultSubtitle(), 24);
@@ -1008,103 +1013,23 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     void populateLegendFromProject(LayoutLegend legend) {
-        legend.getItems().clear();
-        if (ctxProject() == null || ctxProject().getLayers() == null) return;
-        for (Layer layer : ctxProject().getLayers()) {
-            if (layer == null || !layer.isVisible()) continue;
-            String name = layer.getName();
-            if (name == null) continue;
-            if (LayoutLegend.isBasemapName(name)) continue;
-            if (layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) continue;
-
-            String gtype = resolveGeometryType(layer);
-
-            // Check for graduated symbology first (most specific)
-            boolean hasGraduated = addGraduatedLegendItems(legend, layer, gtype);
-            if (hasGraduated) continue;
-
-            // Check for categorized symbology
-            boolean hasCategorized = addCategorizedLegendItems(legend, layer, gtype);
-            if (hasCategorized) continue;
-
-            // Default: single legend item per layer
-            Color c = resolveLayerColor(layer);
-            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(name, c, gtype);
-            item.catalogSymbolId = layer.getCatalogSymbolId();
-            item.pointSymbolStyle = layer.getPointSymbolStyle();
-            item.lineSymbolStyle = layer.getLineSymbolStyle();
-            item.polygonFillStyle = layer.getPolygonFillStyle();
-            item.strokeColor = layer.getBorderColor() != null ? layer.getBorderColor() : layer.getLineColor();
-            legend.getItems().add(item);
-        }
+        layoutController.populateLegendFromProject(legend);
     }
 
     private boolean addGraduatedLegendItems(LayoutLegend legend, Layer layer, String gtype) {
-        // Determine which graduated symbology to use based on geometry type
-        GraduatedSymbology sym = null;
-        if (gtype.contains("POINT")) sym = layer.getPointGraduatedSymbology();
-        else if (gtype.contains("LINE")) sym = layer.getLineGraduatedSymbology();
-        else if (gtype.contains("POLYGON")) sym = layer.getPolygonGraduatedSymbology();
-        if (sym == null || !sym.isConfigured()) return false;
-
-        // Add category for the layer name
-        String layerLabel = layer.getName();
-
-        for (GraduatedRangeRule rule : sym.getRules()) {
-            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(rule.getLabel(), rule.getPrimaryColor(), gtype);
-            item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor().darker();
-            if ("POINT".equals(gtype)) {
-                item.pointSymbolStyle = layer.getPointSymbolStyle();
-                item.catalogSymbolId = rule.getCatalogSymbolId();
-            } else if ("LINE".equals(gtype)) {
-                item.lineSymbolStyle = rule.getLineStyle();
-                item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor();
-            } else {
-                item.polygonFillStyle = rule.getPolygonFillStyle();
-            }
-            legend.getItems().add(item);
-        }
-        return true;
+        return layoutController.addGraduatedLegendItems(legend, layer, gtype);
     }
 
     private boolean addCategorizedLegendItems(LayoutLegend legend, Layer layer, String gtype) {
-        CategorizedSymbology sym = null;
-        if (gtype.contains("POINT")) sym = layer.getPointCategorizedSymbology();
-        else if (gtype.contains("LINE")) sym = layer.getLineCategorizedSymbology();
-        else if (gtype.contains("POLYGON")) sym = layer.getPolygonCategorizedSymbology();
-        if (sym == null || !sym.isConfigured()) return false;
-
-        for (CategoryStyleRule rule : sym.getRules().values()) {
-            String label = rule.getValue();
-            if (label.isEmpty()) label = "(sin valor)";
-            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(label, rule.getPrimaryColor(), gtype);
-            item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor().darker();
-            if ("POINT".equals(gtype)) {
-                item.pointSymbolStyle = rule.getPointSymbolStyle();
-                item.catalogSymbolId = rule.getCatalogSymbolId();
-            } else if ("LINE".equals(gtype)) {
-                item.lineSymbolStyle = rule.getLineStyle();
-                item.strokeColor = rule.getSecondaryColor() != null ? rule.getSecondaryColor() : rule.getPrimaryColor();
-            } else {
-                item.polygonFillStyle = rule.getPolygonFillStyle();
-            }
-            legend.getItems().add(item);
-        }
-        return true;
+        return layoutController.addCategorizedLegendItems(legend, layer, gtype);
     }
 
     private Color resolveLayerColor(Layer layer) {
-        if (layer.getPointColor() != null && !layer.getPointColor().equals(Color.BLUE)) return layer.getPointColor();
-        if (layer.getLineColor() != null && !layer.getLineColor().equals(Color.RED)) return layer.getLineColor();
-        if (layer.getFillColor() != null) return layer.getFillColor();
-        return new Color(0x1976D2);
+        return layoutController.resolveLayerColor(layer);
     }
 
     private String resolveGeometryType(Layer layer) {
-        ShapefileData data = ctxMapPanel() != null ? ctxMapPanel().getShapefileData(layer) : null;
-        if (data == null) return "VECTOR";
-        String family = VectorLayerUtils.resolveGeometryFamily(data);
-        return family != null ? family : "VECTOR";
+        return layoutController.resolveGeometryType(layer);
     }
 
     public static void open() {
@@ -1612,11 +1537,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     void persistCatmapItems() {
-        if (ctxProject() == null) {
-            return;
-        }
-        ctxProject().setCatmapItems(copyCatmapItems());
-        CatgisDesktopApp.markProjectDirty();
+        layoutController.persistCatmapItems(copyCatmapItems());
     }
 
     private void addCatmapItem(CatmapLayoutItem.Kind kind) {
@@ -3199,7 +3120,8 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     public void refreshSnapshot() {
-        snapshot = captureSnapshot();
+        snapshot = layoutController.captureSnapshot();
+        layoutController.setSnapshot(snapshot);
         loadProjectLayersFromProject();
         updateCurrentMapLabel();
         statusLabel.setText("Mapa del layout actualizado desde la vista actual.");
@@ -3485,24 +3407,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     private Double parseScaleDenominator(String value) {
-        String text = safeTrim(value);
-        if (text.isBlank()) {
-            return null;
-        }
-        int colonIndex = text.indexOf(':');
-        if (colonIndex >= 0 && colonIndex < text.length() - 1) {
-            text = text.substring(colonIndex + 1);
-        }
-        text = text.replaceAll("[^0-9]", "");
-        if (text.isBlank()) {
-            return null;
-        }
-        try {
-            double denominator = Double.parseDouble(text);
-            return denominator > 0 ? denominator : null;
-        } catch (NumberFormatException ex) {
-            return null;
-        }
+        return layoutController.parseScaleDenominator(value);
     }
 
     void updateScaleUiState(double exactDenominator) {
@@ -3521,326 +3426,102 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     private double computeCurrentScaleDenominator(LayoutSettings settings) {
-        if (settings == null || snapshot == null) {
-            return 0d;
-        }
-        syncHardcodedLayoutFlagsFromModel();
-        Dimension previewSize = settings.pageSize().pixelSize(settings.orientation(), PREVIEW_RENDER_DPI);
-        LayoutRenderResult result = LayoutPageRenderer.renderResult(
-                settings,
-                snapshot,
-                previewSize.width,
-                previewSize.height,
-                interactionState,
-                PREVIEW_RENDER_DPI
-        );
-        return result.exactScaleDenominator();
+        return layoutController.computeCurrentScaleDenominator(settings);
     }
 
     public static String formatScaleDenominator(double denominator) {
-        if (denominator <= 0) {
-            return "Escala no disponible";
-        }
-        return "1:" + new DecimalFormat("#,##0").format(Math.round(denominator));
+        return LayoutController.formatScaleDenominator(denominator);
     }
 
     LayoutSnapshot getSnapshot() {
-        return snapshot;
+        return layoutController.getSnapshot();
     }
 
     private boolean hasLayoutElement(Class<? extends LayoutElement> type) {
-        for (LayoutElement el : layoutModel.getElements()) {
-            if (type.isInstance(el)) {
-                return true;
-            }
-        }
-        return false;
+        return layoutController.hasLayoutElement(type);
     }
 
     void syncHardcodedLayoutFlagsFromModel() {
-        boolean hasHeaderLabels = false;
-        boolean hasCartoucheLabels = false;
-        for (LayoutElement el : layoutModel.getElements()) {
-            if (el instanceof LayoutLabel) {
-                String n = el.getName();
-                if (n != null && (n.equals("Titulo") || n.startsWith("Titulo ") || n.equals("Subtitulo"))) {
-                    hasHeaderLabels = true;
-                }
-                if (n != null && (n.equals("Empresa") || n.equals("Cartografo") || n.equals("Estudio") || n.startsWith("Datos"))) {
-                    hasCartoucheLabels = true;
-                }
-            }
-        }
-        if (hasHeaderLabels) {
-            interactionState.setElementVisible(LayoutElementType.HEADER, false);
-        }
-        if (hasLayoutElement(LayoutLegend.class)) {
+        layoutController.syncHardcodedLayoutFlagsFromModel();
+        if (layoutController.hasLayoutElement(LayoutLegend.class)) {
             legendCheck.setSelected(false);
-        }
-        if (hasLayoutElement(LayoutNorthArrow.class)) {
-            interactionState.setElementVisible(LayoutElementType.NORTH, false);
-        }
-        if (hasLayoutElement(LayoutScaleBar.class)) {
-            interactionState.setElementVisible(LayoutElementType.SCALE, false);
-        }
-        if (hasLayoutElement(LayoutCartouche.class)) {
-            interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
-        }
-        if (hasCartoucheLabels) {
-            interactionState.setElementVisible(LayoutElementType.CARTOUCHE, false);
-        }
-        if (hasLayoutElement(LayoutMap.class)) {
-            interactionState.setElementVisible(LayoutElementType.MAP_CONTENT, false);
         }
     }
 
     private BufferedImage renderLayout(LayoutSettings settings, Dimension size) {
-        syncHardcodedLayoutFlagsFromModel();
-        BufferedImage base = LayoutPageRenderer.render(settings, snapshot, size.width, size.height, interactionState, settings.dpi());
-        if (layoutModel.size() > 0) {
-            Graphics2D g2 = base.createGraphics();
-            try {
-                PageSizePreset ps = settings.pageSize();
-                double wMm = ps.widthMm, hMm = ps.heightMm;
-                if (settings.orientation() == PageOrientation.LANDSCAPE) { double tmp = wMm; wMm = hMm; hMm = tmp; }
-                LayoutRenderContext ctx = new LayoutRenderContext(LayoutRenderContext.Mode.EXPORT_IMAGE, settings.dpi(), wMm, hMm);
-                for (LayoutElement el : layoutModel.getVisibleElementsSortedByZ()) {
-                    if (el instanceof LayoutScaleBar) {
-                        ((LayoutScaleBar) el).setMapScaleDenominator(Math.max(100, estimateMapScale()));
-                    }
-                    el.render(g2, ctx);
-                }
-            } finally { g2.dispose(); }
-        }
-        return base;
+        return layoutController.renderLayout(settings, size);
     }
 
     private LayoutSnapshot captureSnapshot() {
-        if (ctxMapPanel() == null) {
-            return new LayoutSnapshot(
-                    new BufferedImage(1200, 800, BufferedImage.TYPE_INT_ARGB),
-                    visibleLayers(),
-                    currentProjectName(),
-                    currentProjectCrs(),
-                    currentProjectCrsCode(),
-                    "Escala no disponible",
-                    0,
-                    0,
-                    0,
-                    1d,
-                    1200,
-                    800
-            );
-        }
-
-        int mapWidth = Math.max(ctxMapPanel().getWidth(), 1200);
-        int mapHeight = Math.max(ctxMapPanel().getHeight(), 800);
-        BufferedImage mapImage = new BufferedImage(mapWidth, mapHeight, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = mapImage.createGraphics();
-        try {
-            g2.setColor(Color.WHITE);
-            g2.fillRect(0, 0, mapWidth, mapHeight);
-            ctxMapPanel().paint(g2);
-        } finally {
-            g2.dispose();
-        }
-        mapImage = trimOuterWhitespace(mapImage);
-
-        double scaleMeters = estimateRepresentativeScaleMeters(mapWidth);
-        return new LayoutSnapshot(
-                mapImage,
-                visibleLayers(),
-                currentProjectName(),
-                currentProjectCrs(),
-                currentProjectCrsCode(),
-                formatDistance(scaleMeters),
-                scaleMeters,
-                ctxMapPanel().getViewMinX(),
-                ctxMapPanel().getViewMinY(),
-                Math.max(ctxMapPanel().getZoomFactor(), 0.000001d),
-                Math.max(1, ctxMapPanel().getWidth()),
-                Math.max(1, ctxMapPanel().getHeight())
-        );
+        return layoutController.captureSnapshot();
     }
 
     private BufferedImage trimOuterWhitespace(BufferedImage image) {
-        if (image == null) {
-            return null;
-        }
-        int width = image.getWidth();
-        int height = image.getHeight();
-        if (width <= 2 || height <= 2) {
-            return image;
-        }
-
-        int left = 0;
-        int right = width - 1;
-        int top = 0;
-        int bottom = height - 1;
-
-        while (left < right && isNearWhiteColumn(image, left)) {
-            left++;
-        }
-        while (right > left && isNearWhiteColumn(image, right)) {
-            right--;
-        }
-        while (top < bottom && isNearWhiteRow(image, top)) {
-            top++;
-        }
-        while (bottom > top && isNearWhiteRow(image, bottom)) {
-            bottom--;
-        }
-
-        if (left <= 0 && right >= width - 1 && top <= 0 && bottom >= height - 1) {
-            return image;
-        }
-        int croppedWidth = Math.max(1, right - left + 1);
-        int croppedHeight = Math.max(1, bottom - top + 1);
-        if (croppedWidth < width / 4 || croppedHeight < height / 4) {
-            return image;
-        }
-        BufferedImage cropped = image.getSubimage(left, top, croppedWidth, croppedHeight);
-        BufferedImage copy = new BufferedImage(croppedWidth, croppedHeight, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D copyGraphics = copy.createGraphics();
-        try {
-            copyGraphics.drawImage(cropped, 0, 0, null);
-        } finally {
-            copyGraphics.dispose();
-        }
-        return copy;
+        return layoutController.trimOuterWhitespace(image);
     }
 
     private boolean isNearWhiteColumn(BufferedImage image, int x) {
-        for (int y = 0; y < image.getHeight(); y += Math.max(1, image.getHeight() / 120)) {
-            if (!isNearWhite(image.getRGB(x, y))) {
-                return false;
-            }
-        }
-        return true;
+        return layoutController.isNearWhiteColumn(image, x);
     }
 
     private boolean isNearWhiteRow(BufferedImage image, int y) {
-        for (int x = 0; x < image.getWidth(); x += Math.max(1, image.getWidth() / 160)) {
-            if (!isNearWhite(image.getRGB(x, y))) {
-                return false;
-            }
-        }
-        return true;
+        return layoutController.isNearWhiteRow(image, y);
     }
 
     private boolean isNearWhite(int argb) {
-        int alpha = (argb >> 24) & 0xFF;
-        if (alpha < 10) {
-            return true;
-        }
-        int red = (argb >> 16) & 0xFF;
-        int green = (argb >> 8) & 0xFF;
-        int blue = argb & 0xFF;
-        return red >= 245 && green >= 245 && blue >= 245;
+        return layoutController.isNearWhite(argb);
     }
 
     private List<Layer> visibleLayers() {
-        List<Layer> visible = new ArrayList<>();
-        if (ctxProject() == null || ctxProject().getLayers() == null) {
-            return visible;
-        }
-        for (Layer layer : ctxProject().getLayers()) {
-            if (layer != null && isProjectLayerEffectivelyVisible(layer)) {
-                visible.add(layer);
-            }
-        }
-        return visible;
+        return layoutController.visibleLayers();
     }
 
     private boolean isProjectLayerEffectivelyVisible(Layer layer) {
-        if (layer == null) {
-            return false;
-        }
-        if (ctxProject() != null) {
-            return ctxProject().isLayerEffectivelyVisible(layer);
-        }
-        return layer.isVisible();
+        return layoutController.isProjectLayerEffectivelyVisible(layer);
     }
 
     private String currentProjectName() {
-        if (ctxProject() == null || ctxProject().getName() == null || ctxProject().getName().isBlank()) {
-            return "Proyecto actual";
-        }
-        return ctxProject().getName();
+        return layoutController.currentProjectName();
     }
 
     private String currentProjectCrs() {
-        return CRSDefinitions.getLabelForCode(currentProjectCrsCode());
+        return layoutController.currentProjectCrs();
     }
 
     private String currentProjectCrsCode() {
-        String code = ctxProject() != null ? ctxProject().getProjectCRS() : "";
-        return CRSDefinitions.normalizeCode(code != null ? code : "");
+        return layoutController.currentProjectCrsCode();
     }
 
     private String defaultTitle() {
-        return currentProjectName();
+        return layoutController.defaultTitle();
     }
 
     private String defaultSubtitle() {
-        return "Vista cartografica generada desde la vista actual";
+        return layoutController.defaultSubtitle();
     }
 
     private String defaultFooter() {
-        return "Generado en CATGIS | " + FOOTER_DATE.format(LocalDateTime.now());
+        return layoutController.defaultFooter();
     }
 
     private double estimateRepresentativeScaleMeters(int mapPixelWidth) {
-        if (ctxMapPanel() == null || mapPixelWidth <= 0) {
-            return 0;
-        }
-
-        double zoomFactor = Math.max(ctxMapPanel().getZoomFactor(), 0.000001d);
-        double projectWidth = Math.max(1d, mapPixelWidth / zoomFactor);
-        String projectCrs = ctxProject() != null ? ctxProject().getProjectCRS() : "";
-        if (projectCrs == null) {
-            projectCrs = "";
-        }
-        projectCrs = CRSDefinitions.normalizeCode(projectCrs);
-
-        if (isGeographic(projectCrs)) {
-            double centerLat = ctxMapPanel().getViewMinY()
-                    + (Math.max(1, ctxMapPanel().getHeight()) / 2d) / zoomFactor;
-            double metersPerDegreeLon = 111320d * Math.cos(Math.toRadians(centerLat));
-            metersPerDegreeLon = Math.max(1d, Math.abs(metersPerDegreeLon));
-            return projectWidth * metersPerDegreeLon;
-        }
-        return projectWidth;
+        return layoutController.estimateRepresentativeScaleMeters(mapPixelWidth);
     }
 
     private boolean isGeographic(String projectCrs) {
-        return "EPSG:4326".equalsIgnoreCase(projectCrs)
-                || "EPSG:4258".equalsIgnoreCase(projectCrs)
-                || "EPSG:4269".equalsIgnoreCase(projectCrs)
-                || "EPSG:4674".equalsIgnoreCase(projectCrs)
-                || "EPSG:4190".equalsIgnoreCase(projectCrs)
-                || "EPSG:4221".equalsIgnoreCase(projectCrs);
+        return layoutController.isGeographic(projectCrs);
     }
 
     static String safeTrim(String value) {
-        return value == null ? "" : value.trim();
+        return LayoutController.safeTrim(value);
     }
 
     public static String formatDistance(double meters) {
-        if (meters <= 0) {
-            return "Escala no disponible";
-        }
-        if (meters >= 1000d) {
-            return new DecimalFormat("#,##0.## km").format(meters / 1000d);
-        }
-        return new DecimalFormat("#,##0 m").format(meters);
+        return LayoutController.formatDistance(meters);
     }
 
     private static String escape(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+        return LayoutController.escape(value);
     }
 
 
@@ -3993,32 +3674,16 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
 
 
     private double estimateMapScale() {
-        try {
-            ar.com.catgis.MapPanel mp = ctxMapPanel();
-            if (mp != null) {
-                double denom = mp.getCurrentScaleDenominator();
-                if (denom > 0) return denom;
-            }
-        } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
-        return 10000;
+        return layoutController.estimateMapScale();
     }
 
 
     private String extractNameFromDisplay(String display) {
-        if (display == null) return "";
-        String s = display.replaceAll("^\u25C9 |^\u25CB |\uD83D\uDD12 |\uD83D\uDD13 |^\\> |^  ", "");
-        s = s.replaceAll("\\s*\\(oculto\\)|\\s*\\(bloq\\)", "");
-        return s.trim();
+        return layoutController.extractNameFromDisplay(display);
     }
 
     public void duplicateLayoutElement(LayoutElement src) {
-        if (src instanceof LayoutMap) { LayoutMap m = new LayoutMap("map-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); m.setZOrder(layoutModel.nextZ()); m.setName(src.getName() + " copia"); layoutModel.addElement(m); return; }
-        if (src instanceof LayoutLegend) { LayoutLegend l = new LayoutLegend("legend-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); l.setAutoHeight(true); l.setItems(((LayoutLegend)src).getItems()); layoutModel.addElement(l); return; }
-        if (src instanceof LayoutNorthArrow) { LayoutNorthArrow n = new LayoutNorthArrow("north-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); n.setZOrder(layoutModel.nextZ()); n.setName(src.getName() + " copia"); layoutModel.addElement(n); return; }
-        if (src instanceof LayoutScaleBar) { LayoutScaleBar s = new LayoutScaleBar("scale-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); s.setZOrder(layoutModel.nextZ()); s.setName(src.getName() + " copia"); layoutModel.addElement(s); return; }
-        if (src instanceof LayoutLabel) { LayoutLabel l = new LayoutLabel("lbl-" + System.currentTimeMillis(), ((LayoutLabel)src).getText(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); l.setZOrder(layoutModel.nextZ()); l.setName(src.getName() + " copia"); layoutModel.addElement(l); return; }
-        if (src instanceof LayoutImage) { LayoutImage i = new LayoutImage("img-" + System.currentTimeMillis(), null, src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); i.setZOrder(layoutModel.nextZ()); i.setName(src.getName() + " copia"); layoutModel.addElement(i); return; }
-        if (src instanceof LayoutTable) { LayoutTable t = new LayoutTable("table-" + System.currentTimeMillis(), src.getBoundsMm().x + 5, src.getBoundsMm().y + 5, src.getBoundsMm().width, src.getBoundsMm().height); t.setZOrder(layoutModel.nextZ()); t.setName(src.getName() + " copia"); layoutModel.addElement(t); return; }
+        layoutController.duplicateLayoutElement(src);
     }
 
     private void addQuickElement(String type) {
@@ -4107,13 +3772,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     int countOfType(String prefix) {
-        int c = 1;
-        for (LayoutElement e : layoutModel.getElements()) {
-            if (e.getName() != null && e.getName().startsWith(prefix)) {
-                try { int v = Integer.parseInt(e.getName().substring(prefix.length()).trim()); c = Math.max(c, v + 1); } catch (Exception ignored) { c++; }
-            }
-        }
-        return c;
+        return layoutController.countOfType(prefix);
     }
 
     private void centerOnElement(LayoutElement el) {
@@ -4167,7 +3826,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         editSelectedLayoutObject();
     }
 
-    private LayoutElement findEl(String id) { for (LayoutElement e : layoutModel.getElements()) if (e.getId().equals(id)) return e; return null; }
+    private LayoutElement findEl(String id) { return layoutController.findEl(id); }
 
     public void refreshElementList() {
         if (elementListModel == null) return;
@@ -4186,36 +3845,15 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     private String getTypeIcon(LayoutElement el) {
-        if (el instanceof LayoutMap) return "\uD83D\uDDFA";
-        if (el instanceof LayoutLegend) return "\uD83D\uDCCB";
-        if (el instanceof LayoutNorthArrow) return "\uD83E\uDDED";
-        if (el instanceof LayoutScaleBar) return "\uD83D\uDCCF";
-        if (el instanceof LayoutImage) return "\uD83D\uDDBC";
-        if (el instanceof LayoutEllipse) return "\u2B55";
-        if (el instanceof LayoutLine) return "\u2795";
-        if (el instanceof LayoutRectangle) return "\u25AD";
-        if (el instanceof LayoutTable) return "\uD83D\uDCCA";
-        if (el instanceof LayoutCartouche) return "\uD83D\uDCC4";
-        if (el instanceof LayoutGraticule) return "\uD83D\uDCC8";
-        if (el instanceof LayoutLabel) return "\uD83D\uDCDD";
-        return "\u25A1";
+        return layoutController.getTypeIcon(el);
     }
 
     private LayoutElement findElementByType(Class<?> type) {
-        for (LayoutElement el : layoutModel.getElements()) if (type.isInstance(el)) return el;
-        return null;
+        return layoutController.findElementByType(type);
     }
 
     private LayoutLabel findLayoutLabelByName(String expected) {
-        for (LayoutElement el : layoutModel.getElements()) {
-            if (el instanceof LayoutLabel label) {
-                String name = label.getName();
-                if (name != null && name.equalsIgnoreCase(expected)) {
-                    return label;
-                }
-            }
-        }
-        return null;
+        return layoutController.findLayoutLabelByName(expected);
     }
 
     private void applyMapScale(double denominator) {
@@ -4264,26 +3902,21 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     void pushUndo(LayoutElement el, boolean isDelete) {
-        layoutModel.saveSnapshot();
+        layoutController.pushUndo(el, isDelete);
     }
 
     private void undo() {
-        if (layoutModel.canUndo()) {
-            layoutModel.undo();
-            refreshAll();
-        }
+        layoutController.undo();
+        previewPanel.repaint();
     }
 
     private void redo() {
-        if (layoutModel.canRedo()) {
-            layoutModel.redo();
-            refreshAll();
-        }
+        layoutController.redo();
+        previewPanel.repaint();
     }
 
     private LayoutElement findElementById(String id) {
-        for (LayoutElement el : layoutModel.getElements()) if (el.getId().equals(id)) return el;
-        return null;
+        return layoutController.findElementById(id);
     }
 
     private void refreshAll() {
@@ -4292,31 +3925,12 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     public void alignElements(int mode) {
-        java.util.List<LayoutElement> sel = new java.util.ArrayList<>();
-        for (LayoutElement el : layoutModel.getElements()) if (el.isSelected() && !el.isLocked()) sel.add(el);
-        if (sel.size() < 2) return;
-        pushUndoGroup(sel);
-        double minX = sel.stream().mapToDouble(e -> e.getBoundsMm().x).min().orElse(0);
-        double maxX = sel.stream().mapToDouble(e -> e.getBoundsMm().x + e.getBoundsMm().width).max().orElse(0);
-        double minY = sel.stream().mapToDouble(e -> e.getBoundsMm().y).min().orElse(0);
-        double maxY = sel.stream().mapToDouble(e -> e.getBoundsMm().y + e.getBoundsMm().height).max().orElse(0);
-        for (LayoutElement el : sel) {
-            double x = el.getBoundsMm().x, y = el.getBoundsMm().y, w = el.getBoundsMm().width, h = el.getBoundsMm().height;
-            switch (mode) {
-                case 0: x = minX; break;
-                case 1: x = (minX + maxX - w) / 2; break;
-                case 2: x = maxX - w; break;
-                case 3: y = minY; break;
-                case 4: y = (minY + maxY - h) / 2; break;
-                case 5: y = maxY - h; break;
-            }
-            el.setBoundsMm(x, y, w, h);
-        }
+        layoutController.alignElements(mode);
         refreshAll();
     }
 
     private void pushUndoGroup(java.util.List<LayoutElement> elements) {
-        layoutModel.saveSnapshot();
+        layoutController.pushUndoGroup(elements);
     }
 
     void refreshPropertiesPanel() {
