@@ -1300,6 +1300,7 @@ class MapEditingEngine {
 
             return map.assemblePolygons(parts, factory);
         } catch (Exception ex) {
+            CatgisLogger.warn("Fallo el ensamblado de poligonos durante operacion de edicion", ex);
             return null;
         }
     }

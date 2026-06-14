@@ -2155,10 +2155,10 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return geometry;
         }
 
-        try {
-            String sourceCode = layer != null ? layer.getSourceCRS() : "";
-            String targetCode = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
+        String sourceCode = layer != null ? layer.getSourceCRS() : "";
+        String targetCode = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
 
+        try {
             Geometry resolvedGeometry = geometry;
             if (sourceCode == null || sourceCode.isBlank()) {
                 return CadPlacementSupport.applyPlacement(layer, geometry);
@@ -2179,6 +2179,8 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             }
             return CadPlacementSupport.applyPlacement(layer, resolvedGeometry);
         } catch (Exception ex) {
+            CatgisLogger.warn("Fallo la reproyeccion de geometria (source="
+                    + sourceCode + " target=" + targetCode + "), usando geometria original sin reproyectar", ex);
             return CadPlacementSupport.applyPlacement(layer, geometry);
         }
     }
@@ -2342,6 +2344,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             int dpi = Toolkit.getDefaultToolkit().getScreenResolution();
             return dpi > 0 ? dpi : 96;
         } catch (Exception ex) {
+            CatgisLogger.warn("No se pudo obtener el DPI de pantalla, usando 96", ex);
             return 96;
         }
     }
@@ -3111,6 +3114,8 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             try {
                 reloaded.put(layer, loadRasterForCurrentProject(layer, rasterFile));
             } catch (Exception ex) {
+                CatgisLogger.warn("Fallo la recarga de raster para CRS del proyecto: "
+                        + layer.getName(), ex);
                 if (entry.getValue() != null) {
                     reloaded.put(layer, entry.getValue());
                 }
