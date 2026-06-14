@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WFS_Capabilities version="2.0.0" xmlns="http://www.opengis.net/wfs/2.0">
+  <ServiceIdentification>
+    <Title>CATGIS Test WFS Service</Title>
+    <Abstract>Mock WFS for automated testing</Abstract>
+  </ServiceIdentification>
+  <FeatureTypeList>
+    <FeatureType>
+      <Name>test:pois</Name>
+      <Title>Points of Interest</Title>
+      <DefaultCRS>EPSG:4326</DefaultCRS>
+      <OutputFormats>
+        <Format>application/gml+xml; version=3.2</Format>
+      </OutputFormats>
+      <WGS84BoundingBox>
+        <LowerCorner>-180 -90</LowerCorner>
+        <UpperCorner>180 90</UpperCorner>
+      </WGS84BoundingBox>
+    </FeatureType>
+    <FeatureType>
+      <Name>test:roads</Name>
+      <Title>Road Network</Title>
+      <DefaultCRS>EPSG:4326</DefaultCRS>
+      <OutputFormats>
+        <Format>application/gml+xml; version=3.2</Format>
+      </OutputFormats>
+    </FeatureType>
+  </FeatureTypeList>
+</WFS_Capabilities>
