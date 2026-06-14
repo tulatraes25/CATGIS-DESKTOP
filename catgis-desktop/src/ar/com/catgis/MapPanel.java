@@ -1284,6 +1284,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         if (layer != null && rasterLayers.containsKey(layer)) {
             LocalRasterData data = rasterLayers.get(layer);
             if (data != null) data.dispose();
+            rasterDisplayCache.remove(layer);
         }
         layerManager.removeLayer(layer);
     }
@@ -3400,6 +3401,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         if (selectionFlashTimer != null) {
             selectionFlashTimer.stop();
         }
+        cleanup();
     }
 
     /**
