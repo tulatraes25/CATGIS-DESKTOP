@@ -33,6 +33,7 @@ import java.util.jar.Manifest;
 public final class PluginManager {
 
     private static final String PLUGINS_DIR = "plugins";
+    private static final String ENABLED_PROPERTY = "catgis.plugins.enabled";
     private static final Map<String, PluginInfo> loadedPlugins = new LinkedHashMap<>();
     private static final List<CatgisPlugin> activePlugins = new CopyOnWriteArrayList<>();
     private static ClassLoader pluginClassLoader;
@@ -43,12 +44,31 @@ public final class PluginManager {
     public record PluginInfo(String name, String version, String description,
                               boolean enabled, String mainClass) {}
 
+    /**
+     * Check if plugins are enabled via system property or env var.
+     * Default: disabled (plugins are opt-in for security).
+     */
+    public static boolean isEnabled() {
+        String prop = System.getProperty(ENABLED_PROPERTY);
+        if ("true".equalsIgnoreCase(prop)) return true;
+        String env = System.getenv("CATGIS_PLUGINS_ENABLED");
+        return "true".equalsIgnoreCase(env) || "1".equals(env);
+    }
+
     // ─── Lifecycle ─────────────────────────────────────────────────────
 
     /**
      * Initialize the plugin system. Called at startup.
+     * Plugins are disabled by default — set {@code catgis.plugins.enabled=true}
+     * or the {@code CATGIS_PLUGINS_ENABLED} environment variable to enable.
      */
     public static void initialize() {
+        if (!isEnabled()) {
+            CatgisLogger.warn("PluginManager: plugins deshabilitados por defecto. "
+                    + "Para habilitarlos, iniciar con -Dcatgis.plugins.enabled=true "
+                    + "o definir la variable de entorno CATGIS_PLUGINS_ENABLED=true.", null);
+            return;
+        }
         CatgisLogger.warn("PluginManager: los plugins se ejecutan con los mismos permisos "
                 + "que la aplicacion — solo instalar plugins de fuentes confiables.", null);
         File dir = new File(PLUGINS_DIR);
@@ -58,8 +78,10 @@ public final class PluginManager {
 
     /**
      * Scan for new/removed plugins (hot-reload).
+     * No-op if plugins are disabled.
      */
     public static void scanForChanges() {
+        if (!isEnabled()) return;
         File dir = new File(PLUGINS_DIR);
         if (!dir.exists()) return;
 
