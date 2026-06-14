@@ -236,7 +236,7 @@ public final class SpatiaLiteLoader {
             DataStore store = DataStoreFinder.getDataStore(params);
             CatgisLogger.debug("SpatiaLite DataStore opened (spatialite): " + dbFile.getName());
             return store;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             CatgisLogger.debug("SpatiaLite: spatialite DataStore not available for "
                     + dbFile.getName() + " — " + e.getMessage());
             return null;
@@ -251,7 +251,7 @@ public final class SpatiaLiteLoader {
             DataStore store = DataStoreFinder.getDataStore(params);
             CatgisLogger.debug("SpatiaLite DataStore opened (geopkg): " + dbFile.getName());
             return store;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             CatgisLogger.debug("SpatiaLite: geopkg DataStore not available for "
                     + dbFile.getName() + " — " + e.getMessage());
             return null;
