@@ -270,4 +270,4 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 | R-13 Notification migration | 🟢 BAJA | CLOSED |
 | R-14 Static field access | 🟢 BAJA | OPEN |
 
-**6 CLOSED**, **8 OPEN**. Prioridad: R-09 (tests) y R-01 (plugin sandbox).
+**10 CLOSED**, **4 OPEN**. Sin riesgos 🔴 ALTA.
