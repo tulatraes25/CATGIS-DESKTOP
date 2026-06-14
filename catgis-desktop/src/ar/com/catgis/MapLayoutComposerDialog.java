@@ -4492,4 +4492,24 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     @Override public void setSourceFieldText(String text) { imageSourceField.setText(text); }
     @Override public String getCrsFieldText() { return coordinateReferenceField.getText(); }
     @Override public void setCrsFieldText(String text) { coordinateReferenceField.setText(text); }
+
+    /**
+     * Release listeners and resources before disposal.
+     * Removes MouseListeners from lists/trees to prevent memory leaks
+     * after the dialog is closed and garbage-collected.
+     */
+    @Override
+    public void dispose() {
+        for (java.awt.event.MouseListener ml : layoutItemsList.getMouseListeners()) {
+            layoutItemsList.removeMouseListener(ml);
+        }
+        for (java.awt.event.MouseListener ml : layoutStructureTree.getMouseListeners()) {
+            layoutStructureTree.removeMouseListener(ml);
+        }
+        for (java.awt.event.MouseListener ml : projectLayersList.getMouseListeners()) {
+            projectLayersList.removeMouseListener(ml);
+        }
+        previewPanel.cleanup();
+        super.dispose();
+    }
 }

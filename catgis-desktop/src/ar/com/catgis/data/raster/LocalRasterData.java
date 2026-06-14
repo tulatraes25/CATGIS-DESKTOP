@@ -53,4 +53,11 @@ public class LocalRasterData {
     public boolean isRealMode() {
         return "real".equalsIgnoreCase(rasterMode);
     }
+
+    /** Release the backing BufferedImage to free native memory. */
+    public void dispose() {
+        if (image != null) {
+            image.flush();
+        }
+    }
 }

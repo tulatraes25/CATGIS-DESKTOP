@@ -1756,4 +1756,13 @@ public class LayoutPreviewPanel extends JPanel {
 
     private record SnapAxisResult(int delta, Integer guide) {
     }
+
+    /** Release cached render resources. */
+    public void cleanup() {
+        lastRenderResult = null;
+        hoveredElement = null;
+        activeGuideXs.clear();
+        activeGuideYs.clear();
+        guides.clear();
+    }
 }

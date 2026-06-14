@@ -4308,6 +4308,42 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         void onDragCanceled();
     }
 
+    /**
+     * Swing lifecycle: removes all registered listeners when this panel
+     * is removed from its parent or the parent is disposed.
+     */
+    @Override
+    public void removeNotify() {
+        super.removeNotify();
+        removeMouseListener(mouseHandler);
+        removeMouseMotionListener(mouseHandler);
+        removeMouseWheelListener(mouseHandler);
+        if (selectionFlashTimer != null) {
+            selectionFlashTimer.stop();
+        }
+    }
+
+    /**
+     * Release heavy resources: dispose raster images and clear caches.
+     * Call before closing a project or when memory is constrained.
+     */
+    public void cleanup() {
+        for (java.util.Map.Entry<Layer, LocalRasterData> entry : rasterLayers.entrySet()) {
+            LocalRasterData data = entry.getValue();
+            if (data != null) {
+                data.dispose();
+            }
+        }
+        rasterLayers.clear();
+        rasterDisplayCache.clear();
+        shapefileLayers.clear();
+        onlineTileLayers.clear();
+        onlineWmsLayers.clear();
+        selectedLayer = null;
+        selectedFeature = null;
+        repaint();
+    }
+
 }
 
 
