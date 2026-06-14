@@ -187,7 +187,7 @@ public class ContourGenerationDialog extends JDialog {
     private void startGeneration() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Selecciona un raster DEM valido para generar curvas."));
+            NotificationManager.warn(this, null, I18n.t("Selecciona un raster DEM valido para generar curvas."));
             return;
         }
 
@@ -198,7 +198,7 @@ public class ContourGenerationDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("La equidistancia debe ser numerica y mayor a cero."));
+            NotificationManager.warn(this, null, I18n.t("La equidistancia debe ser numerica y mayor a cero."));
             return;
         }
 
@@ -209,7 +209,7 @@ public class ContourGenerationDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("La curva indice debe repetirse cada 2 o mas curvas."));
+            NotificationManager.warn(this, null, I18n.t("La curva indice debe repetirse cada 2 o mas curvas."));
             return;
         }
 
@@ -218,7 +218,7 @@ public class ContourGenerationDialog extends JDialog {
             try {
                 minimumElevation = Double.parseDouble(minElevationField.getText().trim().replace(",", "."));
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, I18n.t("La cota minima debe ser numerica."));
+                NotificationManager.warn(this, null, I18n.t("La cota minima debe ser numerica."));
                 return;
             }
         } else if (excludeZeroCheck.isSelected()) {
@@ -229,7 +229,7 @@ public class ContourGenerationDialog extends JDialog {
 
         final String outputName = outputNameField.getText().trim();
         if (outputName.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un nombre para la capa de curvas."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un nombre para la capa de curvas."));
             return;
         }
 
@@ -254,11 +254,10 @@ public class ContourGenerationDialog extends JDialog {
                     addResultLayer(result);
                     dispose();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             ContourGenerationDialog.this,
-                            I18n.t("No se pudieron generar las curvas de nivel:") + "\n" + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()),
                             I18n.t("Curvas de nivel"),
-                            JOptionPane.ERROR_MESSAGE
+                            I18n.t("No se pudieron generar las curvas de nivel:") + "\n" + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage())
                     );
                 }
             }
@@ -323,7 +322,7 @@ public class ContourGenerationDialog extends JDialog {
     public static void open() {
         Layer preferred = TopographyWorkflowSupport.resolvePreferredRasterLayer();
         if (preferred == null) {
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("No hay capas raster disponibles para generar curvas."));
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("No hay capas raster disponibles para generar curvas."));
             return;
         }
         open(preferred);
@@ -331,7 +330,7 @@ public class ContourGenerationDialog extends JDialog {
 
     public static void open(Layer rasterLayer) {
         if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("No hay capas raster disponibles para generar curvas."));
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("No hay capas raster disponibles para generar curvas."));
             return;
         }
         Frame owner = JOptionPane.getFrameForComponent(CatgisDesktopApp.getMainFrameSafe());

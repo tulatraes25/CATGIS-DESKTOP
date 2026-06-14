@@ -20,7 +20,7 @@ public class SaveMapViewAction extends AbstractAction {
 
     public static void saveCurrentView() {
         if (AppContext.mapPanel() == null) {
-            JOptionPane.showMessageDialog(null, "No hay mapa disponible para exportar.");
+            NotificationManager.warn(null, null, "No hay mapa disponible para exportar.");
             return;
         }
 
@@ -70,10 +70,9 @@ public class SaveMapViewAction extends AbstractAction {
                 AppContext.setStatusMessage("Vista guardada: " + file.getName());
             }
 
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
-                    "Vista guardada correctamente:\n" + file.getAbsolutePath(),
+            NotificationManager.info(CatgisDesktopApp.getMainFrameSafe(),
                     "Salvar vista del mapa",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Vista guardada correctamente:\n" + file.getAbsolutePath());
 
         } catch (Exception ex) {
             AppErrorSupport.logFailure("Error al guardar la vista del mapa en " + file.getAbsolutePath(), ex);

@@ -169,13 +169,13 @@ public class StacDialog extends JDialog {
     private void downloadSelected() {
         int idx = itemList.getSelectedIndex();
         if (idx < 0 || items == null || idx >= items.size()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un item para descargar.");
+            NotificationManager.warn(this, null, "Selecciona un item para descargar.");
             return;
         }
 
         StacClient.StacItem item = items.get(idx);
         if (item.assetUrls() == null || item.assetUrls().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El item no tiene assets descargables.");
+            NotificationManager.warn(this, null, "El item no tiene assets descargables.");
             return;
         }
 
@@ -204,10 +204,10 @@ public class StacDialog extends JDialog {
                     // Load as raster layer
                     boolean loaded = loadAsRasterLayer(outputFile, item.id());
 
-                    JOptionPane.showMessageDialog(StacDialog.this,
+                    NotificationManager.info(StacDialog.this,
+                            "Exito",
                             "Asset descargado" + (loaded ? " y agregado como capa" : "") + ":\n"
-                                    + outputFile.getAbsolutePath(),
-                            "Exito", JOptionPane.INFORMATION_MESSAGE);
+                                    + outputFile.getAbsolutePath());
                 } catch (Exception e) {
                     statusLabel.setText("Error: " + e.getMessage());
                     statusLabel.setForeground(Color.RED);

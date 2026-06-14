@@ -393,13 +393,13 @@ public final class DxfExportEngine {
             }
             try {
                 exportLayer(file, layer);
-                javax.swing.JOptionPane.showMessageDialog(parent,
-                    "Exportado a DXF correctamente:\n" + file.getAbsolutePath(),
-                    "Exportar DXF", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                NotificationManager.info(parent,
+                    "Exportar DXF",
+                    "Exportado a DXF correctamente:\n" + file.getAbsolutePath());
             } catch (Exception ex) {
-                javax.swing.JOptionPane.showMessageDialog(parent,
-                    "Error al exportar DXF:\n" + ex.getMessage(),
-                    "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(parent,
+                    "Error",
+                    "Error al exportar DXF:\n" + ex.getMessage());
             }
         }
     }

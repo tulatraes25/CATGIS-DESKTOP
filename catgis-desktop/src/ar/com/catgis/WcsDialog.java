@@ -106,7 +106,7 @@ public class WcsDialog extends JDialog {
     private void connectToServer() {
         String url = serviceUrlField.getText().trim();
         if (url.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingresa la URL del servidor WCS.");
+            NotificationManager.warn(this, null, "Ingresa la URL del servidor WCS.");
             return;
         }
 
@@ -132,9 +132,9 @@ public class WcsDialog extends JDialog {
                 } catch (Exception e) {
                     statusLabel.setText("Error: " + e.getMessage());
                     statusLabel.setForeground(Color.RED);
-                    JOptionPane.showMessageDialog(WcsDialog.this,
-                            "Error al conectar:\n" + e.getMessage(),
-                            "Error", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(WcsDialog.this,
+                            "Error",
+                            "Error al conectar:\n" + e.getMessage());
                 }
             }
         }.execute();
@@ -143,7 +143,7 @@ public class WcsDialog extends JDialog {
     private void downloadCoverage() {
         int idx = coverageList.getSelectedIndex();
         if (idx < 0 || coverages == null || idx >= coverages.size()) {
-            JOptionPane.showMessageDialog(this, "Selecciona una cobertura.");
+            NotificationManager.warn(this, null, "Selecciona una cobertura.");
             return;
         }
 
@@ -156,7 +156,7 @@ public class WcsDialog extends JDialog {
             width = Integer.parseInt(widthField.getText().trim());
             height = Integer.parseInt(heightField.getText().trim());
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Dimensiones invalidas.");
+            NotificationManager.warn(this, null, "Dimensiones invalidas.");
             return;
         }
 
@@ -186,17 +186,17 @@ public class WcsDialog extends JDialog {
                     // Load as raster layer
                     boolean loaded = loadAsRasterLayer(outputFile, coverage.name());
 
-                    JOptionPane.showMessageDialog(WcsDialog.this,
+                    NotificationManager.info(WcsDialog.this,
+                            "Descarga completada",
                             "Cobertura descargada" + (loaded ? " y agregada como capa" : "") + ".\n\n"
                                     + "Archivo: " + outputFile.getAbsolutePath()
-                                    + "\nTamanio: " + (outputFile.length() / 1024) + " KB",
-                            "Descarga completada", JOptionPane.INFORMATION_MESSAGE);
+                                    + "\nTamanio: " + (outputFile.length() / 1024) + " KB");
                 } catch (Exception e) {
                     statusLabel.setText("Error: " + e.getMessage());
                     statusLabel.setForeground(Color.RED);
-                    JOptionPane.showMessageDialog(WcsDialog.this,
-                            "Error al descargar:\n" + e.getMessage(),
-                            "Error", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(WcsDialog.this,
+                            "Error",
+                            "Error al descargar:\n" + e.getMessage());
                 }
             }
         }.execute();

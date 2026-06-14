@@ -1005,7 +1005,7 @@ public class LayerPropertiesDialog extends JDialog {
     private boolean applyChanges() {
         String newName = nameField.getText() != null ? nameField.getText().trim() : "";
         if (newName.isEmpty()) {
-            JOptionPane.showMessageDialog(this, I18n.t("El nombre de la capa no puede estar vacio."));
+            NotificationManager.warn(this, null, I18n.t("El nombre de la capa no puede estar vacio."));
             return false;
         }
 
@@ -1283,24 +1283,20 @@ public class LayerPropertiesDialog extends JDialog {
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage("Estilo SLD importado: " + layer.getName());
             }
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
+                    "Importar estilo SLD",
                     importResult.categorized()
                             ? "SLD importado como simbologia por atributo.\nGeometria: " + importResult.geometryFamily()
                             + "\nCampo: " + importResult.fieldName()
                             + "\nReglas: " + importResult.ruleCount()
                             : "SLD importado como estilo simple.\nGeometria: " + importResult.geometryFamily()
-                            + "\nReglas leidas: " + importResult.ruleCount(),
-                    "Importar estilo SLD",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                            + "\nReglas leidas: " + importResult.ruleCount());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.error(
                     this,
-                    "No se pudo importar el estilo SLD:\n" + ex.getMessage(),
                     "Importar estilo SLD",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    "No se pudo importar el estilo SLD:\n" + ex.getMessage());
         }
     }
 
@@ -1326,19 +1322,15 @@ public class LayerPropertiesDialog extends JDialog {
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage("Estilo SLD exportado: " + file.getName());
             }
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    "Estilo exportado correctamente:\n" + file.getAbsolutePath(),
                     "Exportar estilo SLD",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    "Estilo exportado correctamente:\n" + file.getAbsolutePath());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.error(
                     this,
-                    "No se pudo exportar el estilo SLD:\n" + ex.getMessage(),
                     "Exportar estilo SLD",
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    "No se pudo exportar el estilo SLD:\n" + ex.getMessage());
         }
     }
 

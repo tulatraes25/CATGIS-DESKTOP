@@ -166,15 +166,15 @@ public class WhiteboxToolDialog extends JDialog {
                     if (result.success()) {
                         statusLabel.setText("Completado exitosamente");
                         statusLabel.setForeground(new Color(0, 128, 0));
-                        JOptionPane.showMessageDialog(this,
-                                "Herramienta ejecutada correctamente.\n\n" + result.output(),
-                                "Exito", JOptionPane.INFORMATION_MESSAGE);
+                        NotificationManager.info(this,
+                                "Exito",
+                                "Herramienta ejecutada correctamente.\n\n" + result.output());
                     } else {
                         statusLabel.setText("Error en la ejecucion");
                         statusLabel.setForeground(Color.RED);
-                        JOptionPane.showMessageDialog(this,
-                                "Error al ejecutar la herramienta:\n" + result.error(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        NotificationManager.error(this,
+                                "Error",
+                                "Error al ejecutar la herramienta:\n" + result.error());
                     }
                 }));
     }

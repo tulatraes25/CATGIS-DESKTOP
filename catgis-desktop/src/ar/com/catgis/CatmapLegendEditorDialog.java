@@ -209,7 +209,7 @@ public class CatmapLegendEditorDialog extends JDialog {
     private void moveSelected(int delta) {
         int index = legendList.getSelectedIndex();
         if (index < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un item de la leyenda.");
+            NotificationManager.warn(this, null, "Selecciona un item de la leyenda.");
             return;
         }
         int target = index + delta;
@@ -225,7 +225,7 @@ public class CatmapLegendEditorDialog extends JDialog {
     private void toggleSelectedVisibility() {
         CatmapLegendItem item = legendList.getSelectedValue();
         if (item == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un item de la leyenda.");
+            NotificationManager.warn(this, null, "Selecciona un item de la leyenda.");
             return;
         }
         item.setVisible(!item.isVisible());
@@ -235,7 +235,7 @@ public class CatmapLegendEditorDialog extends JDialog {
     private void editSelectedLegendTexts() {
         CatmapLegendItem item = legendList.getSelectedValue();
         if (item == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un item de la leyenda.");
+            NotificationManager.warn(this, null, "Selecciona un item de la leyenda.");
             return;
         }
         JTextField labelEditor = new JTextField(item.getLabel(), 26);
@@ -309,7 +309,7 @@ public class CatmapLegendEditorDialog extends JDialog {
     private void openLayerSymbology() {
         Layer layer = resolveSelectedLayer();
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un item vinculado a una capa.");
+            NotificationManager.warn(this, null, "Selecciona un item vinculado a una capa.");
             return;
         }
         LayerPropertiesDialog.open(layer);
@@ -322,7 +322,7 @@ public class CatmapLegendEditorDialog extends JDialog {
     private void openLayerThematic() {
         Layer layer = resolveSelectedLayer();
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un item vinculado a una capa.");
+            NotificationManager.warn(this, null, "Selecciona un item vinculado a una capa.");
             return;
         }
         CategorizedSymbologyDialog.open(layer);

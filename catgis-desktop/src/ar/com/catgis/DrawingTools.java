@@ -1,6 +1,7 @@
 package ar.com.catgis;
 
 import ar.com.catgis.service.EventBus;
+import ar.com.catgis.NotificationManager;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
@@ -72,46 +73,44 @@ public class DrawingTools {
 
             if ("DISTANCE".equalsIgnoreCase(panel.getMeasurementMode())) {
                 if (panel.measurementTool.getPoints().size() < 2) {
-                    JOptionPane.showMessageDialog(panel, "Para medir distancia necesit\u00E1s al menos 2 v\u00E9rtices.");
+                    NotificationManager.warn(panel, null, "Para medir distancia necesit\u00E1s al menos 2 v\u00E9rtices.");
                     return;
                 }
 
                 Geometry metricLine = buildMeasurementLineInMeters(panel.measurementTool.getPoints(), projectCRS);
                 if (metricLine == null) {
-                    JOptionPane.showMessageDialog(panel, "No se pudo calcular la distancia.");
+                    NotificationManager.warn(panel, null, "No se pudo calcular la distancia.");
                     return;
                 }
 
                 double totalMeters = metricLine.getLength();
 
-                JOptionPane.showMessageDialog(
+                NotificationManager.info(
                         panel,
-                        "Distancia total: " + formatDistance(totalMeters),
                         "Medici\u00F3n de distancia",
-                        JOptionPane.INFORMATION_MESSAGE
+                        "Distancia total: " + formatDistance(totalMeters)
                 );
 
             } else if ("AREA".equalsIgnoreCase(panel.getMeasurementMode())) {
                 if (panel.measurementTool.getPoints().size() < 3) {
-                    JOptionPane.showMessageDialog(panel, "Para medir \u00E1rea necesit\u00E1s al menos 3 v\u00E9rtices.");
+                    NotificationManager.warn(panel, null, "Para medir \u00E1rea necesit\u00E1s al menos 3 v\u00E9rtices.");
                     return;
                 }
 
                 Geometry metricPolygon = buildMeasurementPolygonInMeters(panel.measurementTool.getPoints(), projectCRS);
                 if (metricPolygon == null) {
-                    JOptionPane.showMessageDialog(panel, "No se pudo calcular el \u00E1rea.");
+                    NotificationManager.warn(panel, null, "No se pudo calcular el \u00E1rea.");
                     return;
                 }
 
                 double areaMeters = metricPolygon.getArea();
                 double perimeterMeters = metricPolygon.getLength();
 
-                JOptionPane.showMessageDialog(
+                NotificationManager.info(
                         panel,
-                        "\u00C1rea: " + formatArea(areaMeters) + "\n" +
-                                "Per\u00EDmetro: " + formatDistance(perimeterMeters),
                         "Medici\u00F3n de \u00E1rea",
-                        JOptionPane.INFORMATION_MESSAGE
+                        "\u00C1rea: " + formatArea(areaMeters) + "\n" +
+                                "Per\u00EDmetro: " + formatDistance(perimeterMeters)
                 );
             }
         } finally {
@@ -201,7 +200,7 @@ public class DrawingTools {
             if ("CONTINUE_LINE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
                 Geometry continuationGeometry = buildContinuationLineGeometry();
                 if (continuationGeometry == null) {
-                    JOptionPane.showMessageDialog(panel, "Para continuar la l\u00EDnea necesit\u00E1s agregar al menos un v\u00E9rtice nuevo.");
+                    NotificationManager.warn(panel, null, "Para continuar la l\u00EDnea necesit\u00E1s agregar al menos un v\u00E9rtice nuevo.");
                     return;
                 }
                 panel.updateSelectedFeatureGeometry(continuationGeometry, "L\u00EDnea continuada.");
@@ -226,14 +225,12 @@ public class DrawingTools {
                 return;
             }
             if (targetLayer == null) {
-                int choice = JOptionPane.showConfirmDialog(
+                boolean yes = NotificationManager.confirm(
                         panel,
-                        "No hay una capa vectorial editable compatible para este dibujo.\n\n\u00BFQuer\u00E9s crearla ahora?",
                         "Crear capa destino",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE
+                        "No hay una capa vectorial editable compatible para este dibujo.\n\n\u00BFQuer\u00E9s crearla ahora?"
                 );
-                if (choice != JOptionPane.YES_OPTION) {
+                if (!yes) {
                     panel.showCopiedMessage("Seleccion\u00E1 o cre\u00E1 una capa compatible para guardar el dibujo.");
                     return;
                 }
@@ -286,13 +283,10 @@ public class DrawingTools {
         }
 
         if (hasPendingCurrentGeometry) {
-            int closeCurrent = JOptionPane.showConfirmDialog(
+            int closeCurrent = NotificationManager.confirmCancel(
                     panel,
-                    "La entidad actual todavia no fue cerrada.\n\nQueres guardarla antes de cerrar el dibujo?",
                     "Cerrar dibujo",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
+                    "La entidad actual todavia no fue cerrada.\n\nQueres guardarla antes de cerrar el dibujo?");
             if (closeCurrent == JOptionPane.CANCEL_OPTION || closeCurrent == JOptionPane.CLOSED_OPTION) {
                 return;
             }
@@ -308,13 +302,10 @@ public class DrawingTools {
 
         Layer layerToSave = panel.drawingToolManager.drawingSessionLayer != null ? panel.drawingToolManager.drawingSessionLayer : resolveDrawingTargetLayer();
         if (!panel.drawingToolManager.pendingDrawingSessionGeometries.isEmpty() && layerToSave == null) {
-            int choice = JOptionPane.showConfirmDialog(
+            int choice = NotificationManager.confirmCancel(
                     panel,
-                    "No hay una capa vectorial compatible todavia.\n\nQueres crearla ahora para guardar las entidades dibujadas?",
                     "Crear capa destino",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
+                    "No hay una capa vectorial compatible todavia.\n\nQueres crearla ahora para guardar las entidades dibujadas?");
             if (choice != JOptionPane.YES_OPTION) {
                 return;
             }
@@ -339,13 +330,10 @@ public class DrawingTools {
         }
 
         if (panel.drawingToolManager.drawingSessionDirty && layerToSave != null) {
-            int saveChoice = JOptionPane.showConfirmDialog(
+            int saveChoice = NotificationManager.confirmCancel(
                     panel,
-                    "Queres guardar ahora la capa vectorial?\n\n" + layerToSave.getName(),
                     "Guardar capa vectorial",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
+                    "Queres guardar ahora la capa vectorial?\n\n" + layerToSave.getName());
             if (saveChoice == JOptionPane.CANCEL_OPTION || saveChoice == JOptionPane.CLOSED_OPTION) {
                 return;
             }
@@ -448,7 +436,7 @@ public class DrawingTools {
 
         ShapefileData targetData = panel.getShapefileData(layer);
         if (targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(panel, "La capa destino no tiene esquema vectorial disponible.");
+            NotificationManager.warn(panel, null, "La capa destino no tiene esquema vectorial disponible.");
             return false;
         }
 
@@ -467,7 +455,7 @@ public class DrawingTools {
 
         ShapefileData targetData = panel.getShapefileData(layer);
         if (targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(panel, "La capa destino no tiene esquema vectorial disponible.");
+            NotificationManager.warn(panel, null, "La capa destino no tiene esquema vectorial disponible.");
             return false;
         }
 
@@ -485,7 +473,7 @@ public class DrawingTools {
         }
 
         if (createdIds.isEmpty()) {
-            JOptionPane.showMessageDialog(panel, "No se pudo crear la entidad en la capa seleccionada.");
+            NotificationManager.warn(panel, null, "No se pudo crear la entidad en la capa seleccionada.");
             return false;
         }
 
@@ -515,7 +503,7 @@ public class DrawingTools {
 
         if ("POINT".equalsIgnoreCase(panel.drawingToolManager.drawingMode) || "MULTIPOINT".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
             if (panel.drawingToolManager.drawingCoordinates.isEmpty()) {
-                JOptionPane.showMessageDialog(panel, "Para crear puntos necesit\u00E1s hacer clic en el mapa.");
+                NotificationManager.warn(panel, null, "Para crear puntos necesit\u00E1s hacer clic en el mapa.");
                 return geometries;
             }
 
@@ -537,7 +525,7 @@ public class DrawingTools {
         if ("LINE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
             Geometry geometry = DrawFeatureBuilder.buildLine(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(panel, "Para una l\u00EDnea necesit\u00E1s al menos 2 v\u00E9rtices.");
+                NotificationManager.warn(panel, null, "Para una l\u00EDnea necesit\u00E1s al menos 2 v\u00E9rtices.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -547,7 +535,7 @@ public class DrawingTools {
         if ("RECTANGLE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
             Geometry geometry = buildRectangleGeometry(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(panel, "Para un rect\u00E1ngulo necesit\u00E1s marcar dos esquinas opuestas.");
+                NotificationManager.warn(panel, null, "Para un rect\u00E1ngulo necesit\u00E1s marcar dos esquinas opuestas.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -557,7 +545,7 @@ public class DrawingTools {
         if ("POLYGON".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
             Geometry geometry = DrawFeatureBuilder.buildPolygon(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(panel, "Para un pol\u00EDgono necesit\u00E1s al menos 3 v\u00E9rtices.");
+                NotificationManager.warn(panel, null, "Para un pol\u00EDgono necesit\u00E1s al menos 3 v\u00E9rtices.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -566,7 +554,7 @@ public class DrawingTools {
         if ("CIRCLE".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
             Geometry geometry = buildCircleGeometry(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(panel, "Para un circulo necesitas marcar centro y radio.");
+                NotificationManager.warn(panel, null, "Para un circulo necesitas marcar centro y radio.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -576,7 +564,7 @@ public class DrawingTools {
         if ("CIRCLE_3P".equalsIgnoreCase(panel.drawingToolManager.drawingMode)) {
             Geometry geometry = buildCircleThreePointGeometry(panel.drawingToolManager.drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(panel, "No se pudo construir el circulo con esos tres puntos.");
+                NotificationManager.warn(panel, null, "No se pudo construir el circulo con esos tres puntos.");
                 return geometries;
             }
             geometries.add(geometry);

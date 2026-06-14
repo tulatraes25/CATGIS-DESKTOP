@@ -30,7 +30,7 @@ public class OpenAttributeTableAction extends AbstractAction {
         Layer selectedLayer = AppContext.getSelectedLayer();
 
         if (selectedLayer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
 
@@ -39,13 +39,13 @@ public class OpenAttributeTableAction extends AbstractAction {
 
     public static void openFieldsConfig(Layer layer) {
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
 
         ShapefileData data = ensureDataLoaded(layer);
         if (data == null) {
-            JOptionPane.showMessageDialog(null, "La capa seleccionada no tiene estructura de campos disponible.");
+            NotificationManager.warn(null, null, "La capa seleccionada no tiene estructura de campos disponible.");
             return;
         }
 
@@ -54,7 +54,7 @@ public class OpenAttributeTableAction extends AbstractAction {
 
     public static AttributeTableWindow openTable(Layer layer) {
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return null;
         }
 
@@ -69,14 +69,14 @@ public class OpenAttributeTableAction extends AbstractAction {
             ShapefileData data = ensureDataLoaded(layer);
 
             if (data == null) {
-                JOptionPane.showMessageDialog(null, "La capa seleccionada no tiene tabla de atributos disponible.");
+                NotificationManager.warn(null, null, "La capa seleccionada no tiene tabla de atributos disponible.");
                 return null;
             }
 
             List<SimpleFeature> features = data.getFeatures();
             SimpleFeatureType schema = data.getSchema();
             if ((features == null || features.isEmpty()) && schema == null) {
-                JOptionPane.showMessageDialog(null, "La capa no tiene tabla de atributos disponible.");
+                NotificationManager.warn(null, null, "La capa no tiene tabla de atributos disponible.");
                 return null;
             }
 
@@ -144,11 +144,11 @@ public class OpenAttributeTableAction extends AbstractAction {
     public static void openFieldCalculatorForSelectedLayer() {
         Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
         if (VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
-            JOptionPane.showMessageDialog(null, buildReadOnlyMessage(layer));
+            NotificationManager.warn(null, null, buildReadOnlyMessage(layer));
             return;
         }
 
@@ -161,11 +161,11 @@ public class OpenAttributeTableAction extends AbstractAction {
     public static void openAssignValueForSelectedLayer() {
         Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
         if (VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
-            JOptionPane.showMessageDialog(null, buildReadOnlyMessage(layer));
+            NotificationManager.warn(null, null, buildReadOnlyMessage(layer));
             return;
         }
 
@@ -178,7 +178,7 @@ public class OpenAttributeTableAction extends AbstractAction {
     public static void openQueryBuilderForSelectedLayer() {
         Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
         QueryBuilderDialog.open(layer);
@@ -245,7 +245,7 @@ public class OpenAttributeTableAction extends AbstractAction {
             focused = true;
         }
         if (!focused) {
-            JOptionPane.showMessageDialog(null, "No hay tablas de atributos abiertas.");
+            NotificationManager.warn(null, null, "No hay tablas de atributos abiertas.");
         }
     }
 

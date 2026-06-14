@@ -126,7 +126,7 @@ public class MapPopupHandler {
         JMenuItem copyLatLonItem = new JMenuItem("Copiar Lat/Long");
         copyLatLonItem.addActionListener(ev -> {
             if (geographic == null) {
-                JOptionPane.showMessageDialog(panel, "No se pudo transformar a EPSG:4326.");
+                NotificationManager.warn(panel, null, "No se pudo transformar a EPSG:4326.");
                 return;
             }
             String text = panel.formatNumber(geographic[0]) + ", " + panel.formatNumber(geographic[1]);
@@ -138,7 +138,7 @@ public class MapPopupHandler {
         JMenuItem copyDmsItem = new JMenuItem("Copiar Lat/Long DMS");
         copyDmsItem.addActionListener(ev -> {
             if (geographic == null) {
-                JOptionPane.showMessageDialog(panel, "No se pudo transformar a EPSG:4326.");
+                NotificationManager.warn(panel, null, "No se pudo transformar a EPSG:4326.");
                 return;
             }
             String text = panel.toDms(geographic[0], false) + " , " + panel.toDms(geographic[1], true);

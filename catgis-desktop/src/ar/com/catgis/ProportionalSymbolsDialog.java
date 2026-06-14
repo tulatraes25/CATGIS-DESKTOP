@@ -162,9 +162,9 @@ public class ProportionalSymbolsDialog extends JDialog {
             ? AppContext.mapPanel().getShapefileData(layer) : null;
         if (data == null) data = VectorLayerUtils.ensureVectorData(layer);
         if (data == null) {
-            JOptionPane.showMessageDialog(parent,
-                "No se pudieron cargar los datos de la capa.",
-                "Simbolos proporcionales", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(parent,
+                "Simbolos proporcionales",
+                "No se pudieron cargar los datos de la capa.");
             return false;
         }
         Frame frame = parent instanceof Frame ? (Frame) parent

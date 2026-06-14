@@ -5,7 +5,6 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
@@ -140,7 +139,7 @@ public class CadPlacementDialog extends JDialog {
     private void applyAndClose() {
         double scale = ((Number) scaleSpinner.getValue()).doubleValue();
         if (scale <= 0d) {
-            JOptionPane.showMessageDialog(this, "La escala debe ser mayor que cero.", "Ajuste CAD", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Ajuste CAD", "La escala debe ser mayor que cero.");
             return;
         }
         result = new CadPlacementSupport.Result(

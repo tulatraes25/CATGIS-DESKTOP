@@ -148,16 +148,16 @@ public class PostgisExportDialog extends JDialog {
 
     public static void open(Window owner, Layer sourceLayer) {
         if (sourceLayer == null) {
-            JOptionPane.showMessageDialog(owner, "Seleccioná una capa vectorial para enviar a CATSERVER.");
+            NotificationManager.warn(owner, null, "Seleccioná una capa vectorial para enviar a CATSERVER.");
             return;
         }
         if (sourceLayer instanceof RasterLayer) {
-            JOptionPane.showMessageDialog(owner, "La capa seleccionada no es vectorial.");
+            NotificationManager.warn(owner, null, "La capa seleccionada no es vectorial.");
             return;
         }
         ShapefileData data = OpenAttributeTableAction.ensureLayerDataAvailable(sourceLayer);
         if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
-            JOptionPane.showMessageDialog(owner, "La capa no tiene datos vectoriales disponibles para enviar a CATSERVER.");
+            NotificationManager.warn(owner, null, "La capa no tiene datos vectoriales disponibles para enviar a CATSERVER.");
             return;
         }
         PostgisExportDialog dialog = new PostgisExportDialog(owner, sourceLayer, data);
@@ -199,10 +199,10 @@ public class PostgisExportDialog extends JDialog {
                     get();
                     PostgisConnectionStore.saveProfileConnection("catserver", info);
                     setBusy(false, "Conexión CATSERVER verificada correctamente.");
-                    JOptionPane.showMessageDialog(PostgisExportDialog.this, "La conexión CATSERVER respondió correctamente.", "CATSERVER", JOptionPane.INFORMATION_MESSAGE);
+                    NotificationManager.info(PostgisExportDialog.this, "CATSERVER", "La conexión CATSERVER respondió correctamente.");
                 } catch (Exception ex) {
                     setBusy(false, "No se pudo conectar a CATSERVER.");
-                    JOptionPane.showMessageDialog(PostgisExportDialog.this, PostgisErrorSupport.toUserMessage(ex, info), "CATSERVER", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(PostgisExportDialog.this, "CATSERVER", PostgisErrorSupport.toUserMessage(ex, info));
                 }
             }
         }.execute();
@@ -249,18 +249,17 @@ public class PostgisExportDialog extends JDialog {
                     if (CatgisDesktopApp.statusBar != null) {
                         AppContext.setStatusMessage("Capa enviada a CATSERVER: " + result.layer().getSchemaName() + "." + result.layer().getTableName());
                     }
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.info(
                             PostgisExportDialog.this,
+                            "CATSERVER",
                             "Capa enviada correctamente a CATSERVER.\n\n"
                                     + "Tabla: " + result.layer().getSchemaName() + "." + result.layer().getTableName() + "\n"
-                                    + "Entidades: " + result.writtenFeatureCount(),
-                            "CATSERVER",
-                            JOptionPane.INFORMATION_MESSAGE
+                                    + "Entidades: " + result.writtenFeatureCount()
                     );
                     dispose();
                 } catch (Exception ex) {
                     statusLabel.setText("No se pudo completar la escritura en CATSERVER.");
-                    JOptionPane.showMessageDialog(PostgisExportDialog.this, PostgisErrorSupport.toUserMessage(ex, info), "CATSERVER", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(PostgisExportDialog.this, "CATSERVER", PostgisErrorSupport.toUserMessage(ex, info));
                 }
             }
         }.execute();
@@ -291,7 +290,7 @@ public class PostgisExportDialog extends JDialog {
         try {
             info.setPort(Integer.parseInt(portField.getText().trim()));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "El puerto debe ser un número válido.", "CATSERVER", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "CATSERVER", "El puerto debe ser un número válido.");
             return null;
         }
         info.setDatabase(databaseField.getText());
@@ -302,19 +301,19 @@ public class PostgisExportDialog extends JDialog {
 
         String validationMessage = PostgisErrorSupport.validateConnectionInfo(info, true);
         if (!validationMessage.isBlank()) {
-            JOptionPane.showMessageDialog(this, validationMessage, "CATSERVER", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "CATSERVER", validationMessage);
             return null;
         }
 
         String schemaValidation = PostgisWriteService.validateIdentifier(schemaField.getText(), "El schema");
         if (!schemaValidation.isBlank()) {
-            JOptionPane.showMessageDialog(this, schemaValidation, "CATSERVER", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "CATSERVER", schemaValidation);
             return null;
         }
 
         String tableValidation = PostgisWriteService.validateIdentifier(tableField.getText(), "El nombre de tabla");
         if (!tableValidation.isBlank()) {
-            JOptionPane.showMessageDialog(this, tableValidation, "CATSERVER", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "CATSERVER", tableValidation);
             return null;
         }
         return info;

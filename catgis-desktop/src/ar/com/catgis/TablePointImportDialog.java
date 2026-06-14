@@ -140,7 +140,7 @@ public class TablePointImportDialog extends JDialog {
             AppContext.mapPanel().resetView();
             AppContext.mapPanel().repaint();
 
-            JOptionPane.showMessageDialog(this, "Tabla importada correctamente como capa de puntos.");
+            NotificationManager.info(this, null, "Tabla importada correctamente como capa de puntos.");
             dispose();
 
         } catch (Exception ex) {

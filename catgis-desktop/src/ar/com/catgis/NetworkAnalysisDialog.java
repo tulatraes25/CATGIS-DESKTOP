@@ -155,7 +155,7 @@ public class NetworkAnalysisDialog extends JDialog {
         String op = (String) operationCombo.getSelectedItem();
         String layerName = (String) layerCombo.getSelectedItem();
         if (layerName == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa de red.");
+            NotificationManager.warn(this, null, "Selecciona una capa de red.");
             return;
         }
 

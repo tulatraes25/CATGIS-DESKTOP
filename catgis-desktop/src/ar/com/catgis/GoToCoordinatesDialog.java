@@ -15,7 +15,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextField;
@@ -194,7 +194,7 @@ public class GoToCoordinatesDialog extends JDialog {
             dispose();
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Buscar por coordenadas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Buscar por coordenadas", ex.getMessage());
         }
     }
 

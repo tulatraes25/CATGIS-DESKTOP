@@ -1,5 +1,6 @@
 package ar.com.catgis;
 import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.NotificationManager;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -120,13 +121,13 @@ public class AddLayerDialog extends JDialog {
 
     private void onAccept() {
         if (selectedFiles.length == 0) {
-            JOptionPane.showMessageDialog(this, I18n.t("Primero selecciona uno o varios archivos."), I18n.t("Cargar datos"), JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, I18n.t("Cargar datos"), I18n.t("Primero selecciona uno o varios archivos."));
             return;
         }
 
         FormatOption selected = (FormatOption) formatCombo.getSelectedItem();
         if (selected == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("No se pudo determinar el formato seleccionado."), I18n.t("Cargar datos"), JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, I18n.t("Cargar datos"), I18n.t("No se pudo determinar el formato seleccionado."));
             return;
         }
 

@@ -20,7 +20,6 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.operation.polygonize.Polygonizer;
 
-import javax.swing.JOptionPane;
 import java.awt.Rectangle;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -41,7 +40,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(map, "Mover vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Mover vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
@@ -59,7 +58,7 @@ class MapEditingEngine {
             return;
         }
         if (map.isReadOnlyVectorLayer(map.selectedLayer)) {
-            JOptionPane.showMessageDialog(map, map.getReadOnlyLayerMessage(map.selectedLayer));
+            NotificationManager.warn(map, null, map.getReadOnlyLayerMessage(map.selectedLayer));
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_MOVE_FEATURE;
@@ -78,7 +77,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(map, "Agregar vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Agregar vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_ADD_VERTEX;
@@ -96,7 +95,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(map, "Eliminar vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Eliminar vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_REMOVE_VERTEX;
@@ -114,7 +113,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(map, "Unir vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Unir vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_JOIN_VERTEX;
@@ -133,7 +132,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(map, "Cortar geometrÃ­a sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Cortar geometrÃ­a sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_CUT;
@@ -154,7 +153,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeaturePolygonal()) {
-            JOptionPane.showMessageDialog(map, "La opciÃ³n agujero solo funciona sobre polÃ­gonos.");
+            NotificationManager.warn(map, null, "La opciÃ³n agujero solo funciona sobre polÃ­gonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_HOLE;
@@ -172,7 +171,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeaturePolygonal()) {
-            JOptionPane.showMessageDialog(map, "Poligono adyacente solo funciona sobre poligonos.");
+            NotificationManager.warn(map, null, "Poligono adyacente solo funciona sobre poligonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_ADJACENT_POLYGON;
@@ -221,7 +220,7 @@ class MapEditingEngine {
             return;
         }
         if (resolveCadLineTargetLayer() == null) {
-            JOptionPane.showMessageDialog(map, "Necesitas una capa de lineas compatible para guardar la paralela.");
+            NotificationManager.warn(map, null, "Necesitas una capa de lineas compatible para guardar la paralela.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_PARALLEL;
@@ -240,7 +239,7 @@ class MapEditingEngine {
             return;
         }
         if (resolveCadLineTargetLayer() == null) {
-            JOptionPane.showMessageDialog(map, "Necesitas una capa de lineas compatible para guardar la perpendicular.");
+            NotificationManager.warn(map, null, "Necesitas una capa de lineas compatible para guardar la perpendicular.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_PERPENDICULAR;
@@ -1131,7 +1130,7 @@ class MapEditingEngine {
 
         ShapefileData targetData = map.getShapefileData(map.selectedLayer);
         if (targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(map, "La capa editable no tiene esquema vectorial disponible.");
+            NotificationManager.warn(map, null, "La capa editable no tiene esquema vectorial disponible.");
             return true;
         }
 
@@ -1763,24 +1762,20 @@ class MapEditingEngine {
         String family = FeatureBuilder.resolveGeometryFamily(data.getSchema());
         Geometry mergedGeometry = FeatureBuilder.buildMergedGeometry(selectedFeatures, family);
         if (mergedGeometry == null || mergedGeometry.isEmpty()) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     map,
-                    "No se pudieron unir las entidades seleccionadas.",
                     "Unir elementos",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    "No se pudieron unir las entidades seleccionadas.");
             return false;
         }
 
         List<SimpleFeature> replacementFeatures = FeatureBuilder.buildFeaturesForMergedGeometry(
                 selectedFeatures.get(0), mergedGeometry, data.getSchema());
         if (replacementFeatures.isEmpty()) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     map,
-                    "La geometria resultante no es compatible con la capa actual.",
                     "Unir elementos",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    "La geometria resultante no es compatible con la capa actual.");
             return false;
         }
 
@@ -1826,7 +1821,7 @@ class MapEditingEngine {
             return false;
         }
         if (map.isReadOnlyVectorLayer(map.selectedLayer)) {
-            JOptionPane.showMessageDialog(map, map.getReadOnlyLayerMessage(map.selectedLayer));
+            NotificationManager.warn(map, null, map.getReadOnlyLayerMessage(map.selectedLayer));
             return false;
         }
 
@@ -1870,12 +1865,10 @@ class MapEditingEngine {
         }
 
         if (!changed) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     map,
-                    "La seleccion no contiene entidades multiparte para explotar.",
                     "Explotar entidades",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    "La seleccion no contiene entidades multiparte para explotar.");
             return false;
         }
 
@@ -1899,7 +1892,7 @@ class MapEditingEngine {
             return false;
         }
         if (map.isReadOnlyVectorLayer(map.selectedLayer)) {
-            JOptionPane.showMessageDialog(map, map.getReadOnlyLayerMessage(map.selectedLayer));
+            NotificationManager.warn(map, null, map.getReadOnlyLayerMessage(map.selectedLayer));
             return false;
         }
 

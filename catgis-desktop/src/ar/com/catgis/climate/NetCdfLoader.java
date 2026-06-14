@@ -40,9 +40,9 @@ public final class NetCdfLoader {
      */
     public static RasterLayer loadNetCdfFile(File file, Component parent) {
         if (file == null || !file.exists()) {
-            JOptionPane.showMessageDialog(parent,
-                    "Archivo no encontrado: " + (file != null ? file.getName() : "null"),
-                    "Cargar NetCDF", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(parent,
+                    "Cargar NetCDF",
+                    "Archivo no encontrado: " + (file != null ? file.getName() : "null"));
             return null;
         }
 
@@ -104,9 +104,9 @@ public final class NetCdfLoader {
             // List available variables
             List<VariableInfo> variables = listVariables(ncFile, ncFileClass);
             if (variables.isEmpty()) {
-                JOptionPane.showMessageDialog(parent,
-                        "No se encontraron variables en el archivo NetCDF.",
-                        "Cargar NetCDF", JOptionPane.WARNING_MESSAGE);
+                NotificationManager.warn(parent,
+                        "Cargar NetCDF",
+                        "No se encontraron variables en el archivo NetCDF.");
                 ncFileClass.getMethod("close").invoke(ncFile);
                 return null;
             }
@@ -133,9 +133,9 @@ public final class NetCdfLoader {
             // Read variable data as float array
             float[] data = readVariableData(ncFile, ncFileClass, selectedVar, timeStep);
             if (data == null) {
-                JOptionPane.showMessageDialog(parent,
-                        "No se pudieron leer los datos de la variable: " + selectedVar.name,
-                        "Cargar NetCDF", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(parent,
+                        "Cargar NetCDF",
+                        "No se pudieron leer los datos de la variable: " + selectedVar.name);
                 ncFileClass.getMethod("close").invoke(ncFile);
                 return null;
             }
@@ -211,10 +211,10 @@ public final class NetCdfLoader {
             return layer;
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(parent,
+            NotificationManager.error(parent,
+                    "Cargar NetCDF",
                     "Error al cargar NetCDF: " + e.getMessage() + "\n\n"
-                            + "Verifica que el archivo .nc sea valido y contenga variables grid 2D.",
-                    "Cargar NetCDF", JOptionPane.ERROR_MESSAGE);
+                            + "Verifica que el archivo .nc sea valido y contenga variables grid 2D.");
             return null;
         }
     }

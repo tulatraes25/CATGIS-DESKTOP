@@ -14,7 +14,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
@@ -240,23 +239,25 @@ public class BooleanRiskDialog extends JDialog {
             return;
         }
         if (!isValidDemBaseLayer(demLayer)) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
+                    null,
                     I18n.t("Debes elegir un DEM base real, no una capa raster derivada como inundacion, pendiente, aspecto o mascaras.")
             );
             return;
         }
         if (!(soilLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir un raster de suelos valido."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir un raster de suelos valido."));
             return;
         }
         if (demLayer == soilLayer) {
-            JOptionPane.showMessageDialog(this, I18n.t("El DEM y el raster de suelos deben ser capas distintas."));
+            NotificationManager.warn(this, null, I18n.t("El DEM y el raster de suelos deben ser capas distintas."));
             return;
         }
         if (!layersIntersectOperationally(demLayer, soilLayer)) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
+                    null,
                     I18n.t("El DEM base y el raster de suelos seleccionados no se superponen espacialmente. Elige un raster de suelos descargado para esa misma zona del DEM.")
             );
             return;
@@ -276,7 +277,7 @@ public class BooleanRiskDialog extends JDialog {
                     soilValueBField.getText()
             );
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), I18n.t("Riesgo booleano"), JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this, I18n.t("Riesgo booleano"), ex.getMessage());
             return;
         }
 
@@ -313,11 +314,11 @@ public class BooleanRiskDialog extends JDialog {
                     if (message.contains("El raster de suelos no intersecta")) {
                         message = I18n.t("El DEM base y el raster de suelos seleccionados no se superponen espacialmente. Usa un raster de suelos descargado para esa misma zona del DEM.");
                     }
-                    JOptionPane.showMessageDialog(
+                    String fullErrorMsg = I18n.t("No se pudo generar el riesgo booleano preliminar:") + "\n" + message;
+                    NotificationManager.error(
                             BooleanRiskDialog.this,
-                            I18n.t("No se pudo generar el riesgo booleano preliminar:") + "\n" + message,
                             I18n.t("Riesgo booleano"),
-                            JOptionPane.ERROR_MESSAGE
+                            fullErrorMsg
                     );
                 }
             }
@@ -591,11 +592,10 @@ public class BooleanRiskDialog extends JDialog {
     }
 
     private void showResultSummary(BooleanRiskService.RiskResult result, BooleanRiskService.RiskRequest request) {
-        JOptionPane.showMessageDialog(
+        NotificationManager.info(
                 this,
-                buildResultSummary(result, request),
                 I18n.t("Riesgo booleano"),
-                JOptionPane.INFORMATION_MESSAGE
+                buildResultSummary(result, request)
         );
     }
 

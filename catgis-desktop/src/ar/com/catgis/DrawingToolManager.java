@@ -71,17 +71,17 @@ class DrawingToolManager {
 
     public void enableContinueLineMode() {
         if (map.getSelectedFeatureCount() != 1 && map.selectedFeature != null) {
-            JOptionPane.showMessageDialog(map, "Para continuar una linea tenes que seleccionar exactamente una sola entidad lineal.");
+            NotificationManager.warn(map, null, "Para continuar una linea tenes que seleccionar exactamente una sola entidad lineal.");
             return;
         }
         if (map.selectedLayer == null || map.selectedFeature == null) {
-            JOptionPane.showMessageDialog(map, "Primero seleccioná una línea para continuar.");
+            NotificationManager.warn(map, null, "Primero seleccioná una línea para continuar.");
             return;
         }
 
         Coordinate[] baseCoordinates = extractContinuableLineCoordinates(map.extractFeatureGeometryCopy(map.selectedFeature));
         if (baseCoordinates == null || baseCoordinates.length < 2) {
-            JOptionPane.showMessageDialog(map, "La entidad seleccionada no es una línea continua compatible.");
+            NotificationManager.warn(map, null, "La entidad seleccionada no es una línea continua compatible.");
             return;
         }
 
@@ -175,7 +175,7 @@ class DrawingToolManager {
             if ("CONTINUE_LINE".equalsIgnoreCase(drawingMode)) {
                 Geometry continuationGeometry = buildContinuationLineGeometry();
                 if (continuationGeometry == null) {
-                    JOptionPane.showMessageDialog(map, "Para continuar la línea necesitás agregar al menos un vértice nuevo.");
+                    NotificationManager.warn(map, null, "Para continuar la línea necesitás agregar al menos un vértice nuevo.");
                     return;
                 }
                 map.updateSelectedFeatureGeometry(continuationGeometry, "Línea continuada.");
@@ -200,14 +200,11 @@ class DrawingToolManager {
                 return;
             }
             if (targetLayer == null) {
-                int choice = JOptionPane.showConfirmDialog(
+                boolean yes = NotificationManager.confirm(
                         map,
-                        "No hay una capa vectorial editable compatible para este dibujo.\n\nÂ¿Querés crearla ahora?",
                         "Crear capa destino",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE
-                );
-                if (choice != JOptionPane.YES_OPTION) {
+                        "No hay una capa vectorial editable compatible para este dibujo.\n\n¿Querés crearla ahora?");
+                if (!yes) {
                     map.showCopiedMessage("Seleccioná o creá una capa compatible para guardar el dibujo.");
                     return;
                 }
@@ -260,13 +257,10 @@ class DrawingToolManager {
         }
 
         if (hasPendingCurrentGeometry) {
-            int closeCurrent = JOptionPane.showConfirmDialog(
+            int closeCurrent = NotificationManager.confirmCancel(
                     map,
-                    "La entidad actual todavia no fue cerrada.\n\nQueres guardarla antes de cerrar el dibujo?",
                     "Cerrar dibujo",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
+                    "La entidad actual todavia no fue cerrada.\n\nQueres guardarla antes de cerrar el dibujo?");
             if (closeCurrent == JOptionPane.CANCEL_OPTION || closeCurrent == JOptionPane.CLOSED_OPTION) {
                 return;
             }
@@ -282,13 +276,10 @@ class DrawingToolManager {
 
         Layer layerToSave = drawingSessionLayer != null ? drawingSessionLayer : resolveDrawingTargetLayer();
         if (!pendingDrawingSessionGeometries.isEmpty() && layerToSave == null) {
-            int choice = JOptionPane.showConfirmDialog(
+            int choice = NotificationManager.confirmCancel(
                     map,
-                    "No hay una capa vectorial compatible todavia.\n\nQueres crearla ahora para guardar las entidades dibujadas?",
                     "Crear capa destino",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
+                    "No hay una capa vectorial compatible todavia.\n\nQueres crearla ahora para guardar las entidades dibujadas?");
             if (choice != JOptionPane.YES_OPTION) {
                 return;
             }
@@ -313,13 +304,10 @@ class DrawingToolManager {
         }
 
         if (drawingSessionDirty && layerToSave != null) {
-            int saveChoice = JOptionPane.showConfirmDialog(
+            int saveChoice = NotificationManager.confirmCancel(
                     map,
-                    "Queres guardar ahora la capa vectorial?\n\n" + layerToSave.getName(),
                     "Guardar capa vectorial",
-                    JOptionPane.YES_NO_CANCEL_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
+                    "Queres guardar ahora la capa vectorial?\n\n" + layerToSave.getName());
             if (saveChoice == JOptionPane.CANCEL_OPTION || saveChoice == JOptionPane.CLOSED_OPTION) {
                 return;
             }
@@ -407,7 +395,7 @@ class DrawingToolManager {
 
         ShapefileData targetData = map.getShapefileData(layer);
         if (targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(map, "La capa destino no tiene esquema vectorial disponible.");
+            NotificationManager.warn(map, null, "La capa destino no tiene esquema vectorial disponible.");
             return false;
         }
 
@@ -426,7 +414,7 @@ class DrawingToolManager {
 
         ShapefileData targetData = map.getShapefileData(layer);
         if (targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(map, "La capa destino no tiene esquema vectorial disponible.");
+            NotificationManager.warn(map, null, "La capa destino no tiene esquema vectorial disponible.");
             return false;
         }
 
@@ -444,7 +432,7 @@ class DrawingToolManager {
         }
 
         if (createdIds.isEmpty()) {
-            JOptionPane.showMessageDialog(map, "No se pudo crear la entidad en la capa seleccionada.");
+            NotificationManager.warn(map, null, "No se pudo crear la entidad en la capa seleccionada.");
             return false;
         }
 
@@ -474,7 +462,7 @@ class DrawingToolManager {
 
         if ("POINT".equalsIgnoreCase(drawingMode) || "MULTIPOINT".equalsIgnoreCase(drawingMode)) {
             if (drawingCoordinates.isEmpty()) {
-                JOptionPane.showMessageDialog(map, "Para crear puntos necesitás hacer clic en el mapa.");
+                NotificationManager.warn(map, null, "Para crear puntos necesitás hacer clic en el mapa.");
                 return geometries;
             }
 
@@ -496,7 +484,7 @@ class DrawingToolManager {
         if ("LINE".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = DrawFeatureBuilder.buildLine(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(map, "Para una línea necesitás al menos 2 vértices.");
+                NotificationManager.warn(map, null, "Para una línea necesitás al menos 2 vértices.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -506,7 +494,7 @@ class DrawingToolManager {
         if ("RECTANGLE".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = buildRectangleGeometry(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(map, "Para un rectángulo necesitás marcar dos esquinas opuestas.");
+                NotificationManager.warn(map, null, "Para un rectángulo necesitás marcar dos esquinas opuestas.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -516,7 +504,7 @@ class DrawingToolManager {
         if ("POLYGON".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = DrawFeatureBuilder.buildPolygon(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(map, "Para un polígono necesitás al menos 3 vértices.");
+                NotificationManager.warn(map, null, "Para un polígono necesitás al menos 3 vértices.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -525,7 +513,7 @@ class DrawingToolManager {
         if ("CIRCLE".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = buildCircleGeometry(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(map, "Para un circulo necesitas marcar centro y radio.");
+                NotificationManager.warn(map, null, "Para un circulo necesitas marcar centro y radio.");
                 return geometries;
             }
             geometries.add(geometry);
@@ -535,7 +523,7 @@ class DrawingToolManager {
         if ("CIRCLE_3P".equalsIgnoreCase(drawingMode)) {
             Geometry geometry = buildCircleThreePointGeometry(drawingCoordinates);
             if (geometry == null) {
-                JOptionPane.showMessageDialog(map, "No se pudo construir el circulo con esos tres puntos.");
+                NotificationManager.warn(map, null, "No se pudo construir el circulo con esos tres puntos.");
                 return geometries;
             }
             geometries.add(geometry);

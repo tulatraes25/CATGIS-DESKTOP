@@ -8,7 +8,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JTextField;
@@ -254,12 +254,10 @@ public class CadCrsAssignmentDialog extends JDialog {
             code = projectCrs != null ? projectCrs : "";
         } else if (customRadio.isSelected()) {
             if (selectedCrs == null || selectedCrs.isBlank()) {
-                JOptionPane.showMessageDialog(
+                NotificationManager.warn(
                         this,
-                        "Elegí un CRS desde el selector o cambiá la opcion a 'Sin CRS'.",
                         "CRS para CAD",
-                        JOptionPane.WARNING_MESSAGE
-                );
+                        "Elegí un CRS desde el selector o cambiá la opcion a 'Sin CRS'.");
                 return;
             }
             code = selectedCrs;

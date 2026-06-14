@@ -137,8 +137,8 @@ public final class PostgisWriteService {
             }
             CatgisDesktopApp.markProjectDirty();
             if (result != null && showSuccessMessage) {
-                JOptionPane.showMessageDialog(
-                        parent,
+                NotificationManager.info(
+                        parent, null,
                         "Cambios guardados correctamente en PostGIS:\n"
                                 + result.layer().getSchemaName() + "." + result.layer().getTableName()
                 );
@@ -148,7 +148,7 @@ public final class PostgisWriteService {
             }
             return result != null;
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parent, PostgisErrorSupport.toUserMessage(ex, info), "PostGIS", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(parent, "PostGIS", PostgisErrorSupport.toUserMessage(ex, info));
             return false;
         }
     }

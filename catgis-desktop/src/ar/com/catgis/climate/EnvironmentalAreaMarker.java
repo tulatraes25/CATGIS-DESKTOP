@@ -148,11 +148,10 @@ public final class EnvironmentalAreaMarker {
         List<MarkedArea> alreadyMarked = getMarkedAreaLayers();
 
         if (polygonLayers.isEmpty() && alreadyMarked.isEmpty()) {
-            JOptionPane.showMessageDialog(owner,
-                    "No hay capas poligonales en el proyecto para marcar como área de influencia.\n\n"
-                            + "Cargá o creá una capa de polígonos primero.",
+            NotificationManager.info(owner,
                     "Marcar área de influencia",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "No hay capas poligonales en el proyecto para marcar como área de influencia.\n\n"
+                            + "Cargá o creá una capa de polígonos primero.");
             return;
         }
 

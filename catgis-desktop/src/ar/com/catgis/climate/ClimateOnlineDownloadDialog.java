@@ -12,6 +12,7 @@ import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.DialogKeyboardSupport;
 import ar.com.catgis.FileChooserSupport;
 import ar.com.catgis.I18n;
+import ar.com.catgis.NotificationManager;
 import ar.com.catgis.RasterImageLoader;
 import ar.com.catgis.RasterLayer;
 import ar.com.catgis.WindowLayoutSupport;
@@ -354,11 +355,11 @@ public class ClimateOnlineDownloadDialog extends JDialog {
         String outputText = outputField.getText().trim();
 
         if (provider == null || dataset == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una fuente y una variable climática."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir una fuente y una variable climática."));
             return;
         }
         if (outputText.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un archivo de salida para los datos climáticos."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un archivo de salida para los datos climáticos."));
             return;
         }
         File outputFile = new File(outputText);
@@ -373,13 +374,13 @@ public class ClimateOnlineDownloadDialog extends JDialog {
             west = parseCoord(westField.getText());
             east = parseCoord(eastField.getText());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("Revisa el área climática. Los cuatro valores deben ser numéricos y válidos."));
+            NotificationManager.warn(this, null, I18n.t("Revisa el área climática. Los cuatro valores deben ser numéricos y válidos."));
             return;
         }
 
         Envelope bbox = new Envelope(west, east, south, north);
         if (bbox.isNull() || north <= south || east <= west) {
-            JOptionPane.showMessageDialog(this, I18n.t("El área de clima no es válida. Verifica sur/norte/oeste/este."));
+            NotificationManager.warn(this, null, I18n.t("El área de clima no es válida. Verifica sur/norte/oeste/este."));
             return;
         }
 
@@ -391,17 +392,17 @@ public class ClimateOnlineDownloadDialog extends JDialog {
                 startDate[0] = LocalDate.parse(startDateField.getText().trim(), DateTimeFormatter.ISO_LOCAL_DATE);
                 endDate[0] = LocalDate.parse(endDateField.getText().trim(), DateTimeFormatter.ISO_LOCAL_DATE);
                 if (startDate[0].isAfter(endDate[0])) {
-                    JOptionPane.showMessageDialog(this, I18n.t("La fecha de inicio debe ser anterior a la fecha de fin."));
+                    NotificationManager.warn(this, null, I18n.t("La fecha de inicio debe ser anterior a la fecha de fin."));
                     return;
                 }
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, I18n.t("Las fechas deben estar en formato YYYY-MM-DD (ej: 2024-01-01)."));
+                NotificationManager.warn(this, null, I18n.t("Las fechas deben estar en formato YYYY-MM-DD (ej: 2024-01-01)."));
                 return;
             }
         }
 
         if (provider.requiresApiKey() && apiKey.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Esta fuente requiere una API key."));
+            NotificationManager.warn(this, null, I18n.t("Esta fuente requiere una API key."));
             return;
         }
         if (provider.requiresApiKey()) {

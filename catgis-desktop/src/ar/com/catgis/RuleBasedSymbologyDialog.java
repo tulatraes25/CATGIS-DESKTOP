@@ -112,7 +112,7 @@ public class RuleBasedSymbologyDialog extends JDialog {
     private void addChildRule() {
         RuleBasedStyleRule parent = ruleList.getSelectedValue();
         if (parent == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una regla padre primero.");
+            NotificationManager.warn(this, null, "Seleccione una regla padre primero.");
             return;
         }
         RuleBasedStyleRule child = new RuleBasedStyleRule("Sub-regla");

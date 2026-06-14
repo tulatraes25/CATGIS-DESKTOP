@@ -229,13 +229,13 @@ public class NewVectorLayerDialog extends JDialog {
     private void accept() {
         String layerName = nameField.getText() != null ? nameField.getText().trim() : "";
         if (layerName.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Defini un nombre de capa.");
+            NotificationManager.warn(this, null, "Defini un nombre de capa.");
             return;
         }
 
         String rawPath = pathField.getText() != null ? pathField.getText().trim() : "";
         if (rawPath.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Elegi donde guardar el shapefile.");
+            NotificationManager.warn(this, null, "Elegi donde guardar el shapefile.");
             return;
         }
 
@@ -258,19 +258,19 @@ public class NewVectorLayerDialog extends JDialog {
                 continue;
             }
             if (!fieldName.matches("[A-Za-z][A-Za-z0-9_]{0,9}")) {
-                JOptionPane.showMessageDialog(
-                        this,
+                NotificationManager.warn(
+                        this, null,
                         "Campo invalido: \"" + fieldName + "\".\nUsa hasta 10 caracteres, empezando con letra."
                 );
                 return;
             }
             String lower = fieldName.toLowerCase(Locale.ROOT);
             if ("the_geom".equals(lower) || "geom".equals(lower)) {
-                JOptionPane.showMessageDialog(this, "No uses nombres reservados de geometria.");
+                NotificationManager.warn(this, null, "No uses nombres reservados de geometria.");
                 return;
             }
             if (!usedNames.add(lower)) {
-                JOptionPane.showMessageDialog(this, "Hay campos repetidos: " + fieldName);
+                NotificationManager.warn(this, null, "Hay campos repetidos: " + fieldName);
                 return;
             }
 
@@ -280,7 +280,7 @@ public class NewVectorLayerDialog extends JDialog {
                 config.setPrecision(parseNonNegativeInt(precisionValue, defaultPrecisionForType(typeName), "precision", fieldName));
                 fields.add(config);
             } catch (IllegalArgumentException ex) {
-                JOptionPane.showMessageDialog(this, ex.getMessage());
+                NotificationManager.warn(this, null, ex.getMessage());
                 return;
             }
         }

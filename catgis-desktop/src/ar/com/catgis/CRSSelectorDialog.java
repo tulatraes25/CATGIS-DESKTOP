@@ -7,7 +7,7 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -881,7 +881,7 @@ public class CRSSelectorDialog extends JDialog {
     private void applySelected() {
         CRSDefinitions.CrsCatalogEntry entry = crsList.getSelectedValue();
         if (entry == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Selecciona un CRS de la lista."));
+            NotificationManager.warn(this, null, I18n.t("Selecciona un CRS de la lista."));
             return;
         }
         applyValue(entry.code());
@@ -894,7 +894,7 @@ public class CRSSelectorDialog extends JDialog {
                 : CRSDefinitions.normalizeCode(manualCodeField.getText());
 
         if (value.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Ingresa un codigo CRS o una definicion WKT."));
+            NotificationManager.warn(this, null, I18n.t("Ingresa un codigo CRS o una definicion WKT."));
             return;
         }
         applyValue(value);
@@ -910,12 +910,10 @@ public class CRSSelectorDialog extends JDialog {
             }
             dispose();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.error(
                     this,
-                    I18n.t("No se pudo validar el CRS indicado:") + "\n" + ex.getMessage(),
                     I18n.t("Selector de CRS"),
-                    JOptionPane.ERROR_MESSAGE
-            );
+                    I18n.t("No se pudo validar el CRS indicado:") + "\n" + ex.getMessage());
         }
     }
 

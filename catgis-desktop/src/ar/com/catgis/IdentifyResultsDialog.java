@@ -234,12 +234,10 @@ public class IdentifyResultsDialog extends JDialog {
             owner = (JFrame) window;
         }
 
-        javax.swing.JOptionPane.showMessageDialog(
+        NotificationManager.info(
                 owner != null ? owner : this,
-                item.buildDetailText(),
                 "Identificar entidad",
-                javax.swing.JOptionPane.INFORMATION_MESSAGE
-        );
+                item.buildDetailText());
     }
 }
 

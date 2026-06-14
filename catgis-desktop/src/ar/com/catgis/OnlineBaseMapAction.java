@@ -4,7 +4,7 @@ import ar.com.catgis.data.online.OnlineWmsLayer;
 import ar.com.catgis.data.online.OnlineRasterSource;
 import ar.com.catgis.core.model.Layer;
 
-import javax.swing.JOptionPane;
+
 
 public final class OnlineBaseMapAction {
 
@@ -18,12 +18,9 @@ public final class OnlineBaseMapAction {
     public static boolean addBaseMap(String sourceId) {
         OnlineRasterSource source = OnlineMapCatalog.getById(sourceId);
         if (source == null) {
-            JOptionPane.showMessageDialog(
-                    CatgisDesktopApp.getMainFrameSafe(),
-                    "No se encontro el proveedor de mapa base solicitado.",
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(),
                     "Mapas base online",
-                    JOptionPane.WARNING_MESSAGE
-            );
+                    "No se encontro el proveedor de mapa base solicitado.");
             return false;
         }
         return addBaseMap(source);

@@ -164,7 +164,7 @@ public class SmileClassificationDialog extends JDialog {
     private void runClassification() {
         int algoIdx = algorithmCombo.getSelectedIndex();
         if (algoIdx < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un algoritmo.");
+            NotificationManager.warn(this, null, "Selecciona un algoritmo.");
             return;
         }
 
@@ -173,12 +173,12 @@ public class SmileClassificationDialog extends JDialog {
         String labelField = (String) labelFieldCombo.getSelectedItem();
 
         if (layerName == null || featureField == null || labelField == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona capa y campos.");
+            NotificationManager.warn(this, null, "Selecciona capa y campos.");
             return;
         }
 
         if (featureField.equals(labelField)) {
-            JOptionPane.showMessageDialog(this, "El campo de features y el campo de clase deben ser diferentes.");
+            NotificationManager.warn(this, null, "El campo de features y el campo de clase deben ser diferentes.");
             return;
         }
 
@@ -205,7 +205,7 @@ public class SmileClassificationDialog extends JDialog {
             }
         }
         if (labelMap.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No se encontraron valores validos en el campo de clase.");
+            NotificationManager.warn(this, null, "No se encontraron valores validos en el campo de clase.");
             return;
         }
 
@@ -238,9 +238,9 @@ public class SmileClassificationDialog extends JDialog {
         }
 
         if (validCount < 10) {
-            JOptionPane.showMessageDialog(this,
-                    "Solo se pudieron extraer " + validCount + " muestras validas. Se necesitan al menos 10.",
-                    "Datos insuficientes", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this,
+                    "Datos insuficientes",
+                    "Solo se pudieron extraer " + validCount + " muestras validas. Se necesitan al menos 10.");
             return;
         }
 

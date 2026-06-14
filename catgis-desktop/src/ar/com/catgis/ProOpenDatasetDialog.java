@@ -176,11 +176,10 @@ class ProOpenDatasetDialog extends JDialog {
             }
         }
         if (selectedTarget == null) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
-                    "Primero selecciona una fuente Pro.",
                     "Abrir dataset Pro",
-                    JOptionPane.WARNING_MESSAGE
+                    "Primero selecciona una fuente Pro."
             );
             return;
         }
@@ -214,11 +213,10 @@ class ProOpenDatasetDialog extends JDialog {
     private void openSelectedEntries() {
         int[] selectedRows = entryTable.getSelectedRows();
         if (selectedRows == null || selectedRows.length == 0) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
-                    "Selecciona al menos una variable Pro para abrir.",
                     "Abrir dataset Pro",
-                    JOptionPane.WARNING_MESSAGE
+                    "Selecciona al menos una variable Pro para abrir."
             );
             return;
         }
@@ -246,17 +244,16 @@ class ProOpenDatasetDialog extends JDialog {
 
         if (openableEntries.isEmpty()) {
             boolean gdalBlocked = selectedEntries.stream().anyMatch(ProDatasetOpenService.Entry::blockedByGdal);
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
+                    "Abrir dataset Pro",
                     skipped.isEmpty()
                             ? "La seleccion actual no contiene variables Pro abribles en este MVP."
                             : "No se pudieron abrir estas variables en el MVP actual:\n- " + String.join("\n- ", skipped)
                             + "\n\nQuedaron catalogadas, pero requieren materializacion desde backend Pro."
                             + (gdalBlocked
                             ? "\n\nDetalle: en esta instalacion no se detecto gdal_translate."
-                            : ""),
-                    "Abrir dataset Pro",
-                    JOptionPane.WARNING_MESSAGE
+                            : "")
             );
             return;
         }
@@ -312,14 +309,13 @@ class ProOpenDatasetDialog extends JDialog {
                     }
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             ProOpenDatasetDialog.this,
+                            "Abrir dataset Pro",
                             "No se pudo completar la apertura Pro.\n\n"
                                     + (cause.getMessage() != null && !cause.getMessage().isBlank()
                                     ? cause.getMessage()
-                                    : cause.getClass().getSimpleName()),
-                            "Abrir dataset Pro",
-                            JOptionPane.ERROR_MESSAGE
+                                    : cause.getClass().getSimpleName())
                     );
                 }
             }
@@ -381,12 +377,11 @@ class ProOpenDatasetDialog extends JDialog {
                 msg.append("\n- ").append(failure.label()).append(": ").append(failure.reason());
             }
         }
-        JOptionPane.showMessageDialog(
-                this,
-                msg.toString(),
-                "Abrir dataset Pro",
-                opened > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
-        );
+        if (opened > 0) {
+            NotificationManager.info(this, "Abrir dataset Pro", msg.toString());
+        } else {
+            NotificationManager.warn(this, "Abrir dataset Pro", msg.toString());
+        }
     }
 
     private void setBusy(boolean busy) {

@@ -50,7 +50,7 @@ public class PinManager {
 
     public void convertPinsToLayer() {
         if (pins.isEmpty()) {
-            JOptionPane.showMessageDialog(panel, "No hay pines para convertir.");
+            NotificationManager.warn(panel, null, "No hay pines para convertir.");
             return;
         }
 
@@ -96,7 +96,7 @@ public class PinManager {
                 AppContext.mapPanel().repaint();
             }
 
-            JOptionPane.showMessageDialog(panel, "Pines convertidos y guardados correctamente:\n" + exportedFile.getAbsolutePath());
+            NotificationManager.info(panel, null, "Pines convertidos y guardados correctamente:\n" + exportedFile.getAbsolutePath());
         } catch (Exception ex) {
             AppErrorSupport.logFailure("Error al convertir pines en capa", ex);
             AppErrorSupport.showErrorDialog(panel, "Pines", "Error al convertir pines en capa.", ex);
@@ -122,7 +122,7 @@ public class PinManager {
 
     public void showPinDialog(PinMarker pin) {
         if (pin == null) {
-            JOptionPane.showMessageDialog(panel, "No hay pin seleccionado.");
+            NotificationManager.warn(panel, null, "No hay pin seleccionado.");
             return;
         }
 
@@ -146,12 +146,12 @@ public class PinManager {
             sb.append("Lat DMS: ").append(panel.toDms(geographic[1], true)).append("\n");
         }
 
-        JOptionPane.showMessageDialog(panel, sb.toString(), "Pin P" + pin.getId(), JOptionPane.INFORMATION_MESSAGE);
+        NotificationManager.info(panel, "Pin P" + pin.getId(), sb.toString());
     }
 
     public void copyPinLatLon(PinMarker pin, boolean dms) {
         if (pin == null) {
-            JOptionPane.showMessageDialog(panel, "No hay pin seleccionado.");
+            NotificationManager.warn(panel, null, "No hay pin seleccionado.");
             return;
         }
 
@@ -159,7 +159,7 @@ public class PinManager {
         double[] geographic = panel.transformPoint(pin.getX(), pin.getY(), projectCRS, "EPSG:4326");
 
         if (geographic == null) {
-            JOptionPane.showMessageDialog(panel, "No se pudo transformar el pin a EPSG:4326.");
+            NotificationManager.warn(panel, null, "No se pudo transformar el pin a EPSG:4326.");
             return;
         }
 

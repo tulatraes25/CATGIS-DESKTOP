@@ -213,14 +213,11 @@ public class EditingToolsWindow extends JDialog {
         String layerName = layer != null ? layer.getName() : "desconocida";
 
         if (hasUnsavedChanges()) {
-            int result = JOptionPane.showConfirmDialog(
+            boolean discard = NotificationManager.confirm(
                     this,
-                    "Hay cambios sin guardar en " + layerName + ".\nDesea descartarlos?",
                     "Cancelar edicion",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
-            );
-            if (result != JOptionPane.YES_OPTION) {
+                    "Hay cambios sin guardar en " + layerName + ".\nDesea descartarlos?");
+            if (!discard) {
                 return;
             }
         }

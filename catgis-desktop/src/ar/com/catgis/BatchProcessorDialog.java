@@ -139,13 +139,13 @@ public class BatchProcessorDialog extends JDialog {
     private void scanDirectory() {
         String inputPath = inputDirField.getText().trim();
         if (inputPath.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un directorio de entrada.");
+            NotificationManager.warn(this, null, "Selecciona un directorio de entrada.");
             return;
         }
 
         File inputDir = new File(inputPath);
         if (!inputDir.isDirectory()) {
-            JOptionPane.showMessageDialog(this, "El directorio no existe.");
+            NotificationManager.warn(this, null, "El directorio no existe.");
             return;
         }
 
@@ -159,13 +159,13 @@ public class BatchProcessorDialog extends JDialog {
 
     private void executeBatch() {
         if (currentFiles == null || currentFiles.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay archivos para procesar. Escanea primero.");
+            NotificationManager.warn(this, null, "No hay archivos para procesar. Escanea primero.");
             return;
         }
 
         String outputPath = outputDirField.getText().trim();
         if (outputPath.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un directorio de salida.");
+            NotificationManager.warn(this, null, "Selecciona un directorio de salida.");
             return;
         }
 
@@ -218,13 +218,12 @@ public class BatchProcessorDialog extends JDialog {
                         for (String err : result.errors()) {
                             sb.append("  - ").append(err).append("\n");
                         }
-                        JOptionPane.showMessageDialog(BatchProcessorDialog.this, sb.toString(),
-                                "Errores", JOptionPane.WARNING_MESSAGE);
+                        NotificationManager.warn(BatchProcessorDialog.this, "Errores", sb.toString());
                     } else {
-                        JOptionPane.showMessageDialog(BatchProcessorDialog.this,
+                        NotificationManager.info(BatchProcessorDialog.this,
+                                "Exito",
                                 "Procesamiento completado exitosamente.\n"
-                                        + result.success() + " archivos procesados en " + outputPath,
-                                "Exito", JOptionPane.INFORMATION_MESSAGE);
+                                        + result.success() + " archivos procesados en " + outputPath);
                     }
                 } catch (Exception e) {
                     statusLabel.setText("Error: " + e.getMessage());

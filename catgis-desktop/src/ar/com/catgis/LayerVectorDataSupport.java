@@ -201,11 +201,10 @@ final class LayerVectorDataSupport {
         String layerPath = layer != null ? layer.getPath() : "";
         AppErrorSupport.logFailure("No se pudo cargar la capa vectorial: " + layerName + " | " + layerPath, ex);
         if (layer instanceof PostgisLayer postgisLayer) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.error(
                     owner,
-                    PostgisErrorSupport.toUserMessage(ex, postgisLayer.toConnectionInfo()),
                     "PostGIS",
-                    JOptionPane.ERROR_MESSAGE
+                    PostgisErrorSupport.toUserMessage(ex, postgisLayer.toConnectionInfo())
             );
             return;
         }

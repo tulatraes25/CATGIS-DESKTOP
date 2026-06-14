@@ -250,7 +250,7 @@ public class CategorizedSymbologyDialog extends JDialog {
     private void loadCategoriesFromField() {
         Object selected = fieldCombo.getSelectedItem();
         if (selected == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un campo.");
+            NotificationManager.warn(this, null, "Selecciona un campo.");
             return;
         }
         workingCopy.clearRules();
@@ -639,11 +639,11 @@ public class CategorizedSymbologyDialog extends JDialog {
         if (!"POINT".equalsIgnoreCase(geometryFamily)
                 && !"LINE".equalsIgnoreCase(geometryFamily)
                 && !"POLYGON".equalsIgnoreCase(geometryFamily)) {
-            JOptionPane.showMessageDialog(parent, "La simbologia por campo en esta etapa esta disponible para puntos, lineas y poligonos.");
+            NotificationManager.warn(parent, null, "La simbologia por campo en esta etapa esta disponible para puntos, lineas y poligonos.");
             return;
         }
         if (data == null) {
-            JOptionPane.showMessageDialog(parent, "La capa seleccionada no tiene datos vectoriales cargados.");
+            NotificationManager.warn(parent, null, "La capa seleccionada no tiene datos vectoriales cargados.");
             return;
         }
         Window window = parent != null ? javax.swing.SwingUtilities.getWindowAncestor(parent) : null;

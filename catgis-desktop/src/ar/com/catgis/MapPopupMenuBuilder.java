@@ -11,7 +11,7 @@ import org.locationtech.jts.geom.Polygon;
 
 import javax.swing.JComponent;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPopupMenu;
 import java.awt.event.MouseEvent;
 import java.util.List;
@@ -194,7 +194,7 @@ class MapPopupMenuBuilder {
         JMenuItem copyLatLonItem = new JMenuItem("Copiar Lat/Long");
         copyLatLonItem.addActionListener(ev -> {
             if (geographic == null) {
-                JOptionPane.showMessageDialog(parent, "No se pudo transformar a EPSG:4326.");
+                NotificationManager.warn(parent, null, "No se pudo transformar a EPSG:4326.");
                 return;
             }
             String text = MapUtilities.formatNumber(geographic[0]) + ", " + MapUtilities.formatNumber(geographic[1]);
@@ -206,7 +206,7 @@ class MapPopupMenuBuilder {
         JMenuItem copyDmsItem = new JMenuItem("Copiar Lat/Long DMS");
         copyDmsItem.addActionListener(ev -> {
             if (geographic == null) {
-                JOptionPane.showMessageDialog(parent, "No se pudo transformar a EPSG:4326.");
+                NotificationManager.warn(parent, null, "No se pudo transformar a EPSG:4326.");
                 return;
             }
             String text = MapUtilities.toDms(geographic[0], false) + " , " + MapUtilities.toDms(geographic[1], true);

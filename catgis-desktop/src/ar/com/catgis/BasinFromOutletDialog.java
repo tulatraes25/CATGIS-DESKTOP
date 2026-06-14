@@ -3,6 +3,7 @@ import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.data.vector.VectorLayerUtils;
 import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.NotificationManager;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.locationtech.jts.geom.Coordinate;
@@ -247,7 +248,7 @@ public class BasinFromOutletDialog extends JDialog {
     private void loadSelectedPoint(boolean showWarning) {
         if (AppContext.mapPanel() == null) {
             if (showWarning) {
-                JOptionPane.showMessageDialog(this, I18n.t("No hay mapa activo para leer la seleccion actual."));
+                NotificationManager.warn(this, null, I18n.t("No hay mapa activo para leer la seleccion actual."));
             }
             return;
         }
@@ -256,7 +257,7 @@ public class BasinFromOutletDialog extends JDialog {
         Coordinate coordinate = extractRepresentativePoint(feature);
         if (coordinate == null) {
             if (showWarning) {
-                JOptionPane.showMessageDialog(this, I18n.t("Selecciona primero una entidad puntual para usarla como outlet."));
+                NotificationManager.warn(this, null, I18n.t("Selecciona primero una entidad puntual para usarla como outlet."));
             }
             return;
         }
@@ -267,7 +268,7 @@ public class BasinFromOutletDialog extends JDialog {
 
     private void capturePointOnMap() {
         if (AppContext.mapPanel() == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("No hay mapa activo para capturar un point."));
+            NotificationManager.warn(this, null, I18n.t("No hay mapa activo para capturar un point."));
             return;
         }
         setVisible(false);
@@ -309,7 +310,7 @@ public class BasinFromOutletDialog extends JDialog {
     private void startGeneration() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Selecciona un DEM raster valido."));
+            NotificationManager.warn(this, null, I18n.t("Selecciona un DEM raster valido."));
             return;
         }
         final OutletSourceMode sourceMode = (OutletSourceMode) sourceModeCombo.getSelectedItem();
@@ -322,7 +323,7 @@ public class BasinFromOutletDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
+            NotificationManager.warn(this, null, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
             return;
         }
         try {
@@ -331,7 +332,7 @@ public class BasinFromOutletDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El radio de ajuste debe ser un entero mayor o igual a 0."));
+            NotificationManager.warn(this, null, I18n.t("El radio de ajuste debe ser un entero mayor o igual a 0."));
             return;
         }
 
@@ -346,7 +347,7 @@ public class BasinFromOutletDialog extends JDialog {
         if (sourceMode == OutletSourceMode.POINT_LAYER) {
             Layer outletLayer = (Layer) pointLayerCombo.getSelectedItem();
             if (outletLayer == null) {
-                JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una capa puntual con uno o mas outlets."));
+                NotificationManager.warn(this, null, I18n.t("Debes elegir una capa puntual con uno o mas outlets."));
                 return;
             }
             ShapefileData outletData = AppContext.mapPanel() != null
@@ -357,7 +358,7 @@ public class BasinFromOutletDialog extends JDialog {
             }
             outletData = TopographyWorkflowSupport.projectVectorDataToCurrentProject(outletLayer, outletData);
             if (outletData == null || outletData.getFeatures() == null || outletData.getFeatures().isEmpty()) {
-                JOptionPane.showMessageDialog(this, I18n.t("La capa de outlets no tiene puntos utiles para delimitar cuencas."));
+                NotificationManager.warn(this, null, I18n.t("La capa de outlets no tiene puntos utiles para delimitar cuencas."));
                 return;
             }
             singleRequest = null;
@@ -374,7 +375,7 @@ public class BasinFromOutletDialog extends JDialog {
             );
         } else {
             if (capturedCoordinate == null) {
-                JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un outlet/pour point desde seleccion o captura."));
+                NotificationManager.warn(this, null, I18n.t("Debes indicar un outlet/pour point desde seleccion o captura."));
                 return;
             }
             singleRequest = new TerrainHydrologyAnalysisService.PourPointRequest(
@@ -434,11 +435,10 @@ public class BasinFromOutletDialog extends JDialog {
                     dispose();
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             BasinFromOutletDialog.this,
-                            I18n.t("No se pudo delimitar la cuenca desde el outlet:") + "\n" + cause.getMessage(),
                             I18n.t("Cuenca desde outlet"),
-                            JOptionPane.ERROR_MESSAGE
+                            I18n.t("No se pudo delimitar la cuenca desde el outlet:") + "\n" + cause.getMessage()
                     );
                 }
             }

@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.NotificationManager;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.online.OnlineWmsLayer;
 import ar.com.catgis.core.model.Layer;
@@ -14,7 +15,6 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -172,7 +172,7 @@ public class AddWmsDialog extends JDialog {
     private void fetchCapabilities() {
         String url = urlField.getText() != null ? urlField.getText().trim() : "";
         if (url.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Primero ingresá una URL WMS.", "Agregar WMS", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Agregar WMS", "Primero ingresá una URL WMS.");
             return;
         }
 
@@ -208,11 +208,10 @@ public class AddWmsDialog extends JDialog {
                     crsCombo.setModel(new DefaultComboBoxModel<>());
                     styleCombo.setModel(new DefaultComboBoxModel<>());
                     statusLabel.setText("No se pudo leer el WMS.");
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             AddWmsDialog.this,
-                            "No se pudo consultar el servicio WMS:\n" + ex.getMessage(),
                             "Agregar WMS",
-                            JOptionPane.ERROR_MESSAGE
+                            "No se pudo consultar el servicio WMS:\n" + ex.getMessage()
                     );
                 }
             }

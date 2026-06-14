@@ -80,7 +80,7 @@ public class CustomCrsDialog extends JDialog {
     private void validateCrs() {
         String input = crsField.getText().trim();
         if (input.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingresa un codigo CRS.");
+            NotificationManager.warn(this, null, "Ingresa un codigo CRS.");
             return;
         }
 
@@ -101,7 +101,7 @@ public class CustomCrsDialog extends JDialog {
     private void applyCrs() {
         String input = crsField.getText().trim();
         if (input.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingresa un codigo CRS.");
+            NotificationManager.warn(this, null, "Ingresa un codigo CRS.");
             return;
         }
 
@@ -112,14 +112,14 @@ public class CustomCrsDialog extends JDialog {
             }
             statusLabel.setText("CRS aplicado: " + normalized);
             statusLabel.setForeground(new Color(0, 128, 0));
-            JOptionPane.showMessageDialog(this,
+            NotificationManager.info(this,
+                    "CRS Aplicado",
                     "CRS aplicado al proyecto:\n" + normalized + "\n\n"
-                    + "Etiqueta: " + CRSDefinitions.getLabelForCode(normalized),
-                    "CRS Aplicado", JOptionPane.INFORMATION_MESSAGE);
+                    + "Etiqueta: " + CRSDefinitions.getLabelForCode(normalized));
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al aplicar CRS:\n" + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this,
+                    "Error",
+                    "Error al aplicar CRS:\n" + e.getMessage());
         }
     }
 }

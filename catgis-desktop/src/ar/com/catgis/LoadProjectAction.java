@@ -57,7 +57,7 @@ public class LoadProjectAction extends AbstractAction {
 
         if (file == null || !file.getName().toLowerCase().endsWith(".catgis")) {
             if (showDialogs) {
-                JOptionPane.showMessageDialog(owner, "Seleccione un archivo .catgis valido.");
+                NotificationManager.warn(owner, null, "Seleccione un archivo .catgis valido.");
             }
             return false;
         }
@@ -67,7 +67,7 @@ public class LoadProjectAction extends AbstractAction {
 
             if (firstLine == null || !firstLine.trim().equals("CATGIS_PROJECT")) {
                 if (showDialogs) {
-                    JOptionPane.showMessageDialog(owner, "Archivo de proyecto invalido.");
+                    NotificationManager.warn(owner, null, "Archivo de proyecto invalido.");
                 }
                 return false;
             }
@@ -213,7 +213,7 @@ public class LoadProjectAction extends AbstractAction {
             MainMenuBar.addRecentFile(file.getAbsolutePath());
 
             if (showDialogs) {
-                JOptionPane.showMessageDialog(owner, "Proyecto cargado correctamente.");
+                NotificationManager.info(owner, null, "Proyecto cargado correctamente.");
             }
             return true;
         } catch (Exception ex) {

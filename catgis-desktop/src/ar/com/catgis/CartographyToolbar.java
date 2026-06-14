@@ -2,7 +2,6 @@ package ar.com.catgis;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -57,9 +56,8 @@ public class CartographyToolbar extends JPanel {
             ProcessBuilder pb = buildStandaloneLaunchProcess();
             pb.start();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "No se pudo abrir CATMAP Standalone:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this,
+                    "Error", "No se pudo abrir CATMAP Standalone:\n" + ex.getMessage());
         }
     }
 

@@ -9,7 +9,7 @@ import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
@@ -461,7 +461,7 @@ public class HelpCenterDialog extends JDialog {
     }
 
     private void showHelpError(String message) {
-        JOptionPane.showMessageDialog(this, message, "Centro de ayuda CATGIS", JOptionPane.INFORMATION_MESSAGE);
+        NotificationManager.info(this, "Centro de ayuda CATGIS", message);
     }
 
     private String section(String title, String... blocks) {

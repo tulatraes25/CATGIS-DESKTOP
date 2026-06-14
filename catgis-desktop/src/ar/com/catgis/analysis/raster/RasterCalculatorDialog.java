@@ -15,7 +15,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -206,11 +206,11 @@ public class RasterCalculatorDialog extends JDialog {
         String expr = expressionField.getText().trim();
 
         if (aSel == null || "(ninguno)".equals(aSel)) {
-            JOptionPane.showMessageDialog(this, "Seleccione al menos Raster A.", "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this, "Error", "Seleccione al menos Raster A.");
             return;
         }
         if (expr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingrese una expresion.", "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this, "Error", "Ingrese una expresion.");
             return;
         }
 

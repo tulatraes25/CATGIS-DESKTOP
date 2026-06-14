@@ -459,9 +459,8 @@ public class WelcomePageDialog extends JDialog {
                 SwingUtilities.invokeLater(() -> {
                     File f = new File(rp.path);
                     if (!f.exists()) {
-                        JOptionPane.showMessageDialog(null,
-                                "El proyecto ya no existe: " + rp.path,
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        NotificationManager.error(null, "Error",
+                                "El proyecto ya no existe: " + rp.path);
                         return;
                     }
                     LoadProjectAction.loadProjectFile(f);

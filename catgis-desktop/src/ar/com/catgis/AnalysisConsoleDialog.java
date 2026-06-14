@@ -16,7 +16,7 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
@@ -394,10 +394,9 @@ public class AnalysisConsoleDialog extends JDialog {
         }
 
         if (selectedLayers.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Seleccione al menos una capa para ejecutar el analisis.",
+            NotificationManager.warn(this,
                     "Sin capas seleccionadas",
-                    JOptionPane.WARNING_MESSAGE);
+                    "Seleccione al menos una capa para ejecutar el analisis.");
             return;
         }
 

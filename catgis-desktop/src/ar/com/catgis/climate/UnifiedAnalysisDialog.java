@@ -346,9 +346,9 @@ public class UnifiedAnalysisDialog extends JDialog {
                     statusLabel.setText("Error: " + ex.getMessage());
                     runBtn.setEnabled(true);
                     runBtn.setText("▶ EJECUTAR ANALISIS");
-                    JOptionPane.showMessageDialog(this,
-                        "Error al ejecutar el analisis:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(this,
+                        "Error",
+                        "Error al ejecutar el analisis:\n" + ex.getMessage());
                 });
             }
         }).start();
@@ -400,9 +400,9 @@ public class UnifiedAnalysisDialog extends JDialog {
         }
 
         statusLabel.setText("Resultado agregado al mapa: " + name);
-        JOptionPane.showMessageDialog(this,
-            "Capa agregada al proyecto:\n" + name,
-            "Resultado agregado", JOptionPane.INFORMATION_MESSAGE);
+        NotificationManager.info(this,
+            "Resultado agregado",
+            "Capa agregada al proyecto:\n" + name);
     }
 
     private float[][] loadDemFromLayer(Layer layer) {

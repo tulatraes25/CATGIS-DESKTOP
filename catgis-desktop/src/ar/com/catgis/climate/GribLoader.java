@@ -37,9 +37,9 @@ public final class GribLoader {
      */
     public static RasterLayer loadGribFile(File file, Component parent) {
         if (file == null || !file.exists()) {
-            JOptionPane.showMessageDialog(parent,
-                    "Archivo no encontrado: " + (file != null ? file.getName() : "null"),
-                    "Cargar GRIB", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(parent,
+                    "Cargar GRIB",
+                    "Archivo no encontrado: " + (file != null ? file.getName() : "null"));
             return null;
         }
 
@@ -52,7 +52,7 @@ public final class GribLoader {
                 + "Como alternativa, convertí el GRIB a NetCDF usando CDO:\n"
                 + "  cdo -f nc4 copy archivo.grib2 archivo.nc4\n"
                 + "Luego cargá el .nc4 resultante con 'Datos climáticos (NetCDF)'.";
-            JOptionPane.showMessageDialog(parent, msg, "Error GRIB", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(parent, "Error GRIB", msg);
             return null;
         }
     }

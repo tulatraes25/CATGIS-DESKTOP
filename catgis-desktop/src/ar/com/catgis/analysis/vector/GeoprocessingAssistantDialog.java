@@ -8,6 +8,7 @@ import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.AppErrorSupport;
 import ar.com.catgis.GeometryTools;
+import ar.com.catgis.NotificationManager;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.feature.type.AttributeDescriptor;
@@ -36,7 +37,6 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -435,15 +435,15 @@ public class GeoprocessingAssistantDialog extends JDialog {
         String outputName = txtOutput.getText() != null ? txtOutput.getText().trim() : "";
 
         if (layerA == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa A para ejecutar la operacion.");
+            NotificationManager.warn(this, null, "Selecciona una capa A para ejecutar la operacion.");
             return;
         }
         if (needsSecondLayer(operation) && layerB == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa B para ejecutar la operacion.");
+            NotificationManager.warn(this, null, "Selecciona una capa B para ejecutar la operacion.");
             return;
         }
         if (outputName.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Indica un nombre de salida.");
+            NotificationManager.warn(this, null, "Indica un nombre de salida.");
             return;
         }
 
@@ -511,13 +511,13 @@ public class GeoprocessingAssistantDialog extends JDialog {
             }
 
             if (result == null || result.getFeatureCollection() == null) {
-                JOptionPane.showMessageDialog(this, "No se obtuvo un resultado valido.");
+                NotificationManager.warn(this, null, "No se obtuvo un resultado valido.");
                 return;
             }
 
             String outputCrs = VectorLayerUtils.pickLayerCrs(layerA.layer, layerA.data);
             VectorLayerUtils.addResultLayer(outputName, result, layerA.layer, outputCrs, "");
-            JOptionPane.showMessageDialog(this, "Proceso completado. Se agrego la capa de resultado al proyecto.");
+            NotificationManager.info(this, null, "Proceso completado. Se agrego la capa de resultado al proyecto.");
         } catch (Exception ex) {
             AppErrorSupport.logFailure("Error al ejecutar la operacion de geoprocesamiento " + operation, ex);
             AppErrorSupport.showErrorDialog(this, "Geoprocesamiento", "Error al ejecutar la operacion.", ex);
@@ -1818,7 +1818,7 @@ public class GeoprocessingAssistantDialog extends JDialog {
         sb.append("Capa: ").append(layerA.layer.getName()).append("\n");
         sb.append("Entidades: ").append(layerA.data.getFeatures().size()).append("\n");
         sb.append("Distancia minima: ").append(String.format(Locale.ROOT, "%.4f", minDist)).append(" (").append(crsCode).append(")\n");
-        JOptionPane.showMessageDialog(this, sb.toString(), "Vecino mas Cercano - " + outputName, JOptionPane.INFORMATION_MESSAGE);
+        NotificationManager.info(this, "Vecino mas Cercano - " + outputName, sb.toString());
     }
 
     private ShapefileData delaunayLayer(LayerOption layerA, String outputName) throws Exception {

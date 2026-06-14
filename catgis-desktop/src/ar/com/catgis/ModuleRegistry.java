@@ -225,7 +225,7 @@ public final class ModuleRegistry {
                     AppContext.mapPanel().prepareLayerForEditing(layer);
                     AppContext.mapPanel().copySelectedFeaturesToEditingLayer();
                 } else {
-                    JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), "No hay una capa editable activa.");
+                    NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, "No hay una capa editable activa.");
                 }
             }
         }, ModuleActionPlacement.EDIT_TOOLBAR, () -> AppContext.mapPanel() != null && AppContext.mapPanel().getSelectedFeatureCount() > 0));

@@ -174,13 +174,13 @@ public class QueryBuilderDialog extends JDialog {
 
     public static void open(Layer layer) {
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
 
         ShapefileData data = OpenAttributeTableAction.ensureLayerDataAvailable(layer);
         if (data == null || data.getFeatures() == null || data.getFeatures().isEmpty()) {
-            JOptionPane.showMessageDialog(null, "La capa seleccionada no tiene atributos consultables.");
+            NotificationManager.warn(null, null, "La capa seleccionada no tiene atributos consultables.");
             return;
         }
 
@@ -189,7 +189,7 @@ public class QueryBuilderDialog extends JDialog {
             QueryBuilderDialog dialog = new QueryBuilderDialog(owner, layer, data);
             dialog.setVisible(true);
         } catch (IllegalStateException ex) {
-            JOptionPane.showMessageDialog(null, ex.getMessage(), "Constructor de consultas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(null, "Constructor de consultas", ex.getMessage());
         }
     }
 
@@ -262,7 +262,7 @@ public class QueryBuilderDialog extends JDialog {
             return new ArrayList<>();
         }
         if (operator.requiresValue && expectedText.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribí un valor para ejecutar la consulta.");
+            NotificationManager.warn(this, null, "Escribí un valor para ejecutar la consulta.");
             SwingUtilities.invokeLater(valueField::requestFocusInWindow);
             return new ArrayList<>();
         }

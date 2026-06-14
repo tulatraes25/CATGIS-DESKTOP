@@ -2,7 +2,6 @@ package ar.com.catgis;
 
 import ar.com.catgis.core.model.Layer;
 import org.locationtech.jts.geom.Coordinate;
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import java.awt.Cursor;
 import java.awt.event.MouseEvent;
@@ -53,7 +52,7 @@ public class CadEngine {
             return;
         }
         if (panel.isDrawingActive() || panel.isMeasurementActive() || pointCaptureActive || panel.topographicProfileTool.isActive() || cadPlacementDragActive) {
-            JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de arrastrar la referencia CAD."));
+            NotificationManager.warn(panel, null, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de arrastrar la referencia CAD."));
             return;
         }
         cadPlacementDragLayer = layer;
@@ -182,7 +181,7 @@ public class CadEngine {
             return;
         }
         if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.topographicProfileTool.isActive() || cadPlacementDragActive) {
-            JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de capturar un punto en el mapa."));
+            NotificationManager.warn(panel, null, I18n.t("Termina o cancela la captura, dibujo o medicion actual antes de capturar un punto en el mapa."));
             return;
         }
         pointCaptureHandler = handler;

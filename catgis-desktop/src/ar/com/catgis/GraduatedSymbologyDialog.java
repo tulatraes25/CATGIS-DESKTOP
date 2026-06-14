@@ -313,10 +313,10 @@ public class GraduatedSymbologyDialog extends JDialog {
         if (!workingCopy.isConfigured() || workingCopy.getRules().isEmpty()) {
             classifyAndPreview();
             if (workingCopy.getRules().isEmpty()) {
-                int r = JOptionPane.showConfirmDialog(this,
-                    "No hay clases generadas. ¿Guardar configuracion vacia?",
-                    "Simbologia graduada", JOptionPane.YES_NO_OPTION);
-                if (r != JOptionPane.YES_OPTION) return;
+                boolean ok = NotificationManager.confirm(this,
+                    "Simbologia graduada",
+                    "No hay clases generadas. ¿Guardar configuracion vacia?");
+                if (!ok) return;
             }
         }
         saveToLayer();
@@ -386,9 +386,9 @@ public class GraduatedSymbologyDialog extends JDialog {
             data = VectorLayerUtils.ensureVectorData(layer);
         }
         if (data == null) {
-            JOptionPane.showMessageDialog(owner,
-                "No se pudieron cargar los datos de la capa.",
-                "Simbologia graduada", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(owner,
+                "Simbologia graduada",
+                "No se pudieron cargar los datos de la capa.");
             return false;
         }
         Frame frame = owner instanceof Frame ? (Frame) owner :

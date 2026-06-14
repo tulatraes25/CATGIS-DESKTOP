@@ -28,7 +28,7 @@ public class TopographicProfileTool {
             return;
         }
         if (panel.isDrawingActive() || panel.isMeasurementActive() || panel.cadEngine.pointCaptureActive || panel.cadEngine.cadPlacementDragActive) {
-            JOptionPane.showMessageDialog(panel, I18n.t("Termina o cancela el dibujo/medicion actual antes de capturar un perfil."));
+            NotificationManager.warn(panel, null, I18n.t("Termina o cancela el dibujo/medicion actual antes de capturar un perfil."));
             return;
         }
         this.handler = handler;

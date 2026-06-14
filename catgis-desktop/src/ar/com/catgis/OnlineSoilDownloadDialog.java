@@ -224,11 +224,11 @@ public class OnlineSoilDownloadDialog extends JDialog {
         OnlineSoilDatasetOption dataset = (OnlineSoilDatasetOption) datasetCombo.getSelectedItem();
         String outputText = outputField.getText().trim();
         if (provider == null || dataset == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una fuente y un dataset de suelos."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir una fuente y un dataset de suelos."));
             return;
         }
         if (outputText.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un archivo de salida para el mapa de suelos."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un archivo de salida para el mapa de suelos."));
             return;
         }
         File outputFile = new File(outputText);
@@ -243,13 +243,13 @@ public class OnlineSoilDownloadDialog extends JDialog {
             west = parseCoord(westField.getText());
             east = parseCoord(eastField.getText());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("Revisa el area de suelos online. Los cuatro valores deben ser numericos y validos."));
+            NotificationManager.warn(this, null, I18n.t("Revisa el area de suelos online. Los cuatro valores deben ser numericos y validos."));
             return;
         }
 
         Envelope bbox = new Envelope(west, east, south, north);
         if (bbox.isNull() || north <= south || east <= west) {
-            JOptionPane.showMessageDialog(this, I18n.t("El area del mapa de suelos no es valida. Verifica sur/norte/oeste/este."));
+            NotificationManager.warn(this, null, I18n.t("El area del mapa de suelos no es valida. Verifica sur/norte/oeste/este."));
             return;
         }
 

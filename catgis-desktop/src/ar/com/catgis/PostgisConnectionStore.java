@@ -285,7 +285,7 @@ public final class PostgisConnectionStore {
 
         String password = new String(passwordField.getPassword());
         if (password.isBlank()) {
-            JOptionPane.showMessageDialog(parent, "La clave no puede quedar vacia para conectar la capa PostGIS.");
+            NotificationManager.warn(parent, null, "La clave no puede quedar vacia para conectar la capa PostGIS.");
             return null;
         }
 

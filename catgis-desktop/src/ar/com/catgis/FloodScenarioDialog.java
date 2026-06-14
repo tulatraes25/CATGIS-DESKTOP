@@ -205,7 +205,7 @@ public class FloodScenarioDialog extends JDialog {
     private void startGeneration() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir un DEM raster valido para el escenario de inundacion."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir un DEM raster valido para el escenario de inundacion."));
             return;
         }
 
@@ -216,7 +216,7 @@ public class FloodScenarioDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
+            NotificationManager.warn(this, null, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
             return;
         }
 
@@ -224,7 +224,7 @@ public class FloodScenarioDialog extends JDialog {
         try {
             rainfallScenarios = FloodScenarioService.parseRainfallScenarioList(rainfallField.getText().trim());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("La lluvia del escenario debe ser numerica, mayor a cero y puede tener varios valores separados por coma."));
+            NotificationManager.warn(this, null, I18n.t("La lluvia del escenario debe ser numerica, mayor a cero y puede tener varios valores separados por coma."));
             return;
         }
 
@@ -236,7 +236,7 @@ public class FloodScenarioDialog extends JDialog {
             }
             runoffCoefficient = Math.max(0.01d, Math.min(1d, parsed));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El coeficiente de escorrentia debe ser numerico. Puedes poner 70 o 0.70."));
+            NotificationManager.warn(this, null, I18n.t("El coeficiente de escorrentia debe ser numerico. Puedes poner 70 o 0.70."));
             return;
         }
 
@@ -247,7 +247,7 @@ public class FloodScenarioDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("La profundidad minima visible debe ser numerica y mayor o igual a cero."));
+            NotificationManager.warn(this, null, I18n.t("La profundidad minima visible debe ser numerica y mayor o igual a cero."));
             return;
         }
 
@@ -256,7 +256,7 @@ public class FloodScenarioDialog extends JDialog {
         if (exportGeoTiff) {
             String folderText = exportFolderField.getText() != null ? exportFolderField.getText().trim() : "";
             if (folderText.isBlank()) {
-                JOptionPane.showMessageDialog(this, I18n.t("Debes indicar una carpeta de salida para exportar GeoTIFF."));
+                NotificationManager.warn(this, null, I18n.t("Debes indicar una carpeta de salida para exportar GeoTIFF."));
                 return;
             }
             exportDirectory = new File(folderText);
@@ -305,12 +305,10 @@ public class FloodScenarioDialog extends JDialog {
                     dispose();
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             FloodScenarioDialog.this,
-                            I18n.t("No se pudo generar el escenario preliminar de inundacion:") + "\n" + cause.getMessage(),
                             I18n.t("Inundacion por lluvia"),
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                            I18n.t("No se pudo generar el escenario preliminar de inundacion:") + "\n" + cause.getMessage());
                 }
             }
         }.execute();
@@ -357,12 +355,10 @@ public class FloodScenarioDialog extends JDialog {
             }
         }
         if (batchResult.results().size() > 1 || !batchResult.exportedFiles().isEmpty()) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    buildBatchSummary(batchResult),
                     I18n.t("Inundacion por lluvia"),
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    buildBatchSummary(batchResult));
         }
     }
 

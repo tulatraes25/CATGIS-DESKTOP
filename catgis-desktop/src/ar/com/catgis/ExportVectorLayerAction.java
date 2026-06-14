@@ -69,13 +69,13 @@ public class ExportVectorLayerAction {
 
     public static void exportLayer(Layer layer) {
         if (layer == null) {
-            JOptionPane.showMessageDialog(null, "No hay una capa seleccionada.");
+            NotificationManager.warn(null, null, "No hay una capa seleccionada.");
             return;
         }
 
         ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
         if (!hasExportableVectorData(data)) {
-            JOptionPane.showMessageDialog(null, "La capa no tiene datos disponibles para exportar.");
+            NotificationManager.warn(null, null, "La capa no tiene datos disponibles para exportar.");
             return;
         }
 
@@ -92,11 +92,11 @@ public class ExportVectorLayerAction {
                                              String dialogTitle,
                                              boolean showSuccessMessage) {
         if (layer == null) {
-            JOptionPane.showMessageDialog(parent, "No hay una capa seleccionada.");
+            NotificationManager.warn(parent, null, "No hay una capa seleccionada.");
             return null;
         }
         if (!hasExportableVectorData(data)) {
-            JOptionPane.showMessageDialog(parent, "La capa no tiene datos disponibles para exportar.");
+            NotificationManager.warn(parent, null, "La capa no tiene datos disponibles para exportar.");
             return null;
         }
 
@@ -154,14 +154,12 @@ public class ExportVectorLayerAction {
         FileChooserSupport.rememberFile("vector-export", file);
 
         if (file.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(
+            boolean overwrite = NotificationManager.confirm(
                     parent,
-                    "El archivo ya existe.\n¿Querés reemplazarlo?\n\n" + file.getAbsolutePath(),
                     dialogTitle != null && !dialogTitle.isBlank() ? dialogTitle : "Exportar capa",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
+                    "El archivo ya existe.\n¿Querés reemplazarlo?\n\n" + file.getAbsolutePath()
             );
-            if (overwrite != JOptionPane.YES_OPTION) {
+            if (!overwrite) {
                 return null;
             }
         }
@@ -181,15 +179,15 @@ public class ExportVectorLayerAction {
                                               String option,
                                               String targetCode) {
         if (layer == null) {
-            JOptionPane.showMessageDialog(parent, "No hay una capa seleccionada.");
+            NotificationManager.warn(parent, null, "No hay una capa seleccionada.");
             return null;
         }
         if (!hasExportableVectorData(data)) {
-            JOptionPane.showMessageDialog(parent, "La capa no tiene datos disponibles para exportar.");
+            NotificationManager.warn(parent, null, "La capa no tiene datos disponibles para exportar.");
             return null;
         }
         if (option == null || option.isBlank()) {
-            JOptionPane.showMessageDialog(parent, "Debe indicar un formato de salida.");
+            NotificationManager.warn(parent, null, "Debe indicar un formato de salida.");
             return null;
         }
 
@@ -230,14 +228,12 @@ public class ExportVectorLayerAction {
         FileChooserSupport.rememberFile("vector-export", file);
 
         if (file.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(
+            boolean overwrite = NotificationManager.confirm(
                     parent,
-                    "El archivo ya existe.\nDesea reemplazarlo?\n\n" + file.getAbsolutePath(),
                     dialogTitle != null && !dialogTitle.isBlank() ? dialogTitle : "Exportar capa reproyectada",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
+                    "El archivo ya existe.\nDesea reemplazarlo?\n\n" + file.getAbsolutePath()
             );
-            if (overwrite != JOptionPane.YES_OPTION) {
+            if (!overwrite) {
                 return null;
             }
         }
@@ -328,16 +324,14 @@ public class ExportVectorLayerAction {
             }
 
             if (showSuccessMessage) {
-                JOptionPane.showMessageDialog(parent, "Capa exportada correctamente:\n" + file.getAbsolutePath());
+                NotificationManager.warn(parent, null, "Capa exportada correctamente:\n" + file.getAbsolutePath());
             }
-            int addToProject = JOptionPane.showConfirmDialog(
+            boolean addToProject = NotificationManager.confirm(
                     parent,
-                    "La capa reproyectada se exporto correctamente.\n\nDesea agregar el resultado al proyecto actual?",
                     "Exportar capa reproyectada",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                    "La capa reproyectada se exporto correctamente.\n\nDesea agregar el resultado al proyecto actual?"
             );
-            if (addToProject == JOptionPane.YES_OPTION) {
+            if (addToProject) {
                 if (GEOJSON_OPTION.equals(option) && targetCode != null && !targetCode.isBlank()) {
                     ShapefileData reloaded = GeoJsonLoader.load(file);
                     Layer resultLayer = new VectorLayer(file.getName(), file.getAbsolutePath());
@@ -407,7 +401,7 @@ public class ExportVectorLayerAction {
             }
 
             if (showSuccessMessage) {
-                JOptionPane.showMessageDialog(parent, "Capa exportada correctamente:\n" + file.getAbsolutePath());
+                NotificationManager.warn(parent, null, "Capa exportada correctamente:\n" + file.getAbsolutePath());
             }
             return true;
         } catch (Exception ex) {

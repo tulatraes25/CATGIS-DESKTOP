@@ -165,7 +165,7 @@ public class AssignValueDialog extends JDialog {
 
     private void applyValue() {
         if (targetField == null) {
-            JOptionPane.showMessageDialog(this, "Elegí primero un campo con doble clic.");
+            NotificationManager.warn(this, null, "Elegí primero un campo con doble clic.");
             return;
         }
 
@@ -173,10 +173,9 @@ public class AssignValueDialog extends JDialog {
 
         try {
             int affected = tableWindow.assignConstantValue(targetField.index, value, onlySelectedRowsCheck.isSelected());
-            JOptionPane.showMessageDialog(this,
-                    "Valor asignado correctamente sobre " + affected + " registro(s).",
+            NotificationManager.info(this,
                     "Asignar valor a un campo",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Valor asignado correctamente sobre " + affected + " registro(s).");
             dispose();
         } catch (Exception ex) {
             AppErrorSupport.logFailure("No se pudo asignar el valor al campo", ex);

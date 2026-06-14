@@ -143,7 +143,7 @@ public class DrainageExtractionDialog extends JDialog {
     private void startGeneration() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Selecciona un DEM raster valido para calcular escorrentias."));
+            NotificationManager.warn(this, null, I18n.t("Selecciona un DEM raster valido para calcular escorrentias."));
             return;
         }
 
@@ -154,7 +154,7 @@ public class DrainageExtractionDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
+            NotificationManager.warn(this, null, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
             return;
         }
 
@@ -165,13 +165,13 @@ public class DrainageExtractionDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("La longitud minima del ramal debe ser numerica y mayor o igual a cero."));
+            NotificationManager.warn(this, null, I18n.t("La longitud minima del ramal debe ser numerica y mayor o igual a cero."));
             return;
         }
 
         final String outputName = outputNameField.getText().trim();
         if (outputName.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un nombre para la capa de drenaje."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un nombre para la capa de drenaje."));
             return;
         }
 
@@ -203,12 +203,11 @@ public class DrainageExtractionDialog extends JDialog {
                     addResultLayer(result);
                     dispose();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             DrainageExtractionDialog.this,
-                            I18n.t("No se pudieron calcular las escorrentias:") + "\n"
-                                    + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()),
                             I18n.t("Escorrentias"),
-                            JOptionPane.ERROR_MESSAGE
+                            I18n.t("No se pudieron calcular las escorrentias:") + "\n"
+                                    + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage())
                     );
                 }
             }
@@ -271,7 +270,7 @@ public class DrainageExtractionDialog extends JDialog {
     public static void open() {
         Layer preferred = TopographyWorkflowSupport.resolvePreferredRasterLayer();
         if (preferred == null) {
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("No hay capas raster disponibles para calcular escorrentias."));
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("No hay capas raster disponibles para calcular escorrentias."));
             return;
         }
         open(preferred);
@@ -279,7 +278,7 @@ public class DrainageExtractionDialog extends JDialog {
 
     public static void open(Layer rasterLayer) {
         if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("No hay capas raster disponibles para calcular escorrentias."));
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("No hay capas raster disponibles para calcular escorrentias."));
             return;
         }
         Frame owner = JOptionPane.getFrameForComponent(CatgisDesktopApp.getMainFrameSafe());

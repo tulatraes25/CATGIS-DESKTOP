@@ -27,7 +27,7 @@ public class SaveProjectAction extends AbstractAction {
 
     public static boolean saveProject() {
         if (AppContext.project() == null) {
-            JOptionPane.showMessageDialog(null, "No hay proyecto actual.");
+            NotificationManager.warn(null, null, "No hay proyecto actual.");
             return false;
         }
 
@@ -41,7 +41,7 @@ public class SaveProjectAction extends AbstractAction {
 
     public static boolean saveProjectAs() {
         if (AppContext.project() == null) {
-            JOptionPane.showMessageDialog(null, "No hay proyecto actual.");
+            NotificationManager.warn(null, null, "No hay proyecto actual.");
             return false;
         }
 
@@ -61,14 +61,12 @@ public class SaveProjectAction extends AbstractAction {
         }
 
         if (file.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(
+            boolean overwrite = NotificationManager.confirm(
                     null,
-                    "El archivo ya existe.\n¿Querés reemplazarlo?\n\n" + file.getAbsolutePath(),
                     "Guardar proyecto",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
+                    "El archivo ya existe.\n¿Querés reemplazarlo?\n\n" + file.getAbsolutePath()
             );
-            if (overwrite != JOptionPane.YES_OPTION) {
+            if (!overwrite) {
                 return false;
             }
         }
@@ -159,7 +157,7 @@ public class SaveProjectAction extends AbstractAction {
             }
 
             if (showDialogs) {
-                JOptionPane.showMessageDialog(null, "Proyecto guardado correctamente.");
+                NotificationManager.info(null, null, "Proyecto guardado correctamente.");
             }
             return true;
         } catch (Exception ex) {
@@ -422,11 +420,10 @@ public class SaveProjectAction extends AbstractAction {
                 );
             } else {
                 if (showDialogs) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.info(
                             CatgisDesktopApp.getMainFrameSafe(),
-                            "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegí dónde guardarla antes de guardar el proyecto.",
                             "Guardar capa vectorial",
-                            JOptionPane.INFORMATION_MESSAGE
+                            "La capa \"" + layer.getName() + "\" no tiene archivo asociado.\nElegí dónde guardarla antes de guardar el proyecto."
                     );
                 }
                 File exported = ExportVectorLayerAction.exportLayerWithDialog(

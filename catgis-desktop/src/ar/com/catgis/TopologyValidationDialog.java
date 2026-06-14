@@ -184,13 +184,13 @@ public class TopologyValidationDialog extends JDialog {
     private void runValidation() {
         Layer layer = layerCombo.getItemCount() > 0 ? layerCombo.getItemAt(layerCombo.getSelectedIndex()) : null;
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una capa vectorial.");
+            NotificationManager.warn(this, null, "Seleccione una capa vectorial.");
             return;
         }
 
         ShapefileData data = VectorLayerUtils.ensureVectorData(layer);
         if (data == null) {
-            JOptionPane.showMessageDialog(this, "La capa seleccionada no tiene datos vectoriales disponibles.");
+            NotificationManager.warn(this, null, "La capa seleccionada no tiene datos vectoriales disponibles.");
             return;
         }
 
@@ -203,7 +203,7 @@ public class TopologyValidationDialog extends JDialog {
             lblSummary.setText("Observaciones detectadas: " + currentResults.size());
 
             if (currentResults.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "No se detectaron problemas con las reglas actuales.");
+                NotificationManager.info(this, null, "No se detectaron problemas con las reglas actuales.");
             } else {
                 table.setRowSelectionInterval(0, 0);
                 if (chkAutoZoom.isSelected()) {
@@ -344,7 +344,7 @@ public class TopologyValidationDialog extends JDialog {
 
     private void exportReport() {
         if (currentResults == null || currentResults.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Primero ejecute una validacion.");
+            NotificationManager.warn(this, null, "Primero ejecute una validacion.");
             return;
         }
 
@@ -366,7 +366,7 @@ public class TopologyValidationDialog extends JDialog {
 
         try {
             TopologyValidationService.exportReport(currentResults, file);
-            JOptionPane.showMessageDialog(this, "Reporte exportado:\n" + file.getAbsolutePath());
+            NotificationManager.info(this, null, "Reporte exportado:\n" + file.getAbsolutePath());
         } catch (Exception ex) {
             AppErrorSupport.logFailure("No se pudo exportar el reporte de topologia a " + file.getAbsolutePath(), ex);
             AppErrorSupport.showErrorDialog(this, "Topologia", "No se pudo exportar el reporte.", ex);

@@ -26,7 +26,7 @@ public class TopographyToolbar extends JPanel {
         add(flat("Inundacion", AppIcons.floodIcon(), "Escenario preliminar de anegamiento", () -> chkRaster(FloodScenarioDialog::open)));
         add(flat("Riesgo booleano", AppIcons.riskIcon(), "Combinar DEM y suelos con reglas booleanas", () -> {
             if (TopographyWorkflowSupport.getAvailableRasterLayers().size() < 2) {
-                javax.swing.JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Necesitas al menos un DEM y un raster de suelos cargados.")); return;
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("Necesitas al menos un DEM y un raster de suelos cargados.")); return;
             }
             BooleanRiskDialog.open();
         }));

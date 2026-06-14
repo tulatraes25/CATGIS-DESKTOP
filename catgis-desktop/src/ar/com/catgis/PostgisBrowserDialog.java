@@ -234,19 +234,17 @@ public final class PostgisBrowserDialog extends JDialog {
                     get();
                     PostgisConnectionStore.saveLastConnection(info);
                     setBusy(false, I18n.t(catserverMode ? "Conexion CATSERVER OK." : "Conexion OK."));
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.info(
                             PostgisBrowserDialog.this,
-                            I18n.t(catserverMode ? "Conexion CATSERVER OK." : "Conexion PostGIS OK."),
                             I18n.t(catserverMode ? "CATSERVER" : "PostGIS"),
-                            JOptionPane.INFORMATION_MESSAGE
+                            I18n.t(catserverMode ? "Conexion CATSERVER OK." : "Conexion PostGIS OK.")
                     );
                 } catch (Exception ex) {
                     setBusy(false, I18n.t("Error de conexion."));
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             PostgisBrowserDialog.this,
-                            PostgisErrorSupport.toUserMessage(ex, info),
                             I18n.t(catserverMode ? "CATSERVER" : "PostGIS"),
-                            JOptionPane.ERROR_MESSAGE
+                            PostgisErrorSupport.toUserMessage(ex, info)
                     );
                 }
             }
@@ -280,20 +278,18 @@ public final class PostgisBrowserDialog extends JDialog {
                     PostgisConnectionStore.saveLastConnection(info);
                     setBusy(false, I18n.t(layers.isEmpty() ? "Sin capas." : "Capas listadas."));
                     if (layers.isEmpty()) {
-                        JOptionPane.showMessageDialog(
+                        NotificationManager.info(
                                 PostgisBrowserDialog.this,
-                                I18n.t("No se encontraron capas espaciales.\nRevisa permisos y esquema."),
                                 I18n.t(catserverMode ? "CATSERVER" : "PostGIS"),
-                                JOptionPane.INFORMATION_MESSAGE
+                                I18n.t("No se encontraron capas espaciales.\nRevisa permisos y esquema.")
                         );
                     }
                 } catch (Exception ex) {
                     allRows.clear(); tableModel.setRows(List.of()); setBusy(false, I18n.t("No se pudieron listar capas."));
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             PostgisBrowserDialog.this,
-                            PostgisErrorSupport.toUserMessage(ex, info),
                             I18n.t(catserverMode ? "CATSERVER" : "PostGIS"),
-                            JOptionPane.ERROR_MESSAGE
+                            PostgisErrorSupport.toUserMessage(ex, info)
                     );
                 }
             }
@@ -345,11 +341,10 @@ public final class PostgisBrowserDialog extends JDialog {
                     accepted = true;
                     dispose();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             PostgisBrowserDialog.this,
-                            PostgisErrorSupport.toUserMessage(ex, info),
                             I18n.t(catserverMode ? "CATSERVER" : "PostGIS"),
-                            JOptionPane.ERROR_MESSAGE
+                            PostgisErrorSupport.toUserMessage(ex, info)
                     );
                 }
             }
@@ -360,11 +355,11 @@ public final class PostgisBrowserDialog extends JDialog {
         PostgisConnectionInfo i = new PostgisConnectionInfo();
         i.setHost(hostField.getText());
         try { i.setPort(Integer.parseInt(portField.getText().trim())); }
-        catch (Exception ex) { JOptionPane.showMessageDialog(this, I18n.t("Puerto invalido."), I18n.t(catserverMode ? "CATSERVER" : "PostGIS"), JOptionPane.WARNING_MESSAGE); return null; }
+        catch (Exception ex) { NotificationManager.warn(this, I18n.t(catserverMode ? "CATSERVER" : "PostGIS"), I18n.t("Puerto invalido.")); return null; }
         i.setDatabase(databaseField.getText()); i.setSchema(selectedSchema()); i.setUser(userField.getText());
         i.setPassword(new String(passwordField.getPassword())); i.setRememberPassword(rememberPasswordCheck.isSelected());
         String validation = PostgisErrorSupport.validateConnectionInfo(i, requirePassword);
-        if (!validation.isBlank()) { JOptionPane.showMessageDialog(this, validation, I18n.t(catserverMode ? "CATSERVER" : "PostGIS"), JOptionPane.WARNING_MESSAGE); return null; }
+        if (!validation.isBlank()) { NotificationManager.warn(this, I18n.t(catserverMode ? "CATSERVER" : "PostGIS"), validation); return null; }
         return i;
     }
 

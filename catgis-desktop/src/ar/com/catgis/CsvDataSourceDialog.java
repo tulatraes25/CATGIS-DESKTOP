@@ -9,7 +9,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -166,7 +166,7 @@ public class CsvDataSourceDialog extends JDialog {
             String yField = String.valueOf(cmbY.getSelectedItem());
             String labelField = String.valueOf(cmbLabel.getSelectedItem());
             if (xField == null || yField == null || xField.isBlank() || yField.isBlank()) {
-                JOptionPane.showMessageDialog(this, "Debe indicar columnas X e Y para la capa espacial.");
+                NotificationManager.warn(this, null, "Debe indicar columnas X e Y para la capa espacial.");
                 return;
             }
 
@@ -177,7 +177,7 @@ public class CsvDataSourceDialog extends JDialog {
                 layer.setLabelsVisible(true);
                 layer.setLabelField(labelField);
             }
-            JOptionPane.showMessageDialog(this, "Tabla cargada correctamente como capa de puntos.");
+            NotificationManager.info(this, null, "Tabla cargada correctamente como capa de puntos.");
             dispose();
         } catch (Exception ex) {
             AppErrorSupport.logFailure("Error al cargar tabla desde origen tabular " + (file != null ? file.getAbsolutePath() : ""), ex);

@@ -223,7 +223,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
     private void startGeneration() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Selecciona un DEM raster valido para el analisis topohidrologico."));
+            NotificationManager.warn(this, null, I18n.t("Selecciona un DEM raster valido para el analisis topohidrologico."));
             return;
         }
 
@@ -235,7 +235,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
+            NotificationManager.warn(this, null, I18n.t("El umbral de acumulacion debe ser un entero mayor o igual a 2."));
             return;
         }
         try {
@@ -244,7 +244,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("El tamano minimo de cuenca debe ser un entero mayor o igual a 8."));
+            NotificationManager.warn(this, null, I18n.t("El tamano minimo de cuenca debe ser un entero mayor o igual a 8."));
             return;
         }
 
@@ -280,11 +280,10 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
                     dispose();
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             TerrainHydrologyAnalysisDialog.this,
-                            I18n.t("No se pudo generar el analisis topohidrologico:") + "\n" + cause.getMessage(),
                             I18n.t("Analisis topohidrologico"),
-                            JOptionPane.ERROR_MESSAGE
+                            I18n.t("No se pudo generar el analisis topohidrologico:") + "\n" + cause.getMessage()
                     );
                 }
             }

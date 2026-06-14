@@ -88,9 +88,9 @@ public class OpenFileAction extends AbstractAction {
                 try {
                     List<SpatiaLiteFeatureTypeInfo> tables = SpatiaLiteLoader.listFeatureTypes(connInfo);
                     if (tables.isEmpty()) {
-                        JOptionPane.showMessageDialog(parent, "No se encontraron tablas en " + file.getName()
-                                + ".\nSpatiaLite requiere mod_spatialite para leer datos espaciales.",
-                                "SpatiaLite", JOptionPane.WARNING_MESSAGE);
+                        NotificationManager.warn(parent, "SpatiaLite",
+                                "No se encontraron tablas en " + file.getName()
+                                + ".\nSpatiaLite requiere mod_spatialite para leer datos espaciales.");
                         return false;
                     }
                     // Load first available table
@@ -150,7 +150,7 @@ public class OpenFileAction extends AbstractAction {
                     var header = PmtilesReader.readHeader(file);
                     var entries = PmtilesReader.readDirectory(file, header);
                     String info = PmtilesReader.getStats(file);
-                    JOptionPane.showMessageDialog(parent, info, "PMTiles Info", JOptionPane.INFORMATION_MESSAGE);
+                    NotificationManager.info(parent, "PMTiles Info", info);
                     return false; // PMTiles is a tile archive, not directly loadable as a layer
                 } catch (Exception ex) {
                     AppErrorSupport.showErrorDialog(parent, "PMTiles", "No se pudo leer el archivo PMTiles.", ex);
@@ -161,7 +161,7 @@ public class OpenFileAction extends AbstractAction {
                 try {
                     var meta = GeoParquetReader.readMetadata(file);
                     String info = GeoParquetReader.getSummary(file);
-                    JOptionPane.showMessageDialog(parent, info, "GeoParquet Info", JOptionPane.INFORMATION_MESSAGE);
+                    NotificationManager.info(parent, "GeoParquet Info", info);
                     return false; // GeoParquet requires parquet-hadoop for full support
                 } catch (Exception ex) {
                     AppErrorSupport.showErrorDialog(parent, "GeoParquet", "No se pudo leer el archivo GeoParquet.", ex);
@@ -200,11 +200,10 @@ public class OpenFileAction extends AbstractAction {
                     AppContext.setStatusMessage("Capa agregada: " + layer.getName());
                 }
                 if (showDialogs) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.warn(
                             parent,
-                            vectorDialogMessage != null ? vectorDialogMessage : buildVectorLoadMessage(layer),
                             "Cargar datos",
-                            layer.getSourceCRS().isBlank() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE
+                            vectorDialogMessage != null ? vectorDialogMessage : buildVectorLoadMessage(layer)
                     );
                 }
                 return true;

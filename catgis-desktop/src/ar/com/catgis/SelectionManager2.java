@@ -170,7 +170,7 @@ public class SelectionManager2 {
         if (hits.isEmpty()) {
             clearSelectedFeature();
             panel.showCopiedMessage("No se identific\u00f3 ninguna entidad.");
-            JOptionPane.showMessageDialog(panel, "No se identific\u00f3 ninguna entidad.");
+            NotificationManager.warn(panel, null, "No se identific\u00f3 ninguna entidad.");
             panel.repaint();
             return;
         }

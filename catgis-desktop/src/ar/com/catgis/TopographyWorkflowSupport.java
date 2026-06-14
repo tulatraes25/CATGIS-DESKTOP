@@ -84,8 +84,9 @@ public final class TopographyWorkflowSupport {
     }
 
     public static void showNoRasterMessage() {
-        JOptionPane.showMessageDialog(
+        NotificationManager.warn(
                 CatgisDesktopApp.getMainFrameSafe(),
+                null,
                 I18n.t("No hay capas raster disponibles para trabajar con DEM, relieve, escorrentias, cuencas o perfiles.")
         );
     }

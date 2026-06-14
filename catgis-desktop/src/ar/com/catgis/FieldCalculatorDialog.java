@@ -294,15 +294,13 @@ public class FieldCalculatorDialog extends JDialog {
                     break;
                 }
             }
-            JOptionPane.showMessageDialog(this,
-                    "Campo creado. Ya podes usarlo como destino en la calculadora.",
+            NotificationManager.info(this,
                     "Calculadora de campos",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Campo creado. Ya podes usarlo como destino en la calculadora.");
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "No se pudo crear el campo: " + ex.getMessage(),
+            NotificationManager.error(this,
                     "Calculadora de campos",
-                    JOptionPane.ERROR_MESSAGE);
+                    "No se pudo crear el campo: " + ex.getMessage());
         }
     }
 
@@ -365,55 +363,51 @@ public class FieldCalculatorDialog extends JDialog {
     private void testExpression() {
         int row = tableWindow.getSelectedModelRow();
         if (row < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona una fila en la tabla para probar la expresion.");
+            NotificationManager.warn(this, null, "Selecciona una fila en la tabla para probar la expresion.");
             return;
         }
 
         String expr = expressionArea.getText() != null ? expressionArea.getText().trim() : "";
         if (expr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribe una expresion primero.");
+            NotificationManager.warn(this, null, "Escribe una expresion primero.");
             return;
         }
 
         try {
             int targetIndex = targetField != null ? targetField.index : -1;
             Object value = tableWindow.evaluateExpressionPreview(expr, row, targetIndex);
-            JOptionPane.showMessageDialog(this,
-                    "Resultado para la fila seleccionada: " + trimValue(value),
+            NotificationManager.info(this,
                     "Prueba de expresion",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Resultado para la fila seleccionada: " + trimValue(value));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "No se pudo evaluar la expresion: " + ex.getMessage(),
+            NotificationManager.error(this,
                     "Calculadora de campos",
-                    JOptionPane.ERROR_MESSAGE);
+                    "No se pudo evaluar la expresion: " + ex.getMessage());
         }
     }
 
     private void applyCalculation() {
         if (targetField == null) {
-            JOptionPane.showMessageDialog(this, "Elige primero un campo destino.");
+            NotificationManager.warn(this, null, "Elige primero un campo destino.");
             return;
         }
 
         String expr = expressionArea.getText() != null ? expressionArea.getText().trim() : "";
         if (expr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribe una expresion antes de aplicar.");
+            NotificationManager.warn(this, null, "Escribe una expresion antes de aplicar.");
             return;
         }
 
         try {
             int affected = tableWindow.applyFieldCalculation(targetField.index, expr, onlySelectedRowsCheck.isSelected());
-            JOptionPane.showMessageDialog(this,
-                    "Calculo aplicado correctamente sobre " + affected + " registro(s).",
+            NotificationManager.info(this,
                     "Calculadora de campos",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    "Calculo aplicado correctamente sobre " + affected + " registro(s).");
             dispose();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "No se pudo aplicar el calculo: " + ex.getMessage(),
+            NotificationManager.error(this,
                     "Calculadora de campos",
-                    JOptionPane.ERROR_MESSAGE);
+                    "No se pudo aplicar el calculo: " + ex.getMessage());
         }
     }
 

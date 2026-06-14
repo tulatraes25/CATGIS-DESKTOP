@@ -156,8 +156,7 @@ public class MapUtilities {
             sb.append("Lon DMS: ").append(toDms(geographic[0], false)).append("\n");
             sb.append("Lat DMS: ").append(toDms(geographic[1], true)).append("\n");
         }
-        javax.swing.JOptionPane.showMessageDialog(panel, sb.toString(),
-                "Visor de coordenadas", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        NotificationManager.info(panel, "Visor de coordenadas", sb.toString());
     }
 
     // ========================================================================

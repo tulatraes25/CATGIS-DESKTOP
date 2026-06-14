@@ -10,7 +10,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -171,13 +171,13 @@ public class FieldsConfigDialog extends JDialog {
         fieldNames.clear();
 
         if (data == null || data.getFeatureCollection() == null) {
-            JOptionPane.showMessageDialog(this, "La capa no tiene estructura de campos disponible.");
+            NotificationManager.warn(this, null, "La capa no tiene estructura de campos disponible.");
             return;
         }
 
         SimpleFeatureType schema = data.getFeatureCollection().getSchema();
         if (schema == null) {
-            JOptionPane.showMessageDialog(this, "No se pudo leer el esquema de la capa.");
+            NotificationManager.warn(this, null, "No se pudo leer el esquema de la capa.");
             return;
         }
 

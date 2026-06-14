@@ -11,7 +11,7 @@ import java.io.File;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
+
 import javax.swing.JRadioButtonMenuItem;
 import javax.swing.KeyStroke;
 import java.awt.BasicStroke;
@@ -149,10 +149,8 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemRiesgoBooleano = createItem("Riesgo booleano preliminar...", AppIcons.terrainAnalysisIcon());
         itemRiesgoBooleano.addActionListener(e -> {
             if (TopographyWorkflowSupport.getAvailableRasterLayers().size() < 2) {
-                JOptionPane.showMessageDialog(
-                        CatgisDesktopApp.getMainFrameSafe(),
-                        I18n.t("Necesitas al menos un DEM y un raster de suelos cargados para generar riesgo booleano preliminar.")
-                );
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Necesitas al menos un DEM y un raster de suelos cargados para generar riesgo booleano preliminar."));
                 return;
             }
             BooleanRiskDialog.open();
@@ -185,7 +183,7 @@ public class MainMenuBar extends JMenuBar {
         itemSimbologiaCapa.addActionListener(e -> {
             Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
             if (layer == null) {
-                JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa para editar su simbologia."));
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("Selecciona una capa para editar su simbologia."));
                 return;
             }
             LayerPropertiesDialog.open(layer);
@@ -195,7 +193,7 @@ public class MainMenuBar extends JMenuBar {
         itemTematicaCampo.addActionListener(e -> {
             Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
             if (layer == null) {
-                JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa vectorial."));
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("Selecciona una capa vectorial."));
                 return;
             }
             CategorizedSymbologyDialog.open(layer);
@@ -310,9 +308,8 @@ public class MainMenuBar extends JMenuBar {
                     try {
                         ar.com.catgis.sld.SldSupport.exportToFile(layer, chooser.getSelectedFile());
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(MainMenuBar.this,
-                                "Error al exportar SLD: " + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                        NotificationManager.error(MainMenuBar.this,
+                                "Error", "Error al exportar SLD: " + ex.getMessage());
                     }
                 }
             }
@@ -821,16 +818,18 @@ public class MainMenuBar extends JMenuBar {
             String msg = result.success()
                     ? "Script ejecutado correctamente.\n\nSalida:\n" + result.output()
                     : "Error al ejecutar script:\n" + result.error() + "\n\nSalida:\n" + result.output();
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), msg,
-                    result.success() ? "Script ejecutado" : "Error en script",
-                    result.success() ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+            if (result.success()) {
+                NotificationManager.info(CatgisDesktopApp.getMainFrameSafe(), "Script ejecutado", msg);
+            } else {
+                NotificationManager.error(CatgisDesktopApp.getMainFrameSafe(), "Error en script", msg);
+            }
         }
     }
 
     private void runTopologyValidation(String rule) {
         Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
         if (layer == null) {
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
                     I18n.t("Selecciona una capa para validar topología."));
             return;
         }
@@ -845,7 +844,7 @@ public class MainMenuBar extends JMenuBar {
         }
 
         if (features.isEmpty()) {
-            JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(),
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
                     I18n.t("La capa no tiene features para validar."));
             return;
         }
@@ -858,13 +857,15 @@ public class MainMenuBar extends JMenuBar {
             default -> new TopologyValidator.TopologyResult(true, new java.util.ArrayList<>());
         };
 
-        String msg = result.valid()
+        String msg2 = result.valid()
                 ? I18n.t("Validación OK: sin problemas de topología encontrados.")
                 : I18n.t("Problemas encontrados: ") + result.issues().size() + "\n\n"
                 + result.issues().stream().limit(5).map(i -> "- " + i.message()).reduce("", (a, b) -> a + "\n" + b);
-        JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), msg,
-                I18n.t("Validación de topología"),
-                result.valid() ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE);
+        if (result.valid()) {
+            NotificationManager.info(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Validación de topología"), msg2);
+        } else {
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Validación de topología"), msg2);
+        }
     }
 
     private JMenu buildLanguageMenu() {
@@ -892,12 +893,10 @@ public class MainMenuBar extends JMenuBar {
             return;
         }
         I18n.setLanguage(language);
-        JOptionPane.showMessageDialog(
+        NotificationManager.info(
                 CatgisDesktopApp.getMainFrameSafe(),
-                I18n.t("Idioma actualizado. Reinicia CATGIS para ver el cambio en toda la interfaz."),
                 I18n.languageMenuLabel(),
-                JOptionPane.INFORMATION_MESSAGE
-        );
+                I18n.t("Idioma actualizado. Reinicia CATGIS para ver el cambio en toda la interfaz."));
     }
 
     private Layer getPreferredVectorLayer() {

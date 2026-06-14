@@ -138,13 +138,13 @@ public class SpectralIndexDialog extends JDialog {
     private void computeIndex() {
         int idx = indexCombo.getSelectedIndex();
         if (idx < 0 || idx >= indices.size()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un indice.");
+            NotificationManager.warn(this, null, "Selecciona un indice.");
             return;
         }
 
         String layerName = (String) rasterLayerCombo.getSelectedItem();
         if (layerName == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa raster.");
+            NotificationManager.warn(this, null, "Selecciona una capa raster.");
             return;
         }
 
@@ -164,29 +164,29 @@ public class SpectralIndexDialog extends JDialog {
         // Get raster data
         LocalRasterData data = AppContext.mapPanel().getRasterData(targetLayer);
         if (data == null) {
-            JOptionPane.showMessageDialog(this, "No hay datos raster para esta capa.");
+            NotificationManager.warn(this, null, "No hay datos raster para esta capa.");
             return;
         }
 
         int bandCount = data.getBandCount();
         if (bandCount < 2) {
-            JOptionPane.showMessageDialog(this,
-                    "La capa solo tiene " + bandCount + " banda(s). Se necesitan al menos 2 bandas para calcular indices.",
-                    "Bandas insuficientes", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this,
+                    "Bandas insuficientes",
+                    "La capa solo tiene " + bandCount + " banda(s). Se necesitan al menos 2 bandas para calcular indices.");
             return;
         }
 
         BufferedImage image = data.getImage();
         if (image == null) {
-            JOptionPane.showMessageDialog(this, "No se pudo leer la imagen raster.");
+            NotificationManager.warn(this, null, "No se pudo leer la imagen raster.");
             return;
         }
 
         int actualBands = image.getRaster().getNumBands();
         if (bandA > actualBands || bandB > actualBands) {
-            JOptionPane.showMessageDialog(this,
-                    "La imagen tiene " + actualBands + " bandas. Selecciona bandas entre 1 y " + actualBands + ".",
-                    "Bandas invalidas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this,
+                    "Bandas invalidas",
+                    "La imagen tiene " + actualBands + " bandas. Selecciona bandas entre 1 y " + actualBands + ".");
             return;
         }
 
@@ -202,7 +202,7 @@ public class SpectralIndexDialog extends JDialog {
         BufferedImage result = SpectralIndexEngine.computeIndex(bandAImage, bandBImage, si.id());
 
         if (result == null) {
-            JOptionPane.showMessageDialog(this, "Error al calcular el indice.");
+            NotificationManager.warn(this, null, "Error al calcular el indice.");
             return;
         }
 
@@ -216,14 +216,14 @@ public class SpectralIndexDialog extends JDialog {
         statusLabel.setText("Indice " + si.id() + " calculado y agregado como capa.");
         statusLabel.setForeground(new Color(0, 128, 0));
 
-        JOptionPane.showMessageDialog(this,
+        NotificationManager.info(this,
+                "Exito",
                 "Indice " + si.name() + " calculado exitosamente.\n\n"
                         + "Formula: " + si.formula() + "\n"
                         + "Capa: " + layerName + "\n"
                         + "Banda A: " + bandA + ", Banda B: " + bandB + "\n"
                         + "Dimensiones: " + result.getWidth() + " x " + result.getHeight() + "\n\n"
-                        + "Se agrego como nueva capa: " + resultName,
-                "Exito", JOptionPane.INFORMATION_MESSAGE);
+                        + "Se agrego como nueva capa: " + resultName);
     }
 
     private BufferedImage extractBand(BufferedImage source, int bandIndex) {

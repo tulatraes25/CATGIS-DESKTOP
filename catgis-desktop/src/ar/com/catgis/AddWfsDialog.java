@@ -1,4 +1,5 @@
 package ar.com.catgis;
+import ar.com.catgis.NotificationManager;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.core.model.Layer;
@@ -12,7 +13,6 @@ import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -149,7 +149,7 @@ public class AddWfsDialog extends JDialog {
     private void fetchCapabilities() {
         String url = urlField.getText() != null ? urlField.getText().trim() : "";
         if (url.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Primero ingresá una URL WFS.", "Agregar WFS", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Agregar WFS", "Primero ingresá una URL WFS.");
             return;
         }
 
@@ -182,11 +182,10 @@ public class AddWfsDialog extends JDialog {
                     serviceTitleLabel.setText("Servicio: -");
                     crsCombo.setModel(new DefaultComboBoxModel<>());
                     statusLabel.setText("No se pudo leer el WFS.");
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             AddWfsDialog.this,
-                            "No se pudo consultar el servicio WFS:\n" + ex.getMessage(),
                             "Agregar WFS",
-                            JOptionPane.ERROR_MESSAGE
+                            "No se pudo consultar el servicio WFS:\n" + ex.getMessage()
                     );
                 }
             }
@@ -302,11 +301,10 @@ public class AddWfsDialog extends JDialog {
                     connectButton.setEnabled(true);
                     addButton.setEnabled(true);
                     statusLabel.setText("No se pudo cargar la capa WFS.");
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             AddWfsDialog.this,
-                            "No se pudo cargar la capa WFS:\n" + ex.getMessage(),
                             "Agregar WFS",
-                            JOptionPane.ERROR_MESSAGE
+                            "No se pudo cargar la capa WFS:\n" + ex.getMessage()
                     );
                 }
             }

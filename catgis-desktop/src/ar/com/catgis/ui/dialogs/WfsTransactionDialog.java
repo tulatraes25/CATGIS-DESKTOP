@@ -10,7 +10,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+import ar.com.catgis.NotificationManager;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -125,7 +125,7 @@ public class WfsTransactionDialog extends JDialog {
         if (layer == null) { log("Seleccione una capa."); return; }
         String filter = filterField.getText().trim();
         if (filter.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingrese un filtro ECQL.", "Filtro requerido", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Filtro requerido", "Ingrese un filtro ECQL.");
             return;
         }
         log("Eliminando features de " + layer.getName() + " con filtro: " + filter);

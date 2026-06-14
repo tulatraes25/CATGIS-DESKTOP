@@ -221,7 +221,7 @@ final class ProjectOpenDialog extends JDialog {
             dispose();
             return;
         }
-        JOptionPane.showMessageDialog(this, "Ingresa una carpeta valida o un archivo .catgis existente.");
+        NotificationManager.warn(this, null, "Ingresa una carpeta valida o un archivo .catgis existente.");
     }
 
     private void goUpDirectory() {
@@ -275,7 +275,7 @@ final class ProjectOpenDialog extends JDialog {
             return;
         }
         if (!selected.getName().toLowerCase().endsWith(".catgis")) {
-            JOptionPane.showMessageDialog(this, "Selecciona un archivo .catgis valido.");
+            NotificationManager.warn(this, null, "Selecciona un archivo .catgis valido.");
             return;
         }
         selectedProject = selected;

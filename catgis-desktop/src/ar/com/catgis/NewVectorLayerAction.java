@@ -31,14 +31,12 @@ public class NewVectorLayerAction extends AbstractAction {
 
         File file = result.getFile();
         if (file.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(
+            boolean overwrite = NotificationManager.confirm(
                     owner,
-                    "El archivo ya existe.\nQueres reemplazarlo?\n\n" + file.getAbsolutePath(),
                     "Nueva capa vectorial",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
+                    "El archivo ya existe.\nQueres reemplazarlo?\n\n" + file.getAbsolutePath()
             );
-            if (overwrite != JOptionPane.YES_OPTION) {
+            if (!overwrite) {
                 return null;
             }
         }

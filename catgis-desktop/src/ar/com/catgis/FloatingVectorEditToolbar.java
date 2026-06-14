@@ -18,7 +18,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JMenuItem;
@@ -203,7 +203,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnEditAttributes.addActionListener(e -> {
             Layer layer = getPreferredEditingLayer();
             if (layer == null) {
-                JOptionPane.showMessageDialog(this, "Primero selecciona una capa vectorial.");
+                NotificationManager.warn(this, null, "Primero selecciona una capa vectorial.");
                 return;
             }
             OpenAttributeTableAction.openTable(layer);
@@ -363,7 +363,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnOptions.addActionListener(e -> {
             Layer layer = getPreferredEditingLayer();
             if (layer == null) {
-                JOptionPane.showMessageDialog(this, "Primero selecciona una capa vectorial.");
+                NotificationManager.warn(this, null, "Primero selecciona una capa vectorial.");
                 return;
             }
             LayerPropertiesDialog.open(layer);
@@ -812,12 +812,10 @@ public class FloatingVectorEditToolbar extends JPanel {
         Layer layer = AppContext.mapPanel().getSelectedLayerRef();
         SimpleFeature feature = AppContext.mapPanel().getSelectedFeatureRef();
         if (layer == null || feature == null) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    "Primero selecciona una linea o poligono con la flecha de seleccion dentro de la capa editable.",
                     "Edicion vectorial",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    "Primero selecciona una linea o poligono con la flecha de seleccion dentro de la capa editable.");
             refreshState();
             return;
         }
@@ -886,12 +884,10 @@ public class FloatingVectorEditToolbar extends JPanel {
             if (editingLayer != null) {
                 AppContext.mapPanel().prepareLayerForEditing(editingLayer);
             }
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    "Primero selecciona una entidad de la capa editable con la flecha para " + actionName + ".",
                     "Edicion vectorial",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                    "Primero selecciona una entidad de la capa editable con la flecha para " + actionName + ".");
             refreshState();
             return false;
         }

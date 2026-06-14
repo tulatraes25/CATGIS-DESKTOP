@@ -255,14 +255,14 @@ public class WindRoseDialog extends JDialog {
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage("Rosa de vientos exportada: " + file.getName());
             }
-            JOptionPane.showMessageDialog(this,
+            NotificationManager.info(this,
+                    "Exportar PNG",
                     "Rosa de vientos guardada como PNG con fondo transparente:\n"
-                            + file.getAbsolutePath(),
-                    "Exportar PNG", JOptionPane.INFORMATION_MESSAGE);
+                            + file.getAbsolutePath());
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al guardar: " + ex.getMessage(),
-                    "Exportar PNG", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this,
+                    "Exportar PNG",
+                    "Error al guardar: " + ex.getMessage());
         }
     }
 

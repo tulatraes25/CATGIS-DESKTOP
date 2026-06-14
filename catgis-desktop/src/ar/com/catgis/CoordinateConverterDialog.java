@@ -7,7 +7,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -328,7 +328,7 @@ public class CoordinateConverterDialog extends JDialog {
     private void copyResult() {
         String text = resultArea.getText();
         if (text == null || text.isBlank()) {
-            JOptionPane.showMessageDialog(this, "No hay resultado para copiar.", "Conversor", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this, "Conversor", "No hay resultado para copiar.");
             return;
         }
         Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text), null);

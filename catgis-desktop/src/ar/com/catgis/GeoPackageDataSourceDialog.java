@@ -11,7 +11,7 @@ import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -163,7 +163,7 @@ public class GeoPackageDataSourceDialog extends JDialog {
 
     private void inspectGeoPackage() {
         if (selectedFile == null) {
-            JOptionPane.showMessageDialog(this, "Primero elegí un archivo GeoPackage.", "GeoPackage", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "GeoPackage", "Primero elegí un archivo GeoPackage.");
             return;
         }
 
@@ -203,12 +203,10 @@ public class GeoPackageDataSourceDialog extends JDialog {
                     addButton.setEnabled(false);
                     getRootPane().setDefaultButton(connectButton);
                     statusLabel.setText("No se pudo leer el GeoPackage.");
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             GeoPackageDataSourceDialog.this,
-                            "No se pudo inspeccionar el GeoPackage:\n" + ex.getMessage(),
                             "GeoPackage",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                            "No se pudo inspeccionar el GeoPackage:\n" + ex.getMessage());
                 }
             }
         }.execute();
@@ -217,7 +215,7 @@ public class GeoPackageDataSourceDialog extends JDialog {
     private void addSelectedLayers() {
         List<GeoPackageFeatureInfo> selected = featureList.getSelectedValuesList();
         if (selectedFile == null || selected.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Seleccioná al menos una capa del GeoPackage.", "GeoPackage", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this, "GeoPackage", "Seleccioná al menos una capa del GeoPackage.");
             return;
         }
 
@@ -289,12 +287,10 @@ public class GeoPackageDataSourceDialog extends JDialog {
                     dispose();
                 } catch (Exception ex) {
                     statusLabel.setText("No se pudieron cargar las capas del GeoPackage.");
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             GeoPackageDataSourceDialog.this,
-                            "No se pudieron cargar las capas del GeoPackage:\n" + ex.getMessage(),
                             "GeoPackage",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                            "No se pudieron cargar las capas del GeoPackage:\n" + ex.getMessage());
                 }
             }
         }.execute();

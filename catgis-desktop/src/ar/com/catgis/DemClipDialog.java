@@ -177,7 +177,7 @@ public class DemClipDialog extends JDialog {
     private void startClip() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir un DEM raster valido para recortar."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir un DEM raster valido para recortar."));
             return;
         }
 
@@ -188,7 +188,7 @@ public class DemClipDialog extends JDialog {
             if (target == ClipTarget.POLYGON_MASK) {
                 Layer maskLayer = (Layer) polygonMaskCombo.getSelectedItem();
                 if (maskLayer == null) {
-                    JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una mascara poligonal para recortar el DEM."));
+                    NotificationManager.warn(this, null, I18n.t("Debes elegir una mascara poligonal para recortar el DEM."));
                     return;
                 }
                 ShapefileData maskData = AppContext.mapPanel() != null
@@ -199,11 +199,11 @@ public class DemClipDialog extends JDialog {
                     maskData = TopographyWorkflowSupport.projectVectorDataToCurrentProject(maskLayer, maskData);
                 }
                 if (maskData == null || maskData.getFeatures() == null || maskData.getFeatures().isEmpty()) {
-                    JOptionPane.showMessageDialog(this, I18n.t("La mascara poligonal no tiene geometria util para recortar el DEM."));
+                    NotificationManager.warn(this, null, I18n.t("La mascara poligonal no tiene geometria util para recortar el DEM."));
                     return;
                 }
                 if (!"POLYGON".equalsIgnoreCase(VectorLayerUtils.resolveGeometryFamily(maskData))) {
-                    JOptionPane.showMessageDialog(this, I18n.t("La capa elegida para mascara debe ser poligonal."));
+                    NotificationManager.warn(this, null, I18n.t("La capa elegida para mascara debe ser poligonal."));
                     return;
                 }
                 List<Geometry> geometries = new ArrayList<>();
@@ -213,7 +213,7 @@ public class DemClipDialog extends JDialog {
                     }
                 }
                 if (geometries.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, I18n.t("La mascara poligonal no tiene geometria valida para el recorte."));
+                    NotificationManager.warn(this, null, I18n.t("La mascara poligonal no tiene geometria valida para el recorte."));
                     return;
                 }
                 maskGeometry = UnaryUnionOp.union(geometries);
@@ -222,12 +222,12 @@ public class DemClipDialog extends JDialog {
                 envelope = AppContext.mapPanel() != null ? AppContext.mapPanel().getCurrentViewEnvelope() : null;
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("No se pudo preparar el area de recorte del DEM:") + "\n" + ex.getMessage());
+            NotificationManager.warn(this, null, I18n.t("No se pudo preparar el area de recorte del DEM:") + "\n" + ex.getMessage());
             return;
         }
 
         if (envelope == null || envelope.isNull()) {
-            JOptionPane.showMessageDialog(this, I18n.t("El area de recorte del DEM no es valida."));
+            NotificationManager.warn(this, null, I18n.t("El area de recorte del DEM no es valida."));
             return;
         }
         final Envelope finalEnvelope = new Envelope(envelope);
@@ -235,14 +235,14 @@ public class DemClipDialog extends JDialog {
 
         String outputName = outputNameField.getText().trim();
         if (outputName.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un nombre para el DEM recortado."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un nombre para el DEM recortado."));
             return;
         }
         final String finalOutputName = outputName;
 
         String outputText = outputFileField.getText().trim();
         if (outputText.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un archivo de salida para el DEM recortado."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un archivo de salida para el DEM recortado."));
             return;
         }
         final File outputFile = new File(outputText);
@@ -261,11 +261,10 @@ public class DemClipDialog extends JDialog {
                     dispose();
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             DemClipDialog.this,
-                            I18n.t("No se pudo recortar el DEM:") + "\n" + cause.getMessage(),
                             I18n.t("Recortar DEM"),
-                            JOptionPane.ERROR_MESSAGE
+                            I18n.t("No se pudo recortar el DEM:") + "\n" + cause.getMessage()
                     );
                 }
             }

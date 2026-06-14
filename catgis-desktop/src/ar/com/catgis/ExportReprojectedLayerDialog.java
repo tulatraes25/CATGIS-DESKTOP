@@ -8,7 +8,7 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
+
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
@@ -69,13 +69,13 @@ public class ExportReprojectedLayerDialog extends JDialog {
     private void exportLayer() {
         Layer layer = layerCombo.getItemAt(layerCombo.getSelectedIndex());
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una capa vectorial.");
+            NotificationManager.warn(this, null, "Seleccione una capa vectorial.");
             return;
         }
 
         ShapefileData data = VectorLayerUtils.ensureVectorData(layer);
         if (data == null) {
-            JOptionPane.showMessageDialog(this, "La capa seleccionada no tiene datos vectoriales disponibles.");
+            NotificationManager.warn(this, null, "La capa seleccionada no tiene datos vectoriales disponibles.");
             return;
         }
 

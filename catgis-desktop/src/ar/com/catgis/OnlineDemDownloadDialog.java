@@ -250,11 +250,11 @@ public class OnlineDemDownloadDialog extends JDialog {
         String apiKey = new String(apiKeyField.getPassword()).trim();
         String outputText = outputField.getText().trim();
         if (provider == null || dataset == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una fuente y un dataset DEM."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir una fuente y un dataset DEM."));
             return;
         }
         if (outputText.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes indicar un archivo de salida para el DEM."));
+            NotificationManager.warn(this, null, I18n.t("Debes indicar un archivo de salida para el DEM."));
             return;
         }
         File outputFile = new File(outputText);
@@ -269,18 +269,18 @@ public class OnlineDemDownloadDialog extends JDialog {
             west = parseCoord(westField.getText());
             east = parseCoord(eastField.getText());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("Revisa el area del DEM online. Los cuatro valores deben ser numericos y validos."));
+            NotificationManager.warn(this, null, I18n.t("Revisa el area del DEM online. Los cuatro valores deben ser numericos y validos."));
             return;
         }
 
         Envelope bbox = new Envelope(west, east, south, north);
         if (bbox.isNull() || north <= south || east <= west) {
-            JOptionPane.showMessageDialog(this, I18n.t("El area del DEM online no es valida. Verifica sur/norte/oeste/este."));
+            NotificationManager.warn(this, null, I18n.t("El area del DEM online no es valida. Verifica sur/norte/oeste/este."));
             return;
         }
 
         if (provider.requiresApiKey() && apiKey.isBlank()) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes ingresar una API key de OpenTopography para descargar el DEM."));
+            NotificationManager.warn(this, null, I18n.t("Debes ingresar una API key de OpenTopography para descargar el DEM."));
             return;
         }
         if (provider.requiresApiKey()) {
@@ -291,7 +291,7 @@ public class OnlineDemDownloadDialog extends JDialog {
             try {
                 PublicTerrainTilesDemService.PlanSummary summary = PublicTerrainTilesDemService.estimatePlan(bbox, detailLevel);
                 if (summary.tileCount() > 42) {
-                    JOptionPane.showMessageDialog(this, I18n.t("El area elegida sigue siendo demasiado grande para el DEM publico. Acerca la vista o usa un area mas chica."));
+                    NotificationManager.warn(this, null, I18n.t("El area elegida sigue siendo demasiado grande para el DEM publico. Acerca la vista o usa un area mas chica."));
                     return;
                 }
             } catch (Exception ex) {

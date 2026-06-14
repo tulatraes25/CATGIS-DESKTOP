@@ -2,7 +2,6 @@ package ar.com.catgis;
 import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.core.model.Layer;
 
-import javax.swing.JOptionPane;
 import java.awt.Component;
 import java.awt.Window;
 
@@ -13,7 +12,7 @@ public final class CadWorkflowSupport {
 
     public static void openGeoreferenceWorkflow(Component owner, Layer layer) {
         if (layer == null || !CadLayerSupport.isCadLayer(layer)) {
-            JOptionPane.showMessageDialog(owner, "Selecciona una capa CAD (DWG/DXF) para georreferenciar.");
+            NotificationManager.warn(owner, null, "Selecciona una capa CAD (DWG/DXF) para georreferenciar.");
             return;
         }
 
@@ -46,13 +45,13 @@ public final class CadWorkflowSupport {
 
     public static void openCadInternalLayers(Component owner, Layer layer) {
         if (layer == null || !CadLayerSupport.isCadLayer(layer)) {
-            JOptionPane.showMessageDialog(owner, "Selecciona una capa CAD (DWG/DXF) para revisar sus capas internas.");
+            NotificationManager.warn(owner, null, "Selecciona una capa CAD (DWG/DXF) para revisar sus capas internas.");
             return;
         }
 
         ShapefileData data = OpenAttributeTableAction.ensureLayerDataAvailable(layer);
         if (data == null || data.getFeatures() == null || data.getFeatures().isEmpty()) {
-            JOptionPane.showMessageDialog(owner, "La capa CAD no tiene elementos cargados para revisar sus capas internas.");
+            NotificationManager.warn(owner, null, "La capa CAD no tiene elementos cargados para revisar sus capas internas.");
             return;
         }
 
@@ -78,15 +77,15 @@ public final class CadWorkflowSupport {
 
     public static void openCadDragPlacementWorkflow(Component owner, Layer layer) {
         if (layer == null || !CadLayerSupport.isCadLayer(layer)) {
-            JOptionPane.showMessageDialog(owner, "Selecciona una capa CAD (DWG/DXF) para moverla sobre el mapa.");
+            NotificationManager.warn(owner, null, "Selecciona una capa CAD (DWG/DXF) para moverla sobre el mapa.");
             return;
         }
         if (AppContext.mapPanel() == null) {
-            JOptionPane.showMessageDialog(owner, "No se encontro la vista de mapa activa para arrastrar la referencia CAD.");
+            NotificationManager.warn(owner, null, "No se encontro la vista de mapa activa para arrastrar la referencia CAD.");
             return;
         }
         if (AppContext.mapPanel().isCadPlacementDragActive()) {
-            JOptionPane.showMessageDialog(owner, "Ya hay un arrastre CAD activo. Termina o cancela el flujo actual.");
+            NotificationManager.warn(owner, null, "Ya hay un arrastre CAD activo. Termina o cancela el flujo actual.");
             return;
         }
         AppContext.mapPanel().startCadPlacementDrag(

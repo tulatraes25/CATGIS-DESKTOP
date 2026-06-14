@@ -18,7 +18,7 @@ public final class PostgisDataSourceAction {
     public static void exportSelectedLayerToPostgis() {
         Layer layer = AppContext.getSelectedLayer();
         if (layer == null) {
-            javax.swing.JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), I18n.t("Selecciona una capa vectorial para enviar a CATSERVER."));
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("Selecciona una capa vectorial para enviar a CATSERVER."));
             return;
         }
         PostgisExportDialog.open(CatgisDesktopApp.getMainFrameSafe(), layer);
@@ -34,7 +34,7 @@ public final class PostgisDataSourceAction {
         }
         ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
         if (!ExportVectorLayerAction.hasExportableVectorData(data)) {
-            javax.swing.JOptionPane.showMessageDialog(CatgisDesktopApp.getMainFrameSafe(), "La capa no tiene datos disponibles para guardar en PostGIS.");
+            NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, "La capa no tiene datos disponibles para guardar en PostGIS.");
             return;
         }
         PostgisWriteService.saveLayerToCurrentPath(layer, data, CatgisDesktopApp.getMainFrameSafe(), true);

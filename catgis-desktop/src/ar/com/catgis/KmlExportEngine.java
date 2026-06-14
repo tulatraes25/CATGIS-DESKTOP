@@ -20,7 +20,7 @@ public final class KmlExportEngine {
         if (layer == null) return;
         ar.com.catgis.data.vector.ShapefileData data = ar.com.catgis.data.vector.VectorLayerUtils.ensureVectorData(layer);
         if (data == null || data.getFeatures() == null || data.getFeatures().isEmpty()) {
-            JOptionPane.showMessageDialog(parent, "La capa no tiene entidades para exportar.", "KML Export", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(parent, "KML Export", "La capa no tiene entidades para exportar.");
             return;
         }
         JFileChooser chooser = new JFileChooser();
@@ -29,7 +29,7 @@ public final class KmlExportEngine {
         if (chooser.showSaveDialog(parent) != JFileChooser.APPROVE_OPTION) return;
         try {
             exportToKml(chooser.getSelectedFile(), data.getFeatures(), layer.getName());
-            JOptionPane.showMessageDialog(parent, "Exportado exitosamente.", "KML Export", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(parent, "KML Export", "Exportado exitosamente.");
         } catch (Exception e) {
             AppErrorSupport.showErrorDialog(parent, "KML Export", "Error al exportar KML.", e);
         }
