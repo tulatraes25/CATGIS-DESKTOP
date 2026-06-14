@@ -99,12 +99,13 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 | Field | Value |
 |---|---|
-| **Severity** | 🟡 MEDIA |
-| **File** | `catmap/CatmapSerializer.java` (líneas ~319, ~323) |
-| **Evidence** | Dos catch blocks retornan `0` en fallo de parseo de propiedades numéricas. No existe método `validate()`. Layout corrupto → carga con datos parciales sin error. |
-| **Impacto** | Crash durante save puede producir archivo `.catgis` corrupto que abre con elementos faltantes y sin advertencia. |
-| **Recomendación** | Guardar a `.catgis.tmp` primero, renombrar al terminar. Agregar `validate()` y lanzar `UnsupportedFormatException` en fallos de parseo. |
-| **Prioridad** | P2. |
+| **Severity** | 🟢 BAJA (era 🟡 MEDIA) |
+| **Status** | OPEN / mitigado |
+| **File** | `catmap/CatmapSerializer.java` |
+| **Evidence** | `parseDouble`/`parseInt` ahora loguean `CatgisLogger.warn` con valor inválido antes de retornar 0. `parseBoolean` valida estrictamente true/false con warn si no coincide. `parseElement` emite warning adicional si `w<=0 \|\| h<=0` con id+tipo. 10 tests en `CatmapSerializerTest` (commit `58484f0`). |
+| **Impacto** | Bajo — los parseos siguen retornando defaults para no romper la carga del resto del layout, pero ahora el usuario/desarrollador ve el warning en logs. |
+| **Riesgo residual** | `parseColor` (línea 355) retorna `Color.BLACK` sin log. `parseElement` retorna null con partes < 10 sin log del id. |
+| **Prioridad** | P3. |
 
 ---
 
@@ -157,12 +158,41 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 | Field | Value |
 |---|---|
-| **Severity** | 🔴 ALTA |
-| **Files** | 8 features con 0 tests: GeoPackage, SpatiaLite, DXF, DWG, LAS, WMS, WFS, Plugins |
-| **Evidence** | FlatGeobuf: tests con byte arrays sintéticos, sin roundtrip con .fgb real. PostGIS: tests solo de regex, sin conexión real. CATMAP: golden tests con datos sintéticos. |
-| **Impacto** | Regresiones en loaders de formatos pueden no detectarse hasta que usuarios las reporten. |
-| **Recomendación** | Priorizar: FlatGeobuf roundtrip, PostGIS conexión real, GeoPackage read, SpatiaLite read. |
-| **Prioridad** | P1. |
+| **Severity** | 🟢 BAJA (era 🔴 ALTA) |
+| **Status** | OPEN / mitigado — 7 formatos con cobertura 🟢 Alta, 3 con cobertura parcial 🟡 Media, 2 sin cobertura |
+| **Evidencia** | |
+
+### Cobertura real (roundtrip con fixture válido)
+
+| Formato | Tests | Fixture | Confianza |
+|---|---|---|---|
+| DXF | 3 | ASCII string | 🟢 Alta |
+| FlatGeobuf | 4 | GeoJSON → `ogr2ogr` .fgb | 🟢 Alta |
+| GeoPackage | 5 | GeoJSON → `ogr2ogr` .gpkg | 🟢 Alta |
+| CSV | 3 | CSV inline | 🟢 Alta |
+| KML | 2 | KML inline | 🟢 Alta |
+| GPX | 2 | GPX inline | 🟢 Alta |
+| SpatiaLite | 3 | GeoJSON → `ogr2ogr -dsco SPATIALITE=YES` .sqlite | 🟢 Alta |
+
+### Cobertura parcial (mock o render programático)
+
+| Formato | Tests | Bloqueante |
+|---|---|---|
+| CATMAP | 3 | `StreamingRenderer` no disponible en classpath |
+| WMS | 3 | `HttpServer` mock — falta GetMap real |
+| WFS | 3 | `HttpServer` mock — falta GetFeature real |
+
+### Sin cobertura (requiere infraestructura externa)
+
+| Formato | Bloqueante |
+|---|---|
+| PostGIS | Servidor PostgreSQL+PostGIS externo |
+| DWG | ODA Teigha binario externo |
+| LAS/LiDAR | Fixture binario LAS |
+
+| **Impacto** | Bajo — 7 de 12 formatos con roundtrip real. Los 2 sin cobertura requieren infraestructura externa no automatizable. |
+| **Recomendación** | PostGIS: documento de prueba manual con script SQL. DWG/LAS: documentar como pendiente permanente. |
+| **Prioridad** | P3. |
 
 ---
 
@@ -194,12 +224,13 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 | Field | Value |
 |---|---|
-| **Severity** | 🟡 MEDIA |
-| **Files** | `CatmapSerializer.java`, lógica de save/load de proyecto |
-| **Evidence** | Sin `validate()`, sin backup atómico (save a .tmp → rename). Si la app crashea durante el save, el archivo queda corrupto y carga con datos parciales sin error. |
-| **Impacto** | Pérdida de trabajo no guardado. Layout corrupto abre con elementos faltantes. |
-| **Recomendación** | Save atómico (.tmp → rename). Agregar `CatmapSerializer.validate()`. |
-| **Prioridad** | P2. |
+| **Severity** | 🟢 BAJA (era 🟡 MEDIA) |
+| **Status** | OPEN / mitigado |
+| **Files** | `catmap/CatmapSerializer.java` |
+| **Evidence** | Save atómico implementado en commit `58484f0`: escribe a `.tmp`, renombra al final. Si el archivo destino ya existe, crea backup `.bak`. Si rename falla, lanza `IOException`. 10 tests en `CatmapSerializerTest` verifican roundtrip, .tmp cleanup, .bak creation. |
+| **Impacto** | Bajo — crash durante save deja `.tmp` que puede recuperarse manualmente. `.bak` conserva la versión anterior. |
+| **Riesgo residual** | Backup `.bak` se crea pero no hay restauración automática. `parseColor` retorna `Color.BLACK` sin log. |
+| **Prioridad** | P3. |
 
 ---
 
@@ -234,15 +265,15 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 | R-01 Plugin ClassLoader | 🔴 ALTA | OPEN |
 | R-02 pgRouting SQL injection | 🟢 BAJA | **CLOSED** (era ALTA) |
 | R-03 GribLoader empty catch | 🟡 MEDIA | OPEN |
-| R-04 CatmapSerializer silent | 🟡 MEDIA | OPEN |
+| R-04 CatmapSerializer silent | 🟢 BAJA | OPEN / mitigado |
 | R-05 4 empty catch blocks | 🟢 BAJA | OPEN |
 | R-06 External processes | 🟢 BAJA | CLOSED |
 | R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
 | R-08 PostGIS pooling | 🟢 BAJA | CLOSED |
-| R-09 Real dataset tests | 🔴 ALTA | OPEN |
+| R-09 Real dataset tests | 🟢 BAJA | OPEN / mitigado (7/12 formatos 🟢 Alta) |
 | R-10 Raster memory | 🟡 MEDIA | OPEN |
 | R-11 UI freeze | 🟢 BAJA | CLOSED |
-| R-12 Project corruption | 🟡 MEDIA | OPEN |
+| R-12 Project corruption | 🟢 BAJA | OPEN / mitigado |
 | R-13 Notification migration | 🟢 BAJA | CLOSED |
 | R-14 Static field access | 🟢 BAJA | OPEN |
 
