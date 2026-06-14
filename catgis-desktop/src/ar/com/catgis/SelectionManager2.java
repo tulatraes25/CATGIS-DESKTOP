@@ -328,7 +328,7 @@ public class SelectionManager2 {
 
     void forEachVisibleFeatureGeometry(List<Layer> layers,
                                        String failurePrefix,
-                                       BiConsumer<Layer, MapPanel.FeatureGeometryRef> consumer) {
+                                       BiConsumer<Layer, SelectionManager2.FeatureGeometryRef> consumer) {
         if (layers == null || consumer == null) {
             return;
         }
@@ -358,7 +358,7 @@ public class SelectionManager2 {
                         continue;
                     }
 
-                    consumer.accept(layer, new MapPanel.FeatureGeometryRef(feature, geometry));
+                    consumer.accept(layer, new SelectionManager2.FeatureGeometryRef(feature, geometry));
                 }
             } catch (Exception ex) {
                 AppErrorSupport.logFailure((failurePrefix != null ? failurePrefix : "Error de capa ") + layer.getName(), ex);

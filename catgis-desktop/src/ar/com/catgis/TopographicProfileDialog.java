@@ -272,7 +272,7 @@ public class TopographicProfileDialog extends JDialog {
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(I18n.t("Perfil topografico: haz clics sobre el mapa para dibujar la linea. Usa clic derecho para terminar o Esc para cancelar."));
         }
-        AppContext.mapPanel().startTopographicProfileCapture(new MapPanel.TopographicProfileCaptureHandler() {
+        AppContext.mapPanel().startTopographicProfileCapture(new TopographicProfileCaptureHandler() {
             @Override
             public void onLineCaptured(LineString line, String sourceCrs) {
                 profileLineGeometry = line;
@@ -968,3 +968,4 @@ public class TopographicProfileDialog extends JDialog {
         }
     }
 }
+

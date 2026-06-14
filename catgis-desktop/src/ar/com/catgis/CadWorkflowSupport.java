@@ -90,7 +90,7 @@ public final class CadWorkflowSupport {
         }
         AppContext.mapPanel().startCadPlacementDrag(
                 layer,
-                new MapPanel.CadPlacementDragHandler() {
+                new CadPlacementDragHandler() {
                     @Override
                     public void onDragApplied(double offsetX, double offsetY) {
                         layer.setCadOffsetX(offsetX);
@@ -128,3 +128,4 @@ public final class CadWorkflowSupport {
         );
     }
 }
+

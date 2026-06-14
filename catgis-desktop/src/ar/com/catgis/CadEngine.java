@@ -12,7 +12,7 @@ public class CadEngine {
 
     boolean cadPlacementDragActive = false;
     Layer cadPlacementDragLayer = null;
-    MapPanel.CadPlacementDragHandler cadPlacementDragHandler = null;
+    CadPlacementDragHandler cadPlacementDragHandler = null;
     boolean cadPlacementDragStarted = false;
     boolean cadPlacementDragMoved = false;
     double cadPlacementDragStartX = Double.NaN;
@@ -24,7 +24,7 @@ public class CadEngine {
     String cadPlacementDragCancelMessage;
 
     boolean pointCaptureActive = false;
-    MapPanel.MapPointCaptureHandler pointCaptureHandler = null;
+    MapPointCaptureHandler pointCaptureHandler = null;
     String pointCaptureStartMessage;
     String pointCaptureSuccessMessage;
     String pointCaptureCancelMessage;
@@ -44,7 +44,7 @@ public class CadEngine {
     }
 
     public void startCadPlacementDrag(Layer layer,
-                                      MapPanel.CadPlacementDragHandler handler,
+                                      CadPlacementDragHandler handler,
                                       String startMessage,
                                       String successMessage,
                                       String cancelMessage) {
@@ -88,7 +88,7 @@ public class CadEngine {
             layer.setCadOffsetX(cadPlacementDragOriginalOffsetX);
             layer.setCadOffsetY(cadPlacementDragOriginalOffsetY);
         }
-        MapPanel.CadPlacementDragHandler handler = cadPlacementDragHandler;
+        CadPlacementDragHandler handler = cadPlacementDragHandler;
         cadPlacementDragActive = false;
         cadPlacementDragStarted = false;
         cadPlacementDragMoved = false;
@@ -139,7 +139,7 @@ public class CadEngine {
             return;
         }
         Layer layer = cadPlacementDragLayer;
-        MapPanel.CadPlacementDragHandler handler = cadPlacementDragHandler;
+        CadPlacementDragHandler handler = cadPlacementDragHandler;
         boolean moved = cadPlacementDragMoved;
         double offsetX = layer != null ? layer.getCadOffsetX() : 0d;
         double offsetY = layer != null ? layer.getCadOffsetY() : 0d;
@@ -164,7 +164,7 @@ public class CadEngine {
         }
     }
 
-    public void startPointCapture(MapPanel.MapPointCaptureHandler handler) {
+    public void startPointCapture(MapPointCaptureHandler handler) {
         startPointCapture(
                 handler,
                 I18n.t("Pour point: haz clic sobre el mapa para indicar el outlet. Usa clic derecho o Esc para cancelar."),
@@ -173,7 +173,7 @@ public class CadEngine {
         );
     }
 
-    public void startPointCapture(MapPanel.MapPointCaptureHandler handler,
+    public void startPointCapture(MapPointCaptureHandler handler,
                                   String startMessage,
                                   String successMessage,
                                   String cancelMessage) {
@@ -202,7 +202,7 @@ public class CadEngine {
     }
 
     public void cancelPointCapture() {
-        MapPanel.MapPointCaptureHandler handler = pointCaptureHandler;
+        MapPointCaptureHandler handler = pointCaptureHandler;
         pointCaptureActive = false;
         pointCaptureHandler = null;
         AppContext.setStatusMessage(pointCaptureCancelMessage);
@@ -216,7 +216,7 @@ public class CadEngine {
         if (!pointCaptureActive || coordinate == null) {
             return;
         }
-        MapPanel.MapPointCaptureHandler handler = pointCaptureHandler;
+        MapPointCaptureHandler handler = pointCaptureHandler;
         String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
         pointCaptureActive = false;
         pointCaptureHandler = null;
@@ -227,3 +227,4 @@ public class CadEngine {
         }
     }
 }
+

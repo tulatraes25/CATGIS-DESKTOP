@@ -4,6 +4,9 @@ import ar.com.catgis.FeatureBuilder;
 import ar.com.catgis.MapGeometryUtils;
 import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.data.vector.VectorLayerUtils;
+import ar.com.catgis.data.online.OnlineRasterSource;
+import ar.com.catgis.data.online.OnlineWmsLayer;
+import ar.com.catgis.data.raster.LocalRasterData;
 import ar.com.catgis.core.model.Layer;
 
 import org.geotools.api.feature.simple.SimpleFeature;
@@ -1921,5 +1924,566 @@ class MapEditingEngine {
 
     boolean deleteSelectedFeature() {
         return deleteSelectedFeatures();
+    }
+
+    // --- Editing lifecycle methods moved from MapPanel ---
+
+    public void prepareLayerForEditing(Layer layer) {
+        if (layer == null) {
+            return;
+        }
+        if (map.isReadOnlyVectorLayer(layer)) {
+            NotificationManager.warn(map, null, getReadOnlyLayerMessage(layer));
+            return;
+        }
+        if ((map.featureEditMode || map.featureEditDirty)
+                && (layer != map.activeVectorEditingLayer || map.selectedLayer != layer)
+                && !confirmPendingFeatureEdit("cambiar de capa editable")) {
+            return;
+        }
+        map.activeVectorEditingLayer = layer;
+        if (map.selectedLayer != layer) {
+            map.selectedLayer = layer;
+            map.selectedFeature = null;
+            map.featureEditMode = false;
+            map.featureEditOriginalGeometry = null;
+            map.featureEditDirty = false;
+            map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
+            map.featureEditSketchCoordinates.clear();
+            map.activeEditVertexIndex = -1;
+            map.joinTargetVertexIndex = -1;
+            map.clearAdjacentPolygonState();
+            map.clearCadConstructionState();
+            map.undoRedoManager.clear();
+        }
+        map.setTool("SELECT");
+        map.refreshEditingUi();
+        if (CatgisDesktopApp.statusBar != null) {
+            AppContext.setStatusMessage("Capa lista para edicion: " + layer.getName() + ". Selecciona una entidad con la flecha.");
+        }
+    }
+
+    public void enableFeatureEdit(Layer layer, SimpleFeature feature) {
+        if (map.isReadOnlyVectorLayer(layer)) {
+            NotificationManager.warn(map, null, getReadOnlyLayerMessage(layer));
+            return;
+        }
+        boolean sameSelection = layer == map.selectedLayer && feature == map.selectedFeature && map.featureEditMode;
+        if (!sameSelection && !confirmPendingFeatureEdit("cambiar de entidad en edicion")) {
+            return;
+        }
+        map.activeVectorEditingLayer = layer;
+        map.selectedLayer = layer;
+        map.selectedFeature = feature;
+        if (layer != null && feature != null) {
+            map.tableSelectionIds.clear();
+            map.tableSelectionIds.put(layer, new ArrayList<>(java.util.List.of(feature.getID())));
+            OpenAttributeTableAction.syncSelectionFromMap(layer, java.util.List.of(feature.getID()));
+        }
+        map.featureEditMode = layer != null && feature != null;
+        if (!sameSelection) {
+            map.featureEditOriginalGeometry = MapGeometryUtils.extractFeatureGeometryCopy(feature);
+            map.featureEditDirty = false;
+            map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
+            map.featureEditSketchCoordinates.clear();
+            map.undoRedoManager.clear();
+        }
+        map.activeEditVertexIndex = -1;
+        map.joinTargetVertexIndex = -1;
+        map.clearAdjacentPolygonState();
+        map.clearCadConstructionState();
+        map.setTool("SELECT");
+        if (map.featureEditMode && CatgisDesktopApp.statusBar != null) {
+            AppContext.setStatusMessage("Edicion activa en rojo. Arrastra o modifica los vertices de la entidad seleccionada.");
+        }
+        if (map.featureEditMode) {
+            map.startSelectionFlash(layer, feature);
+        }
+        map.refreshEditingUi();
+    }
+
+    void adjustSelectedPolygonArea(boolean increase) {
+        if (!map.featureEditMode || map.selectedFeature == null || map.selectedLayer == null) {
+            return;
+        }
+        if (!map.isSelectedFeaturePolygonal()) {
+            NotificationManager.warn(map, null, "Esta herramienta solo funciona sobre poligonos.");
+            return;
+        }
+
+        String actionName = increase ? "aumentar" : "disminuir";
+        String unitHint = map.getPolygonSurfaceDistanceHint(map.selectedLayer);
+        String input = javax.swing.JOptionPane.showInputDialog(
+                map,
+                "Distancia para " + actionName + " superficie (" + unitHint + "):",
+                "5"
+        );
+        if (input == null) {
+            return;
+        }
+
+        double distance = map.parsePositiveDistance(input);
+        if (!(distance > 0d)) {
+            NotificationManager.warn(map, null, "Ingresa una distancia positiva valida.");
+            return;
+        }
+
+        Object geomObj = map.selectedFeature.getDefaultGeometry();
+        if (!(geomObj instanceof Geometry geometry)) {
+            return;
+        }
+
+        Geometry updated = map.editingGeomOps.buildBufferedPolygonGeometry(geometry, map.selectedLayer, increase ? distance : -distance);
+        if (updated == null || updated.isEmpty()) {
+            NotificationManager.warn(map, null, "No se pudo ajustar la superficie con esa distancia.");
+            return;
+        }
+
+        map.updateSelectedFeatureGeometry(updated, increase ? "Superficie aumentada." : "Superficie disminuida.");
+    }
+
+    public void finishFeatureEdit() {
+        if (!map.featureEditMode && map.activeVectorEditingLayer == null) {
+            return;
+        }
+        if (!confirmPendingFeatureEdit("salir de la edicion")) {
+            return;
+        }
+
+        map.activeVectorEditingLayer = null;
+        map.featureEditMode = false;
+        map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
+        map.featureEditSketchCoordinates.clear();
+        map.activeEditVertexIndex = -1;
+        map.joinTargetVertexIndex = -1;
+        map.clearAdjacentPolygonState();
+        map.clearCadConstructionState();
+        map.featureEditOriginalGeometry = null;
+        map.featureEditDirty = false;
+        if (CatgisDesktopApp.statusBar != null) {
+            AppContext.setStatusMessage("Edicion finalizada.");
+        }
+        map.undoRedoManager.clear();
+        map.refreshEditingUi();
+    }
+
+    public boolean saveFeatureEditChanges() {
+        if (!map.featureEditMode || map.selectedFeature == null) {
+            return false;
+        }
+
+        map.featureEditOriginalGeometry = MapGeometryUtils.extractFeatureGeometryCopy(map.selectedFeature);
+        map.featureEditDirty = false;
+        map.featureEditSketchCoordinates.clear();
+        map.joinTargetVertexIndex = -1;
+        map.clearAdjacentPolygonState();
+        map.clearCadConstructionState();
+        CatgisDesktopApp.markProjectDirty();
+        if (CatgisDesktopApp.statusBar != null) {
+            AppContext.setStatusMessage("Cambios geometricos guardados en la sesion del proyecto.");
+        }
+        map.refreshEditingUi();
+        return true;
+    }
+
+    public boolean confirmPendingFeatureEdit(String nextActionDescription) {
+        if (!map.hasFeatureEditChanges() || map.selectedFeature == null) {
+            return true;
+        }
+
+        String layerName = map.selectedLayer != null ? map.selectedLayer.getName() : "la capa actual";
+        Object[] options = {"Guardar", "Descartar", "Cancelar"};
+        String message = "Hay cambios sin guardar en la entidad en edicion de " + layerName + ".\n"
+                + "Queres guardarlos antes de " + nextActionDescription + "?";
+        int choice = javax.swing.JOptionPane.showOptionDialog(
+                map,
+                message,
+                "Cambios en edicion",
+                javax.swing.JOptionPane.YES_NO_CANCEL_OPTION,
+                javax.swing.JOptionPane.WARNING_MESSAGE,
+                null,
+                options,
+                options[0]
+        );
+
+        if (choice == 0) {
+            return saveFeatureEditChanges();
+        }
+        if (choice == 1) {
+            restoreFeatureEditOriginalGeometry();
+            map.featureEditDirty = false;
+            map.featureEditSketchCoordinates.clear();
+            map.activeEditVertexIndex = -1;
+            map.joinTargetVertexIndex = -1;
+            map.clearAdjacentPolygonState();
+            map.undoRedoManager.clear();
+            map.refreshEditingUi();
+            return true;
+        }
+        return false;
+    }
+
+    void restoreFeatureEditOriginalGeometry() {
+        if (map.selectedFeature != null && map.featureEditOriginalGeometry != null) {
+            map.selectedFeature.setDefaultGeometry(map.featureEditOriginalGeometry.copy());
+            map.repaint();
+        }
+    }
+
+    public void cancelFeatureEdit() {
+        if (!confirmPendingFeatureEdit("cancelar la edicion")) {
+            return;
+        }
+        restoreFeatureEditOriginalGeometry();
+        map.activeVectorEditingLayer = null;
+        map.featureEditMode = false;
+        map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
+        map.featureEditSketchCoordinates.clear();
+        map.activeEditVertexIndex = -1;
+        map.joinTargetVertexIndex = -1;
+        map.clearAdjacentPolygonState();
+        map.clearCadConstructionState();
+        map.featureEditOriginalGeometry = null;
+        map.featureEditDirty = false;
+        map.undoRedoManager.clear();
+        if (CatgisDesktopApp.statusBar != null) {
+            AppContext.setStatusMessage("Edicion cancelada.");
+        }
+        map.refreshEditingUi();
+    }
+
+    public boolean isFeatureEditSketchMode() {
+        return MapPanel.EDIT_OP_CUT.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_HOLE.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_ADJACENT_POLYGON.equals(map.featureEditOperation);
+    }
+
+    boolean isCadLineConstructionMode() {
+        return MapPanel.EDIT_OP_EXTEND_LINE.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_SHORTEN_LINE.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_PARALLEL.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_PERPENDICULAR.equals(map.featureEditOperation);
+    }
+
+    boolean ensureSelectedLineReadyForCad(String actionName) {
+        if (!map.featureEditMode && map.selectedLayer != null && map.selectedFeature != null) {
+            enableFeatureEdit(map.selectedLayer, map.selectedFeature);
+        }
+        if (!map.featureEditMode || !map.isSelectedFeatureLinear()) {
+            NotificationManager.warn(map, null, "Primero selecciona una sola linea valida para " + actionName + ".");
+            return false;
+        }
+        return true;
+    }
+
+    boolean shouldPreserveFeatureEditOperation() {
+        return MapPanel.EDIT_OP_ADD_VERTEX.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_REMOVE_VERTEX.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_JOIN_VERTEX.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_EXTEND_LINE.equals(map.featureEditOperation)
+                || MapPanel.EDIT_OP_SHORTEN_LINE.equals(map.featureEditOperation);
+    }
+
+    String getReadOnlyLayerMessage(Layer layer) {
+        String reason = VectorLayerUtils.getReadOnlyVectorLayerReason(layer);
+        return !reason.isBlank() ? reason : "La capa seleccionada esta en modo lectura.";
+    }
+
+    public void refreshEditingUi() {
+        CatgisDesktopApp.syncFloatingVectorEditToolbar();
+        if (CatgisDesktopApp.layersPanel != null) {
+            javax.swing.SwingUtilities.invokeLater(() -> AppContext.refreshLayerList());
+        }
+        map.repaint();
+    }
+
+    // --- Zoom and viewport methods moved from MapPanel ---
+
+    public void resetView() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            map.rememberCurrentView();
+            map.fitToAllLayers();
+            map.rememberCurrentView();
+            map.repaint();
+        });
+    }
+
+    public void restoreView(double viewMinX, double viewMinY, double zoomFactor) {
+        if (zoomFactor <= 0) {
+            return;
+        }
+
+        map.viewMinX = viewMinX;
+        map.viewMinY = viewMinY;
+        map.zoomFactor = zoomFactor;
+        map.syncViewToController();
+        map.refreshStatusBarScale();
+        map.repaint();
+    }
+
+    public void restoreViewOrReset(double savedViewMinX, double savedViewMinY, double savedZoomFactor, boolean hasSavedView) {
+        if (hasSavedView) {
+            restoreView(savedViewMinX, savedViewMinY, savedZoomFactor);
+        } else {
+            resetView();
+            return;
+        }
+
+        Envelope current = map.getCurrentViewEnvelope();
+        Envelope global = map.getGlobalEnvelope();
+        if (global == null || global.isNull()) {
+            map.repaint();
+            return;
+        }
+
+        if (current == null
+                || current.isNull()
+                || !current.intersects(global)
+                || current.getWidth() > global.getWidth() * 500
+                || current.getHeight() > global.getHeight() * 500) {
+            map.fitToEnvelope(global);
+            map.rememberCurrentView();
+            map.repaint();
+        }
+    }
+
+    public void zoomToAllLayers() {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            map.rememberCurrentView();
+            Envelope global = map.getGlobalEnvelope();
+
+            if (global == null || global.isNull()) {
+                NotificationManager.warn(map, null, "No hay capas cargadas para calcular la extension.");
+                return;
+            }
+
+            map.fitToEnvelope(global);
+            map.rememberCurrentView();
+            map.repaint();
+
+            if (CatgisDesktopApp.statusBar != null) {
+                AppContext.setStatusMessage("Zoom a todas las capas aplicado.");
+            }
+        });
+    }
+
+    void fitToAllLayers() {
+        Envelope global = map.getGlobalEnvelope();
+
+        if (global == null || global.isNull()) {
+            map.repaint();
+            return;
+        }
+
+        map.fitToEnvelope(global);
+    }
+
+    public Envelope getCurrentViewEnvelope() {
+        if (map.getWidth() <= 0 || map.getHeight() <= 0) {
+            return null;
+        }
+        return new Envelope(
+                map.screenToWorldX(0),
+                map.screenToWorldX(map.getWidth()),
+                map.screenToWorldY(map.getHeight()),
+                map.screenToWorldY(0)
+        );
+    }
+
+    void shiftViewByPixels(int dx, int dy) {
+        if (dx != 0 || dy != 0) {
+            double zf = map.viewController.getZoomFactor();
+            map.viewMinX -= dx / zf;
+            map.viewMinY += dy / zf;
+            map.syncViewToController();
+        }
+    }
+
+    public void applyRequestedScale(String input) {
+        Double targetDenominator = parseScaleDenominator(input);
+        if (targetDenominator == null || targetDenominator <= 0d) {
+            NotificationManager.warn(
+                    map,
+                    "Escala de vista",
+                    "Introduce una escala valida. Ejemplo: 1:5000"
+            );
+            return;
+        }
+
+        double currentDenominator = map.getCurrentScaleDenominator();
+        if (currentDenominator <= 0d) {
+            NotificationManager.warn(
+                    map,
+                    "Escala de vista",
+                    "No se pudo calcular la escala actual de la vista."
+            );
+            return;
+        }
+
+        map.rememberCurrentView();
+        double factor = currentDenominator / targetDenominator;
+        applyZoom(factor, Math.max(1, map.getWidth() / 2), Math.max(1, map.getHeight() / 2));
+        map.rememberCurrentView();
+        if (CatgisDesktopApp.statusBar != null) {
+            String scaleText = formatScaleDenominator(targetDenominator);
+            AppContext.forceStatusScaleText(scaleText);
+            AppContext.setStatusMessage("Escala de vista ajustada a " + scaleText + ".");
+        }
+    }
+
+    private Double parseScaleDenominator(String input) {
+        return MapUtilities.parseScaleDenominator(input);
+    }
+
+    private void applyZoom(double factor, int anchorX, int anchorY) {
+        map.getViewController().applyZoom(factor,
+                map.getViewController().screenToWorldX(anchorX),
+                map.getViewController().screenToWorldY(anchorY));
+    }
+
+    private String formatScaleDenominator(double denominator) {
+        return MapUtilities.formatScaleDenominator(denominator);
+    }
+
+    public void zoomToLayer(Layer layer) {
+        if (layer == null) {
+            return;
+        }
+
+        ShapefileData data = map.shapefileLayers.get(layer);
+        LocalRasterData raster = map.rasterLayers.get(layer);
+        OnlineRasterSource online = map.onlineTileLayers.get(layer);
+        OnlineWmsLayer onlineWms = map.onlineWmsLayers.get(layer);
+        if (data == null && raster == null && online == null && onlineWms == null) {
+            NotificationManager.warn(map, null, "La capa no tiene datos cargados en el mapa.");
+            return;
+        }
+
+        layer.setVisible(true);
+
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            map.rememberCurrentView();
+            Envelope env = data != null
+                    ? map.getLayerEnvelope(layer, data)
+                    : (raster != null
+                    ? map.getRasterEnvelope(layer, raster)
+                    : (online != null ? map.getOnlineLayerEnvelope((OnlineTileLayer) layer) : map.getOnlineWmsEnvelope(onlineWms)));
+
+            if (env == null || env.isNull()) {
+                NotificationManager.warn(map, null, "No se pudo calcular la extension de la capa.");
+                return;
+            }
+
+            map.fitToEnvelope(env);
+            map.rememberCurrentView();
+            map.repaint();
+        });
+    }
+
+    public void zoomToFeatureSelection(Layer layer, java.util.List<String> featureIds) {
+        if (layer == null || featureIds == null || featureIds.isEmpty()) {
+            return;
+        }
+
+        ShapefileData data = map.getShapefileData(layer);
+        if (data == null || data.getFeatures() == null || data.getFeatures().isEmpty()) {
+            return;
+        }
+
+        Envelope selectionEnvelope = null;
+        for (String featureId : featureIds) {
+            SimpleFeature feature = map.findFeatureById(data.getFeatures(), featureId);
+            if (feature == null) {
+                continue;
+            }
+            Object geomObj = feature.getDefaultGeometry();
+            if (!(geomObj instanceof Geometry)) {
+                continue;
+            }
+            Geometry geometry = map.reprojectGeometryIfNeeded(layer, (Geometry) geomObj);
+            if (geometry == null || geometry.isEmpty()) {
+                continue;
+            }
+
+            if (selectionEnvelope == null) {
+                selectionEnvelope = new Envelope(geometry.getEnvelopeInternal());
+            } else {
+                selectionEnvelope.expandToInclude(geometry.getEnvelopeInternal());
+            }
+        }
+
+        if (selectionEnvelope == null || selectionEnvelope.isNull()) {
+            return;
+        }
+
+        double expandX = Math.max(selectionEnvelope.getWidth() * 0.12, 10.0 / Math.max(map.zoomFactor, 0.000001));
+        double expandY = Math.max(selectionEnvelope.getHeight() * 0.12, 10.0 / Math.max(map.zoomFactor, 0.000001));
+        selectionEnvelope.expandBy(expandX, expandY);
+        map.fitToEnvelope(selectionEnvelope);
+        map.repaint();
+    }
+
+    public void zoomToFeature(SimpleFeature feature, Layer layer) {
+        if (feature == null) {
+            return;
+        }
+
+        Object geomObj = feature.getDefaultGeometry();
+        if (!(geomObj instanceof Geometry)) {
+            return;
+        }
+
+        Geometry geometry = map.reprojectGeometryIfNeeded(layer, (Geometry) geomObj);
+        if (geometry == null || geometry.isEmpty()) {
+            return;
+        }
+
+        Envelope env = geometry.getEnvelopeInternal();
+        if (env == null || env.isNull()) {
+            return;
+        }
+
+        double expandX = Math.max(env.getWidth() * 0.15, 10.0 / Math.max(map.zoomFactor, 0.000001));
+        double expandY = Math.max(env.getHeight() * 0.15, 10.0 / Math.max(map.zoomFactor, 0.000001));
+        env.expandBy(expandX, expandY);
+
+        map.fitToEnvelope(env);
+        map.highlightIdentifiedFeature(layer, feature);
+    }
+
+    public void zoomToGeometry(Geometry geometry, String sourceCrs) {
+        Geometry displayGeometry = adaptExternalGeometryToProject(geometry, sourceCrs);
+        if (displayGeometry == null || displayGeometry.isEmpty()) {
+            return;
+        }
+
+        Envelope env = displayGeometry.getEnvelopeInternal();
+        if (env == null || env.isNull()) {
+            return;
+        }
+
+        double expandX = Math.max(env.getWidth() * 0.15, 10.0 / Math.max(map.zoomFactor, 0.000001));
+        double expandY = Math.max(env.getHeight() * 0.15, 10.0 / Math.max(map.zoomFactor, 0.000001));
+        env.expandBy(expandX, expandY);
+        map.fitToEnvelope(env);
+        map.flashGeometry(displayGeometry, null);
+        map.repaint();
+    }
+
+    private Geometry adaptExternalGeometryToProject(Geometry geometry, String sourceCrs) {
+        if (geometry == null || geometry.isEmpty()) {
+            return geometry;
+        }
+        String targetCrs = (AppContext.project() != null) ? AppContext.project().getProjectCRS() : "";
+        if (sourceCrs == null || sourceCrs.isBlank() || targetCrs == null || targetCrs.isBlank()
+                || sourceCrs.equalsIgnoreCase(targetCrs)) {
+            return geometry.copy();
+        }
+        Geometry reprojected = reprojectGeometry(geometry, sourceCrs, targetCrs);
+        return reprojected != null ? reprojected : geometry.copy();
+    }
+
+    private Geometry reprojectGeometry(Geometry geometry, String sourceCrs, String targetCrs) {
+        return map.reprojectGeometry(geometry, sourceCrs, targetCrs);
     }
 }

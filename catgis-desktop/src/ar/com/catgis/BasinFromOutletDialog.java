@@ -272,7 +272,7 @@ public class BasinFromOutletDialog extends JDialog {
             return;
         }
         setVisible(false);
-        AppContext.mapPanel().startPointCapture(new MapPanel.MapPointCaptureHandler() {
+        AppContext.mapPanel().startPointCapture(new MapPointCaptureHandler() {
             @Override
             public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
                 capturedCoordinate = coordinate != null ? new Coordinate(coordinate) : null;
@@ -596,3 +596,4 @@ public class BasinFromOutletDialog extends JDialog {
                                           String statusMessage) {
     }
 }
+

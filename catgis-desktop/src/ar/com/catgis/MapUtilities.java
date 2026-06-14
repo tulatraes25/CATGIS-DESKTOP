@@ -591,4 +591,49 @@ public class MapUtilities {
         }
         return "metros";
     }
+
+    // ========================================================================
+    // 17. Info dialog methods
+    // ========================================================================
+
+    public void showFeatureInfo(SimpleFeature feature, Layer layer) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Capa: ").append(layer.getName()).append("\n\n");
+
+        feature.getProperties().forEach(property -> {
+            String name = property.getName().toString();
+            Object value = property.getValue();
+            if (!"the_geom".equalsIgnoreCase(name)) {
+                sb.append(name).append(": ").append(value).append("\n");
+            }
+        });
+
+        showScrollableInfoDialog(panel, "Identificar entidad", sb.toString());
+    }
+
+    static void showScrollableInfoDialog(java.awt.Component parent, String title, String content) {
+        javax.swing.JTextArea infoArea = new javax.swing.JTextArea(content != null ? content : "");
+        infoArea.setEditable(false);
+        infoArea.setLineWrap(false);
+        infoArea.setWrapStyleWord(false);
+        infoArea.setCaretPosition(0);
+        infoArea.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN,
+                Math.max(12, infoArea.getFont().getSize())));
+
+        javax.swing.JScrollPane scrollPane = new javax.swing.JScrollPane(
+                infoArea,
+                javax.swing.JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                javax.swing.JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        );
+        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+
+        java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+        int preferredWidth = Math.max(540, Math.min(940, screenSize.width - 140));
+        int preferredHeight = Math.max(320, Math.min(620, screenSize.height - 180));
+        scrollPane.setPreferredSize(new java.awt.Dimension(preferredWidth, preferredHeight));
+
+        javax.swing.JOptionPane.showMessageDialog(parent, scrollPane, title,
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+    }
 }

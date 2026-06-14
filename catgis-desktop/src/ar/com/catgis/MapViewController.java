@@ -2,6 +2,9 @@ package ar.com.catgis;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
+
+import org.locationtech.jts.geom.Envelope;
 
 /**
  * Manages map view state: extent, zoom, pan, history, coordinate conversion.
@@ -27,6 +30,9 @@ public class MapViewController {
     private Runnable repaintCallback;
     private Runnable scaleUpdateCallback;
 
+    // Optional: whether map has loaded content (for scale denominator)
+    private BooleanSupplier hasLoadedContent = () -> false;
+
     // --- View state getters/setters ---
 
     public double getViewMinX() { return viewMinX; }
@@ -46,6 +52,7 @@ public class MapViewController {
 
     public void setRepaintCallback(Runnable callback) { this.repaintCallback = callback; }
     public void setScaleUpdateCallback(Runnable callback) { this.scaleUpdateCallback = callback; }
+    public void setHasLoadedContent(BooleanSupplier supplier) { this.hasLoadedContent = supplier; }
 
     // --- Zoom ---
 
@@ -75,10 +82,11 @@ public class MapViewController {
 
     public void handleZoom(double wheelRotation, int screenX, int screenY) {
         rememberCurrentView();
-        double factor = wheelRotation < 0 ? 1.12 : 1.0 / 1.12;
+        double factor = wheelRotation < 0 ? 1.2 : 1.0 / 1.2;
         double worldX = screenToWorldX(screenX);
         double worldY = screenToWorldY(screenY);
         applyZoom(factor, worldX, worldY);
+        rememberCurrentView();
     }
 
     // --- Pan ---
@@ -97,27 +105,73 @@ public class MapViewController {
 
     // --- Fit to extent ---
 
-    public void fitToEnvelope(double envMinX, double envMinY, double envMaxX, double envMaxY) {
-        double envW = envMaxX - envMinX;
-        double envH = envMaxY - envMinY;
-        if (envW <= 0 || envH <= 0) return;
+    public void fitToEnvelope(Envelope env) {
+        if (env == null || env.isNull()) return;
+        double width = env.getWidth();
+        double height = env.getHeight();
+        if (width <= 0) width = 10;
+        if (height <= 0) height = 10;
 
-        double scaleX = panelWidth / envW;
-        double scaleY = panelHeight / envH;
-        zoomFactor = Math.min(scaleX, scaleY) * 0.85;
+        double pw = panelWidth > 0 ? panelWidth : 800;
+        double ph = panelHeight > 0 ? panelHeight : 600;
 
-        viewMinX = envMinX - (panelWidth / zoomFactor - envW) / 2;
-        viewMinY = envMinY - (panelHeight / zoomFactor - envH) / 2;
+        double scaleX = (pw * 0.85) / width;
+        double scaleY = (ph * 0.85) / height;
+        zoomFactor = Math.min(scaleX, scaleY);
+        if (zoomFactor <= 0 || Double.isInfinite(zoomFactor) || Double.isNaN(zoomFactor)) {
+            zoomFactor = 1.0;
+        }
+
+        double extraWorldWidth = pw / zoomFactor - width;
+        double extraWorldHeight = ph / zoomFactor - height;
+        viewMinX = env.getMinX() - extraWorldWidth / 2.0;
+        viewMinY = env.getMinY() - extraWorldHeight / 2.0;
         notifyScaleUpdate();
         repaint();
+    }
+
+    public void fitToEnvelope(double envMinX, double envMinY, double envMaxX, double envMaxY) {
+        fitToEnvelope(new org.locationtech.jts.geom.Envelope(envMinX, envMaxX, envMinY, envMaxY));
     }
 
     // --- Scale ---
 
     public double getCurrentScaleDenominator() {
-        if (zoomFactor <= 0) return 10000;
-        double metersPerPixel = 0.0254 / 96.0;
-        return metersPerPixel / zoomFactor * 1000;
+        if (zoomFactor <= 0d || panelWidth <= 0 || !hasLoadedContent.getAsBoolean()) {
+            return 0d;
+        }
+
+        int screenDpi = MapUtilities.safeScreenDpi();
+        double mppu = estimateMetersPerProjectUnit();
+        if (mppu <= 0d) {
+            return 0d;
+        }
+
+        double groundMetersPerPixel = mppu / zoomFactor;
+        double screenMetersPerPixel = 0.0254d / Math.max(1, screenDpi);
+        double denominator = groundMetersPerPixel / screenMetersPerPixel;
+        if (Double.isFinite(denominator) && denominator > 0d) {
+            return denominator;
+        }
+        return 0d;
+    }
+
+    private double estimateMetersPerProjectUnit() {
+        String projectCrs = AppContext.project() != null
+                ? CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS())
+                : "";
+        if (projectCrs == null || projectCrs.isBlank()) {
+            return 0d;
+        }
+        if (MapUtilities.isGeographicProjectCrs()) {
+            double centerX = viewMinX + (Math.max(1, panelWidth) / (2d * Math.max(zoomFactor, 0.000001d)));
+            double centerY = viewMinY + (Math.max(1, panelHeight) / (2d * Math.max(zoomFactor, 0.000001d)));
+            double[] geographic = MapUtilities.reprojectPoint(centerX, centerY, projectCrs, "EPSG:4326");
+            double centerLat = geographic != null && geographic.length >= 2 ? geographic[1] : centerY;
+            double metersPerDegreeLon = 111320d * Math.cos(Math.toRadians(centerLat));
+            return Math.max(1d, Math.abs(metersPerDegreeLon));
+        }
+        return 1d;
     }
 
     public void applyScale(double targetDenominator) {
@@ -132,12 +186,15 @@ public class MapViewController {
 
     // --- Coordinate conversion ---
 
+    public int getPanelWidth() { return panelWidth; }
+    public int getPanelHeight() { return panelHeight; }
+
     public int worldToScreenX(double worldX) {
-        return (int) ((worldX - viewMinX) * zoomFactor);
+        return (int) Math.round((worldX - viewMinX) * zoomFactor);
     }
 
     public int worldToScreenY(double worldY) {
-        return (int) (panelHeight - (worldY - viewMinY) * zoomFactor);
+        return (int) Math.round(panelHeight - (worldY - viewMinY) * zoomFactor);
     }
 
     public double screenToWorldX(int screenX) {
@@ -165,6 +222,11 @@ public class MapViewController {
             viewHistory.remove(0);
         }
         viewHistoryIndex = viewHistory.size() - 1;
+    }
+
+    /** Public entry — remember a specific view state by coordinates. */
+    public void rememberView(double minX, double minY, double zoom) {
+        rememberViewState(minX, minY, zoom);
     }
 
     public boolean canZoomPrevious() { return viewHistoryIndex > 0; }

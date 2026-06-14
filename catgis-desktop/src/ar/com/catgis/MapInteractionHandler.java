@@ -196,7 +196,7 @@ public class MapInteractionHandler extends MouseAdapter {
         }
 
         if (panel.dragging && ("MOVE".equalsIgnoreCase(panel.currentTool))) {
-            panel.rememberViewState(panel.dragStartViewMinX, panel.dragStartViewMinY, panel.zoomFactor);
+            panel.viewController.rememberView(panel.dragStartViewMinX, panel.dragStartViewMinY, panel.zoomFactor);
             panel.rememberCurrentView();
             panel.refreshStatusBarScale();
         }

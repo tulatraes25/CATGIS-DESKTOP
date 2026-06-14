@@ -266,7 +266,7 @@ public class CadGeoreferenceDialog extends JDialog {
         String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar CAD de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
         String successMessage = "Georreferenciacion CAD: CAD P" + (row + 1) + " capturado.";
         String cancelMessage = "Georreferenciacion CAD: captura de CAD P" + (row + 1) + " cancelada.";
-        AppContext.mapPanel().startPointCapture(new MapPanel.MapPointCaptureHandler() {
+        AppContext.mapPanel().startPointCapture(new MapPointCaptureHandler() {
             @Override
             public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
                 if (finishing || coordinate == null) {
@@ -319,7 +319,7 @@ public class CadGeoreferenceDialog extends JDialog {
         String startMessage = "Georreferenciacion CAD: haz clic en el mapa para capturar destino de P" + (row + 1) + ". Usa clic derecho o Esc para cancelar.";
         String successMessage = "Georreferenciacion CAD: destino P" + (row + 1) + " capturado.";
         String cancelMessage = "Georreferenciacion CAD: captura de destino P" + (row + 1) + " cancelada.";
-        AppContext.mapPanel().startPointCapture(new MapPanel.MapPointCaptureHandler() {
+        AppContext.mapPanel().startPointCapture(new MapPointCaptureHandler() {
             @Override
             public void onPointCaptured(Coordinate coordinate, String sourceCrs) {
                 if (finishing || coordinate == null) {
@@ -527,3 +527,4 @@ public class CadGeoreferenceDialog extends JDialog {
                              CadGeoreferenceSupport.ControlPoint target) {
     }
 }
+

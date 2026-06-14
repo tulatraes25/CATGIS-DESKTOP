@@ -14,7 +14,7 @@ public class TopographicProfileTool {
 
     boolean active = false;
     final List<Coordinate> coordinates = new ArrayList<>();
-    MapPanel.TopographicProfileCaptureHandler handler = null;
+    TopographicProfileCaptureHandler handler = null;
 
     public boolean isActive() { return active; }
     public List<Coordinate> getCoordinates() { return coordinates; }
@@ -23,7 +23,7 @@ public class TopographicProfileTool {
         this.panel = panel;
     }
 
-    public void startCapture(MapPanel.TopographicProfileCaptureHandler handler) {
+    public void startCapture(TopographicProfileCaptureHandler handler) {
         if (handler == null) {
             return;
         }
@@ -43,7 +43,7 @@ public class TopographicProfileTool {
     }
 
     public void cancelCapture() {
-        MapPanel.TopographicProfileCaptureHandler h = this.handler;
+        TopographicProfileCaptureHandler h = this.handler;
         active = false;
         coordinates.clear();
         this.handler = null;
@@ -61,7 +61,7 @@ public class TopographicProfileTool {
             return;
         }
         LineString line = TopographicProfileService.buildLineFromProjectCoordinates(coordinates);
-        MapPanel.TopographicProfileCaptureHandler h = this.handler;
+        TopographicProfileCaptureHandler h = this.handler;
         String projectCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "EPSG:4326";
         active = false;
         coordinates.clear();
@@ -75,3 +75,4 @@ public class TopographicProfileTool {
         }
     }
 }
+
