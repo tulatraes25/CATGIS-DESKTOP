@@ -541,12 +541,7 @@ public class LayersPanel extends JPanel {
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(message);
         }
-        JOptionPane.showMessageDialog(
-                this,
-                message,
-                "Interpretacion Pro",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        NotificationManager.info(this, "Interpretacion Pro", message);
     }
 
     public void selectLayer(Layer layer) {
@@ -730,10 +725,10 @@ public class LayersPanel extends JPanel {
         for (Object obj : selected) {
             if (obj instanceof Layer l) names.append("- ").append(l.getName()).append("\n");
         }
-        int opt = JOptionPane.showConfirmDialog(this,
-                I18n.t("Quitar las siguientes capas?\n") + names,
-                I18n.t("Quitar capas"), JOptionPane.YES_NO_OPTION);
-        if (opt != JOptionPane.YES_OPTION) return;
+        boolean yes = NotificationManager.confirm(this,
+                I18n.t("Quitar capas"),
+                I18n.t("Quitar las siguientes capas?\n") + names);
+        if (!yes) return;
         for (Object obj : selected) {
             if (obj instanceof Layer l) {
                 AppContext.mapPanel().removeLayers(List.of(l));
@@ -818,7 +813,7 @@ public class LayersPanel extends JPanel {
         }
         String trimmed = name.trim();
         if (trimmed.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Ingresa un nombre valido para el grupo.", "Grupos de capas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Grupos de capas", "Ingresa un nombre valido para el grupo.");
             return;
         }
         LayerGroup group = AppContext.project().addLayerGroup(trimmed);
@@ -883,7 +878,7 @@ public class LayersPanel extends JPanel {
             return;
         }
         if (newName.trim().isBlank()) {
-            JOptionPane.showMessageDialog(this, "Ingresa un nombre valido para el grupo.", "Grupos de capas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Grupos de capas", "Ingresa un nombre valido para el grupo.");
             return;
         }
         AppContext.project().renameLayerGroup(group.getName(), newName.trim());
@@ -895,14 +890,12 @@ public class LayersPanel extends JPanel {
         if (group == null || AppContext.project() == null) {
             return;
         }
-        int option = JOptionPane.showConfirmDialog(
+        boolean option = NotificationManager.confirm(
                 this,
-                "Se quitara el grupo \"" + group.getName() + "\".\nLas capas quedaran sueltas en el proyecto.\n\nQueres continuar?",
                 "Quitar grupo",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
+                "Se quitara el grupo \"" + group.getName() + "\".\nLas capas quedaran sueltas en el proyecto.\n\nQueres continuar?"
         );
-        if (option != JOptionPane.YES_OPTION) {
+        if (!option) {
             return;
         }
         AppContext.project().removeLayerGroup(group.getName(), true);
@@ -1434,14 +1427,12 @@ public class LayersPanel extends JPanel {
             message = I18n.format("Vas a quitar {0} capas del proyecto.\n\nQueres continuar?", layersToRemove.size());
         }
 
-        int option = JOptionPane.showConfirmDialog(
+        boolean option = NotificationManager.confirm(
                 this,
-                message,
                 I18n.t("Quitar capas"),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
+                message
         );
-        return option == JOptionPane.YES_OPTION;
+        return option;
     }
 
     private void restoreSelectionAfterRemoval(int fallbackIndex) {
@@ -1533,14 +1524,12 @@ public class LayersPanel extends JPanel {
         FileChooserSupport.rememberFile("pro-raster-report", outputFile);
 
         if (outputFile.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(
+            boolean overwrite = NotificationManager.confirm(
                     CatgisDesktopApp.getMainFrameSafe(),
-                    "El archivo ya existe.\nDesea reemplazarlo?\n\n" + outputFile.getAbsolutePath(),
                     "Exportar ficha raster",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
+                    "El archivo ya existe.\nDesea reemplazarlo?\n\n" + outputFile.getAbsolutePath()
             );
-            if (overwrite != JOptionPane.YES_OPTION) {
+            if (!overwrite) {
                 return;
             }
         }
@@ -1556,18 +1545,16 @@ public class LayersPanel extends JPanel {
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage("Ficha raster exportada: " + saved.getName());
             }
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     CatgisDesktopApp.getMainFrameSafe(),
-                    "Ficha raster exportada correctamente:\n" + saved.getAbsolutePath(),
                     "CATGIS",
-                    JOptionPane.INFORMATION_MESSAGE
+                    "Ficha raster exportada correctamente:\n" + saved.getAbsolutePath()
             );
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.error(
                     CatgisDesktopApp.getMainFrameSafe(),
-                    "No se pudo exportar la ficha raster:\n" + ex.getMessage(),
                     "CATGIS",
-                    JOptionPane.ERROR_MESSAGE
+                    "No se pudo exportar la ficha raster:\n" + ex.getMessage()
             );
         }
     }
@@ -1753,21 +1740,19 @@ public class LayersPanel extends JPanel {
             ctor.newInstance(this, layer);
             return;
         } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
-        JOptionPane.showMessageDialog(
+        NotificationManager.error(
                 this,
-                "No se pudo abrir el dialogo de ajustes de visualizacion.",
                 "Error",
-                JOptionPane.ERROR_MESSAGE
+                "No se pudo abrir el dialogo de ajustes de visualizacion."
         );
     }
 
     void openRasterDisplaySettings(Layer layer) {
         if (!isRasterLayer(layer)) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
-                    "La capa seleccionada no es un raster.",
                     "Ajustes de visualizacion",
-                    JOptionPane.WARNING_MESSAGE
+                    "La capa seleccionada no es un raster."
             );
             return;
         }
@@ -1798,16 +1783,15 @@ public class LayersPanel extends JPanel {
             } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
         } catch (Exception ignored) { CatgisLogger.warn("LayersPanel: operation failed", ignored); }
 
-        JOptionPane.showMessageDialog(
+        NotificationManager.info(
                 this,
+                "Ajustes de visualizacion",
                 "Proximo paso sugerido para raster:\n"
                         + "- contraste automatico\n"
                         + "- min/max manual\n"
                         + "- bandas RGB\n"
                         + "- escala de grises\n"
-                        + "- opacidad",
-                "Ajustes de visualizacion",
-                JOptionPane.INFORMATION_MESSAGE
+                        + "- opacidad"
         );
     }
 
@@ -1853,11 +1837,10 @@ public class LayersPanel extends JPanel {
             return;
         }
         if (isDerivedRasterLayer(layer)) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    "La capa raster seleccionada es derivada del DEM y no cambia entre Vista rapida / Virtual / Real.\nVolvela a generar desde el analisis topohidrologico si queres recalcularla.",
                     "Raster derivado",
-                    JOptionPane.INFORMATION_MESSAGE
+                    "La capa raster seleccionada es derivada del DEM y no cambia entre Vista rapida / Virtual / Real.\nVolvela a generar desde el analisis topohidrologico si queres recalcularla."
             );
             return;
         }
@@ -1874,24 +1857,12 @@ public class LayersPanel extends JPanel {
 
         String path = layer.getPath();
         if (path == null || path.isBlank()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "La capa no tiene una ruta de archivo vÃƒÂ¡lida.",
-                    "Raster",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
+            NotificationManager.warn(this, "Raster", "La capa no tiene una ruta de archivo válida.");
         }
 
         File rasterFile = new File(path);
         if (!rasterFile.exists()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "No se encontrÃƒÂ³ el archivo raster original:\n" + rasterFile.getAbsolutePath(),
-                    "Raster",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            return;
+            NotificationManager.warn(this, "Raster", "No se encontró el archivo raster original:\n" + rasterFile.getAbsolutePath());
         }
 
         final JDialog progressDialog = createRasterProgressDialog(
@@ -1936,18 +1907,16 @@ public class LayersPanel extends JPanel {
                         AppContext.setStatusMessage(msg);
                     }
 
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.info(
                             LayersPanel.this,
-                            msg,
                             "Raster",
-                            JOptionPane.INFORMATION_MESSAGE
+                            msg
                     );
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             LayersPanel.this,
-                            "No se pudo recargar el raster:\n" + ex.getMessage(),
                             "Raster",
-                            JOptionPane.ERROR_MESSAGE
+                            "No se pudo recargar el raster:\n" + ex.getMessage()
                     );
                 }
             }
@@ -2007,18 +1976,16 @@ public class LayersPanel extends JPanel {
                     if (CatgisDesktopApp.statusBar != null) {
                         AppContext.setStatusMessage(message.replace('\n', ' '));
                     }
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.info(
                             LayersPanel.this,
-                            message,
                             "CATGIS",
-                            JOptionPane.INFORMATION_MESSAGE
+                            message
                     );
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             LayersPanel.this,
-                            "No se pudo generar la salida raster:\n" + ex.getMessage(),
                             "CATGIS",
-                            JOptionPane.ERROR_MESSAGE
+                            "No se pudo generar la salida raster:\n" + ex.getMessage()
                     );
                 }
             }
@@ -2033,12 +2000,11 @@ public class LayersPanel extends JPanel {
         }
         List<RasterLayer> candidates = findComparableProLayers(sourceLayer);
         if (candidates.isEmpty()) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    "No hay otra capa Pro compatible en el proyecto para comparar esta variable.\n\n"
-                            + "CATGIS exige misma variable, misma familia fuente y fechas distintas.",
                     "CATGIS",
-                    JOptionPane.INFORMATION_MESSAGE
+                    "No hay otra capa Pro compatible en el proyecto para comparar esta variable.\n\n"
+                            + "CATGIS exige misma variable, misma familia fuente y fechas distintas."
             );
             return;
         }
@@ -2091,18 +2057,16 @@ public class LayersPanel extends JPanel {
                     if (CatgisDesktopApp.statusBar != null) {
                         AppContext.setStatusMessage(message.replace('\n', ' '));
                     }
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.info(
                             LayersPanel.this,
-                            message,
                             "CATGIS",
-                            JOptionPane.INFORMATION_MESSAGE
+                            message
                     );
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             LayersPanel.this,
-                            "No se pudo generar la comparacion temporal raster:\n" + ex.getMessage(),
                             "CATGIS",
-                            JOptionPane.ERROR_MESSAGE
+                            "No se pudo generar la comparacion temporal raster:\n" + ex.getMessage()
                     );
                 }
             }

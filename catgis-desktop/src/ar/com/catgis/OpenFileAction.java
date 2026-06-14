@@ -15,7 +15,6 @@ import ar.com.catgis.renderer.LineSymbolRenderer;
 import ar.com.catgis.climate.GribLoader;
 import ar.com.catgis.climate.NetCdfLoader;
 import javax.swing.AbstractAction;
-import javax.swing.JOptionPane;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Window;
@@ -79,8 +78,7 @@ public class OpenFileAction extends AbstractAction {
                 // SpatiaLite: validate file and load first available table
                 ValidationResult vr = SpatiaLiteLoader.validateFile(file);
                 if (!vr.isValid()) {
-                    JOptionPane.showMessageDialog(parent, vr.message(),
-                            "SpatiaLite — archivo inválido", JOptionPane.WARNING_MESSAGE);
+                    NotificationManager.warn(parent, "SpatiaLite — archivo inválido", vr.message());
                     return false;
                 }
                 SpatiaLiteConnectionInfo connInfo = new SpatiaLiteConnectionInfo();
@@ -138,8 +136,7 @@ public class OpenFileAction extends AbstractAction {
             } else if (lowerName.endsWith(".fgb")) {
                 ValidationResult vr = FlatGeobufLoader.validateFile(file);
                 if (!vr.isValid()) {
-                    JOptionPane.showMessageDialog(parent, vr.message(),
-                            "FlatGeobuf — archivo inválido", JOptionPane.WARNING_MESSAGE);
+                    NotificationManager.warn(parent, "FlatGeobuf — archivo inválido", vr.message());
                     return false;
                 }
                 data = FlatGeobufLoader.load(file);
@@ -239,15 +236,14 @@ public class OpenFileAction extends AbstractAction {
                     ? "\nFormato seleccionado: " + requestedFormat
                     : "";
             if (showDialogs) {
-                JOptionPane.showMessageDialog(
+                NotificationManager.warn(
                         parent,
+                        "Cargar datos",
                         "No se pudo cargar \"" + file.getName() + "\".\n\n"
                                 + "CATGIS no reconoce ese formato como capa soportada en este flujo."
                                 + suffix
                                 + "\n\nFormatos vectoriales principales: SHP, GeoJSON, GPKG, KML, KMZ, DXF, DWG, GPX."
-                                + "\nFormatos raster principales: GeoTIFF, TIFF, JPG, PNG, BMP, GIF, IMG, ECW.",
-                        "Cargar datos",
-                        JOptionPane.WARNING_MESSAGE
+                                + "\nFormatos raster principales: GeoTIFF, TIFF, JPG, PNG, BMP, GIF, IMG, ECW."
                 );
             }
             return false;
@@ -284,22 +280,20 @@ public class OpenFileAction extends AbstractAction {
         }
 
         if (!projectFiles.isEmpty() && !layerFiles.isEmpty()) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     parent,
-                    "No mezcles proyectos .catgis con capas en el mismo arrastre.\n\nSolta el proyecto por separado o arrastra solo capas.",
                     "Arrastrar y soltar",
-                    JOptionPane.WARNING_MESSAGE
+                    "No mezcles proyectos .catgis con capas en el mismo arrastre.\n\nSolta el proyecto por separado o arrastra solo capas."
             );
             return false;
         }
 
         if (!projectFiles.isEmpty()) {
             if (projectFiles.size() > 1) {
-                JOptionPane.showMessageDialog(
+                NotificationManager.warn(
                         parent,
-                        "Arrastra un solo proyecto .catgis por vez.",
                         "Arrastrar y soltar",
-                        JOptionPane.WARNING_MESSAGE
+                        "Arrastra un solo proyecto .catgis por vez."
                 );
                 return false;
             }
@@ -329,11 +323,10 @@ public class OpenFileAction extends AbstractAction {
         }
 
         if (!failedFiles.isEmpty()) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     parent,
-                    "No se pudieron cargar estos archivos:\n- " + String.join("\n- ", failedFiles),
                     "Arrastrar y soltar",
-                    JOptionPane.WARNING_MESSAGE
+                    "No se pudieron cargar estos archivos:\n- " + String.join("\n- ", failedFiles)
             );
         }
 
@@ -346,11 +339,10 @@ public class OpenFileAction extends AbstractAction {
             GpxImportResult result = GpxLoader.load(file);
             if (!result.hasAnyData()) {
                 if (showDialogs) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.warn(
                             parent,
-                            "El archivo GPX no contiene waypoints, tracks ni routes utilizables: " + file.getName(),
                             "Cargar datos",
-                            JOptionPane.WARNING_MESSAGE
+                            "El archivo GPX no contiene waypoints, tracks ni routes utilizables: " + file.getName()
                     );
                 }
                 return false;
@@ -365,11 +357,10 @@ public class OpenFileAction extends AbstractAction {
                 AppContext.setStatusMessage("GPX agregado: " + file.getName());
             }
             if (showDialogs) {
-                JOptionPane.showMessageDialog(
+                NotificationManager.info(
                         parent,
-                        buildGpxLoadMessage(file.getName(), loadedSummaries),
                         "Cargar datos",
-                        JOptionPane.INFORMATION_MESSAGE
+                        buildGpxLoadMessage(file.getName(), loadedSummaries)
                 );
             }
             return true;
@@ -488,12 +479,11 @@ public class OpenFileAction extends AbstractAction {
                 );
             }
             if (showDialogs) {
-                JOptionPane.showMessageDialog(
-                        parent,
-                        buildProRasterLoadMessage(layer, prepared),
-                        "Abrir dataset",
-                        layer.getSourceCRS().isBlank() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE
-                );
+                if (layer.getSourceCRS().isBlank()) {
+                    NotificationManager.warn(parent, "Abrir dataset", buildProRasterLoadMessage(layer, prepared));
+                } else {
+                    NotificationManager.info(parent, "Abrir dataset", buildProRasterLoadMessage(layer, prepared));
+                }
             }
             return true;
         } catch (Exception ex) {
@@ -615,12 +605,12 @@ public class OpenFileAction extends AbstractAction {
             }
 
             if (showDialogs) {
-                JOptionPane.showMessageDialog(
-                        parent,
-                        msg.toString(),
-                        demMode ? I18n.t("Cargar datos DEM") : "Cargar datos",
-                        layer.getSourceCRS().isBlank() ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE
-                );
+                String loadTitle = demMode ? I18n.t("Cargar datos DEM") : "Cargar datos";
+                if (layer.getSourceCRS().isBlank()) {
+                    NotificationManager.warn(parent, loadTitle, msg.toString());
+                } else {
+                    NotificationManager.info(parent, loadTitle, msg.toString());
+                }
             }
             return true;
         } catch (Exception ex) {

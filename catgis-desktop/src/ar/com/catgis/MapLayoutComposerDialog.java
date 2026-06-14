@@ -993,17 +993,17 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
             public void onFileDropped(File file, double mmX, double mmY) {
                 String lname = file.getName().toLowerCase();
                 if (lname.endsWith(".shp") || lname.endsWith(".geojson") || lname.endsWith(".gpkg")) {
-                    int opt = javax.swing.JOptionPane.showConfirmDialog(MapLayoutComposerDialog.this,
-                        "Agregar " + file.getName() + " como capa al proyecto?",
-                        "Archivo vectorial", javax.swing.JOptionPane.YES_NO_OPTION);
-                    if (opt == javax.swing.JOptionPane.YES_OPTION) {
-                        javax.swing.JOptionPane.showMessageDialog(MapLayoutComposerDialog.this,
+                    boolean yes = NotificationManager.confirm(MapLayoutComposerDialog.this,
+                        "Archivo vectorial",
+                        "Agregar " + file.getName() + " como capa al proyecto?");
+                    if (yes) {
+                        NotificationManager.warn(MapLayoutComposerDialog.this, null,
                             "Importacion de capas via drag & drop pendiente.\nUse Proyecto > Agregar capa.");
                     }
                 } else {
-                    javax.swing.JOptionPane.showMessageDialog(MapLayoutComposerDialog.this,
-                        "Archivo no soportado: " + file.getName(),
-                        "Formato", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+                    NotificationManager.info(MapLayoutComposerDialog.this,
+                        "Formato",
+                        "Archivo no soportado: " + file.getName());
                 }
             }
         };
@@ -1454,7 +1454,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void toggleSelectedProjectLayerVisibility() {
         Layer layer = projectLayersList.getSelectedValue();
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa del panel derecho para cambiar su visibilidad.");
+            NotificationManager.warn(this, null, "Selecciona una capa del panel derecho para cambiar su visibilidad.");
             return;
         }
         toggleProjectLayerVisibility(layer);
@@ -1463,7 +1463,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void openSelectedProjectLayerAppearance() {
         Layer layer = projectLayersList.getSelectedValue();
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa del panel derecho para editar su simbologia.");
+            NotificationManager.warn(this, null, "Selecciona una capa del panel derecho para editar su simbologia.");
             return;
         }
         openProjectLayerAppearance(layer);
@@ -1476,11 +1476,10 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         if (layer instanceof RasterLayer) {
             RasterDisplaySettingsDialog.open(this, layer);
         } else if (layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.info(
                     this,
-                    "En esta ronda las capas online se controlan desde CATMAP por visibilidad y orden.\nLa simbologia detallada sigue sin aplicar como en vector o raster local.",
                     "CATMAP - Capas online",
-                    JOptionPane.INFORMATION_MESSAGE
+                    "En esta ronda las capas online se controlan desde CATMAP por visibilidad y orden.\nLa simbologia detallada sigue sin aplicar como en vector o raster local."
             );
             return;
         } else {
@@ -1502,7 +1501,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void moveSelectedProjectLayer(int delta) {
         Layer layer = projectLayersList.getSelectedValue();
         if (layer == null || ctxProject() == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona una capa del panel derecho para reordenarla.");
+            NotificationManager.warn(this, null, "Selecciona una capa del panel derecho para reordenarla.");
             return;
         }
         List<Layer> orderedLayers = ctxProject().getLayers();
@@ -1766,7 +1765,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     void editSelectedCatmapItem() {
         CatmapLayoutItem selected = getPrimarySelectedCatmapItem();
         if (selected == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para editar.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para editar.");
             return;
         }
         if (layoutItemsList.getSelectedIndices().length > 1) {
@@ -1795,7 +1794,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void duplicateSelectedCatmapItem() {
         List<CatmapLayoutItem> selectedItems = getSelectedCatmapItems();
         if (selectedItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para duplicar.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para duplicar.");
             return;
         }
         int[] selectedIndices = layoutItemsList.getSelectedIndices();
@@ -1848,7 +1847,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void moveSelectedCatmapItem(int delta) {
         int index = layoutItemsList.getSelectedIndex();
         if (index < 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para reordenar.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para reordenar.");
             return;
         }
         int target = index + delta;
@@ -1870,7 +1869,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void removeSelectedCatmapItem() {
         int[] selectedIndices = layoutItemsList.getSelectedIndices();
         if (selectedIndices.length == 0) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para quitar.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para quitar.");
             return;
         }
         for (int i = selectedIndices.length - 1; i >= 0; i--) {
@@ -1996,7 +1995,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void applyInspectorToSelectedCatmapItem() {
         CatmapLayoutItem item = getPrimarySelectedCatmapItem();
         if (item == null) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para editar desde el inspector.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para editar desde el inspector.");
             return;
         }
         try {
@@ -2023,14 +2022,14 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
             syncLayoutStructureSelection();
             previewPanel.repaint();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "X, Y, W y H deben ser numeros enteros validos.");
+            NotificationManager.warn(this, null, "X, Y, W y H deben ser numeros enteros validos.");
         }
     }
 
     private void toggleSelectedCatmapItemVisibility() {
         List<CatmapLayoutItem> items = getSelectedCatmapItems();
         if (items.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para cambiar su visibilidad.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para cambiar su visibilidad.");
             return;
         }
         boolean makeVisible = items.stream().anyMatch(item -> !item.isVisible());
@@ -2051,7 +2050,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void toggleSelectedCatmapItemLock() {
         List<CatmapLayoutItem> items = getSelectedCatmapItems();
         if (items.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecciona un elemento CATMAP para bloquearlo o liberarlo.");
+            NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para bloquearlo o liberarlo.");
             return;
         }
         boolean lock = items.stream().anyMatch(item -> !item.isLocked());
@@ -2742,12 +2741,12 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void alignSelectedCatmapItems(AlignmentCommand command) {
         List<CatmapLayoutItem> items = getUnlockedSelectedCatmapItems();
         if (items.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Selecciona al menos un elemento CATMAP desbloqueado para alinear.");
+            NotificationManager.warn(this, null, "Selecciona al menos un elemento CATMAP desbloqueado para alinear.");
             return;
         }
         Rectangle referenceBounds = resolveAlignmentReferenceBounds(items);
         if (referenceBounds == null) {
-            JOptionPane.showMessageDialog(this, "CATMAP todavia no tiene una pagina renderizada para alinear elementos.");
+            NotificationManager.warn(this, null, "CATMAP todavia no tiene una pagina renderizada para alinear elementos.");
             return;
         }
         for (CatmapLayoutItem item : items) {
@@ -2773,7 +2772,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void distributeSelectedCatmapItems(boolean horizontal) {
         List<CatmapLayoutItem> items = getUnlockedSelectedCatmapItems();
         if (items.size() < 3) {
-            JOptionPane.showMessageDialog(this, "Selecciona al menos tres elementos CATMAP desbloqueados para distribuir.");
+            NotificationManager.warn(this, null, "Selecciona al menos tres elementos CATMAP desbloqueados para distribuir.");
             return;
         }
         items.sort((a, b) -> horizontal
@@ -3293,7 +3292,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
             AppContext.setStatusMessage(prefix + ": " + file.getName());
         }
         statusLabel.setText(prefix + ": " + file.getAbsolutePath());
-        JOptionPane.showMessageDialog(this, prefix + " correctamente:\n" + file.getAbsolutePath());
+        NotificationManager.warn(this, null, prefix + " correctamente:\n" + file.getAbsolutePath());
     }
 
     public void saveLayout() { saveCatmapLayout(); }
@@ -3389,13 +3388,13 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     private void applyManualScale() {
         Double targetDenominator = parseScaleDenominator(mapScaleField.getText());
         if (targetDenominator == null || targetDenominator <= 0) {
-            JOptionPane.showMessageDialog(this, "Introduce una escala valida. Ejemplo: 1:5000", "CATMAP - Escala", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "CATMAP - Escala", "Introduce una escala valida. Ejemplo: 1:5000");
             return;
         }
 
         double currentDenominator = computeCurrentScaleDenominator(buildSettings());
         if (currentDenominator <= 0) {
-            JOptionPane.showMessageDialog(this, "No se pudo calcular la escala actual del mapa.", "CATMAP - Escala", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "CATMAP - Escala", "No se pudo calcular la escala actual del mapa.");
             return;
         }
 
@@ -3801,12 +3800,12 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         try {
             QgisQptImporter.ImportResult res = QgisQptImporter.importQpt(fc.getSelectedFile());
             for (LayoutElement el : res.imported) layoutModel.addElement(el);
-            for (String skip : res.skipped) javax.swing.JOptionPane.showMessageDialog(this, skip, "Elemento omitido", javax.swing.JOptionPane.WARNING_MESSAGE);
+            for (String skip : res.skipped) NotificationManager.warn(this, "Elemento omitido", skip);
             refreshAll();
             statusLabel.setText("Importado: " + fc.getSelectedFile().getName() + " (" + res.imported.size() + " elementos)");
         } catch (Exception ex) {
             CatgisLogger.warn("Layout import error", ex);
-            javax.swing.JOptionPane.showMessageDialog(this, "Error al importar: " + ex.getMessage(), "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this, "Error", "Error al importar: " + ex.getMessage());
         }
     }
 

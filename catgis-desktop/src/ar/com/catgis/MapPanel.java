@@ -310,7 +310,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     private void zoomToSelectedLayer() {
         Layer layer = (CatgisDesktopApp.layersPanel != null) ? AppContext.getSelectedLayer() : null;
         if (layer == null) {
-            JOptionPane.showMessageDialog(this, "Primero seleccionÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ una capa en el panel de capas.");
+            NotificationManager.warn(this, null, "Primero seleccionÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ una capa en el panel de capas.");
             return;
         }
         zoomToLayer(layer);
@@ -710,7 +710,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (isReadOnlyVectorLayer(layer)) {
-            JOptionPane.showMessageDialog(this, getReadOnlyLayerMessage(layer));
+            NotificationManager.warn(this, null, getReadOnlyLayerMessage(layer));
             return;
         }
         if ((featureEditMode || featureEditDirty)
@@ -742,7 +742,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     public void enableFeatureEdit(Layer layer, SimpleFeature feature) {
         if (isReadOnlyVectorLayer(layer)) {
-            JOptionPane.showMessageDialog(this, getReadOnlyLayerMessage(layer));
+            NotificationManager.warn(this, null, getReadOnlyLayerMessage(layer));
             return;
         }
         boolean sameSelection = layer == selectedLayer && feature == selectedFeature && featureEditMode;
@@ -802,7 +802,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Mover vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
+            NotificationManager.warn(this, null, "Mover vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
             return;
         }
         featureEditOperation = EDIT_OP_MOVE_VERTEX;
@@ -820,7 +820,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (isReadOnlyVectorLayer(selectedLayer)) {
-            JOptionPane.showMessageDialog(this, getReadOnlyLayerMessage(selectedLayer));
+            NotificationManager.warn(this, null, getReadOnlyLayerMessage(selectedLayer));
             return;
         }
         featureEditOperation = EDIT_OP_MOVE_FEATURE;
@@ -839,7 +839,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Agregar vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
+            NotificationManager.warn(this, null, "Agregar vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
             return;
         }
         featureEditOperation = EDIT_OP_ADD_VERTEX;
@@ -857,7 +857,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Eliminar vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
+            NotificationManager.warn(this, null, "Eliminar vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
             return;
         }
         featureEditOperation = EDIT_OP_REMOVE_VERTEX;
@@ -875,7 +875,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Unir vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
+            NotificationManager.warn(this, null, "Unir vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
             return;
         }
         featureEditOperation = EDIT_OP_JOIN_VERTEX;
@@ -894,7 +894,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeatureLinearOrPolygonal()) {
-            JOptionPane.showMessageDialog(this, "Cortar geometrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
+            NotificationManager.warn(this, null, "Cortar geometrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³lo funciona sobre lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas o polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
             return;
         }
         featureEditOperation = EDIT_OP_CUT;
@@ -915,7 +915,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeaturePolygonal()) {
-            JOptionPane.showMessageDialog(this, "La opciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n agujero solo funciona sobre polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
+            NotificationManager.warn(this, null, "La opciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n agujero solo funciona sobre polÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gonos.");
             return;
         }
         featureEditOperation = EDIT_OP_HOLE;
@@ -933,7 +933,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeaturePolygonal()) {
-            JOptionPane.showMessageDialog(this, "Poligono adyacente solo funciona sobre poligonos.");
+            NotificationManager.warn(this, null, "Poligono adyacente solo funciona sobre poligonos.");
             return;
         }
         featureEditOperation = EDIT_OP_ADJACENT_POLYGON;
@@ -982,7 +982,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (resolveCadLineTargetLayer() == null) {
-            JOptionPane.showMessageDialog(this, "Necesitas una capa de lineas compatible para guardar la paralela.");
+            NotificationManager.warn(this, null, "Necesitas una capa de lineas compatible para guardar la paralela.");
             return;
         }
         featureEditOperation = EDIT_OP_PARALLEL;
@@ -1001,7 +1001,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (resolveCadLineTargetLayer() == null) {
-            JOptionPane.showMessageDialog(this, "Necesitas una capa de lineas compatible para guardar la perpendicular.");
+            NotificationManager.warn(this, null, "Necesitas una capa de lineas compatible para guardar la perpendicular.");
             return;
         }
         featureEditOperation = EDIT_OP_PERPENDICULAR;
@@ -1028,7 +1028,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return;
         }
         if (!isSelectedFeaturePolygonal()) {
-            JOptionPane.showMessageDialog(this, "Esta herramienta solo funciona sobre poligonos.");
+            NotificationManager.warn(this, null, "Esta herramienta solo funciona sobre poligonos.");
             return;
         }
 
@@ -1045,7 +1045,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
         double distance = parsePositiveDistance(input);
         if (!(distance > 0d)) {
-            JOptionPane.showMessageDialog(this, "Ingresa una distancia positiva valida.");
+            NotificationManager.warn(this, null, "Ingresa una distancia positiva valida.");
             return;
         }
 
@@ -1056,7 +1056,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
         Geometry updated = buildBufferedPolygonGeometry(geometry, selectedLayer, increase ? distance : -distance);
         if (updated == null || updated.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No se pudo ajustar la superficie con esa distancia.");
+            NotificationManager.warn(this, null, "No se pudo ajustar la superficie con esa distancia.");
             return;
         }
 
@@ -1213,46 +1213,44 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
             if ("DISTANCE".equalsIgnoreCase(mode)) {
                 if (coords.size() < 2) {
-                    JOptionPane.showMessageDialog(this, "Para medir distancia necesit\u00E1s al menos 2 v\u00E9rtices.");
+                    NotificationManager.warn(this, null, "Para medir distancia necesit\u00E1s al menos 2 v\u00E9rtices.");
                     return;
                 }
 
                 Geometry metricLine = buildMeasurementLineInMeters(coords, projectCRS);
                 if (metricLine == null) {
-                    JOptionPane.showMessageDialog(this, "No se pudo calcular la distancia.");
+                    NotificationManager.warn(this, null, "No se pudo calcular la distancia.");
                     return;
                 }
 
                 double totalMeters = metricLine.getLength();
 
-                JOptionPane.showMessageDialog(
+                NotificationManager.info(
                         this,
-                        "Distancia total: " + formatDistance(totalMeters),
                         "Medici\u00F3n de distancia",
-                        JOptionPane.INFORMATION_MESSAGE
+                        "Distancia total: " + formatDistance(totalMeters)
                 );
 
             } else if ("AREA".equalsIgnoreCase(mode)) {
                 if (coords.size() < 3) {
-                    JOptionPane.showMessageDialog(this, "Para medir \u00E1rea necesit\u00E1s al menos 3 v\u00E9rtices.");
+                    NotificationManager.warn(this, null, "Para medir \u00E1rea necesit\u00E1s al menos 3 v\u00E9rtices.");
                     return;
                 }
 
                 Geometry metricPolygon = buildMeasurementPolygonInMeters(coords, projectCRS);
                 if (metricPolygon == null) {
-                    JOptionPane.showMessageDialog(this, "No se pudo calcular el \u00E1rea.");
+                    NotificationManager.warn(this, null, "No se pudo calcular el \u00E1rea.");
                     return;
                 }
 
                 double areaMeters = metricPolygon.getArea();
                 double perimeterMeters = metricPolygon.getLength();
 
-                JOptionPane.showMessageDialog(
+                NotificationManager.info(
                         this,
-                        "\u00C1rea: " + formatArea(areaMeters) + "\n" +
-                                "Per\u00EDmetro: " + formatDistance(perimeterMeters),
                         "Medici\u00F3n de \u00E1rea",
-                        JOptionPane.INFORMATION_MESSAGE
+                        "\u00C1rea: " + formatArea(areaMeters) + "\n" +
+                                "Per\u00EDmetro: " + formatDistance(perimeterMeters)
                 );
             }
         } finally {
@@ -1483,22 +1481,20 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     public void applyRequestedScale(String input) {
         Double targetDenominator = parseScaleDenominator(input);
         if (targetDenominator == null || targetDenominator <= 0d) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
-                    "Introduce una escala valida. Ejemplo: 1:5000",
                     "Escala de vista",
-                    JOptionPane.WARNING_MESSAGE
+                    "Introduce una escala valida. Ejemplo: 1:5000"
             );
             return;
         }
 
         double currentDenominator = getCurrentScaleDenominator();
         if (currentDenominator <= 0d) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.warn(
                     this,
-                    "No se pudo calcular la escala actual de la vista.",
                     "Escala de vista",
-                    JOptionPane.WARNING_MESSAGE
+                    "No se pudo calcular la escala actual de la vista."
             );
             return;
         }
@@ -2068,7 +2064,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         OnlineRasterSource online = onlineTileLayers.get(layer);
         OnlineWmsLayer onlineWms = onlineWmsLayers.get(layer);
         if (data == null && raster == null && online == null && onlineWms == null) {
-            JOptionPane.showMessageDialog(this, "La capa no tiene datos cargados en el mapa.");
+            NotificationManager.warn(this, null, "La capa no tiene datos cargados en el mapa.");
             return;
         }
 
@@ -2083,7 +2079,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                     : (online != null ? getOnlineLayerEnvelope((OnlineTileLayer) layer) : getOnlineWmsEnvelope(onlineWms)));
 
             if (env == null || env.isNull()) {
-                JOptionPane.showMessageDialog(this, "No se pudo calcular la extensiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de la capa.");
+                NotificationManager.warn(this, null, "No se pudo calcular la extensiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de la capa.");
                 return;
             }
 
@@ -2147,7 +2143,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         sb.append("Etiquetas: ").append(layer.isLabelsVisible() ? "SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­" : "No").append("\n");
         sb.append("Campo etiqueta: ").append(layer.getLabelField() != null ? layer.getLabelField() : "-").append("\n");
 
-        JOptionPane.showMessageDialog(this, sb.toString(), "InformaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n de capa", JOptionPane.INFORMATION_MESSAGE);
+        NotificationManager.info(this, "Información de capa", sb.toString());
     }
 
     @Override public boolean isFeatureVisibleInLayer(Layer layer, SimpleFeature feature) {
@@ -2405,7 +2401,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             Envelope global = getGlobalEnvelope();
 
             if (global == null || global.isNull()) {
-                JOptionPane.showMessageDialog(this, "No hay capas cargadas para calcular la extensiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.");
+                NotificationManager.warn(this, null, "No hay capas cargadas para calcular la extensiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.");
                 return;
             }
 
@@ -3434,7 +3430,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             enableFeatureEdit(selectedLayer, selectedFeature);
         }
         if (!featureEditMode || !isSelectedFeatureLinear()) {
-            JOptionPane.showMessageDialog(this, "Primero selecciona una sola linea valida para " + actionName + ".");
+            NotificationManager.warn(this, null, "Primero selecciona una sola linea valida para " + actionName + ".");
             return false;
         }
         return true;
@@ -4007,7 +4003,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
         ShapefileData targetData = getShapefileData(selectedLayer);
         if (targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(this, "La capa editable no tiene esquema vectorial disponible.");
+            NotificationManager.warn(this, null, "La capa editable no tiene esquema vectorial disponible.");
             return true;
         }
 

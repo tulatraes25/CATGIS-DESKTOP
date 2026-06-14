@@ -241,7 +241,7 @@ public class TopographicProfileDialog extends JDialog {
         TopographyWorkflowSupport.SelectedProfileLine selectedLine = TopographyWorkflowSupport.resolveSelectedProfileLine();
         if (selectedLine == null) {
             if (showFeedback) {
-                JOptionPane.showMessageDialog(this, I18n.t("Selecciona una linea vectorial en el mapa para reutilizarla en el perfil topografico."));
+                NotificationManager.warn(this, null, I18n.t("Selecciona una linea vectorial en el mapa para reutilizarla en el perfil topografico."));
             }
             return;
         }
@@ -259,7 +259,7 @@ public class TopographicProfileDialog extends JDialog {
 
     private void startMapCapture() {
         if (AppContext.mapPanel() == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("No hay un mapa activo para capturar el perfil."));
+            NotificationManager.warn(this, null, I18n.t("No hay un mapa activo para capturar el perfil."));
             return;
         }
         captureActive = true;
@@ -330,11 +330,11 @@ public class TopographicProfileDialog extends JDialog {
     private void startProfileGeneration() {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this, I18n.t("Selecciona un raster DEM para generar el perfil."));
+            NotificationManager.warn(this, null, I18n.t("Selecciona un raster DEM para generar el perfil."));
             return;
         }
         if (profileLineGeometry == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Debes elegir una linea seleccionada o capturar una polilinea para el perfil."));
+            NotificationManager.warn(this, null, I18n.t("Debes elegir una linea seleccionada o capturar una polilinea para el perfil."));
             return;
         }
 
@@ -345,7 +345,7 @@ public class TopographicProfileDialog extends JDialog {
                 throw new NumberFormatException();
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, I18n.t("La cantidad de muestras del perfil debe ser un numero entero mayor o igual a 16."));
+            NotificationManager.warn(this, null, I18n.t("La cantidad de muestras del perfil debe ser un numero entero mayor o igual a 16."));
             return;
         }
 
@@ -368,11 +368,10 @@ public class TopographicProfileDialog extends JDialog {
                         AppContext.setStatusMessage(I18n.t("Perfil topografico generado para ") + rasterLayer.getName());
                     }
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
+                    NotificationManager.error(
                             TopographicProfileDialog.this,
-                            I18n.t("No se pudo generar el perfil topografico:") + "\n" + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage()),
                             I18n.t("Perfil topografico"),
-                            JOptionPane.ERROR_MESSAGE
+                            I18n.t("No se pudo generar el perfil topografico:") + "\n" + (ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage())
                     );
                 }
             }
@@ -381,7 +380,7 @@ public class TopographicProfileDialog extends JDialog {
 
     private void exportProfileImage() {
         if (currentProfileResult == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Primero debes generar un perfil topografico para exportarlo."));
+            NotificationManager.warn(this, null, I18n.t("Primero debes generar un perfil topografico para exportarlo."));
             return;
         }
 
@@ -394,7 +393,7 @@ public class TopographicProfileDialog extends JDialog {
 
     private void exportProfileToComposer() {
         if (currentProfileResult == null) {
-            JOptionPane.showMessageDialog(this, I18n.t("Primero debes generar un perfil topografico para incorporarlo al layout."));
+            NotificationManager.warn(this, null, I18n.t("Primero debes generar un perfil topografico para incorporarlo al layout."));
             return;
         }
         File output = lastExportedProfileFile != null ? lastExportedProfileFile : chooseProfileOutputFile("export-topographic-profile-layout", I18n.t("Guardar perfil para el compositor"));
@@ -443,14 +442,13 @@ public class TopographicProfileDialog extends JDialog {
                 }
                 MapLayoutComposerDialog.openWithLayoutImage(output);
             } else {
-                JOptionPane.showMessageDialog(this, I18n.t("Perfil topografico exportado correctamente.") + "\n" + output.getAbsolutePath());
+                NotificationManager.warn(this, null, I18n.t("Perfil topografico exportado correctamente.") + "\n" + output.getAbsolutePath());
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(
+            NotificationManager.error(
                     this,
-                    I18n.t("No se pudo exportar el perfil topografico:") + "\n" + ex.getMessage(),
                     I18n.t("Perfil topografico"),
-                    JOptionPane.ERROR_MESSAGE
+                    I18n.t("No se pudo exportar el perfil topografico:") + "\n" + ex.getMessage()
             );
         }
     }
