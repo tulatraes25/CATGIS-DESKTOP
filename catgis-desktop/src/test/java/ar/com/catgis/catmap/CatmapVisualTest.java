@@ -1,14 +1,17 @@
 package ar.com.catgis.catmap;
 
 import ar.com.catgis.layout.*;
+import org.geotools.api.data.Query;
 import org.geotools.api.data.SimpleFeatureStore;
 import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.gce.geotiff.GeoTiffWriter;
@@ -39,6 +42,7 @@ class CatmapVisualTest {
     private static final int DPI = 96;
     private static final CoordinateReferenceSystem WGS84 = DefaultGeographicCRS.WGS84;
     private static final String GOLDEN = "catmap-real-data.png";
+    private static final String GOLDEN_REAL = "catmap-real-rendered.png";
 
     @TempDir
     Path tempDir;
@@ -76,6 +80,36 @@ class CatmapVisualTest {
 
         assertTrue(output.exists());
         assertTrue(output.length() > 5000, "Export PNG too small: " + output.length());
+    }
+
+    @Test
+    void catmapExportWithRealRenderedMap() throws Exception {
+        createTestData();
+
+        BufferedImage mapPreview = renderMapPreviewFromShapefile();
+        int nonBgPixels = countNonBackgroundPixels(mapPreview);
+        assertTrue(nonBgPixels > 100,
+                "Rendered map has too few non-background pixels: " + nonBgPixels);
+
+        LayoutModel model = buildLayout(mapPreview);
+
+        File output = tempDir.resolve("catmap_real_rendered.png").toFile();
+        LayoutExportEngine.exportPng(model, output, DPI);
+        assertTrue(output.exists());
+        assertTrue(output.length() > 5000, "Export PNG too small: " + output.length());
+
+        // Compare against golden (first run creates it)
+        Path goldenPath = goldenPath(GOLDEN_REAL);
+        if (!Files.exists(goldenPath)) {
+            GoldenImageAssert.saveGoldenImage(mapPreview, goldenPath);
+            System.err.println("GOLDEN CREATED: " + goldenPath.toAbsolutePath()
+                    + " (non-bg pixels: " + nonBgPixels + ")");
+            return;
+        }
+
+        BufferedImage expected = GoldenImageAssert.loadGoldenImage(
+                "ar/com/catgis/catmap/golden/" + GOLDEN_REAL);
+        GoldenImageAssert.assertMatches(expected, mapPreview, 1.0, 8);
     }
 
     private void createTestData() throws Exception {
@@ -145,6 +179,85 @@ class CatmapVisualTest {
         fb.add(name);
         fb.add(area);
         return fb.buildFeature(null);
+    }
+
+    private BufferedImage renderMapPreviewFromShapefile() throws Exception {
+        File shpFile = new File(tempDir.resolve("test_data").toFile(), "zonas.shp");
+        ShapefileDataStore store = new ShapefileDataStore(shpFile.toURI().toURL());
+        SimpleFeatureCollection features = store.getFeatureSource().getFeatures();
+        Envelope bounds = store.getFeatureSource().getBounds();
+        if (bounds == null || bounds.isNull()) {
+            bounds = new Envelope(-58.7, -58.0, -34.9, -34.4);
+        }
+
+        int w = 500, h = 300;
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, w, h);
+
+        Color[] fills = {
+                new Color(255, 200, 150, 180),
+                new Color(180, 200, 220, 180),
+                new Color(150, 210, 150, 180)
+        };
+        Color[] strokes = {
+                new Color(120, 60, 40), new Color(60, 80, 120), new Color(40, 120, 40)
+        };
+        int idx = 0;
+
+        try (SimpleFeatureIterator it = (SimpleFeatureIterator) features.features()) {
+            while (it.hasNext()) {
+                SimpleFeature sf = it.next();
+                Geometry geom = (Geometry) sf.getDefaultGeometry();
+                if (geom == null) continue;
+
+                java.awt.Polygon awtPoly = toAwtPolygon(geom, bounds, w, h);
+                g.setColor(fills[idx % fills.length]);
+                g.fillPolygon(awtPoly);
+                g.setColor(strokes[idx % strokes.length]);
+                g.setStroke(new BasicStroke(1.5f));
+                g.drawPolygon(awtPoly);
+
+                String name = (String) sf.getAttribute("nombre");
+                if (name != null) {
+                    g.setColor(Color.BLACK);
+                    g.setFont(new Font("SansSerif", Font.BOLD, 10));
+                    g.drawString(name, awtPoly.xpoints[0], awtPoly.ypoints[0] - 4);
+                }
+                idx++;
+            }
+        }
+        store.dispose();
+        g.dispose();
+        return img;
+    }
+
+    private java.awt.Polygon toAwtPolygon(Geometry geom, Envelope bounds, int w, int h) {
+        Coordinate[] coords = geom.getCoordinates();
+        int[] xs = new int[coords.length];
+        int[] ys = new int[coords.length];
+        double scaleX = w / bounds.getWidth();
+        double scaleY = h / bounds.getHeight();
+        for (int i = 0; i < coords.length; i++) {
+            xs[i] = (int) ((coords[i].x - bounds.getMinX()) * scaleX);
+            ys[i] = (int) ((bounds.getMaxY() - coords[i].y) * scaleY);
+        }
+        return new java.awt.Polygon(xs, ys, coords.length);
+    }
+
+    private int countNonBackgroundPixels(BufferedImage img) {
+        int count = 0;
+        int bg = Color.WHITE.getRGB();
+        int transparent = 0x00000000;
+        for (int y = 0; y < img.getHeight(); y++) {
+            for (int x = 0; x < img.getWidth(); x++) {
+                int rgb = img.getRGB(x, y);
+                if (rgb != bg && rgb != transparent) count++;
+            }
+        }
+        return count;
     }
 
     private BufferedImage renderMapPreview() {
