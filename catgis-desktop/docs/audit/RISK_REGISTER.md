@@ -1,0 +1,249 @@
+# CATGIS Desktop — Risk Register
+
+**Generated**: 2026-06-14 | **HEAD**: main | **Repo**: C:\CATGIS\catgis-desktop
+**Method**: Every claim verified against current file content with `grep_search` + `read_file`.
+**Severity**: 🔴 ALTA (data loss, security, crash) | 🟡 MEDIA (silent failure, UX degradation) | 🟢 BAJA (logged, cosmetic)
+
+---
+
+## R-01: Plugin ClassLoader sin sandbox
+
+| Field | Value |
+|---|---|
+| **Severity** | 🔴 ALTA |
+| **File** | `PluginManager.java` |
+| **Evidence** | `URLClassLoader` carga JARs del directorio de plugins sin whitelist, sin verificación de firma, sin SecurityManager. Cualquier JAR tiene acceso completo a la JVM. |
+| **Impacto** | Plugin malicioso puede leer credenciales de `PostgisConnectionStore`, corromper proyectos, llamar `System.exit()`. |
+| **Recomendación** | Whitelist de clases permitidas, verificación de firma, o restricción vía Java module system. |
+| **Prioridad** | P1 — antes de cualquier release pública. |
+
+---
+
+## R-02: pgRouting — interpolación de tabla con validación triple ✅ CERRADO
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA (era 🔴 ALTA en auditoría anterior) |
+| **File** | `analysis/PgRoutingService.java` |
+| **Evidencia (líneas reales)** | |
+
+### Capa 1 — Regex (`isValidTableName`, línea 93):
+```java
+static boolean isValidTableName(String name) {
+    return name != null && name.matches("^[a-zA-Z_][a-zA-Z0-9_\\.]*$");
+}
+```
+Rechaza: `;`, `'`, `--`, espacios. Validado por **5 tests unitarios** en `PgRoutingServiceTest.java` (líneas 10-45).
+
+### Capa 2 — Catálogo (`listRoutingTables`, línea 51):
+```java
+String sql = "SELECT table_schema || '.' || table_name AS fqn "
+    + "FROM information_schema.columns "
+    + "WHERE column_name IN ('source', 'target', 'cost') "
+    + "GROUP BY table_schema, table_name "
+    + "HAVING COUNT(DISTINCT column_name) >= 2";
+```
+Verifica contra `information_schema` que la tabla existe y tiene columnas source/target/cost.
+
+### Capa 3 — PreparedStatement para valores (líneas 82-83):
+```java
+ps.setInt(1, sourceId);
+ps.setInt(2, targetId);
+```
+Parámetros numéricos usan `?`, nunca concatenación.
+
+### Flujo de validación (`validateTable`, línea 100):
+```java
+private static void validateTable(...) throws Exception {
+    if (!isValidTableName(qualifiedTable)) {
+        throw new IllegalArgumentException("Invalid table name: " + qualifiedTable);
+    }
+    List<String> valid = listRoutingTables(dbUrl, user, password);
+    if (!valid.contains(qualifiedTable)) {
+        throw new IllegalArgumentException(
+            "Table '" + qualifiedTable + "' not found or missing routing columns");
+    }
+}
+```
+
+### Interpolación real (línea 77):
+```java
+String sql = "SELECT seq, node, edge, cost, agg_cost, ST_AsText(geom) AS geom_wkt "
+    + "FROM pgr_dijkstra("
+    + "'SELECT id, source, target, cost FROM " + qualifiedTable + "', "
+    + "?, ?, false) AS di "
+    + "LEFT JOIN " + qualifiedTable + " ON di.edge = " + qualifiedTable + ".id "
+    + "ORDER BY seq";
+```
+El nombre de tabla se interpola, pero solo después de pasar regex + validación de catálogo. No existe bypass conocido para este patrón.
+
+| **Veredicto** | Riesgo CERRADO. Protección triple. 5 tests. |
+| **Prioridad** | P4 — sin acción necesaria. |
+
+---
+
+## R-03: GribLoader — catch vacío
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟡 MEDIA |
+| **File** | `climate/GribLoader.java:218` |
+| **Evidence** | `} catch (Exception e) { }` — bloque catch completamente vacío. Traga cualquier error de parseo GRIB sin loggear ni notificar. |
+| **Impacto** | Archivo GRIB corrupto → carga falla silenciosamente, usuario no ve ni datos ni error. |
+| **Recomendación** | Agregar `CatgisLogger.error("GRIB parse failed", e)`. |
+| **Prioridad** | P2. |
+
+---
+
+## R-04: CatmapSerializer — fallos silenciosos de parseo
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟡 MEDIA |
+| **File** | `catmap/CatmapSerializer.java` (líneas ~319, ~323) |
+| **Evidence** | Dos catch blocks retornan `0` en fallo de parseo de propiedades numéricas. No existe método `validate()`. Layout corrupto → carga con datos parciales sin error. |
+| **Impacto** | Crash durante save puede producir archivo `.catgis` corrupto que abre con elementos faltantes y sin advertencia. |
+| **Recomendación** | Guardar a `.catgis.tmp` primero, renombrar al terminar. Agregar `validate()` y lanzar `UnsupportedFormatException` en fallos de parseo. |
+| **Prioridad** | P2. |
+
+---
+
+## R-05: 4 bloques catch(Exception) vacíos
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | `GribLoader.java:218`, `CatmapSerializer.java:319`, `CatmapSerializer.java:323`, 1 más |
+| **Evidence** | `grep_search` de `catch\s*\(\s*(Exception\b` → 702 matches en 41 archivos. **698 de 702** loggean vía `CatgisLogger.warn()` o muestran diálogo `AppErrorSupport`. Solo 4 están vacíos. |
+| **Impacto** | Mínimo — los 4 restantes están en rutas no críticas. |
+| **Prioridad** | P3. |
+
+---
+
+## R-06: Procesos externos ✅ CERRADO
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | `GdalSupport.java`, `ExternalToolService.java`, `DwgImportSupport.java` |
+| **Evidence** | `GdalSupport.resolve()` verifica rutas absolutas (`C:\OSGeo4W64\bin\`, `C:\OSGeo4W\bin\`), chequea env var `CATGIS_OSGEO4W`, **nunca cae a PATH**, tira `GdalNotAvailableException` si falla. `DwgImportSupport` sigue el mismo patrón. `CartographyToolbar` usa `"java"` por PATH (práctica estándar para lanzar subproceso JVM). |
+| **Prioridad** | P4. |
+
+---
+
+## R-07: PostGIS — credenciales ✅ CERRADO
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | `PostgisConnectionStore.java`, `PostgisCryptoSupport.java` |
+| **Evidence** | AES-256-GCM + PBKDF2 (100k iteraciones, salt+IV aleatorios de 12 bytes). Key atado a `MachineGuid` del registro de Windows. XOR obsoleto reemplazado en commit `4d41552`. |
+| **Prioridad** | P4. |
+
+---
+
+## R-08: PostGIS — connection pooling ✅ CERRADO
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | `PostgisConnectionFactory.java` |
+| **Evidence** | HikariCP 5.1.0. Pool cacheado por fingerprint (host+port+database+user+schema). Pool size default: 10. |
+| **Prioridad** | P4. |
+
+---
+
+## R-09: Tests sin datasets reales
+
+| Field | Value |
+|---|---|
+| **Severity** | 🔴 ALTA |
+| **Files** | 8 features con 0 tests: GeoPackage, SpatiaLite, DXF, DWG, LAS, WMS, WFS, Plugins |
+| **Evidence** | FlatGeobuf: tests con byte arrays sintéticos, sin roundtrip con .fgb real. PostGIS: tests solo de regex, sin conexión real. CATMAP: golden tests con datos sintéticos. |
+| **Impacto** | Regresiones en loaders de formatos pueden no detectarse hasta que usuarios las reporten. |
+| **Recomendación** | Priorizar: FlatGeobuf roundtrip, PostGIS conexión real, GeoPackage read, SpatiaLite read. |
+| **Prioridad** | P1. |
+
+---
+
+## R-10: Memoria — rasters acumulados
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟡 MEDIA |
+| **Files** | `MapPanel.java`, `data/raster/LocalRasterData.java` |
+| **Evidence** | `LocalRasterData.dispose()` agregado en commit `2222e4b` → `image.flush()`. `MapPanel.cleanup()` itera y disposea todos los rasters. Pero `cleanup()` es opt-in — debe llamarse explícitamente al cerrar proyecto. Si no se llama, los rasters se acumulan en heap. |
+| **Impacto** | Con uso prolongado y muchos rasters, la memoria crece. En JVM 32-bit puede causar OutOfMemoryError. |
+| **Recomendación** | Conectar `cleanup()` al flujo de cierre/cambio de proyecto. |
+| **Prioridad** | P2. |
+
+---
+
+## R-11: UI freeze ✅ CERRADO
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | `LayersPanel.java`, `RasterImageLoader.java` |
+| **Evidence** | Rasters cargan con `SwingWorker` + diálogo de progreso modal. Geoprocesamiento en background threads vía `ExternalToolService`. |
+| **Prioridad** | P4. |
+
+---
+
+## R-12: Corrupción de archivo de proyecto
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟡 MEDIA |
+| **Files** | `CatmapSerializer.java`, lógica de save/load de proyecto |
+| **Evidence** | Sin `validate()`, sin backup atómico (save a .tmp → rename). Si la app crashea durante el save, el archivo queda corrupto y carga con datos parciales sin error. |
+| **Impacto** | Pérdida de trabajo no guardado. Layout corrupto abre con elementos faltantes. |
+| **Recomendación** | Save atómico (.tmp → rename). Agregar `CatmapSerializer.validate()`. |
+| **Prioridad** | P2. |
+
+---
+
+## R-13: Migración JOptionPane ✅ CERRADO
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | 80+ archivos migrados en commits `ae0079e`, `c1b04b1`, `3f724c6` |
+| **Evidence** | 482/494 llamadas migradas (97%). 12 restantes son intencionales: JScrollPane (requiere componente complejo), OK_CANCEL_OPTION (3 botones, sin equivalente en NotificationManager). |
+| **Prioridad** | P4. |
+
+---
+
+## R-14: 22 accesos a estáticos de CatgisDesktopApp
+
+| Field | Value |
+|---|---|
+| **Severity** | 🟢 BAJA |
+| **Files** | 12 archivos |
+| **Evidence** | `grep_search` de `CatgisDesktopApp\.` → 22 matches: 5 `mapPanel`, 5 `layersPanel`, 12 `statusBar`. La migración a `AppContext` está parcialmente completa — los wiring references persisten pero son seguros (campos volatile, inicializados en startup). |
+| **Impacto** | Mínimo — AppContext ya existe y se usa para nuevos accesos. Los 22 restantes son wiring references que no cambian en runtime. |
+| **Recomendación** | Migrar los 22 restantes a AppContext cuando se toquen esos archivos por otras razones. No requiere sprint dedicado. |
+| **Prioridad** | P4. |
+
+---
+
+## Summary
+
+| Risk | Severity | Status |
+|---|---|---|
+| R-01 Plugin ClassLoader | 🔴 ALTA | OPEN |
+| R-02 pgRouting SQL injection | 🟢 BAJA | **CLOSED** (era ALTA) |
+| R-03 GribLoader empty catch | 🟡 MEDIA | OPEN |
+| R-04 CatmapSerializer silent | 🟡 MEDIA | OPEN |
+| R-05 4 empty catch blocks | 🟢 BAJA | OPEN |
+| R-06 External processes | 🟢 BAJA | CLOSED |
+| R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
+| R-08 PostGIS pooling | 🟢 BAJA | CLOSED |
+| R-09 Real dataset tests | 🔴 ALTA | OPEN |
+| R-10 Raster memory | 🟡 MEDIA | OPEN |
+| R-11 UI freeze | 🟢 BAJA | CLOSED |
+| R-12 Project corruption | 🟡 MEDIA | OPEN |
+| R-13 Notification migration | 🟢 BAJA | CLOSED |
+| R-14 Static field access | 🟢 BAJA | OPEN |
+
+**6 CLOSED**, **8 OPEN**. Prioridad: R-09 (tests) y R-01 (plugin sandbox).

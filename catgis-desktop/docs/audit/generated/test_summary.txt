@@ -1,0 +1,153 @@
+================================================================================
+CATGIS DESKTOP — TEST EXECUTION AUDIT
+Generated: 2026-06-14
+Command: gradlew.bat --no-daemon clean test --rerun-tasks
+Directory: C:\CATGIS\catgis-desktop
+================================================================================
+
+--- BUILD OUTPUT ------------------------------------------------------------
+
+To honour the JVM settings for this build a single-use Daemon process will
+be forked. For more on this, please refer to
+https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon
+in the Gradle documentation.
+Daemon will be stopped at the end of the build
+
+> Task :compileJava
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: C:\CATGIS\catgis-desktop\src\ar\com\catgis\climate\NetCdfLoader.java
+uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+> Task :verifyProjectLayout
+Estructura base del proyecto verificada.
+
+> Task :compileTestJava
+C:\CATGIS\catgis-desktop\src\test\java\ar\com\catgis\catmap\CatmapVisualTest.java:128:
+warning: non-varargs call of varargs method with inexact argument type for
+last parameter;
+        writer.write(coverage, null);
+                               ^
+  cast to GeneralParameterValue for a varargs call
+  cast to GeneralParameterValue[] for a non-varargs call and to suppress
+  this warning
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+1 warning
+
+BUILD SUCCESSFUL in 1m 29s
+8 actionable tasks: 8 executed
+
+--- TEST RESULTS (aggregated from 94 TEST-*.xml files) -----------------------
+
+Build result:      SUCCESS
+Test suites:        94
+Total tests:       647
+Failures:            0
+Errors:              0
+Skipped:             0
+Total time:        27.1 s (test execution only)
+
+--- COMPILER NOTES -----------------------------------------------------------
+- 1 deprecation warning (NetCdfLoader.java uses unchecked operations)
+- 1 non-varargs warning in CatmapVisualTest.java (test code)
+- Project layout verified OK by verifyProjectLayout task
+
+--- TEST SUITE LIST (all 94 suites, no failures) ----------------------------
+ 1. ZonalStatisticsEngineTest
+ 2. ReleaseVectorInteropTest
+ 3. LayoutNorthArrowAndTableTest
+ 4. LayoutLegendReorderTest
+ 5. LandformClassifierTest
+ 6. BooleanRiskServiceTest
+ 7. BatchPourPointResultTest
+ 8. TemporalControllerTest
+ 9. ReleaseFieldCalculatorTest
+10. LayoutRenderTest
+11. LayoutPipelineTest
+12. AppContextTest
+13. SldSupportTest
+14. FlatGeobufLoaderRealTest
+15. GoldenImageTest
+16. TerrainHydrologyAnalysisServiceViewshedTest
+17. MapViewportContextTest
+18. LayoutScaleBarTest
+19. LayoutExportSettingsTest
+20. GeometryToolsTest
+21. FloodScenarioComparatorBatchTest
+22. SoilGridsDownloadServiceTest
+23. QgisQptImporterTest
+24. LayoutModelTest
+25. LayoutEdgeCasesTest
+26. ClippedDemRoundTripAlignmentTest
+27. CatmapVisualTest
+28. PgRoutingServiceTest
+29. HillshadeGeneratorTest
+30. SpatialUtilsTest
+31. LayoutLegendTest
+32. LayoutIntegrationTest
+33. WcsClientTest
+34. TopographicProfileServiceTest
+35. LayoutFrameTest
+36. NetworkAnalysisEngineTest
+37. LayoutShapeTests
+38. LayoutExpressionTest
+39. ProjectContourOperationalCrsRoundTripTest
+40. NetworkAnalysisEndToEndTest
+41. LayoutTableDataTest
+42. PointSymbolCatalogTest
+43. LayoutAtlasTest
+44. StacClientTest
+45. SnapContextTest
+46. ProjectOperationalCrsRoundTripTest
+47. LayoutCartoucheTest
+48. RuleBasedSymbologyTest
+49. SnapManagerTest
+50. PostgisWriteServiceTest
+51. LayoutStressTest
+52. ScriptEngineTest
+53. LayoutLabelTest
+54. HexagonalGridTest
+55. ReleaseFormatCompatibilityTest
+56. ProjectFloodOperationalCrsRoundTripTest
+57. LayoutModelAdvancedTest
+58. ReleaseVectorOperationsTest
+59. RasterCoverageSupportReprojectionOrientationTest
+60. LayoutMultiMapTest
+61. DemClipServiceTest
+62. LayoutRenderContextTest
+63. LayoutMultiPageTest
+64. FloodScenarioGeoTiffExportTest
+65. RiskAnalysisEngineTest
+66. LayoutCompletionTest
+67. TopologyValidatorTest
+68. ProjectSerializationTest
+69. LayoutTemplateManagerTest
+70. LayoutImageAndGuideLineTest
+71. LabelEncodingTest
+72. RasterColorizerTest
+73. RasterReclassifyEngineTest
+74. LayoutElementTests
+75. ProjectOperationalCrs32719AlignmentTest
+76. ProjectBooleanRiskRoundTripTest
+77. ContourThresholdControlTest
+78. SpectralIndexEngineTest
+79. TemporalControllerIntegrationTest
+80. SmileClassifierServiceTest
+81. ReleaseProjectRoundTripTest
+82. PostgisConnectionPresetTest
+83. PmtilesGeoParquetStateTest
+84. QptImporterAdvancedTest
+85. LayoutUtilsTest
+86. LayoutMapTest
+87. LayoutFeatureTests
+88. LabelExpressionEngineTest
+89. GraduatedSymbologyTest
+90. ExternalToolServiceTest
+91. CRSDefinitionsCatalogTest
+92. PdfExportOptionsTest
+93. BatchProcessorTest
+94. RasterCalculatorEngineTest
+
+================================================================================

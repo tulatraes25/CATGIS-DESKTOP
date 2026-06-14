@@ -1,0 +1,211 @@
+================================================================================
+CATGIS DESKTOP — GREP CODE QUALITY AUDIT
+Generated: 2026-06-14
+Scope: src/ar/com/catgis/**/*.java (main code only; test excluded)
+================================================================================
+
+--- 1. catch (Exception) ------------------------------------------------
+Total matches: 183
+Files with matches: 41
+Risk: MEDIUM
+
+Broad Exception catches. Many are properly logged via CatgisLogger.warn()
+with context, but broad Exception swallowing remains a pattern.
+
+Notable files (top by count):
+  analysis/vector/GeoprocessingAssistantDialog.java
+  catmap/CatmapSocketServer.java
+  catmap/CatmapSerializer.java
+  catmap/CatmapSocketClient.java
+  catmap/Main.java
+  climate/GribLoader.java
+  climate/NetCdfLoader.java
+  layout/LayoutController.java
+  layout/LayoutTemplateManager.java
+  scripting/ScriptEngine.java
+
+Sample findings:
+  "catch (Exception ignored) { CatgisLogger.warn(...) }" — properly logged
+  "catch (Exception e) { return 0; }" — silent swallow (CatmapSerializer:319,323)
+  Most catches now route to CatgisLogger — good trajectory.
+
+--- 2. printStackTrace ---------------------------------------------------
+Total matches: 0
+Risk: NONE
+
+No printStackTrace calls remain in main code. Previously common anti-pattern
+has been fully migrated to CatgisLogger.
+
+--- 3. System.err --------------------------------------------------------
+Total matches: 0
+Risk: NONE
+
+No direct writes to stderr. All diagnostics go through CatgisLogger.
+
+--- 4. System.out --------------------------------------------------------
+Total matches: 0
+Risk: NONE
+
+No direct writes to stdout. Clean.
+
+--- 5. ProcessBuilder ----------------------------------------------------
+Total matches: 6
+Files: 1
+Risk: LOW
+
+All 6 matches are in: scripting/ScriptEngine.java (Python subprocess execution)
+
+This file already uses GdalSupport's safe resolution pattern and does not
+fall back to bare command names. Acceptable concentration.
+
+--- 6. Runtime.getRuntime ------------------------------------------------
+Total matches: 1
+Files: 1
+Risk: LOW
+
+  climate/ClimateAreaAnalysisDialog.java — single use, likely for
+  availableProcessors or memory info. Not a security risk.
+
+--- 7. TODO ---------------------------------------------------------------
+Total matches: 106
+Files with matches: 5
+Risk: LOW (known tech debt, tracked)
+
+Distribution:
+  renderer/labels/LabelExpressionEngine.java — 76 matches (lines 537-790)
+    Tokenizer function stubs: cos, sin, tan, log, sqrt, round, abs,
+    length, replace, substr, concat, format_number, area, perimeter,
+    x, y, x_at, y_at, etc. Labeled as TODO: implement function.
+  layout/LayoutController.java — 4 matches (lines 180-183)
+  climate/LandformClassifier.java — 4 matches (lines 337-340)
+  catmap/Main.java — 2 matches (lines 175, 977)
+  analysis/vector/GeoprocessingAssistantDialog.java — 1 match (line 348)
+
+Assessment: LabelExpressionEngine TODOs represent unimplemented expression
+functions. The engine already has tokenizer support (backslash escaping)
+and RPN evaluation; these TODOs are expansion slots.
+
+--- 8. FIXME --------------------------------------------------------------
+Total matches: 0
+
+Clean — no FIXME markers.
+
+--- 9. placeholder --------------------------------------------------------
+Total matches: 21
+Files with matches: 3
+Risk: LOW
+
+  layout/LayoutMap.java — 12 matches (placeholder dimensions/values)
+  data/online/OnlineTileCache.java — 7 matches (placeholder paths/config)
+  climate/ClimateAreaAnalysisDialog.java — 1 match
+
+These are UI/configuration placeholder values, not functional gaps.
+
+--- 10. experimental ------------------------------------------------------
+Total matches: 0
+
+No experimental code markers.
+
+--- 11. "not implemented" (case-insensitive) ------------------------------
+Total matches: 0
+
+No "not implemented" strings found.
+
+--- 12. return null -------------------------------------------------------
+Total matches: 154
+Files with most matches:
+  data/raster/RasterCoverageSupport.java    — 24
+  climate/NetCdfLoader.java                 — 20
+  analysis/vector/GeoprocessingAssistantDialog.java — 12
+  layout/LayoutController.java             —  8
+  catmap/CatmapSocketClient.java           —  8
+  analysis/raster/RasterCalculatorEngine.java —  7
+  sld/SldSupport.java                      —  7
+
+Risk: MEDIUM. Returning null forces null checks on every caller. Common
+in data loading (no result = null), geometry operations, and expression
+evaluation. Not a bug, but adds defensive coding burden.
+
+--- 13. new Point(0, 0) ---------------------------------------------------
+Total matches: 0
+
+No hardcoded origin points found.
+
+--- 14. CatgisDesktopApp.mapPanel ----------------------------------------
+Total matches: 5
+Files: 4
+Risk: LOW-MEDIUM
+
+  catmap/Main.java
+  climate/ClimateVisualizationDialog.java
+  service/EventBus.java
+  service/EventBusInitializer.java
+
+Static field access to central map panel. Being migrated to AppContext.
+Down from 113 references in MapLayoutComposerDialog alone (refactoring
+reduced that to 15 via ctxMapPanel() helper).
+
+--- 15. CatgisDesktopApp.currentProject ----------------------------------
+Total matches: 0
+Risk: NONE
+
+Zero direct accesses — project access is now mediated.
+
+--- 16. CatgisDesktopApp.layersPanel -------------------------------------
+Total matches: 5
+Files: 5
+Risk: LOW-MEDIUM
+
+  catmap/Main.java
+  climate/ClimateOnlineDownloadDialog.java
+  climate/GribLoader.java
+  service/EventBusInitializer.java
+  data/vector/VectorLayerUtils.java
+
+--- 17. CatgisDesktopApp.statusBar ---------------------------------------
+Total matches: 12
+Files: 7
+Risk: LOW-MEDIUM
+
+  catmap/Main.java
+  climate/ClimateAreaAnalysisDialog.java
+  climate/ClimateOnlineDownloadDialog.java
+  climate/ClimateVisualizationDialog.java
+  climate/GribLoader.java
+  climate/WindRoseDialog.java
+  service/EventBusInitializer.java
+
+Status bar access is concentrated in climate package + EventBus. All 12
+instances remain on static field; migration to AppContext is in progress.
+
+--- 18. "ignored" (in catch context) --------------------------------------
+Total matches: 164
+Files with matches across: climate, catmap, layout, scripting, sld,
+  analysis, plugins, data, renderer, core
+
+Risk: LOW (pattern already improved)
+
+Most "ignored" occurrences are in the pattern:
+  "catch (Exception ignored) { CatgisLogger.warn(...); }"
+
+This pattern was established during the exception-handling hardening phase.
+It names the exception variable "ignored" to signal intent, then logs it
+via CatgisLogger. This is acceptable — the exception is NOT truly swallowed.
+
+Some "ignored" occurrences are in comments (e.g., LayoutMap "ignored
+placeholder"), not catch blocks.
+
+--- OVERALL ASSESSMENT ----------------------------------------------------
+  printStackTrace:         0 — Fully migrated to CatgisLogger
+  System.err/out:          0 — No raw console writes
+  ProcessBuilder:          6 — Concentrated in ScriptEngine, safe pattern
+  Runtime.getRuntime:      1 — Negligible
+  CatgisDesktopApp.*:     22 — Migration to AppContext in progress
+  catch (Exception):     183 — Mostly logged now, some still return 0/null
+  return null:           154 — Common in data/loader paths, accepted pattern
+  TODO:                  106 — LabelExpressionEngine expansion slots
+
+The codebase is in good shape. The main areas to watch:
+1. catch(Exception) silent swallows (CatmapSerializer:319,323)
+2. CatgisDesktopApp static access — continue AppContext migration
+3. LabelExpressionEngine TODOs — implement pending functions

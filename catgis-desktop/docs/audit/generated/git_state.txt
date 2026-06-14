@@ -1,0 +1,136 @@
+================================================================================
+CATGIS DESKTOP — GIT STATE AUDIT
+Generated: 2026-06-14
+Repository: C:\CATGIS\catgis-desktop
+================================================================================
+
+--- GIT STATUS ---------------------------------------------------------------
+
+On branch main
+Your branch and 'origin/main' have diverged,
+and have 351 and 7 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+Changes not staged for commit:
+  deleted:    ../CONSULTLAN-OPERATIVO/CONSULTLAN-CODEX-GITHUB-FLOW.md
+  deleted:    ../CONSULTLAN_repo-hygiene-phase1
+
+Untracked files:
+  ../.atl/
+  fix_final2.ps1
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+--- GIT LOG (last 20 commits) ------------------------------------------------
+
+2222e4b (HEAD -> main) Add resource cleanup to MapPanel, MapLayoutComposerDialog, LayoutPreviewPanel
+4e13cf1 Harden exception handling in MapPanel and MapEditingEngine
+415fa6b Add CatmapVisualTest -- golden test with real GIS data
+cd94915 Decouple LayoutPreviewPanel from MapLayoutComposerDialog via LayoutViewContext
+3f724c6 Complete JOptionPane migration: 97% of showMessageDialog/confirmDialog migrated
+c1b04b1 Migrate 330 JOptionPane calls to NotificationManager across 50+ files
+ae0079e Migrate 60 JOptionPane calls to NotificationManager in 5 high-density files
+e8e553a Wire LayoutController with business logic from MapLayoutComposerDialog
+f7aa492 Extract MapLayoutComposerDialog UI into composable components
+0655292 Add LayoutMap.setPreviewImage() for headless golden testing
+ef49fd6 Add Golden Image Testing for CATMAP layout export
+5611c6f Add NotificationManager: Toast notifications + modal dialogs
+3d8e75f Harden FlatGeobufLoader and SpatiaLiteLoader with strict validation
+a1da8e6 Extract inner types from MapLayoutComposerDialog, LayersPanel
+22fcdcf Remove dead EditingState field and untracked EditingState.java
+b8e4033 Extract FeatureBuilder, MapPopupMenuBuilder; expand MapEditingEngine/MapUtilities
+5645ec2 Extract EditingGeometryOperations and EditingCursorFactory from MapPanel
+5bb6748 Remove 7 thin geometry wrappers from MapPanel, delegate to MapGeometryUtils
+5da644a Extract line projection geometry methods to MapGeometryUtils
+b4807d4 Add MapTool Strategy pattern for map interaction tools
+
+--- DIFF STAT (HEAD~5..HEAD) --------------------------------------------------
+
+ catgis-desktop/src/ar/com/catgis/LayersPanel.java           | 128 +++----
+ catgis-desktop/src/ar/com/catgis/LayoutPreviewPanel.java     | 412 ++++++++++-----------
+ catgis-desktop/src/ar/com/catgis/MapEditingEngine.java       |   1 +
+ catgis-desktop/src/ar/com/catgis/MapLayoutComposerDialog.java| 197 +++++++---
+ catgis-desktop/src/ar/com/catgis/MapPanel.java               | 121 +++---
+ catgis-desktop/src/ar/com/catgis/OpenFileAction.java         |  62 ++--
+ catgis-desktop/src/ar/com/catgis/TopographicProfileDialog.java|  26 +-
+ catgis-desktop/src/ar/com/catgis/data/raster/LocalRasterData.java |   7 +
+ catgis-desktop/src/ar/com/catgis/layout/LayoutViewContext.java    | 119 ++++++
+ catgis-desktop/src/ar/com/catgis/catmap/CatmapVisualTest.java     | 266 +++++++++++++
+ catgis-desktop/src/ar/com/catgis/catmap/golden/catmap-real-data.png| Bin 0 -> 131212 bytes
+ 11 files changed, 905 insertions(+), 434 deletions(-)
+
+--- BRANCH LIST (-vv) ---------------------------------------------------------
+
+  codex/climate-gap-closure         895c9db [origin/...: ahead 3] feat: add regex/timezone/trig expression functions
+  docs/etapa3-final-report          4559390 docs(etapa3): CATMAP_SCALE_AND_TEMPLATE_FIX_REPORT.md
+* emdash/wild-horses-wish-n92gr     1693864 [origin/...] Sync repo with CATGIS DESKTOP snapshot
+  feat/copy-paste-elements          bdcca93 feat: Ctrl+C/V copy/paste LayoutElements
+  feat/final-push-100               4216b73 feat: expression evaluator, atlas renderer, geospatial PDF
+  feat/independent-map-frame        14492c7 feat: LayoutMap 100% independent extent
+  feat/labeling                     6a2fa93 feat(labeling): cartographic labeling engine
+  feat/labeling-dialog              cae9ce9 feat(labeling): label panel in LayerPropertiesDialog
+  feat/labeling-lines-polys         8dd2cc7 feat: label placement and collision engine
+  feat/last-3-percent               ff05c7e feat: legend item reorder, CATMAP vs QGIS 98%
+  feat/layout-cartouche             4b1f71f feat: LayoutCartouche structured cartouche
+  feat/layoutelements-complete      ff92ebc feat: LayoutEllipse, LayoutLine
+  feat/layoutmap-live-frame         8d74c6a feat: LayoutMap independent extent, LayoutGraticule
+  feat/line-symbol-renderer         4559390 docs(etapa3): CATMAP_SCALE_AND_TEMPLATE_FIX_REPORT.md
+  feat/massive-template-library     f758bfc feat: 76 templates in 10 categories
+  feat/one-click-ux                 86c7812 feat: one-click Auto-componer button
+  feat/polish-and-installer         6d8c8a4 feat: properties panel for all 12 element types
+  feat/poly-symbol-renderer         67c4678 feat: LineSymbolRenderer, PolygonSymbolRenderer
+  feat/professional-templates       d95a29c feat: 4 professional templates
+  feat/professional-ui              ca43c82 feat: ArcMap-style canvas UI
+  feat/properties-all-types         11063e3 feat: properties panel for all element types
+  feat/push-98                      0d76961 test: +8 completion tests, 263 total
+  feat/push-to-100                  22bb855 feat: snap-to-grid 5mm, dots grid
+  feat/surpass-qgis                 2b6c15d feat: SVG export, auto-componer with project data
+  feat/symbology-and-templates      9a829d7 feat: 28 point styles, 18 line styles, 18 polygon styles
+  feat/symbology-point-catalog      f5ad6ab feat: PointSymbolCatalog.render(), 50+ symbols
+  feat/template-library             1e9bb30 feat: 14 new templates, 24 total
+  feat/undo-delete-dpi              cbc74e5 feat: Delete key, undo/redo for move/resize
+  fix/audit-cleanup                 09998b4 fix: dead code removal, buildLineStroke eliminated
+  fix/catmap-auditoria-final        90b7e44 fix: unified hit-test, normalized z-order
+  fix/catmap-contextual-ux-final    16ef68d feat: floating popups, direct-draw shapes
+  fix/catmap-editable-header-cartouche 5d969d2 feat: editable header/cartouche properties
+  fix/catmap-grid-spacing-scale-controls 6b61d6d feat: distance grid, editable scale
+  fix/catmap-unify-layoutelements   0649f2e refactor: migrate toolbar to LayoutElements
+  fix/close-polygon                 09998b4 fix: dead code removal
+  fix/critical-map-legend-scale     2ab1ae0 feat: layout map cache, shared symbol renderers
+  fix/defaults-and-names            c2930d4 fix: A3 templates change page size
+  refactor/arch-and-competition     f54875d feat: ArcMap frame border, QGIS dynamic text
+  refactor/arch-strong-phase2       5d5aa52 test: +14 render tests
+  refactor/architecture-hardening   1505f8f refactor: AppContext, ProjectSerializer
+  refactor/architecture-strong      99d3f44 refactor: CatgisDesktopApp refs 113->15 (-87%)
+  refactor/continue-hardening       a93ea00 test: LayoutElementTests, 68 tests
+  refactor/eliminate-hardcoded      5c9122f fix: auto-disable hardcoded elements
+  refactor/extract-layout-renderer  efac57b test: +20 tests, 117 total
+  refactor/extract-point-render     09d0f5f test: +29 tests, 146 total
+  refactor/extract-renderer         8e0a43c test: +16 tests, layout package coverage
+  refactor/final-hardening          8793363 feat: multiple maps in layout
+  refactor/final-marathon           6372b32 test: +4 integration tests, 182 total
+  refactor/final-push               d7a094d test: +13 tests, 78 total
+  refactor/final-tests              23101d1 test: +4 stress/edge tests, 200 total
+  refactor/keep-going               deff25e feat: multi-page support, 248 tests
+  refactor/keep-pushing             8cf5979 test: +14 tests, 196 total
+  refactor/last-push                6372b32 test: +4 integration tests, 182 total
+  refactor/map-panel-catmap-cleanup 28230aa refactor: LayoutExportContext, 53 tests
+  refactor/more                     7751f00 feat: LayoutLabel background+border, 207 tests
+  refactor/more-tests               14878b4 test: +5 QPT importer tests, 219 total
+  refactor/push-more                dabc545 test: +4 multi-map tests, 168 total
+  refactor/reduce-coupling          3da7eb0 test: +6 advanced tests, 225 total
+  refactor/safe-incremental         efac57b test: +20 tests, 117 total
+  refactor/to-the-max               e134405 feat: LayoutAtlas map series, 238 tests
+  refactor/zone-by-zone             5dd9c2d test: +7 tests
+* main                              2222e4b [origin/main: ahead 351, behind 7] Add resource cleanup
+  master                            4be990b [origin/master] fix: OpenClaw fixes
+
+--- OBSERVATIONS --------------------------------------------------------------
+- Working tree is the emdash/wild-horses-wish-n92gr worktree (frozen snapshot)
+- Main branch is 351 commits ahead of origin/main (local-only work)
+- Origin is 7 commits ahead (need git pull before push)
+- 2 untracked items: fix_final2.ps1 (script) and .atl/ (agent team config)
+- 2 deleted files in parent directory (not in CATGIS worktree)
+- No staged changes — working tree is clean for CATGIS files
+
+================================================================================
