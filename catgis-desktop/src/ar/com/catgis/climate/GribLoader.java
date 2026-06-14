@@ -215,7 +215,10 @@ public final class GribLoader {
             try {
                 var arrayMethod = dataObj.getClass().getMethod("copyToNDJavaArray");
                 dataArray = (Double) arrayMethod.invoke(dataObj);
-            } catch (Exception ex) {}
+            } catch (Exception ex) {
+                CatgisLogger.error("GribLoader: fallo al leer datos GRIB via reflection, "
+                        + "la imagen mostrada sera sintetica (no representa datos reales)", ex);
+            }
 
             if (latSize <= 0 || lonSize <= 0) {
                 latSize = 180;

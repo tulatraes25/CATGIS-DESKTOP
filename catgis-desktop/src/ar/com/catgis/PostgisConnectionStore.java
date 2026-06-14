@@ -178,7 +178,9 @@ public final class PostgisConnectionStore {
                 String output = new String(p.getInputStream().readAllBytes()).trim();
                 if (!output.isBlank()) return output;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            CatgisLogger.warn("PostgisConnectionStore: no se pudo obtener machine-id del sistema", null);
+        }
         return "";
     }
 
