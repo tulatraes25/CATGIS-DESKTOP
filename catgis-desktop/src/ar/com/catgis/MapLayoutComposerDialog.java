@@ -157,7 +157,7 @@ import ar.com.catgis.layout.LayoutPageRenderer;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.ui.components.layout.PreviewToolbarActions;
 
-public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarActions {
+public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarActions, ar.com.catgis.layout.LayoutViewContext {
 
     // Context helpers - prefer AppContext over static globals
     public static Project ctxProject() {
@@ -523,7 +523,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    void showCartouchePopup(LayoutCartouche cartouche) {
+    public void showCartouchePopup(LayoutCartouche cartouche) {
         JDialog popup = new JDialog(this, "Datos cartograficos", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -563,7 +563,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
-    void showScalePopup(LayoutScaleBar scale) {
+    public void showScalePopup(LayoutScaleBar scale) {
         JDialog popup = new JDialog(this, "Escala grafica", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -608,7 +608,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
-    void showNorthPopup(LayoutNorthArrow north) {
+    public void showNorthPopup(LayoutNorthArrow north) {
         JDialog popup = new JDialog(this, "Norte", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -637,7 +637,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         popup.add(panel); popup.pack(); popup.setResizable(false); popup.setLocationRelativeTo(this); popup.setVisible(true);
     }
 
-    void showMapPropsPopup(LayoutMap map) {
+    public void showMapPropsPopup(LayoutMap map) {
         JDialog popup = new JDialog(this, "Propiedades del mapa", true);
         popup.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         JPanel panel = new JPanel(new BorderLayout(8,8));
@@ -1535,7 +1535,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return items;
     }
 
-    void persistCatmapItems() {
+    public void persistCatmapItems() {
         layoutController.persistCatmapItems(copyCatmapItems());
     }
 
@@ -1681,7 +1681,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         refreshPreviewWorkspace();
     }
 
-    void configureNorthFromToolbar() {
+    public void configureNorthFromToolbar() {
         JCheckBox visibleCheck = new JCheckBox("Mostrar norte en el layout", northCheck.isSelected());
         JComboBox<NorthStyle> styleCombo = new JComboBox<>(NorthStyle.values());
         styleCombo.setSelectedItem(northStyleCombo.getSelectedItem());
@@ -1762,7 +1762,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         previewPanel.repaint();
     }
 
-    void editSelectedCatmapItem() {
+    public void editSelectedCatmapItem() {
         CatmapLayoutItem selected = getPrimarySelectedCatmapItem();
         if (selected == null) {
             NotificationManager.warn(this, null, "Selecciona un elemento CATMAP para editar.");
@@ -2289,7 +2289,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         syncLayoutStructureSelection();
     }
 
-    void syncLayoutStructureSelection() {
+    public void syncLayoutStructureSelection() {
         if (layoutStructureTree == null || syncingLayoutStructureSelection) {
             return;
         }
@@ -3134,7 +3134,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
                 "<br><b>Ancho visible aprox.:</b> " + escape(snapshot.scaleLabel()) + "</html>");
     }
 
-    void openLegendEditor() {
+    public void openLegendEditor() {
         CatmapLegendEditorDialog.open(
                 this,
                 ctxProject(),
@@ -3335,7 +3335,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         AppErrorSupport.showErrorDialog(this, "Composicion", intro, ex);
     }
 
-    LayoutSettings buildSettings() {
+    public LayoutSettings buildSettings() {
         pushProjectMetadataFromControls();
         PageSizePreset pageSize = (PageSizePreset) pageSizeCombo.getSelectedItem();
         PageOrientation orientation = (PageOrientation) orientationCombo.getSelectedItem();
@@ -3409,7 +3409,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return layoutController.parseScaleDenominator(value);
     }
 
-    void updateScaleUiState(double exactDenominator) {
+    public void updateScaleUiState(double exactDenominator) {
         String text = exactDenominator > 0 ? formatScaleDenominator(exactDenominator) : "Escala no disponible";
         scaleInfoLabel.setText("Escala real actual: " + text);
         if (!mapScaleField.hasFocus()) {
@@ -3432,7 +3432,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return LayoutController.formatScaleDenominator(denominator);
     }
 
-    LayoutSnapshot getSnapshot() {
+    public LayoutSnapshot getSnapshot() {
         return layoutController.getSnapshot();
     }
 
@@ -3440,7 +3440,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         return layoutController.hasLayoutElement(type);
     }
 
-    void syncHardcodedLayoutFlagsFromModel() {
+    public void syncHardcodedLayoutFlagsFromModel() {
         layoutController.syncHardcodedLayoutFlagsFromModel();
         if (layoutController.hasLayoutElement(LayoutLegend.class)) {
             legendCheck.setSelected(false);
@@ -3583,7 +3583,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    void drawLayoutModelOverlay(Graphics2D g2, LayoutSettings settings, int pageX, int pageY, double scale) {
+    public void drawLayoutModelOverlay(Graphics2D g2, LayoutSettings settings, int pageX, int pageY, double scale) {
         if (layoutModel.size() == 0) return;
         double dpi = settings.dpi();
         PageSizePreset ps = settings.pageSize();
@@ -3657,7 +3657,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         }
     }
 
-    RectMm toPageRectMm() {
+    public RectMm toPageRectMm() {
         if (previewPanel.lastRenderResult == null || previewPanel.lastPageBounds == null || previewPanel.lastPreviewScale <= 0) return null;
         LayoutSettings settings = buildSettings();
         PageSizePreset ps = settings.pageSize();
@@ -3770,7 +3770,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         previewPanel.repaint();
     }
 
-    int countOfType(String prefix) {
+    public int countOfType(String prefix) {
         return layoutController.countOfType(prefix);
     }
 
@@ -3873,7 +3873,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
     }
 
-    int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
+    public int hitTestHandle(LayoutElement el, Point pagePoint, RectMm pageRect) {
         double sc = pageRect.pxToMmScale;
         int px = (int)(el.getBoundsMm().x / sc);
         int py = (int)(el.getBoundsMm().y / sc);
@@ -3900,7 +3900,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         draggingLayoutElement.setBoundsMm(x, y, w, h);
     }
 
-    void pushUndo(LayoutElement el, boolean isDelete) {
+    public void pushUndo(LayoutElement el, boolean isDelete) {
         layoutController.pushUndo(el, isDelete);
     }
 
@@ -3928,11 +3928,11 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         refreshAll();
     }
 
-    private void pushUndoGroup(java.util.List<LayoutElement> elements) {
+    public void pushUndoGroup(java.util.List<LayoutElement> elements) {
         layoutController.pushUndoGroup(elements);
     }
 
-    void refreshPropertiesPanel() {
+    public void refreshPropertiesPanel() {
         if (propertiesInfoLabel == null || propertiesCardPanel == null) return;
         LayoutElement sel = layoutModel.getSelected();
         java.awt.CardLayout cl = (java.awt.CardLayout) propertiesCardPanel.getLayout();
@@ -4416,4 +4416,80 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         form.add(cb, g);
         return y + 1;
     }
+
+    // ── LayoutViewContext implementation ───────────────────────
+
+    @Override public LayoutModel getLayoutModel() { return layoutModel; }
+
+    @Override public LayoutInteractionState getInteractionState() { return interactionState; }
+
+    @Override public void setStatusMessage(String msg) { statusLabel.setText(msg); }
+
+    @Override public void repaintCanvas() { previewPanel.repaint(); }
+
+    @Override public Dimension getPreviewViewportSize() {
+        if (previewScrollPane != null) {
+            Dimension extent = previewScrollPane.getViewport().getExtentSize();
+            if (extent != null && extent.width > 0 && extent.height > 0) return extent;
+        }
+        if (previewPanel.getParent() instanceof javax.swing.JViewport viewport) {
+            Dimension extent = viewport.getExtentSize();
+            if (extent != null && extent.width > 0 && extent.height > 0) return extent;
+        }
+        if (previewPanel.getWidth() > 0 && previewPanel.getHeight() > 0)
+            return new Dimension(previewPanel.getWidth(), previewPanel.getHeight());
+        return new Dimension(980, 760);
+    }
+
+    @Override public boolean isElementLocked(LayoutElementType type) {
+        return interactionState.isElementLocked(type);
+    }
+
+    @Override public void selectItemInList(String id) { selectCatmapItemInList(id); }
+
+    @Override public CatmapLayoutItem getCatmapItem(String id) { return getCatmapItemById(id); }
+
+    @Override public String elementLabel(LayoutElementType type) { return layoutElementLabel(type); }
+
+    @Override public void populateLegend(LayoutLegend legend) { populateLegendFromProject(legend); }
+
+    @Override public void resizeCanvasElement(int handleIndex, int dx, int dy) { resizeElement(handleIndex, dx, dy); }
+
+    @Override public void showPopupForElement(LayoutElement el) {
+        if (el instanceof LayoutCartouche) { showCartouchePopup((LayoutCartouche) el); return; }
+        if (el instanceof LayoutScaleBar) { showScalePopup((LayoutScaleBar) el); return; }
+        if (el instanceof LayoutNorthArrow) { showNorthPopup((LayoutNorthArrow) el); return; }
+        if (el instanceof LayoutMap) { showMapPropsPopup((LayoutMap) el); return; }
+        refreshPropertiesPanel();
+    }
+
+    @Override public ar.com.catgis.layout.CanvasRenderer getCanvasRenderer() { return canvasRenderer; }
+
+    // ── Deprecated drag state ──────────────────────────────────
+
+    @Override public LayoutElement getDraggingLayoutElement() { return draggingLayoutElement; }
+    @Override public void setDraggingLayoutElement(LayoutElement el) { draggingLayoutElement = el; }
+    @Override public Point getDragStartPagePoint() { return dragStartPagePoint; }
+    @Override public void setDragStartPagePoint(Point p) { dragStartPagePoint = p; }
+    @Override public java.awt.geom.Rectangle2D.Double getDragStartBoundsMm() { return dragStartBoundsMm; }
+    @Override public void setDragStartBoundsMm(java.awt.geom.Rectangle2D.Double r) { dragStartBoundsMm = r; }
+    @Override public int getActiveResizeHandleIndex() { return activeResizeHandleIndex; }
+    @Override public void setActiveResizeHandleIndex(int index) { activeResizeHandleIndex = index; }
+
+    // ── Inline editing fields ──────────────────────────────────
+
+    @Override public String getTitleFieldText() { return titleField.getText(); }
+    @Override public void setTitleFieldText(String text) { titleField.setText(text); }
+    @Override public String getStudyFieldText() { return studyField.getText(); }
+    @Override public void setStudyFieldText(String text) { studyField.setText(text); }
+    @Override public String getProjectFieldText() { return cartoucheProjectField.getText(); }
+    @Override public void setProjectFieldText(String text) { cartoucheProjectField.setText(text); }
+    @Override public String getCompanyFieldText() { return companyField.getText(); }
+    @Override public void setCompanyFieldText(String text) { companyField.setText(text); }
+    @Override public String getCartographerFieldText() { return cartographerField.getText(); }
+    @Override public void setCartographerFieldText(String text) { cartographerField.setText(text); }
+    @Override public String getSourceFieldText() { return imageSourceField.getText(); }
+    @Override public void setSourceFieldText(String text) { imageSourceField.setText(text); }
+    @Override public String getCrsFieldText() { return coordinateReferenceField.getText(); }
+    @Override public void setCrsFieldText(String text) { coordinateReferenceField.setText(text); }
 }

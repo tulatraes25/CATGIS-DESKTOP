@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LayoutPreviewPanel extends JPanel {
-    private final MapLayoutComposerDialog dialog;
+    private final ar.com.catgis.layout.LayoutViewContext ctx;
     LayoutRenderResult lastRenderResult;
     Rectangle lastPageBounds = new Rectangle();
     double lastPreviewScale = 1d;
@@ -38,8 +38,8 @@ public class LayoutPreviewPanel extends JPanel {
     private final JTextField inlineCartoucheSourceField;
     private final JTextField inlineCartoucheCrsField;
 
-    public LayoutPreviewPanel(MapLayoutComposerDialog dialog) {
-        this.dialog = dialog;
+    public LayoutPreviewPanel(ar.com.catgis.layout.LayoutViewContext ctx) {
+        this.ctx = ctx;
         setLayout(null);
         setOpaque(true);
         setFocusable(true);
@@ -72,7 +72,7 @@ public class LayoutPreviewPanel extends JPanel {
 
     @Override
     public Dimension getPreferredSize() {
-        LayoutSettings settings = dialog.buildSettings();
+        LayoutSettings settings = ctx.buildSettings();
         if (settings == null) {
             return new Dimension(980, 760);
         }
@@ -82,7 +82,7 @@ public class LayoutPreviewPanel extends JPanel {
         int availableHeight = Math.max(80, viewportSize.height - 40);
         double fitPageScale = Math.min(availableWidth / (double) pageSize.width, availableHeight / (double) pageSize.height);
         double fitWidthScale = availableWidth / (double) pageSize.width;
-        double scale = Math.max(0.08d, dialog.interactionState.resolvePreviewScale(fitPageScale, fitWidthScale));
+        double scale = Math.max(0.08d, ctx.getInteractionState().resolvePreviewScale(fitPageScale, fitWidthScale));
         int drawWidth = (int) Math.round(pageSize.width * scale);
         int drawHeight = (int) Math.round(pageSize.height * scale);
         return new Dimension(
@@ -92,22 +92,7 @@ public class LayoutPreviewPanel extends JPanel {
     }
 
     private Dimension resolvePreviewViewportSize() {
-        if (dialog.previewScrollPane != null) {
-            Dimension extent = dialog.previewScrollPane.getViewport().getExtentSize();
-            if (extent != null && extent.width > 0 && extent.height > 0) {
-                return extent;
-            }
-        }
-        if (getParent() instanceof javax.swing.JViewport viewport) {
-            Dimension extent = viewport.getExtentSize();
-            if (extent != null && extent.width > 0 && extent.height > 0) {
-                return extent;
-            }
-        }
-        if (getWidth() > 0 && getHeight() > 0) {
-            return new Dimension(getWidth(), getHeight());
-        }
-        return new Dimension(980, 760);
+        return ctx.getPreviewViewportSize();
     }
 
     private JPanel buildInlineCartoucheEditor() {
@@ -169,37 +154,37 @@ public class LayoutPreviewPanel extends JPanel {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     // Check if double-click on a LayoutElement -> open contextual editor
                     Point pp = toPagePoint(e.getPoint());
-                    RectMm pr = dialog.toPageRectMm();
-                    if (pp != null && pr != null && dialog.layoutModel.size() > 0) {
+                    RectMm pr = ctx.toPageRectMm();
+                    if (pp != null && pr != null && ctx.getLayoutModel().size() > 0) {
                         double xMm = pr.xMm + pp.x * pr.pxToMmScale;
                         double yMm = pr.yMm + pp.y * pr.pxToMmScale;
-                        LayoutElement el = dialog.layoutModel.findTopmostElementAtMm(xMm, yMm);
+                        LayoutElement el = ctx.getLayoutModel().findTopmostElementAtMm(xMm, yMm);
                         if (el instanceof LayoutMap) {
-                            dialog.layoutModel.clearSelection();
+                            ctx.getLayoutModel().clearSelection();
                             el.setSelected(true);
-                            dialog.mapPanToolButton.doClick();
-                            dialog.statusLabel.setText("Editando contenido del mapa: \"" + el.getName() + "\". Esc para salir.");
+                            ctx.activateMapPanTool();
+                            ctx.setStatusMessage("Editando contenido del mapa: \"" + el.getName() + "\". Esc para salir.");
                             return;
                         }
                         if (el instanceof LayoutLabel) {
-                            dialog.layoutModel.clearSelection();
+                            ctx.getLayoutModel().clearSelection();
                             el.setSelected(true);
-                            dialog.refreshElementList();
+                            ctx.refreshElementList();
                             showTextPopup((LayoutLabel) el);
                             return;
                         }
                         if (el instanceof LayoutLegend) {
-                            dialog.layoutModel.clearSelection();
+                            ctx.getLayoutModel().clearSelection();
                             el.setSelected(true);
-                            dialog.refreshElementList();
+                            ctx.refreshElementList();
                             showLegendPopup((LayoutLegend) el);
                             return;
                         }
                         if (el instanceof LayoutCartouche) {
-                            dialog.layoutModel.clearSelection();
+                            ctx.getLayoutModel().clearSelection();
                             el.setSelected(true);
-                            dialog.refreshElementList();
-                            dialog.showCartouchePopup((LayoutCartouche) el);
+                            ctx.refreshElementList();
+                            ctx.showCartouchePopup((LayoutCartouche) el);
                             return;
                         }
                     }
@@ -209,12 +194,12 @@ public class LayoutPreviewPanel extends JPanel {
                     } else if (pagePoint != null && isInsideElement(LayoutElementType.CARTOUCHE, pagePoint)) {
                         beginInlineCartoucheEdit();
                     } else if (pagePoint != null && isInsideElement(LayoutElementType.LEGEND, pagePoint)) {
-                        dialog.openLegendEditor();
+                        ctx.openLegendEditor();
                     } else if (pagePoint != null && isInsideElement(LayoutElementType.NORTH, pagePoint)) {
-                        dialog.configureNorthFromToolbar();
+                        ctx.configureNorthFromToolbar();
                     } else if (pagePoint != null && findCustomItemIdAt(pagePoint) != null) {
-                        dialog.selectCatmapItemInList(findCustomItemIdAt(pagePoint));
-                        dialog.editSelectedCatmapItem();
+                        ctx.selectItemInList(findCustomItemIdAt(pagePoint));
+                        ctx.editSelectedCatmapItem();
                     }
                 }
             }
@@ -234,7 +219,7 @@ public class LayoutPreviewPanel extends JPanel {
                 // Guide interaction: drag from ruler or existing guide
                 GuideLine.Orientation rulerHit = RulerRenderer.rulerHitTest(e.getX(), e.getY(), 0, 0, getWidth(), getHeight());
                 if (rulerHit != null) {
-                    LayoutSettings settings = dialog.buildSettings();
+                    LayoutSettings settings = ctx.buildSettings();
                     double pxPerMm = MapLayoutComposerDialog.PREVIEW_RENDER_DPI / 25.4 * lastPreviewScale;
                     double mm = rulerHit == GuideLine.Orientation.VERTICAL
                             ? (e.getX() - lastPageBounds.x) / pxPerMm
@@ -266,108 +251,108 @@ public class LayoutPreviewPanel extends JPanel {
                 }
 
                 Point pagePoint = toPagePoint(e.getPoint());
-                RectMm pageRect = dialog.toPageRectMm();
+                RectMm pageRect = ctx.toPageRectMm();
                 if (pagePoint != null && pageRect != null) {
                 double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
                 double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
-                    LayoutElement clicked = dialog.layoutModel.findElementAtMm(xMm, yMm);
+                    LayoutElement clicked = ctx.getLayoutModel().findElementAtMm(xMm, yMm);
                     if (clicked != null) {
                         // Only allow resize if element is already selected; otherwise select+move first
                         if (clicked.isSelected() && !clicked.isLocked()) {
-                            int handleIdx = dialog.hitTestHandle(clicked, pagePoint, pageRect);
+                            int handleIdx = ctx.hitTestHandle(clicked, pagePoint, pageRect);
                             if (handleIdx >= 0) {
-                                dialog.pushUndo(clicked, false);
-                                dialog.activeResizeHandleIndex = handleIdx;
-                                dialog.draggingLayoutElement = clicked;
-                                dialog.dragStartPagePoint = pagePoint;
-                                dialog.dragStartBoundsMm = new java.awt.geom.Rectangle2D.Double(
+                                ctx.pushUndo(clicked, false);
+                                ctx.setActiveResizeHandleIndex(handleIdx);
+                                ctx.setDraggingLayoutElement(clicked);
+                                ctx.setDragStartPagePoint(pagePoint);
+                                ctx.setDragStartBoundsMm(new java.awt.geom.Rectangle2D.Double(
                                     clicked.getBoundsMm().x, clicked.getBoundsMm().y,
-                                    clicked.getBoundsMm().width, clicked.getBoundsMm().height);
+                                    clicked.getBoundsMm().width, clicked.getBoundsMm().height));
                                 return;
                             }
                         }
                         if (!clicked.isLocked()) {
-                            dialog.pushUndo(clicked, false);
-                            dialog.layoutModel.clearSelection();
+                            ctx.pushUndo(clicked, false);
+                            ctx.getLayoutModel().clearSelection();
                             clicked.setSelected(true);
-                            dialog.draggingLayoutElement = clicked;
-                            dialog.dragStartPagePoint = pagePoint;
-                            dialog.dragStartBoundsMm = new java.awt.geom.Rectangle2D.Double(
+                            ctx.setDraggingLayoutElement(clicked);
+                            ctx.setDragStartPagePoint(pagePoint);
+                            ctx.setDragStartBoundsMm(new java.awt.geom.Rectangle2D.Double(
                                 clicked.getBoundsMm().x, clicked.getBoundsMm().y,
-                                clicked.getBoundsMm().width, clicked.getBoundsMm().height);
-                            dialog.activeResizeHandleIndex = -1;
-                            dialog.refreshElementList();
+                                clicked.getBoundsMm().width, clicked.getBoundsMm().height));
+                            ctx.setActiveResizeHandleIndex(-1);
+                            ctx.refreshElementList();
                             repaint();
                             return;
                         }
-                        dialog.layoutModel.clearSelection();
+                        ctx.getLayoutModel().clearSelection();
                         clicked.setSelected(true);
-                        dialog.refreshElementList();
+                        ctx.refreshElementList();
                         repaint();
                         return;
                     }
-                    dialog.layoutModel.clearSelection();
+                    ctx.getLayoutModel().clearSelection();
                 }
 
-                if (dialog.interactionState.isMapFramePanToolActive() || dialog.interactionState.isMapFrameZoomToolActive()) {
+                if (ctx.getInteractionState().isMapFramePanToolActive() || ctx.getInteractionState().isMapFrameZoomToolActive()) {
                     activeResizeHandle = ResizeHandle.NONE;
                     activeResizeElement = null;
                     activeResizeCustomItemId = null;
                     if (pagePoint == null || !isInsideElement(LayoutElementType.MAP_CONTENT, pagePoint)) {
                         lastDragPagePoint = null;
                         setCursor(Cursor.getDefaultCursor());
-                        dialog.statusLabel.setText(dialog.interactionState.isMapFramePanToolActive()
+                        ctx.setStatusMessage(ctx.getInteractionState().isMapFramePanToolActive()
                                 ? "Pan mapa activo. Haz clic dentro del frame para desplazar solo el contenido interno."
                                 : "Lupa mapa activa. Usa la rueda dentro del frame para cambiar el zoom interno.");
                         repaint();
                         return;
                     }
-                    dialog.interactionState.select(LayoutElementType.MAP_CONTENT);
-                    dialog.selectCatmapItemInList(null);
-                    dialog.syncLayoutStructureSelection();
-                    lastDragPagePoint = dialog.interactionState.isMapFramePanToolActive() ? pagePoint : null;
-                    setCursor(dialog.interactionState.isMapFramePanToolActive()
+                    ctx.getInteractionState().select(LayoutElementType.MAP_CONTENT);
+                    ctx.selectItemInList(null);
+                    ctx.syncLayoutStructureSelection();
+                    lastDragPagePoint = ctx.getInteractionState().isMapFramePanToolActive() ? pagePoint : null;
+                    setCursor(ctx.getInteractionState().isMapFramePanToolActive()
                             ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                             : Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-                    dialog.statusLabel.setText(dialog.interactionState.isMapFramePanToolActive()
+                    ctx.setStatusMessage(ctx.getInteractionState().isMapFramePanToolActive()
                             ? "Pan mapa activo. Arrastra para mover solo el contenido interno."
                             : "Lupa mapa activa. Usa la rueda para acercar o alejar el contenido interno.");
                     repaint();
                     return;
                 }
                 if (pagePoint == null || lastRenderResult == null) {
-                    dialog.interactionState.select(null);
+                    ctx.getInteractionState().select(null);
                     activeResizeHandle = ResizeHandle.NONE;
                     activeResizeElement = null;
                     activeResizeCustomItemId = null;
-                    dialog.selectCatmapItemInList(null);
+                    ctx.selectItemInList(null);
                     repaint();
                     return;
                 }
                 ResizeTarget resizeTarget = findResizeTarget(pagePoint);
                 if (resizeTarget != null) {
                     if (resizeTarget.customItemId() != null) {
-                        dialog.interactionState.selectCustomItem(resizeTarget.customItemId());
-                        dialog.selectCatmapItemInList(resizeTarget.customItemId());
-                        CatmapLayoutItem item = dialog.getCatmapItemById(resizeTarget.customItemId());
+                        ctx.getInteractionState().selectCustomItem(resizeTarget.customItemId());
+                        ctx.selectItemInList(resizeTarget.customItemId());
+                        CatmapLayoutItem item = ctx.getCatmapItem(resizeTarget.customItemId());
                         if (item != null && item.isLocked()) {
                             lastDragPagePoint = null;
                             activeResizeHandle = ResizeHandle.NONE;
                             activeResizeElement = null;
                             activeResizeCustomItemId = null;
-                            dialog.statusLabel.setText("Elemento CATMAP bloqueado. Liberalo desde el inspector para redimensionarlo.");
+                            ctx.setStatusMessage("Elemento CATMAP bloqueado. Liberalo desde el inspector para redimensionarlo.");
                             repaint();
                             return;
                         }
                     } else {
-                        dialog.interactionState.select(resizeTarget.elementType());
-                        dialog.selectCatmapItemInList(null);
-                        if (dialog.interactionState.isElementLocked(resizeTarget.elementType())) {
+                        ctx.getInteractionState().select(resizeTarget.elementType());
+                        ctx.selectItemInList(null);
+                        if (ctx.getInteractionState().isElementLocked(resizeTarget.elementType())) {
                             lastDragPagePoint = null;
                             activeResizeHandle = ResizeHandle.NONE;
                             activeResizeElement = null;
                             activeResizeCustomItemId = null;
-                            dialog.statusLabel.setText(dialog.layoutElementLabel(resizeTarget.elementType()) + " bloqueado. Liberalo desde la estructura para redimensionarlo.");
+                            ctx.setStatusMessage(ctx.elementLabel(resizeTarget.elementType()) + " bloqueado. Liberalo desde la estructura para redimensionarlo.");
                             repaint();
                             return;
                         }
@@ -377,36 +362,36 @@ public class LayoutPreviewPanel extends JPanel {
                     activeResizeHandle = resizeTarget.handle();
                     lastDragPagePoint = pagePoint;
                     setCursor(cursorForHandle(activeResizeHandle));
-                    dialog.statusLabel.setText("Redimensionando " + elementLabel(activeResizeElement) + " con el mouse.");
+                    ctx.setStatusMessage("Redimensionando " + elementLabel(activeResizeElement) + " con el mouse.");
                     repaint();
                     return;
                 }
                 LayoutElementType hit = findElementAt(pagePoint);
                 String customItemId = findCustomItemIdAt(pagePoint);
                 if (customItemId != null) {
-                    dialog.interactionState.selectCustomItem(customItemId);
-                    dialog.selectCatmapItemInList(customItemId);
-                    CatmapLayoutItem item = dialog.getCatmapItemById(customItemId);
+                    ctx.getInteractionState().selectCustomItem(customItemId);
+                    ctx.selectItemInList(customItemId);
+                    CatmapLayoutItem item = ctx.getCatmapItem(customItemId);
                     if (item != null && item.isLocked()) {
                         activeResizeHandle = ResizeHandle.NONE;
                         activeResizeElement = null;
                         activeResizeCustomItemId = null;
                         lastDragPagePoint = null;
                         setCursor(Cursor.getDefaultCursor());
-                        dialog.statusLabel.setText("Elemento CATMAP bloqueado. PodÃ©s editarlo desde el inspector, pero no moverlo.");
+                        ctx.setStatusMessage("Elemento CATMAP bloqueado. PodÃ©s editarlo desde el inspector, pero no moverlo.");
                         repaint();
                         return;
                     }
                 } else {
-                    dialog.interactionState.select(hit);
-                    dialog.selectCatmapItemInList(null);
-                    if (dialog.interactionState.isElementLocked(hit)) {
+                    ctx.getInteractionState().select(hit);
+                    ctx.selectItemInList(null);
+                    if (ctx.getInteractionState().isElementLocked(hit)) {
                         activeResizeHandle = ResizeHandle.NONE;
                         activeResizeElement = null;
                         activeResizeCustomItemId = null;
                         lastDragPagePoint = null;
                         setCursor(Cursor.getDefaultCursor());
-                        dialog.statusLabel.setText(dialog.layoutElementLabel(hit) + " bloqueado. PodÃ©s seleccionarlo, pero no moverlo.");
+                        ctx.setStatusMessage(ctx.elementLabel(hit) + " bloqueado. PodÃ©s seleccionarlo, pero no moverlo.");
                         repaint();
                         return;
                     }
@@ -418,7 +403,7 @@ public class LayoutPreviewPanel extends JPanel {
                 boolean selected = hit != null || customItemId != null;
                 lastDragPagePoint = selected ? pagePoint : null;
                 setCursor(resolveWorkCursor(pagePoint, selected));
-                dialog.statusLabel.setText(resolveSelectionStatus(hit, customItemId, selected));
+                ctx.setStatusMessage(resolveSelectionStatus(hit, customItemId, selected));
                 repaint();
             }
 
@@ -444,10 +429,10 @@ public class LayoutPreviewPanel extends JPanel {
                     handleRightClick(e);
                     return;
                 }
-                if (dialog.draggingLayoutElement != null) {
-                    dialog.draggingLayoutElement = null;
-                    dialog.dragStartPagePoint = null;
-                    dialog.dragStartBoundsMm = null;
+                if (ctx.getDraggingLayoutElement() != null) {
+                    ctx.setDraggingLayoutElement(null);
+                    ctx.setDragStartPagePoint(null);
+                    ctx.setDragStartBoundsMm(null);
                     setCursor(Cursor.getDefaultCursor());
                     repaint();
                 }
@@ -467,7 +452,7 @@ public class LayoutPreviewPanel extends JPanel {
                     return;
                 }
                 if (draggingGuide != null) {
-                    LayoutSettings settings = dialog.buildSettings();
+                    LayoutSettings settings = ctx.buildSettings();
                     double mmPerPx = 25.4 / MapLayoutComposerDialog.PREVIEW_RENDER_DPI / lastPreviewScale;
                     if (draggingGuide.orientation == GuideLine.Orientation.VERTICAL) {
                         double delta = (e.getX() - lastPageBounds.x) - (e.getX() - lastPageBounds.x);
@@ -482,25 +467,25 @@ public class LayoutPreviewPanel extends JPanel {
                     repaint();
                     return;
                 }
-                if (dialog.draggingLayoutElement != null && dialog.dragStartPagePoint != null && dialog.dragStartBoundsMm != null) {
+                if (ctx.getDraggingLayoutElement() != null && ctx.getDragStartPagePoint() != null && ctx.getDragStartBoundsMm() != null) {
                     Point p = toPagePoint(e.getPoint());
                     if (p != null) {
-                        RectMm r = dialog.toPageRectMm();
+                        RectMm r = ctx.toPageRectMm();
                         if (r != null) {
                             double sc = r.pxToMmScale;
-                            if (dialog.activeResizeHandleIndex >= 0) {
-                                dialog.resizeElement(dialog.activeResizeHandleIndex, p.x - dialog.dragStartPagePoint.x, p.y - dialog.dragStartPagePoint.y);
+                            if (ctx.getActiveResizeHandleIndex() >= 0) {
+                                ctx.resizeCanvasElement(ctx.getActiveResizeHandleIndex(), p.x - ctx.getDragStartPagePoint().x, p.y - ctx.getDragStartPagePoint().y);
             } else {
-                double newX = dialog.dragStartBoundsMm.x + (p.x - dialog.dragStartPagePoint.x) * sc;
-                double newY = dialog.dragStartBoundsMm.y + (p.y - dialog.dragStartPagePoint.y) * sc;
+                double newX = ctx.getDragStartBoundsMm().x + (p.x - ctx.getDragStartPagePoint().x) * sc;
+                double newY = ctx.getDragStartBoundsMm().y + (p.y - ctx.getDragStartPagePoint().y) * sc;
                 // Smart snap to other element edges (conditional)
                 if (snapToElements) {
                 double snapTol = 2.0;
-                for (LayoutElement other : dialog.layoutModel.getElements()) {
-                    if (other == dialog.draggingLayoutElement || !other.isVisible()) continue;
+                for (LayoutElement other : ctx.getLayoutModel().getElements()) {
+                    if (other == ctx.getDraggingLayoutElement() || !other.isVisible()) continue;
                     double ox = other.getBoundsMm().x, oy = other.getBoundsMm().y;
                     double ow = other.getBoundsMm().width, oh = other.getBoundsMm().height;
-                    double ex = newX, ey = newY, ew = dialog.dragStartBoundsMm.width, eh = dialog.dragStartBoundsMm.height;
+                    double ex = newX, ey = newY, ew = ctx.getDragStartBoundsMm().width, eh = ctx.getDragStartBoundsMm().height;
                     if (Math.abs(ex - ox) < snapTol) newX = ox;
                     if (Math.abs(ex + ew - ox - ow) < snapTol) newX = ox + ow - ew;
                     if (Math.abs(ex + ew/2 - ox - ow/2) < snapTol) newX = ox + ow/2 - ew/2;
@@ -515,17 +500,17 @@ public class LayoutPreviewPanel extends JPanel {
                 newX = Math.round(newX / gridSize) * gridSize;
                 newY = Math.round(newY / gridSize) * gridSize;
                 }
-                dialog.draggingLayoutElement.setBoundsMm(newX, newY, dialog.dragStartBoundsMm.width, dialog.dragStartBoundsMm.height);
+                ctx.getDraggingLayoutElement().setBoundsMm(newX, newY, ctx.getDragStartBoundsMm().width, ctx.getDragStartBoundsMm().height);
                             }
                         }
                     }
                     repaint();
                     return;
                 }
-                if (lastDragPagePoint == null || dialog.interactionState.getSelectedElement() == null) {
+                if (lastDragPagePoint == null || ctx.getInteractionState().getSelectedElement() == null) {
                     return;
                 }
-                if (dialog.interactionState.isMapFrameZoomToolActive()) {
+                if (ctx.getInteractionState().isMapFrameZoomToolActive()) {
                     return;
                 }
                 Point pagePoint = toPagePoint(e.getPoint());
@@ -545,7 +530,7 @@ public class LayoutPreviewPanel extends JPanel {
                         if (activeResizeElement == LayoutElementType.CATMAP_ITEM && activeResizeCustomItemId != null) {
                             resizeCatmapItem(activeResizeCustomItemId, activeResizeHandle, dx, dy, currentBounds);
                         } else {
-                            dialog.interactionState.resize(
+                            ctx.getInteractionState().resize(
                                     activeResizeElement,
                                     activeResizeHandle,
                                     dx,
@@ -557,14 +542,14 @@ public class LayoutPreviewPanel extends JPanel {
                             );
                         }
                     }
-                } else if (dialog.interactionState.getSelectedElement() == LayoutElementType.MAP_CONTENT && dialog.interactionState.isMapFrameMoveToolActive()) {
-                    dialog.interactionState.translate(LayoutElementType.MAP_CONTENT, dx, dy);
-                } else if (dialog.interactionState.getSelectedElement() == LayoutElementType.MAP_CONTENT && dialog.interactionState.isMapFramePanToolActive()) {
-                    dialog.interactionState.panMap(dx, dy);
-                } else if (dialog.interactionState.getSelectedElement() == LayoutElementType.CATMAP_ITEM) {
-                    translateCatmapItem(dialog.interactionState.getSelectedCustomItemId(), dx, dy);
-                } else if (!dialog.interactionState.isElementLocked(dialog.interactionState.getSelectedElement())) {
-                    dialog.interactionState.translate(dialog.interactionState.getSelectedElement(), dx, dy);
+                } else if (ctx.getInteractionState().getSelectedElement() == LayoutElementType.MAP_CONTENT && ctx.getInteractionState().isMapFrameMoveToolActive()) {
+                    ctx.getInteractionState().translate(LayoutElementType.MAP_CONTENT, dx, dy);
+                } else if (ctx.getInteractionState().getSelectedElement() == LayoutElementType.MAP_CONTENT && ctx.getInteractionState().isMapFramePanToolActive()) {
+                    ctx.getInteractionState().panMap(dx, dy);
+                } else if (ctx.getInteractionState().getSelectedElement() == LayoutElementType.CATMAP_ITEM) {
+                    translateCatmapItem(ctx.getInteractionState().getSelectedCustomItemId(), dx, dy);
+                } else if (!ctx.getInteractionState().isElementLocked(ctx.getInteractionState().getSelectedElement())) {
+                    ctx.getInteractionState().translate(ctx.getInteractionState().getSelectedElement(), dx, dy);
                 }
                 lastDragPagePoint = pagePoint;
                 repaint();
@@ -573,21 +558,21 @@ public class LayoutPreviewPanel extends JPanel {
             @Override
             public void mouseMoved(MouseEvent e) {
                 Point pagePoint = toPagePoint(e.getPoint());
-                RectMm pageRect = dialog.toPageRectMm();
+                RectMm pageRect = ctx.toPageRectMm();
                 LayoutElement oldHover = hoveredElement;
                 hoveredElement = null;
-                if (pagePoint != null && pageRect != null && dialog.layoutModel.size() > 0) {
+                if (pagePoint != null && pageRect != null && ctx.getLayoutModel().size() > 0) {
                     double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
                     double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
-                    hoveredElement = dialog.layoutModel.findHoverAtMm(xMm, yMm);
+                    hoveredElement = ctx.getLayoutModel().findHoverAtMm(xMm, yMm);
                     if (hoveredElement != null) {
                         if (hoveredElement.isLocked()) {
                             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
                         } else {
                             boolean overMapContent = hoveredElement instanceof ar.com.catgis.layout.LayoutMap;
-                            if (overMapContent && dialog.interactionState.isMapFrameZoomToolActive()) {
+                            if (overMapContent && ctx.getInteractionState().isMapFrameZoomToolActive()) {
                                 setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-                            } else if (overMapContent && dialog.interactionState.isMapFramePanToolActive()) {
+                            } else if (overMapContent && ctx.getInteractionState().isMapFramePanToolActive()) {
                                 setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                             } else {
                                 setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
@@ -613,12 +598,12 @@ public class LayoutPreviewPanel extends JPanel {
                 Point pagePoint = toPagePoint(e.getPoint());
                 boolean overMap = pagePoint != null && isInsideElement(LayoutElementType.MAP_CONTENT, pagePoint);
                 double factor = e.getWheelRotation() < 0 ? 1.12d : (1d / 1.12d);
-                if (overMap && dialog.interactionState.isMapFrameZoomToolActive()) {
-                    dialog.interactionState.zoomMap(factor);
-                    dialog.statusLabel.setText("Zoom del mapa dentro del layout: " + Math.round(dialog.interactionState.getMapZoom() * 100d) + "%");
+                if (overMap && ctx.getInteractionState().isMapFrameZoomToolActive()) {
+                    ctx.getInteractionState().zoomMap(factor);
+                    ctx.setStatusMessage("Zoom del mapa dentro del layout: " + Math.round(ctx.getInteractionState().getMapZoom() * 100d) + "%");
                 } else {
-                    dialog.interactionState.zoomPreview(factor);
-                    dialog.statusLabel.setText("Zoom del compositor actualizado para trabajar la maquetacion.");
+                    ctx.getInteractionState().zoomPreview(factor);
+                    ctx.setStatusMessage("Zoom del compositor actualizado para trabajar la maquetacion.");
                 }
                 revalidate();
                 repaint();
@@ -636,17 +621,17 @@ public class LayoutPreviewPanel extends JPanel {
         }
         String customItemId = findCustomItemIdAt(pagePoint);
         if (customItemId != null) {
-            dialog.interactionState.selectCustomItem(customItemId);
-            dialog.selectCatmapItemInList(customItemId);
-            dialog.syncLayoutStructureSelection();
+            ctx.getInteractionState().selectCustomItem(customItemId);
+            ctx.selectItemInList(customItemId);
+            ctx.syncLayoutStructureSelection();
             repaint();
             return;
         }
         LayoutElementType hit = findElementAt(pagePoint);
         if (hit != null) {
-            dialog.interactionState.select(hit);
-            dialog.selectCatmapItemInList(null);
-            dialog.syncLayoutStructureSelection();
+            ctx.getInteractionState().select(hit);
+            ctx.selectItemInList(null);
+            ctx.syncLayoutStructureSelection();
             repaint();
         }
     }
@@ -663,7 +648,7 @@ public class LayoutPreviewPanel extends JPanel {
         int editorY = lastPageBounds.y + (int) Math.round((headerBounds.y + 6) * lastPreviewScale);
         int editorWidth = Math.max(180, (int) Math.round(Math.min(headerBounds.width * 0.72d, 460) * lastPreviewScale));
         int editorHeight = Math.max(28, (int) Math.round(34 * lastPreviewScale));
-        inlineTitleEditor.setText(dialog.titleField.getText());
+        inlineTitleEditor.setText(ctx.getTitleFieldText());
         inlineTitleEditor.setBounds(editorX, editorY, editorWidth, editorHeight);
         inlineTitleEditor.setVisible(true);
         inlineTitleEditor.requestFocusInWindow();
@@ -676,7 +661,7 @@ public class LayoutPreviewPanel extends JPanel {
         }
         String updated = inlineTitleEditor.getText() != null ? inlineTitleEditor.getText().trim() : "";
         if (!updated.isBlank()) {
-            dialog.titleField.setText(updated);
+            ctx.setTitleFieldText(updated);
         }
         inlineTitleEditor.setVisible(false);
         repaint();
@@ -690,18 +675,18 @@ public class LayoutPreviewPanel extends JPanel {
         if (cartoucheBounds == null) {
             return;
         }
-        inlineCartoucheStudyField.setText(dialog.studyField.getText());
-        inlineCartoucheProjectField.setText(dialog.cartoucheProjectField.getText());
-        inlineCartoucheCompanyField.setText(dialog.companyField.getText());
-        inlineCartoucheCartographerField.setText(dialog.cartographerField.getText());
-        inlineCartoucheSourceField.setText(dialog.imageSourceField.getText());
-        inlineCartoucheCrsField.setText(dialog.coordinateReferenceField.getText());
+        inlineCartoucheStudyField.setText(ctx.getStudyFieldText());
+        inlineCartoucheProjectField.setText(ctx.getProjectFieldText());
+        inlineCartoucheCompanyField.setText(ctx.getCompanyFieldText());
+        inlineCartoucheCartographerField.setText(ctx.getCartographerFieldText());
+        inlineCartoucheSourceField.setText(ctx.getSourceFieldText());
+        inlineCartoucheCrsField.setText(ctx.getCrsFieldText());
         placeInlineCartoucheEditor(cartoucheBounds);
         inlineCartoucheEditor.setVisible(true);
         inlineCartoucheEditor.requestFocusInWindow();
         inlineCartoucheStudyField.requestFocusInWindow();
         inlineCartoucheStudyField.selectAll();
-        dialog.statusLabel.setText("Editando cartucho directamente sobre el layout. Aplicar confirma los cambios.");
+        ctx.setStatusMessage("Editando cartucho directamente sobre el layout. Aplicar confirma los cambios.");
     }
 
     private void placeInlineCartoucheEditor(Rectangle cartoucheBounds) {
@@ -718,20 +703,20 @@ public class LayoutPreviewPanel extends JPanel {
         if (!inlineCartoucheEditor.isVisible()) {
             return;
         }
-        dialog.studyField.setText(dialog.safeTrim(inlineCartoucheStudyField.getText()));
-        dialog.cartoucheProjectField.setText(dialog.safeTrim(inlineCartoucheProjectField.getText()));
-        dialog.companyField.setText(dialog.safeTrim(inlineCartoucheCompanyField.getText()));
-        dialog.cartographerField.setText(dialog.safeTrim(inlineCartoucheCartographerField.getText()));
-        dialog.imageSourceField.setText(dialog.safeTrim(inlineCartoucheSourceField.getText()));
-        dialog.coordinateReferenceField.setText(dialog.safeTrim(inlineCartoucheCrsField.getText()));
+        ctx.setStudyFieldText(MapLayoutComposerDialog.safeTrim(inlineCartoucheStudyField.getText()));
+        ctx.setProjectFieldText(MapLayoutComposerDialog.safeTrim(inlineCartoucheProjectField.getText()));
+        ctx.setCompanyFieldText(MapLayoutComposerDialog.safeTrim(inlineCartoucheCompanyField.getText()));
+        ctx.setCartographerFieldText(MapLayoutComposerDialog.safeTrim(inlineCartoucheCartographerField.getText()));
+        ctx.setSourceFieldText(MapLayoutComposerDialog.safeTrim(inlineCartoucheSourceField.getText()));
+        ctx.setCrsFieldText(MapLayoutComposerDialog.safeTrim(inlineCartoucheCrsField.getText()));
         inlineCartoucheEditor.setVisible(false);
-        dialog.statusLabel.setText("Datos cartograficos actualizados desde el layout.");
+        ctx.setStatusMessage("Datos cartograficos actualizados desde el layout.");
         repaint();
     }
 
     private void cancelInlineCartoucheEdit() {
         inlineCartoucheEditor.setVisible(false);
-        dialog.statusLabel.setText("Edicion directa del cartucho cancelada.");
+        ctx.setStatusMessage("Edicion directa del cartucho cancelada.");
         repaint();
     }
 
@@ -753,14 +738,14 @@ public class LayoutPreviewPanel extends JPanel {
             return Cursor.getDefaultCursor();
         }
         boolean overMap = pagePoint != null && isInsideElement(LayoutElementType.MAP_CONTENT, pagePoint);
-        if (overMap && dialog.interactionState.getSelectedElement() == LayoutElementType.MAP_CONTENT) {
-            if (dialog.interactionState.isMapFrameZoomToolActive()) {
+        if (overMap && ctx.getInteractionState().getSelectedElement() == LayoutElementType.MAP_CONTENT) {
+            if (ctx.getInteractionState().isMapFrameZoomToolActive()) {
                 return Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR);
             }
-            if (dialog.interactionState.isMapFramePanToolActive()) {
+            if (ctx.getInteractionState().isMapFramePanToolActive()) {
                 return Cursor.getPredefinedCursor(Cursor.HAND_CURSOR);
             }
-            if (dialog.interactionState.isMapFrameMoveToolActive()) {
+            if (ctx.getInteractionState().isMapFrameMoveToolActive()) {
                 return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
             }
         }
@@ -775,13 +760,13 @@ public class LayoutPreviewPanel extends JPanel {
             return "Elemento CATMAP seleccionado. Arrastralo para reubicarlo o usa el inspector para editarlo.";
         }
         if (hit == LayoutElementType.MAP_CONTENT) {
-            if (dialog.interactionState.isMapFrameMoveToolActive()) {
+            if (ctx.getInteractionState().isMapFrameMoveToolActive()) {
                 return "Mover layout activo. Arrastra el bloque completo del mapa sin cambiar el contenido interno.";
             }
-            if (dialog.interactionState.isMapFramePanToolActive()) {
+            if (ctx.getInteractionState().isMapFramePanToolActive()) {
                 return "Pan mapa activo. Arrastra para mover solo el contenido interno.";
             }
-            if (dialog.interactionState.isMapFrameZoomToolActive()) {
+            if (ctx.getInteractionState().isMapFrameZoomToolActive()) {
                 return "Lupa de mapa activa. Usa la rueda para cambiar el zoom interno sin mover el bloque.";
             }
         }
@@ -830,10 +815,10 @@ public class LayoutPreviewPanel extends JPanel {
                 LayoutElementType.HEADER,
                 LayoutElementType.MAP_CONTENT
         }) {
-            if (type == LayoutElementType.MAP_CONTENT && !dialog.interactionState.isMapFrameMoveToolActive()) {
+            if (type == LayoutElementType.MAP_CONTENT && !ctx.getInteractionState().isMapFrameMoveToolActive()) {
                 continue;
             }
-            if (dialog.interactionState.isElementLocked(type)) {
+            if (ctx.getInteractionState().isElementLocked(type)) {
                 continue;
             }
             Rectangle bounds = lastRenderResult != null ? lastRenderResult.elementBounds().get(type) : null;
@@ -881,7 +866,7 @@ public class LayoutPreviewPanel extends JPanel {
 
     private boolean isInsideElement(LayoutElementType type, Point pagePoint) {
         Rectangle bounds = type == LayoutElementType.CATMAP_ITEM && lastRenderResult != null
-                ? lastRenderResult.customItemBounds().get(dialog.interactionState.getSelectedCustomItemId())
+                ? lastRenderResult.customItemBounds().get(ctx.getInteractionState().getSelectedCustomItemId())
                 : (lastRenderResult != null ? lastRenderResult.elementBounds().get(type) : null);
         return bounds != null && bounds.contains(pagePoint);
     }
@@ -902,18 +887,18 @@ public class LayoutPreviewPanel extends JPanel {
     }
 
     private void translateCatmapItem(String itemId, int dx, int dy) {
-        CatmapLayoutItem item = dialog.getCatmapItemById(itemId);
+        CatmapLayoutItem item = ctx.getCatmapItem(itemId);
         if (item == null || item.isLocked() || !item.isVisible()) {
             return;
         }
         Rectangle proposed = new Rectangle(item.getX() + dx, item.getY() + dy, item.getWidth(), item.getHeight());
         SnapResult snapped = snapCatmapRectangle(proposed, itemId);
         applySnapResultToItem(item, snapped);
-        dialog.persistCatmapItems();
+        ctx.persistCatmapItems();
     }
 
     private void resizeCatmapItem(String itemId, ResizeHandle handle, int dx, int dy, Rectangle currentBounds) {
-        CatmapLayoutItem item = dialog.getCatmapItemById(itemId);
+        CatmapLayoutItem item = ctx.getCatmapItem(itemId);
         if (item == null || item.isLocked() || !item.isVisible() || handle == null || handle == ResizeHandle.NONE) {
             return;
         }
@@ -966,7 +951,7 @@ public class LayoutPreviewPanel extends JPanel {
         }
         SnapResult snapped = snapCatmapRectangle(new Rectangle(x, y, width, height), itemId);
         applySnapResultToItem(item, snapped);
-        dialog.persistCatmapItems();
+        ctx.persistCatmapItems();
     }
 
     private void applySnapResultToItem(CatmapLayoutItem item, SnapResult snapped) {
@@ -1000,26 +985,26 @@ public class LayoutPreviewPanel extends JPanel {
 
     private void handleRightClick(MouseEvent e) {
         Point pagePoint = toPagePoint(e.getPoint());
-        RectMm pageRect = dialog.toPageRectMm();
+        RectMm pageRect = ctx.toPageRectMm();
         LayoutElement rightClicked = null;
-        if (pagePoint != null && pageRect != null && dialog.layoutModel.size() > 0) {
+        if (pagePoint != null && pageRect != null && ctx.getLayoutModel().size() > 0) {
         double xMm = pageRect.xMm + pagePoint.x * pageRect.pxToMmScale;
         double yMm = pageRect.yMm + pagePoint.y * pageRect.pxToMmScale;
-        rightClicked = dialog.layoutModel.findTopmostElementAtMm(xMm, yMm);
+        rightClicked = ctx.getLayoutModel().findTopmostElementAtMm(xMm, yMm);
         }
         JPopupMenu menu = new JPopupMenu();
         if (rightClicked != null) {
             boolean selWas = rightClicked.isSelected();
-            dialog.layoutModel.clearSelection();
+            ctx.getLayoutModel().clearSelection();
             rightClicked.setSelected(true);
             refresh(null);
             final LayoutElement rce = rightClicked;
             menu.add(item("Propiedades", () -> openElementProperties(rce)));
             menu.addSeparator();
-            menu.add(item("Traer al frente", () -> { dialog.layoutModel.moveToFront(rce); refresh(null); }));
-            menu.add(item("Enviar atras", () -> { dialog.layoutModel.moveToBack(rce); refresh(null); }));
-            menu.add(item("Subir", () -> { dialog.layoutModel.moveUp(rce); refresh(null); }));
-            menu.add(item("Bajar", () -> { dialog.layoutModel.moveDown(rce); refresh(null); }));
+            menu.add(item("Traer al frente", () -> { ctx.getLayoutModel().moveToFront(rce); refresh(null); }));
+            menu.add(item("Enviar atras", () -> { ctx.getLayoutModel().moveToBack(rce); refresh(null); }));
+            menu.add(item("Subir", () -> { ctx.getLayoutModel().moveUp(rce); refresh(null); }));
+            menu.add(item("Bajar", () -> { ctx.getLayoutModel().moveDown(rce); refresh(null); }));
             menu.addSeparator();
             menu.add(item(rce.isLocked() ? "Desbloquear" : "Bloquear", () -> { rce.setLocked(!rce.isLocked()); refresh(null); }));
             menu.add(item(rce.isVisible() ? "Ocultar" : "Mostrar", () -> { rce.setVisible(!rce.isVisible()); refresh(null); }));
@@ -1033,11 +1018,11 @@ public class LayoutPreviewPanel extends JPanel {
                 if (newName != null && !newName.isBlank()) { rce.setName(newName.trim()); refresh(null); }
             }));
             menu.addSeparator();
-            menu.add(item("Eliminar", () -> { dialog.layoutModel.removeElement(rce.getId()); refresh(null); }));
+            menu.add(item("Eliminar", () -> { ctx.getLayoutModel().removeElement(rce.getId()); refresh(null); }));
             if (rce instanceof LayoutLegend) {
                 menu.addSeparator();
                 menu.add(item("Actualizar desde capas", () -> {
-                    dialog.populateLegendFromProject((LayoutLegend) rce);
+                    ctx.populateLegend((LayoutLegend) rce);
                     refresh(null);
                 }));
                 menu.add(item("Excluir mapas base", () -> {
@@ -1062,11 +1047,11 @@ public class LayoutPreviewPanel extends JPanel {
     void openElementProperties(LayoutElement el) {
         if (el instanceof LayoutLabel) { showTextPopup((LayoutLabel) el); return; }
         if (el instanceof LayoutLegend) { showLegendPopup((LayoutLegend) el); return; }
-        if (el instanceof LayoutCartouche) { dialog.showCartouchePopup((LayoutCartouche) el); return; }
-        if (el instanceof LayoutScaleBar) { dialog.showScalePopup((LayoutScaleBar) el); return; }
-        if (el instanceof LayoutNorthArrow) { dialog.showNorthPopup((LayoutNorthArrow) el); return; }
-        if (el instanceof LayoutMap) { dialog.showMapPropsPopup((LayoutMap) el); return; }
-        dialog.refreshPropertiesPanel();
+        if (el instanceof LayoutCartouche) { ctx.showCartouchePopup((LayoutCartouche) el); return; }
+        if (el instanceof LayoutScaleBar) { ctx.showScalePopup((LayoutScaleBar) el); return; }
+        if (el instanceof LayoutNorthArrow) { ctx.showNorthPopup((LayoutNorthArrow) el); return; }
+        if (el instanceof LayoutMap) { ctx.showMapPropsPopup((LayoutMap) el); return; }
+        ctx.refreshPropertiesPanel();
     }
 
     void showTextPopup(LayoutLabel label) {
@@ -1159,7 +1144,7 @@ public class LayoutPreviewPanel extends JPanel {
                 label.setHaloWidth(0f);
             }
             repaint();
-            dialog.refreshElementList();
+            ctx.refreshElementList();
         };
 
         acceptBtn.addActionListener(e -> {
@@ -1290,12 +1275,12 @@ public class LayoutPreviewPanel extends JPanel {
         buttons.add(cancelBtn);
 
         refreshBtn.addActionListener(e -> {
-            dialog.populateLegendFromProject(legend);
+            ctx.populateLegend(legend);
             repaint();
         });
 
         Runnable applyChanges = () -> {
-            legend.setTitle(dialog.titleField.getText().trim());
+            legend.setTitle(ctx.getTitleFieldText().trim());
             legend.setTitleFont(new Font((String) titleFontCombo.getSelectedItem(), Font.BOLD, parsePopupInt(titleSize.getSelectedItem(), originalTitleFont.getSize())));
             legend.setItemFont(new Font((String) itemFontCombo.getSelectedItem(), Font.PLAIN, parsePopupInt(itemSize.getSelectedItem(), originalItemFont.getSize())));
             legend.setTitleColor(titleColorBtn.getBackground());
@@ -1308,7 +1293,7 @@ public class LayoutPreviewPanel extends JPanel {
             legend.setColumns((Integer) colCombo.getSelectedItem());
             legend.setAutoHeight(autoHeightCheck.isSelected());
             repaint();
-            dialog.refreshElementList();
+            ctx.refreshElementList();
         };
 
         acceptBtn.addActionListener(e -> {
@@ -1392,20 +1377,20 @@ public class LayoutPreviewPanel extends JPanel {
     }
 
     private LayoutElement duplicateElement(LayoutElement src) {
-        dialog.duplicateLayoutElement(src);
+        ctx.duplicateLayoutElement(src);
         return null;
     }
 
-    private void refresh(Boolean unused) { dialog.refreshElementList(); repaint(); }
+    private void refresh(Boolean unused) { ctx.refreshElementList(); repaint(); }
 
     void startDrawing(String shape) {
         drawingShape = shape;
         drawingStart = null;
         setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
-        dialog.layoutModel.clearSelection();
-        dialog.refreshElementList();
+        ctx.getLayoutModel().clearSelection();
+        ctx.refreshElementList();
         repaint();
-        dialog.statusLabel.setText("Dibujando " + shape + ". Click y arrastra en el canvas. Esc para cancelar.");
+        ctx.setStatusMessage("Dibujando " + shape + ". Click y arrastra en el canvas. Esc para cancelar.");
     }
 
     void cancelDrawing() {
@@ -1413,12 +1398,12 @@ public class LayoutPreviewPanel extends JPanel {
         drawingStart = null;
         setCursor(Cursor.getDefaultCursor());
         repaint();
-        dialog.statusLabel.setText("Dibujo cancelado.");
+        ctx.setStatusMessage("Dibujo cancelado.");
     }
 
     private void finishDrawing(Point pageEnd) {
         if (drawingStart == null || drawingShape == null) return;
-        RectMm pr = dialog.toPageRectMm();
+        RectMm pr = ctx.toPageRectMm();
         if (pr == null) return;
         double sc = pr.pxToMmScale;
         double x1 = Math.min(drawingStart.x, pageEnd.x) * sc;
@@ -1430,22 +1415,22 @@ public class LayoutPreviewPanel extends JPanel {
 
         if ("rect".equals(drawingShape)) {
             LayoutRectangle r = new LayoutRectangle(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
-            r.setZOrder(dialog.layoutModel.nextZ()); r.setName("Rectangulo " + dialog.countOfType("Rectangulo"));
-            dialog.layoutModel.addElement(r);
+            r.setZOrder(ctx.getLayoutModel().nextZ()); r.setName("Rectangulo " + ctx.countOfType("Rectangulo"));
+            ctx.getLayoutModel().addElement(r);
         } else if ("ellipse".equals(drawingShape)) {
             LayoutEllipse e = new LayoutEllipse(drawingShape + "-" + System.currentTimeMillis(), x1, y1, w, h);
-            e.setZOrder(dialog.layoutModel.nextZ()); e.setName("Elipse " + dialog.countOfType("Elipse"));
-            dialog.layoutModel.addElement(e);
+            e.setZOrder(ctx.getLayoutModel().nextZ()); e.setName("Elipse " + ctx.countOfType("Elipse"));
+            ctx.getLayoutModel().addElement(e);
         } else if ("line".equals(drawingShape)) {
             LayoutLine l = new LayoutLine(drawingShape + "-" + System.currentTimeMillis(), x1, y1, x2, y2);
-            l.setZOrder(dialog.layoutModel.nextZ()); l.setName("Linea " + dialog.countOfType("Linea"));
-            dialog.layoutModel.addElement(l);
+            l.setZOrder(ctx.getLayoutModel().nextZ()); l.setName("Linea " + ctx.countOfType("Linea"));
+            ctx.getLayoutModel().addElement(l);
         }
         drawingShape = null; drawingStart = null;
         setCursor(Cursor.getDefaultCursor());
-        dialog.refreshElementList();
+        ctx.refreshElementList();
         repaint();
-        dialog.statusLabel.setText("Forma creada.");
+        ctx.setStatusMessage("Forma creada.");
     }
 
     private JMenuItem item(String text, Runnable action) {
@@ -1577,9 +1562,9 @@ public class LayoutPreviewPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        dialog.syncHardcodedLayoutFlagsFromModel();
-        LayoutSettings settings = dialog.buildSettings();
-        LayoutSnapshot currentSnapshot = dialog.getSnapshot();
+        ctx.syncHardcodedLayoutFlagsFromModel();
+        LayoutSettings settings = ctx.buildSettings();
+        LayoutSnapshot currentSnapshot = ctx.getSnapshot();
         if (settings == null || currentSnapshot == null) return;
 
         Dimension previewSize = settings.pageSize().pixelSize(settings.orientation(), MapLayoutComposerDialog.PREVIEW_RENDER_DPI);
@@ -1588,10 +1573,10 @@ public class LayoutPreviewPanel extends JPanel {
                 currentSnapshot,
                 previewSize.width,
                 previewSize.height,
-                dialog.interactionState,
+                ctx.getInteractionState(),
                 MapLayoutComposerDialog.PREVIEW_RENDER_DPI
         );
-        SwingUtilities.invokeLater(() -> dialog.updateScaleUiState(lastRenderResult.exactScaleDenominator()));
+        SwingUtilities.invokeLater(() -> ctx.updateScaleUiState(lastRenderResult.exactScaleDenominator()));
         BufferedImage page = lastRenderResult.image();
 
         Graphics2D g2 = (Graphics2D) g.create();
@@ -1603,7 +1588,7 @@ public class LayoutPreviewPanel extends JPanel {
             int availableHeight = Math.max(80, viewportSize.height - 40);
             double fitPageScale = Math.min(availableWidth / (double) page.getWidth(), availableHeight / (double) page.getHeight());
             double fitWidthScale = availableWidth / (double) page.getWidth();
-            double scale = dialog.interactionState.resolvePreviewScale(fitPageScale, fitWidthScale);
+            double scale = ctx.getInteractionState().resolvePreviewScale(fitPageScale, fitWidthScale);
             scale = Math.max(0.08d, scale);
             int drawWidth = (int) Math.round(page.getWidth() * scale);
             int drawHeight = (int) Math.round(page.getHeight() * scale);
@@ -1641,15 +1626,15 @@ public class LayoutPreviewPanel extends JPanel {
             g2.setColor(new Color(200, 205, 212));
             g2.setStroke(new BasicStroke(1f));
             g2.drawRoundRect(x, y, drawWidth, drawHeight, 4, 4);
-            dialog.drawLayoutModelOverlay(g2, settings, x, y, scale);
+            ctx.drawLayoutModelOverlay(g2, settings, x, y, scale);
             // Render dynamic layout elements via CanvasRenderer
-            dialog.canvasRenderer.setScale(scale);
-            dialog.canvasRenderer.render(g2);
+            ctx.getCanvasRenderer().setScale(scale);
+            ctx.getCanvasRenderer().render(g2);
             drawSnapGuides(g2, x, y, scale, drawWidth, drawHeight);
             drawPersistentGuides(g2, x, y, scale, drawWidth, drawHeight, settings);
             drawDrawingPreview(g2, x, y, scale);
             RulerRenderer.render(g2, 0, 0, getWidth(), getHeight(), settings.pageSize().widthMm, settings.pageSize().heightMm, MapLayoutComposerDialog.PREVIEW_RENDER_DPI, scale);
-            SwingUtilities.invokeLater(() -> dialog.refreshElementList());
+            SwingUtilities.invokeLater(() -> ctx.refreshElementList());
             drawSelectionOverlay(g2, x, y, scale);
             if (inlineTitleEditor.isVisible()) {
                 Rectangle headerBounds = lastRenderResult.elementBounds().get(LayoutElementType.HEADER);
@@ -1679,12 +1664,12 @@ public class LayoutPreviewPanel extends JPanel {
     }
 
     private void drawSelectionOverlay(Graphics2D g2, int pageX, int pageY, double scale) {
-        LayoutElementType selected = dialog.interactionState.getSelectedElement();
+        LayoutElementType selected = ctx.getInteractionState().getSelectedElement();
         if (selected == null || lastRenderResult == null) {
             return;
         }
         Rectangle bounds = selected == LayoutElementType.CATMAP_ITEM
-                ? lastRenderResult.customItemBounds().get(dialog.interactionState.getSelectedCustomItemId())
+                ? lastRenderResult.customItemBounds().get(ctx.getInteractionState().getSelectedCustomItemId())
                 : lastRenderResult.elementBounds().get(selected);
         if (bounds == null) {
             return;
@@ -1697,10 +1682,10 @@ public class LayoutPreviewPanel extends JPanel {
         try {
             Color fill = new Color(37, 99, 235, 26);
             Color stroke = new Color(37, 99, 235);
-            if (selected == LayoutElementType.MAP_CONTENT && dialog.interactionState.isMapFramePanToolActive()) {
+            if (selected == LayoutElementType.MAP_CONTENT && ctx.getInteractionState().isMapFramePanToolActive()) {
                 fill = new Color(16, 185, 129, 28);
                 stroke = new Color(5, 150, 105);
-            } else if (selected == LayoutElementType.MAP_CONTENT && dialog.interactionState.isMapFrameZoomToolActive()) {
+            } else if (selected == LayoutElementType.MAP_CONTENT && ctx.getInteractionState().isMapFrameZoomToolActive()) {
                 fill = new Color(245, 158, 11, 28);
                 stroke = new Color(217, 119, 6);
             }
@@ -1710,7 +1695,7 @@ public class LayoutPreviewPanel extends JPanel {
             copy.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, new float[]{7f, 5f}, 0f));
             copy.drawRoundRect(x, y, w, h, 12, 12);
             boolean showHandles = selected == LayoutElementType.MAP_CONTENT
-                    ? dialog.interactionState.isMapFrameMoveToolActive()
+                    ? ctx.getInteractionState().isMapFrameMoveToolActive()
                     : (selected == LayoutElementType.HEADER
                     || selected == LayoutElementType.LEGEND
                     || selected == LayoutElementType.NORTH
