@@ -14,5 +14,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [CATGIS] Validacion completa OK. Ver "%LOG_FILE%".
+echo [CATGIS] Validacion completa OK. Iniciando aplicacion...
+echo [CATGIS] Validacion completa OK. Iniciando aplicacion... >> "%LOG_FILE%"
+call gradlew.bat --no-daemon run >> "%LOG_FILE%" 2>&1
 exit /b 0
