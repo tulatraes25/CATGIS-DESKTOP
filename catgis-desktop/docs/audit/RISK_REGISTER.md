@@ -10,12 +10,12 @@
 
 | Field | Value |
 |---|---|
-| **Severity** | 🔴 ALTA |
-| **File** | `PluginManager.java` |
-| **Evidence** | `URLClassLoader` carga JARs del directorio de plugins sin whitelist, sin verificación de firma, sin SecurityManager. Cualquier JAR tiene acceso completo a la JVM. |
-| **Impacto** | Plugin malicioso puede leer credenciales de `PostgisConnectionStore`, corromper proyectos, llamar `System.exit()`. |
-| **Recomendación** | Whitelist de clases permitidas, verificación de firma, o restricción vía Java module system. |
-| **Prioridad** | P1 — antes de cualquier release pública. |
+| **Severity** | 🟡 MEDIA (era 🔴 ALTA) |
+| **Status** | OPEN / mitigado |
+| **File** | `plugins/PluginManager.java` |
+| **Evidence** | Plugins ahora requieren opt-in explícito: `-Dcatgis.plugins.enabled=true` o `CATGIS_PLUGINS_ENABLED=true`. Deshabilitados por defecto. Si se activan, el URLClassLoader sigue sin sandbox — advertencia documentada. 7 tests en `PluginManagerTest` (commit `827cc41`). |
+| **Impacto** | Medio — atacante necesita acceso de escritura + conocimiento del flag. |
+| **Prioridad** | P2. |
 
 ---
 
@@ -255,7 +255,7 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 | Risk | Severity | Status |
 |---|---|---|
-| R-01 Plugin ClassLoader | 🔴 ALTA | OPEN |
+| R-01 Plugin ClassLoader | 🟡 MEDIA | OPEN / mitigado |
 | R-02 pgRouting SQL injection | 🟢 BAJA | **CLOSED** (era ALTA) |
 | R-03 GribLoader empty catch | 🟢 BAJA | CLOSED |
 | R-04 CatmapSerializer silent | 🟢 BAJA | CLOSED |
