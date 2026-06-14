@@ -468,19 +468,31 @@ public class LayoutTemplateManager {
     }
 
     private static double extractDouble(String json, String key) {
-        try { return Double.parseDouble(extractStr(json, key)); } catch (Exception e) { return 0; }
+        try { return Double.parseDouble(extractStr(json, key)); } catch (Exception e) {
+            CatgisLogger.warn("LayoutTemplateManager: valor decimal invalido para '" + key + "', usando 0", null);
+            return 0;
+        }
     }
 
     private static int extractInt(String json, String key) {
-        try { return Integer.parseInt(extractStr(json, key)); } catch (Exception e) { return 0; }
+        try { return Integer.parseInt(extractStr(json, key)); } catch (Exception e) {
+            CatgisLogger.warn("LayoutTemplateManager: valor entero invalido para '" + key + "', usando 0", null);
+            return 0;
+        }
     }
 
     private static double extractDouble(String json, String key, double def) {
-        try { return Double.parseDouble(extractStr(json, key)); } catch (Exception e) { return def; }
+        try { return Double.parseDouble(extractStr(json, key)); } catch (Exception e) {
+            CatgisLogger.warn("LayoutTemplateManager: valor decimal invalido para '" + key + "', usando " + def, null);
+            return def;
+        }
     }
 
     private static int extractInt(String json, String key, int def) {
-        try { return Integer.parseInt(extractStr(json, key)); } catch (Exception e) { return def; }
+        try { return Integer.parseInt(extractStr(json, key)); } catch (Exception e) {
+            CatgisLogger.warn("LayoutTemplateManager: valor entero invalido para '" + key + "', usando " + def, null);
+            return def;
+        }
     }
 
     private static boolean extractBool(String json, String key, boolean def) {
@@ -583,7 +595,10 @@ public class LayoutTemplateManager {
         try {
             if (hex.startsWith("#")) hex = hex.substring(1);
             return new Color(Integer.parseInt(hex, 16));
-        } catch (Exception e) { return Color.BLACK; }
+        } catch (Exception e) {
+            CatgisLogger.warn("LayoutTemplateManager: color invalido '" + hex + "', usando negro", null);
+            return Color.BLACK;
+        }
     }
 
     // ---- New professional templates ----

@@ -352,6 +352,9 @@ public class NetworkAnalysisDialog extends JDialog {
 
     private double parseDouble(String text) {
         try { return Double.parseDouble(text.trim()); }
-        catch (NumberFormatException e) { return 0; }
+        catch (NumberFormatException e) {
+            CatgisLogger.warn("NetworkAnalysisDialog: numero invalido '" + text + "', usando 0", null);
+            return 0;
+        }
     }
 }

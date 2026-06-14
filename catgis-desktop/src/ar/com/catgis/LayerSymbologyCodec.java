@@ -274,7 +274,10 @@ public final class LayerSymbologyCodec {
     }
 
     private static double tryParseDouble(String s, double def) {
-        try { return Double.parseDouble(s); } catch (Exception e) { return def; }
+        try { return Double.parseDouble(s); } catch (Exception e) {
+            CatgisLogger.warn("LayerSymbologyCodec: valor decimal invalido '" + s + "', usando " + def, null);
+            return def;
+        }
     }
 
     private static String encode(String value) {
@@ -285,7 +288,10 @@ public final class LayerSymbologyCodec {
     private static String decode(String value) {
         if (value == null || value.isBlank()) return "";
         try { return new String(Base64.getUrlDecoder().decode(value), StandardCharsets.UTF_8); }
-        catch (Exception e) { return ""; }
+        catch (Exception e) {
+            CatgisLogger.warn("LayerSymbologyCodec: no se pudo decodificar valor", null);
+            return "";
+        }
     }
 
     private static String colorToText(Color c) {
@@ -300,6 +306,9 @@ public final class LayerSymbologyCodec {
             if (p.length < 3) return null;
             return new Color(Integer.parseInt(p[0].trim()), Integer.parseInt(p[1].trim()),
                              Integer.parseInt(p[2].trim()), p.length >= 4 ? Integer.parseInt(p[3].trim()) : 255);
-        } catch (Exception e) { return null; }
+        } catch (Exception e) {
+            CatgisLogger.warn("LayerSymbologyCodec: color invalido '" + text + "', usando null", null);
+            return null;
+        }
     }
 }

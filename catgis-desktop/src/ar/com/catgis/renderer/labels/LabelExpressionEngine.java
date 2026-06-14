@@ -769,7 +769,10 @@ public final class LabelExpressionEngine {
     private static org.locationtech.jts.io.WKTReader wktReader = new org.locationtech.jts.io.WKTReader();
 
     private static Geometry parseWkt(String wkt) {
-        try { return wktReader.read(wkt); } catch (Exception e) { return null; }
+        try { return wktReader.read(wkt); } catch (Exception e) {
+            CatgisLogger.warn("LabelExpressionEngine: WKT invalido, retornando null", e);
+            return null;
+        }
     }
 
     private static Number parseNumber(String s) {

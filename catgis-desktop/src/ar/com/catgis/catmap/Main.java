@@ -1455,7 +1455,10 @@ public class Main {
             if (upper.contains("POLYGON") || upper.contains("MULTIPOLYGON")) return "POLYGON";
             if (upper.contains("LINE") || upper.contains("MULTILINESTRING")) return "LINE";
             return "POINT";
-        } catch (Exception e) { return "POLYGON"; }
+        } catch (Exception e) {
+            CatgisLogger.warn("Main.resolveGeometryType: fallo al resolver tipo de geometria, usando POLYGON", e);
+            return "POLYGON";
+        }
     }
 
     private static Color resolveColorForLegend(Layer layer) {
