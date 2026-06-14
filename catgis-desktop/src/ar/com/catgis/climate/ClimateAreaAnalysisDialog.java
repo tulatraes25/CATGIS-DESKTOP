@@ -197,16 +197,16 @@ public class ClimateAreaAnalysisDialog extends JDialog {
         Layer rasterLayer = (Layer) rasterCombo.getSelectedItem();
         Layer areaLayer = (Layer) areaCombo.getSelectedItem();
         if (rasterLayer == null || areaLayer == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Seleccioná una capa raster climática y una capa de área.",
-                    "Análisis climático", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this,
+                    "Análisis climático",
+                    "Seleccioná una capa raster climática y una capa de área.");
             return;
         }
 
         if (!(rasterLayer instanceof RasterLayer)) {
-            JOptionPane.showMessageDialog(this,
-                    "La capa seleccionada no es un raster climático.",
-                    "Análisis climático", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this,
+                    "Análisis climático",
+                    "La capa seleccionada no es un raster climático.");
             return;
         }
 
@@ -214,17 +214,17 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             // Get the raw GridCoverage2D for precise pixel evaluation
             GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
             if (coverage == null) {
-                JOptionPane.showMessageDialog(this,
-                        "No se pudo leer el raster como GridCoverage2D.",
-                        "Análisis climático", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(this,
+                        "Análisis climático",
+                        "No se pudo leer el raster como GridCoverage2D.");
                 return;
             }
 
             var shapefileData = mapPanel.getShapefileData(areaLayer);
             if (shapefileData == null || shapefileData.getFeatures() == null) {
-                JOptionPane.showMessageDialog(this,
-                        "No se pudieron obtener los datos vectoriales del área.",
-                        "Análisis climático", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(this,
+                        "Análisis climático",
+                        "No se pudieron obtener los datos vectoriales del área.");
                 return;
             }
 
@@ -331,10 +331,10 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             }
 
             if (processedCount == 0) {
-                JOptionPane.showMessageDialog(this,
+                NotificationManager.info(this,
+                        "Análisis climático",
                         "No se encontraron polígonos en la capa de área seleccionada.\n"
-                                + "Verificá que sea una capa de polígonos.",
-                        "Análisis climático", JOptionPane.INFORMATION_MESSAGE);
+                                + "Verificá que sea una capa de polígonos.");
             } else {
                 if (CatgisDesktopApp.statusBar != null) {
                     AppContext.setStatusMessage(
@@ -343,9 +343,9 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             }
 
         } catch (Exception ex) {
-            javax.swing.JOptionPane.showMessageDialog(this,
-                    "Error al ejecutar el análisis: " + ex.getMessage(),
-                    "Análisis climático", javax.swing.JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this,
+                    "Análisis climático",
+                    "Error al ejecutar el análisis: " + ex.getMessage());
         }
     }
 
@@ -378,8 +378,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
 
     private void copyToClipboard() {
         if (lastResults.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay resultados para copiar.",
-                    "Copiar", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this, "Copiar", "No hay resultados para copiar.");
             return;
         }
         StringBuilder sb = new StringBuilder();
@@ -421,8 +420,7 @@ public class ClimateAreaAnalysisDialog extends JDialog {
 
     private void exportToCsv() {
         if (lastResults.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay resultados para exportar.",
-                    "Exportar CSV", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this, "Exportar CSV", "No hay resultados para exportar.");
             return;
         }
 
@@ -449,21 +447,21 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             if (CatgisDesktopApp.statusBar != null) {
                 AppContext.setStatusMessage("Análisis climático exportado: " + file.getName());
             }
-            JOptionPane.showMessageDialog(this,
-                    "Resultados exportados a:\n" + file.getAbsolutePath(),
-                    "Exportar CSV", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this,
+                    "Exportar CSV",
+                    "Resultados exportados a:\n" + file.getAbsolutePath());
         } catch (IOException ex) {
-            javax.swing.JOptionPane.showMessageDialog(this,
-                    "Error al guardar el archivo: " + ex.getMessage(),
-                    "Exportar CSV", javax.swing.JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this,
+                    "Exportar CSV",
+                    "Error al guardar el archivo: " + ex.getMessage());
         }
     }
 
     private void exportToCatmap() {
         if (lastResults.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No hay resultados para enviar a CATMAP. Generá un análisis primero.",
-                    "Enviar a CATMAP", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this,
+                    "Enviar a CATMAP",
+                    "No hay resultados para enviar a CATMAP. Generá un análisis primero.");
             return;
         }
 
@@ -505,13 +503,13 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                 Preferences prefs = Preferences.userNodeForPackage(ClimateAreaAnalysisDialog.class);
                 prefs.put("pendingCatmapTable", tempFile.getAbsolutePath());
 
-                int result = JOptionPane.showConfirmDialog(this,
+                boolean yes = NotificationManager.confirm(this,
+                        "Enviar a CATMAP",
                         "CATMAP no está abierto.\n\n"
                         + "¿Querés iniciar CATMAP Standalone con esta tabla\n"
-                        + "para ubicarla en el layout?",
-                        "Enviar a CATMAP", JOptionPane.YES_NO_OPTION);
+                        + "para ubicarla en el layout?");
 
-                if (result == JOptionPane.YES_OPTION) {
+                if (yes) {
                     String catmapMain = "ar.com.catgis.catmap.Main";
                     try {
                         Runtime.getRuntime().exec(new String[]{
@@ -519,11 +517,11 @@ public class ClimateAreaAnalysisDialog extends JDialog {
                                 catmapMain, "--import-table", tempFile.getAbsolutePath()
                         });
                     } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(this,
+                        NotificationManager.info(this,
+                                "Enviar a CATMAP",
                                 "No se pudo iniciar CATMAP.\n"
                                 + "La tabla quedó guardada en:\n"
-                                + tempFile.getAbsolutePath(),
-                                "Enviar a CATMAP", JOptionPane.INFORMATION_MESSAGE);
+                                + tempFile.getAbsolutePath());
                     }
                 }
             }
@@ -533,9 +531,9 @@ public class ClimateAreaAnalysisDialog extends JDialog {
             }
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al enviar tabla a CATMAP: " + ex.getMessage(),
-                    "Enviar a CATMAP", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this,
+                    "Enviar a CATMAP",
+                    "Error al enviar tabla a CATMAP: " + ex.getMessage());
         }
     }
 

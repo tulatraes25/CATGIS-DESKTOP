@@ -6,7 +6,6 @@ import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.locationtech.jts.geom.Geometry;
 
-import javax.swing.JOptionPane;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,7 +56,7 @@ class CopyPasteHandler {
             return false;
         }
         if (map.isReadOnlyVectorLayer(targetLayer)) {
-            JOptionPane.showMessageDialog(map, map.getReadOnlyLayerMessage(targetLayer));
+            NotificationManager.warn(map, "Pegar entidades", map.getReadOnlyLayerMessage(targetLayer));
             return false;
         }
 
@@ -81,10 +80,8 @@ class CopyPasteHandler {
         }
 
         if (pastedIds.isEmpty()) {
-            JOptionPane.showMessageDialog(map,
-                    "Por ahora solo se puede pegar en una capa compatible con la estructura de los elementos copiados.",
-                    "Pegar entidades",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Pegar entidades",
+                    "Por ahora solo se puede pegar en una capa compatible con la estructura de los elementos copiados.");
             return false;
         }
 
@@ -113,7 +110,7 @@ class CopyPasteHandler {
             return false;
         }
         if (map.isReadOnlyVectorLayer(targetLayer)) {
-            JOptionPane.showMessageDialog(map, map.getReadOnlyLayerMessage(targetLayer));
+            NotificationManager.warn(map, "Pegar entidades", map.getReadOnlyLayerMessage(targetLayer));
             return false;
         }
 
@@ -127,59 +124,47 @@ class CopyPasteHandler {
 
     boolean copySelectedFeaturesFromLayerToEditingLayer(Layer sourceLayer) {
         if (sourceLayer == null || sourceLayer instanceof RasterLayer) {
-            JOptionPane.showMessageDialog(map,
-                    "Selecciona una capa vectorial con entidades seleccionadas.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "Selecciona una capa vectorial con entidades seleccionadas.");
             return false;
         }
 
         Layer targetLayer = map.getEditingLayerRef();
         if (targetLayer == null) {
-            JOptionPane.showMessageDialog(map,
-                    "No hay una capa vectorial en edicion activa. Primero activa Editar vector en la capa destino.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "No hay una capa vectorial en edicion activa. Primero activa Editar vector en la capa destino.");
             return false;
         }
         if (sourceLayer == targetLayer) {
-            JOptionPane.showMessageDialog(map,
-                    "La capa seleccionada ya es la capa en edicion. Usa copiar/pegar normal para duplicar dentro de la misma capa.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "La capa seleccionada ya es la capa en edicion. Usa copiar/pegar normal para duplicar dentro de la misma capa.");
             return false;
         }
         if (map.isReadOnlyVectorLayer(targetLayer)) {
-            JOptionPane.showMessageDialog(map, map.getReadOnlyLayerMessage(targetLayer));
+            NotificationManager.warn(map, "Pegar entidades", map.getReadOnlyLayerMessage(targetLayer));
             return false;
         }
 
         ShapefileData sourceData = map.getShapefileData(sourceLayer);
         ShapefileData targetData = map.getShapefileData(targetLayer);
         if (sourceData == null || sourceData.getSchema() == null || targetData == null || targetData.getSchema() == null) {
-            JOptionPane.showMessageDialog(map,
-                    "La capa fuente o destino no tiene esquema vectorial disponible.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "La capa fuente o destino no tiene esquema vectorial disponible.");
             return false;
         }
 
         String sourceFamily = map.resolveGeometryFamily(sourceData.getSchema());
         String targetFamily = map.resolveGeometryFamily(targetData.getSchema());
         if (sourceFamily.isBlank() || !sourceFamily.equals(targetFamily)) {
-            JOptionPane.showMessageDialog(map,
-                    "La geometria no es compatible. Fuente: " + sourceFamily + " | Destino: " + targetFamily + ".",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "La geometria no es compatible. Fuente: " + sourceFamily + " | Destino: " + targetFamily + ".");
             return false;
         }
 
         List<String> selectedIds = map.getSelectedFeatureIdsForLayer(sourceLayer);
         if (selectedIds.isEmpty()) {
-            JOptionPane.showMessageDialog(map,
-                    "No hay entidades seleccionadas en la capa fuente.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "No hay entidades seleccionadas en la capa fuente.");
             return false;
         }
 
@@ -195,10 +180,8 @@ class CopyPasteHandler {
         }
 
         if (pastedIds.isEmpty()) {
-            JOptionPane.showMessageDialog(map,
-                    "No se pudieron copiar las entidades seleccionadas a la capa en edicion.",
-                    "Copiar a capa en edicion",
-                    JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.warn(map, "Copiar a capa en edicion",
+                    "No se pudieron copiar las entidades seleccionadas a la capa en edicion.");
             return false;
         }
 

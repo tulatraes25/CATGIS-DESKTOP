@@ -303,17 +303,17 @@ public class CatgisDesktopApp extends JFrame {
     private void startEditingSelectedLayer() {
         Layer selected = layersPanel.getSelectedLayer();
         if (selected == null) {
-            javax.swing.JOptionPane.showMessageDialog(this, "Selecciona una capa vectorial en el panel Capas.", "Iniciar edicion", javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this, "Iniciar edicion", "Selecciona una capa vectorial en el panel Capas.");
             return;
         }
         if (selected instanceof RasterLayer || selected instanceof OnlineTileLayer) {
-            javax.swing.JOptionPane.showMessageDialog(this, "La capa seleccionada no es vectorial editable.", "Iniciar edicion", javax.swing.JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(this, "Iniciar edicion", "La capa seleccionada no es vectorial editable.");
             return;
         }
         Layer existing = mapPanel != null ? mapPanel.getEditingLayerRef() : null;
         if (existing != null && existing != selected) {
-            int r = javax.swing.JOptionPane.showConfirmDialog(this, "Ya hay una capa en edicion: " + existing.getName() + ".\nDesea finalizarla y editar " + selected.getName() + "?", "Cambiar capa de edicion", javax.swing.JOptionPane.YES_NO_OPTION);
-            if (r != javax.swing.JOptionPane.YES_OPTION) return;
+            boolean yes = NotificationManager.confirm(this, "Cambiar capa de edicion", "Ya hay una capa en edicion: " + existing.getName() + ".\nDesea finalizarla y editar " + selected.getName() + "?");
+            if (!yes) return;
             EditingToolsWindow.hideIfOpen();
         }
         if (mapPanel != null) {
@@ -609,7 +609,7 @@ public class CatgisDesktopApp extends JFrame {
 
         String trimmed = newName.trim();
         if (trimmed.isEmpty()) {
-            JOptionPane.showMessageDialog(getMainFrame(), I18n.t("El nombre del proyecto no puede quedar vacio."));
+            NotificationManager.warn(getMainFrame(), null, I18n.t("El nombre del proyecto no puede quedar vacio."));
             return;
         }
 

@@ -330,7 +330,7 @@ public class AttributeTableWindow extends JFrame {
 
     void openFieldCalculator() {
         if (isReadOnlyLayer()) {
-            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            NotificationManager.warn(this, null, getReadOnlyMessage());
             return;
         }
         FieldCalculatorDialog.open(this);
@@ -338,7 +338,7 @@ public class AttributeTableWindow extends JFrame {
 
     void openAssignValueDialog() {
         if (isReadOnlyLayer()) {
-            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            NotificationManager.warn(this, null, getReadOnlyMessage());
             return;
         }
         AssignValueDialog.open(this);
@@ -897,7 +897,7 @@ public class AttributeTableWindow extends JFrame {
 
     private void toggleEditMode() {
         if (isReadOnlyLayer()) {
-            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            NotificationManager.warn(this, null, getReadOnlyMessage());
             return;
         }
         if (table.isEditing()) {
@@ -1071,9 +1071,9 @@ public class AttributeTableWindow extends JFrame {
             }
             pw.close();
             statusLabel.setText("Exportado: " + file.getName());
-            JOptionPane.showMessageDialog(this, "CSV exportado:\n" + file.getAbsolutePath(), "Exportar CSV", JOptionPane.INFORMATION_MESSAGE);
+            NotificationManager.info(this, "Exportar CSV", "CSV exportado:\n" + file.getAbsolutePath());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error al exportar:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(this, "Error", "Error al exportar:\n" + ex.getMessage());
         }
     }
 
@@ -1112,11 +1112,11 @@ public class AttributeTableWindow extends JFrame {
 
     private void applyChanges() {
         if (isReadOnlyLayer()) {
-            JOptionPane.showMessageDialog(this, getReadOnlyMessage());
+            NotificationManager.warn(this, null, getReadOnlyMessage());
             return;
         }
         if (!editMode) {
-            JOptionPane.showMessageDialog(this, "Primero habilitá la edición para poder aplicar cambios.");
+            NotificationManager.warn(this, null, "Primero habilitá la edición para poder aplicar cambios.");
             return;
         }
 
@@ -1125,13 +1125,13 @@ public class AttributeTableWindow extends JFrame {
         }
 
         if (data == null || data.getFeatures() == null) {
-            JOptionPane.showMessageDialog(this, "No se encontró la capa en memoria para aplicar cambios.");
+            NotificationManager.warn(this, null, "No se encontró la capa en memoria para aplicar cambios.");
             return;
         }
 
         List<SimpleFeature> features = data.getFeatures();
         if (features.size() != model.getRowCount()) {
-            JOptionPane.showMessageDialog(this,
+            NotificationManager.warn(this, null,
                     "La cantidad de filas ya no coincide con la capa en memoria. Cerrá y volvé a abrir la tabla.");
             return;
         }
@@ -1167,7 +1167,7 @@ public class AttributeTableWindow extends JFrame {
             updateEditControls();
             statusLabel.setText("Cambios aplicados correctamente en la capa cargada en CATGIS.");
 
-            JOptionPane.showMessageDialog(this,
+            NotificationManager.info(this, null,
                     "Cambios aplicados correctamente en la capa cargada en CATGIS.\n\n" +
                             "Solo se modificaron los campos marcados como editables.");
         } catch (Exception ex) {

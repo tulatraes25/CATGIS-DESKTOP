@@ -69,9 +69,9 @@ public class Main {
                 try {
                     LoadProjectAction.loadProjectFile(new File(projectPath));
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(null,
-                            "No se pudo cargar el proyecto:\n" + ex.getMessage(),
-                            "CATMAP", JOptionPane.ERROR_MESSAGE);
+                    NotificationManager.error(null,
+                            "CATMAP",
+                            "No se pudo cargar el proyecto:\n" + ex.getMessage());
                 }
             }
 
@@ -266,9 +266,9 @@ public class Main {
     private static void configureAtlas() {
         Project project = AppContext.project();
         if (project == null || project.getLayers().isEmpty()) {
-            JOptionPane.showMessageDialog(mainFrame,
-                "No hay proyecto cargado. Abrí o creá un proyecto primero.",
-                "Configurar Atlas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(mainFrame,
+                "Configurar Atlas",
+                "No hay proyecto cargado. Abrí o creá un proyecto primero.");
             return;
         }
 
@@ -281,9 +281,9 @@ public class Main {
             }
         }
         if (vectorLayers.isEmpty()) {
-            JOptionPane.showMessageDialog(mainFrame,
-                "No hay capas vectoriales con datos en el proyecto.\nEl atlas necesita una capa de cobertura vectorial.",
-                "Configurar Atlas", JOptionPane.WARNING_MESSAGE);
+            NotificationManager.warn(mainFrame,
+                "Configurar Atlas",
+                "No hay capas vectoriales con datos en el proyecto.\nEl atlas necesita una capa de cobertura vectorial.");
             return;
         }
 
@@ -536,16 +536,16 @@ public class Main {
                         AtlasEngine.generateAndSave(layoutModel, pageList, outDir, baseName, 150);
                         SwingUtilities.invokeLater(() -> {
                             statusLabel.setText("Atlas generado: " + outDir.getAbsolutePath());
-                            JOptionPane.showMessageDialog(mainFrame,
-                                "Atlas generado correctamente:\n" + outDir.getAbsolutePath(),
-                                "Atlas completado", JOptionPane.INFORMATION_MESSAGE);
+                            NotificationManager.info(mainFrame,
+                                "Atlas completado",
+                                "Atlas generado correctamente:\n" + outDir.getAbsolutePath());
                         });
                     } catch (Exception ex) {
                         SwingUtilities.invokeLater(() -> {
                             statusLabel.setText("Error al generar atlas");
-                            JOptionPane.showMessageDialog(mainFrame,
-                                "Error al generar atlas:\n" + ex.getMessage(),
-                                "Error", JOptionPane.ERROR_MESSAGE);
+                            NotificationManager.error(mainFrame,
+                                "Error",
+                                "Error al generar atlas:\n" + ex.getMessage());
                         });
                     }
                 }).start();
@@ -1111,9 +1111,9 @@ public class Main {
                 statusLabel.setText("Proyecto cargado: " + chooser.getSelectedFile().getName());
                 refreshMap();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Error al cargar proyecto:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame,
+                        "Error",
+                        "Error al cargar proyecto:\n" + ex.getMessage());
             }
         }
     }
@@ -1129,9 +1129,9 @@ public class Main {
             CatmapSerializer.save(layoutModel, currentFile);
             statusLabel.setText("Layout guardado: " + currentFile.getName());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(mainFrame,
-                    "Error al guardar:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(mainFrame,
+                    "Error",
+                    "Error al guardar:\n" + ex.getMessage());
         }
     }
 
@@ -1149,9 +1149,9 @@ public class Main {
                 mainFrame.setTitle("CATMAP - " + file.getName());
                 statusLabel.setText("Layout guardado: " + file.getName());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Error al guardar:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame,
+                        "Error",
+                        "Error al guardar:\n" + ex.getMessage());
             }
         }
     }
@@ -1168,13 +1168,13 @@ public class Main {
             try {
                 LayoutExportEngine.exportPdf(layoutModel, file, exportResolution);
                 statusLabel.setText("PDF exportado: " + file.getName());
-                JOptionPane.showMessageDialog(mainFrame,
-                        "PDF exportado correctamente:\n" + file.getAbsolutePath(),
-                        "Exportar PDF", JOptionPane.INFORMATION_MESSAGE);
+                NotificationManager.info(mainFrame,
+                        "Exportar PDF",
+                        "PDF exportado correctamente:\n" + file.getAbsolutePath());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Error al exportar PDF:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame,
+                        "Error",
+                        "Error al exportar PDF:\n" + ex.getMessage());
                 statusLabel.setText("Error al exportar PDF");
             }
         }
@@ -1192,13 +1192,13 @@ public class Main {
             try {
                 LayoutExportEngine.exportPng(layoutModel, file, exportResolution);
                 statusLabel.setText("PNG exportado: " + file.getName());
-                JOptionPane.showMessageDialog(mainFrame,
-                        "PNG exportado correctamente:\n" + file.getAbsolutePath(),
-                        "Exportar PNG", JOptionPane.INFORMATION_MESSAGE);
+                NotificationManager.info(mainFrame,
+                        "Exportar PNG",
+                        "PNG exportado correctamente:\n" + file.getAbsolutePath());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Error al exportar PNG:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame,
+                        "Error",
+                        "Error al exportar PNG:\n" + ex.getMessage());
                 statusLabel.setText("Error al exportar PNG");
             }
         }
@@ -1216,13 +1216,13 @@ public class Main {
             try {
                 LayoutExportEngine.exportJpg(layoutModel, file, exportResolution);
                 statusLabel.setText("JPG exportado: " + file.getName());
-                JOptionPane.showMessageDialog(mainFrame,
-                        "JPG exportado correctamente:\n" + file.getAbsolutePath(),
-                        "Exportar JPG", JOptionPane.INFORMATION_MESSAGE);
+                NotificationManager.info(mainFrame,
+                        "Exportar JPG",
+                        "JPG exportado correctamente:\n" + file.getAbsolutePath());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Error al exportar JPG:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame,
+                        "Error",
+                        "Error al exportar JPG:\n" + ex.getMessage());
                 statusLabel.setText("Error al exportar JPG");
             }
         }
@@ -1240,13 +1240,13 @@ public class Main {
             try {
                 SvgExportEngine.exportSvg(layoutModel, file, exportResolution);
                 statusLabel.setText("SVG exportado: " + file.getName());
-                JOptionPane.showMessageDialog(mainFrame,
-                        "SVG exportado correctamente:\n" + file.getAbsolutePath(),
-                        "Exportar SVG", JOptionPane.INFORMATION_MESSAGE);
+                NotificationManager.info(mainFrame,
+                        "Exportar SVG",
+                        "SVG exportado correctamente:\n" + file.getAbsolutePath());
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame,
-                        "Error al exportar SVG:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame,
+                        "Error",
+                        "Error al exportar SVG:\n" + ex.getMessage());
                 statusLabel.setText("Error al exportar SVG");
             }
         }
@@ -1286,9 +1286,9 @@ public class Main {
                 statusLabel.setText("Impresión cancelada");
             }
         } catch (Exception ex) {
-            javax.swing.JOptionPane.showMessageDialog(mainFrame,
-                    "Error al imprimir:\n" + ex.getMessage(),
-                    "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(mainFrame,
+                    "Error",
+                    "Error al imprimir:\n" + ex.getMessage());
             statusLabel.setText("Error al imprimir");
         }
     }
@@ -1329,8 +1329,8 @@ public class Main {
                     statusLabel.setText("Imagen insertada");
                 }
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(mainFrame, "Error al cargar imagen:\n" + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+                NotificationManager.error(mainFrame, "Error",
+                        "Error al cargar imagen:\n" + ex.getMessage());
             }
         }
     }
@@ -1604,9 +1604,9 @@ public class Main {
             previewPanel.repaint();
             statusLabel.setText("Layout cargado: " + file.getName());
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(mainFrame,
-                    "Error al cargar layout:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(mainFrame,
+                    "Error",
+                    "Error al cargar layout:\n" + ex.getMessage());
         }
     }
 
@@ -1621,17 +1621,17 @@ public class Main {
             table.setName("Tabla climática");
             if (layoutModel != null) {
                 layoutModel.addElement(table);
-                JOptionPane.showMessageDialog(mainFrame,
-                    "Tabla climática importada correctamente.\nUbicala en el layout y ajustá su posición.",
-                    "Importar tabla", JOptionPane.INFORMATION_MESSAGE);
+                NotificationManager.info(mainFrame,
+                    "Importar tabla",
+                    "Tabla climática importada correctamente.\nUbicala en el layout y ajustá su posición.");
             }
             Preferences prefs = Preferences.userNodeForPackage(ar.com.catgis.climate.ClimateAreaAnalysisDialog.class);
             prefs.remove("pendingCatmapTable");
             csvFile.delete();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(mainFrame,
-                "Error al importar tabla climática: " + ex.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+            NotificationManager.error(mainFrame,
+                "Error",
+                "Error al importar tabla climática: " + ex.getMessage());
         }
     }
 
@@ -1657,10 +1657,10 @@ public class Main {
             if (!pendingPath.isEmpty()) {
                 File csvFile = new File(pendingPath);
                 if (csvFile.exists()) {
-                    int r = JOptionPane.showConfirmDialog(mainFrame,
-                        "Se encontró una tabla climática pendiente de importar.\n¿Querés agregarla al layout?",
-                        "Tabla pendiente", JOptionPane.YES_NO_OPTION);
-                    if (r == JOptionPane.YES_OPTION) {
+                    boolean yes = NotificationManager.confirm(mainFrame,
+                        "Tabla pendiente",
+                        "Se encontró una tabla climática pendiente de importar.\n¿Querés agregarla al layout?");
+                    if (yes) {
                         importClimateTable(csvFile);
                     } else {
                         prefs.remove("pendingCatmapTable");
@@ -1673,7 +1673,8 @@ public class Main {
     }
 
     private static void showShortcuts() {
-        JOptionPane.showMessageDialog(mainFrame,
+        NotificationManager.info(mainFrame,
+                "Atajos de teclado",
                 "Atajos de teclado:\n\n" +
                 "Ctrl+N - Nuevo layout\n" +
                 "Ctrl+O - Abrir layout\n" +
@@ -1684,19 +1685,18 @@ public class Main {
                 "Ctrl+V - Pegar\n" +
                 "Delete - Eliminar\n" +
                 "F5 - Refrescar mapa\n" +
-                "Ctrl+P - Imprimir",
-                "Atajos de teclado", JOptionPane.INFORMATION_MESSAGE);
+                "Ctrl+P - Imprimir");
     }
 
     private static void showAbout() {
-        JOptionPane.showMessageDialog(mainFrame,
+        NotificationManager.info(mainFrame,
+                "Acerca de CATMAP",
                 "CATMAP - Cartographic Layout Composer\n" +
                 "Version 1.0\n\n" +
                 "Parte de CATGIS Desktop\n" +
                 "Copyright 2026\n\n" +
                 "Herramienta de composición cartográfica\n" +
-                "para mapas técnicos y ambientales.",
-                "Acerca de CATMAP", JOptionPane.INFORMATION_MESSAGE);
+                "para mapas técnicos y ambientales.");
     }
 
     private static void addDefaultElements(LayoutModel model) {
