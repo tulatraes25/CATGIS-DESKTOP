@@ -348,6 +348,7 @@ public class CatgisDesktopApp extends JFrame {
         centerContainer.setOpaque(true);
         centerContainer.setBackground(new Color(226, 232, 240));
 
+        quickStylePanel = new QuickStylePanel();
         quickStylePanel.setVisible(false);
         quickStylePanel.setPreferredSize(new java.awt.Dimension(260, 100));
 
