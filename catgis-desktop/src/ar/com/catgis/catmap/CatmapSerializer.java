@@ -21,10 +21,13 @@ public final class CatmapSerializer {
     private CatmapSerializer() {}
 
     /**
-     * Save layout to .catmap file.
+     * Save layout to .catmap file atomically.
+     * Writes to a temporary file first, then renames to the target
+     * to prevent corruption on crash during write.
      */
     public static void save(LayoutModel model, File file) throws IOException {
-        try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+        File tmp = new File(file.getParentFile(), file.getName() + ".tmp");
+        try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmp), StandardCharsets.UTF_8))) {
             w.write("# CATMAP Layout v1");
             w.newLine();
 
@@ -42,6 +45,17 @@ public final class CatmapSerializer {
 
             w.write("# End of layout");
             w.newLine();
+        }
+        // Atomic rename: replace target only after successful write
+        if (file.exists()) {
+            File backup = new File(file.getParentFile(), file.getName() + ".bak");
+            if (backup.exists()) backup.delete();
+            if (!file.renameTo(backup)) {
+                CatgisLogger.warn("CatmapSerializer: no se pudo crear backup de " + file.getName(), null);
+            }
+        }
+        if (!tmp.renameTo(file)) {
+            throw new IOException("No se pudo guardar el layout: " + file.getAbsolutePath());
         }
     }
 
@@ -156,6 +170,11 @@ public final class CatmapSerializer {
         int zOrder = parseInt(parts[8]);
         boolean visible = parseBoolean(parts[9]);
         boolean locked = parts.length > 10 ? parseBoolean(parts[10]) : false;
+
+        if (w <= 0 || h <= 0) {
+            CatgisLogger.warn("CatmapSerializer: elemento '" + id + "' (tipo=" + type
+                    + ") tiene tamanio invalido w=" + w + " h=" + h + ", posible corrupcion de archivo", null);
+        }
 
         LayoutElement element = switch (type) {
             case "LayoutLabel" -> {
@@ -316,15 +335,25 @@ public final class CatmapSerializer {
     // --- Utility methods ---
 
     private static double parseDouble(String s) {
-        try { return Double.parseDouble(s.trim()); } catch (Exception e) { return 0; }
+        try { return Double.parseDouble(s.trim()); } catch (Exception e) {
+            CatgisLogger.warn("CatmapSerializer: valor decimal invalido '" + s + "', usando 0", null);
+            return 0;
+        }
     }
 
     private static int parseInt(String s) {
-        try { return Integer.parseInt(s.trim()); } catch (Exception e) { return 0; }
+        try { return Integer.parseInt(s.trim()); } catch (Exception e) {
+            CatgisLogger.warn("CatmapSerializer: valor entero invalido '" + s + "', usando 0", null);
+            return 0;
+        }
     }
 
     private static boolean parseBoolean(String s) {
-        return Boolean.parseBoolean(s.trim());
+        String trimmed = s.trim();
+        if ("true".equalsIgnoreCase(trimmed)) return true;
+        if ("false".equalsIgnoreCase(trimmed)) return false;
+        CatgisLogger.warn("CatmapSerializer: valor booleano invalido '" + s + "', usando false", null);
+        return false;
     }
 
     private static Color parseColor(String s) {
