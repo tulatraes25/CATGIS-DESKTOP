@@ -191,16 +191,14 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 ---
 
-## R-10: Memoria — rasters acumulados
+## R-10: Memoria — rasters acumulados ✅ CERRADO
 
 | Field | Value |
 |---|---|
 | **Severity** | 🟢 BAJA (era 🟡 MEDIA) |
-| **Status** | OPEN / mitigado |
+| **Status** | CLOSED |
 | **Files** | `MapPanel.java`, `data/raster/LocalRasterData.java` |
-| **Evidence** | `LocalRasterData.dispose()` llama `image.flush()`. `clearAllLayers()` y `removeLayer()` llaman `dispose()` en cada raster antes de limpiar. `MapLayoutComposerDialog.dispose()` limpia preview panel. Caminos principales cubiertos: nuevo proyecto, abrir proyecto, quitar capa. Commits `2222e4b`, `9a28d0c`. |
-| **Riesgo residual** | `rasterDisplayCache` no se limpia en `removeLayer()` (solo en `clearAllLayers`). `cleanup()` es opt-in — si se agrega un flujo "cerrar proyecto" sin pasar por `NewProjectAction`, los rasters no se liberan. Sin tests automatizados. |
-| **Prioridad** | P3. |
+| **Evidence** | Todos los caminos liberan memoria raster: `clearAllLayers()` → dispose + cache clear, `removeLayer()` → dispose + cache remove, `removeNotify()` → `cleanup()`. Commits `2222e4b`, `9a28d0c`, `9e1d78d`. |
 
 ---
 
@@ -266,7 +264,7 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 | R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
 | R-08 PostGIS pooling | 🟢 BAJA | CLOSED |
 | R-09 Real dataset tests | 🟢 BAJA | OPEN / mitigado (7/12 formatos 🟢 Alta) |
-| R-10 Raster memory | 🟢 BAJA | OPEN / mitigado |
+| R-10 Raster memory | 🟢 BAJA | CLOSED |
 | R-11 UI freeze | 🟢 BAJA | CLOSED |
 | R-12 Project corruption | 🟢 BAJA | OPEN / mitigado |
 | R-13 Notification migration | 🟢 BAJA | CLOSED |
