@@ -82,16 +82,14 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 
 ---
 
-## R-03: GribLoader — catch vacío
+## R-03: GribLoader — catch vacío ✅ CERRADO
 
 | Field | Value |
 |---|---|
-| **Severity** | 🟡 MEDIA |
+| **Severity** | 🟢 BAJA (era 🟡 MEDIA) |
+| **Status** | CLOSED |
 | **File** | `climate/GribLoader.java:218` |
-| **Evidence** | `} catch (Exception e) { }` — bloque catch completamente vacío. Traga cualquier error de parseo GRIB sin loggear ni notificar. |
-| **Impacto** | Archivo GRIB corrupto → carga falla silenciosamente, usuario no ve ni datos ni error. |
-| **Recomendación** | Agregar `CatgisLogger.error("GRIB parse failed", e)`. |
-| **Prioridad** | P2. |
+| **Evidence** | `catch (Exception ex) {}` → `CatgisLogger.error("GribLoader: fallo al leer datos GRIB via reflection, la imagen mostrada sera sintetica (no representa datos reales)")`. Commit `d0934b7`. |
 
 ---
 
@@ -261,9 +259,9 @@ El nombre de tabla se interpola, pero solo después de pasar regex + validación
 |---|---|---|
 | R-01 Plugin ClassLoader | 🔴 ALTA | OPEN |
 | R-02 pgRouting SQL injection | 🟢 BAJA | **CLOSED** (era ALTA) |
-| R-03 GribLoader empty catch | 🟡 MEDIA | OPEN |
+| R-03 GribLoader empty catch | 🟢 BAJA | CLOSED |
 | R-04 CatmapSerializer silent | 🟢 BAJA | CLOSED |
-| R-05 4 empty catch blocks | 🟢 BAJA | OPEN |
+| R-05 Empty/silent catch blocks | 🟢 BAJA | OPEN / mitigado |
 | R-06 External processes | 🟢 BAJA | CLOSED |
 | R-07 PostGIS crypto | 🟢 BAJA | CLOSED |
 | R-08 PostGIS pooling | 🟢 BAJA | CLOSED |
