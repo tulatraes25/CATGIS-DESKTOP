@@ -252,57 +252,61 @@ public class CRSDefinitions {
     }
 
     /**
-     * Hardcoded bounds for Argentine POSGAR 94 and POSGAR 2007 zones.
-     * EPSG database often lacks bbox data for these projected CRS.
-     * Each zone is approximately 3° wide centered on its meridian:
-     *   Faja 2: meridian -72°, bounds [-73.5, -55, -70.5, -22]
-     *   Faja 3: meridian -69°, bounds [-70.5, -55, -67.5, -22]
-     *   Faja 4: meridian -66°, bounds [-67.5, -55, -64.5, -22]
-     *   Faja 5: meridian -63°, bounds [-64.5, -55, -61.5, -22]
-     *   Faja 6: meridian -60°, bounds [-61.5, -55, -58.5, -22]
-     *   Faja 7: meridian -57°, bounds [-58.5, -55, -55.5, -22]
+     * Hardcoded bounds for common projected CRS whose EPSG entries lack bbox.
+     * Covers: UTM North/South (all 60 zones), Argentine POSGAR families.
      */
-    private static CrsTechnicalDetails argentineZoneBounds(String normalized) {
-        int zone = -1;
-        String label = null;
+    private static CrsTechnicalDetails hardcodedProjectedBounds(String normalized) {
         try {
-            if (normalized.contains("2218")) {
-                zone = Integer.parseInt(normalized.substring(normalized.length() - 1));
-                label = "POSGAR 94 / Argentina " + zone;
-            } else if (normalized.contains("534")) {
-                zone = Integer.parseInt(normalized.substring(normalized.length() - 1));
-                label = "POSGAR 2007 / Argentina " + zone;
-            } else if (normalized.contains("2219")) {
-                zone = Integer.parseInt(normalized.substring(normalized.length() - 1));
-                label = "POSGAR 98 / Argentina " + zone;
-            }
+            int epsg = Integer.parseInt(normalized.replaceAll("[^0-9]", ""));
+            // UTM North: EPSG:32601-32660
+            if (epsg >= 32601 && epsg <= 32660)
+                return utmZoneBounds(normalized, epsg - 32600, true);
+            // UTM South: EPSG:32701-32760
+            if (epsg >= 32701 && epsg <= 32760)
+                return utmZoneBounds(normalized, epsg - 32700, false);
+            // Argentine POSGAR 94: 22181-22187
+            if (epsg >= 22181 && epsg <= 22187)
+                return argentineFajaBounds(normalized, epsg - 22180, "POSGAR 94");
+            // Argentine POSGAR 98: 22191-22197
+            if (epsg >= 22191 && epsg <= 22197)
+                return argentineFajaBounds(normalized, epsg - 22190, "POSGAR 98");
+            // Argentine POSGAR 2007: 5343-5349
+            if (epsg >= 5343 && epsg <= 5349)
+                return argentineFajaBounds(normalized, epsg - 5342, "POSGAR 2007");
         } catch (NumberFormatException e) {
             return null;
         }
-        if (zone < 1 || zone > 7 || label == null) return null;
+        return null;
+    }
 
-        // Argentine continental bounds: lat -55 to -22, lon ~ -73 to -53
-        double[] longs = {-73.5, -73.5, -70.5, -67.5, -64.5, -61.5, -58.5};
-        String[] meridianLabels = {"-72°", "-72°", "-69°", "-66°", "-63°", "-60°", "-57°"};
-        int idx = Math.max(0, Math.min(6, zone - 1));
-        double west = longs[idx];
-        double east = west + 3.0;
-        String areaName = String.format(Locale.US,
-                "Argentina faja %d (meridiano %s W)", zone, meridianLabels[idx]);
+    private static CrsTechnicalDetails utmZoneBounds(String code, int zone, boolean north) {
+        double cm = 6.0 * zone - 183.0;
+        String hem = north ? "Norte" : "Sur";
+        String label = "WGS 84 / UTM zone " + zone + hem.charAt(0);
 
-        return new CrsTechnicalDetails(
-                normalized,
-                label,
-                label + " — " + areaName,
-                "Proyectado (Gauss-Krüger)",
-                "POSGAR",
-                "m",
-                String.format(Locale.US, "Oeste %.4f, Sur %.4f, Este %.4f, Norte %.4f",
-                        west, -55.0, east, -22.0),
-                "Transverse Mercator",
-                "Latitud de origen -90, factor de escala 1.0",
-                west, -55.0, east, -22.0, true, false, false
-        );
+        return new CrsTechnicalDetails(code, label,
+                label + " (meridiano " + (int)cm + "°, " + hem.toLowerCase() + ")",
+                "Proyectado (UTM)", "WGS 84", "m",
+                String.format(Locale.US, "Oeste %.1f, Sur %.1f, Este %.1f, Norte %.1f",
+                        cm - 3.0, north ? 0.0 : -80.0, cm + 3.0, north ? 84.0 : 0.0),
+                "Transverse Mercator", "Factor de escala 0.9996",
+                cm - 3.0, north ? 0.0 : -80.0, cm + 3.0, north ? 84.0 : 0.0,
+                true, false, false);
+    }
+
+    private static CrsTechnicalDetails argentineFajaBounds(String code, int zone, String family) {
+        double[] cm = {-72, -72, -69, -66, -63, -60, -57};
+        String[] cmLabel = {"-72°W", "-72°W", "-69°W", "-66°W", "-63°W", "-60°W", "-57°W"};
+        int i = Math.max(0, Math.min(6, zone - 1));
+        double w = cm[i] - 1.5, e = cm[i] + 1.5;
+        String label = family + " / Argentina " + zone;
+
+        return new CrsTechnicalDetails(code, label,
+                label + " — faja " + zone + " (" + cmLabel[i] + ")",
+                "Proyectado (Gauss-Krüger)", family, "m",
+                String.format(Locale.US, "Oeste %.1f, Sur -55.0, Este %.1f, Norte -22.0", w, e),
+                "Transverse Mercator", "Latitud de origen -90°, factor de escala 1.0",
+                w, -55.0, e, -22.0, true, false, false);
     }
 
     private static CrsTechnicalDetails buildFastDetails(String normalized) {
@@ -310,11 +314,8 @@ public class CRSDefinitions {
             return CrsTechnicalDetails.unavailable(DEFAULT_CRS);
         }
 
-        // Hardcoded bounds for Argentine POSGAR zones (EPSG database lacks bbox for these)
-        CrsTechnicalDetails argBounds = argentineZoneBounds(normalized);
-        if (argBounds != null) {
-            return argBounds;
-        }
+        CrsTechnicalDetails hc = hardcodedProjectedBounds(normalized);
+        if (hc != null) return hc;
 
         for (CrsCatalogEntry entry : getCatalogEntries()) {
             if (normalized.equalsIgnoreCase(entry.code())) {
