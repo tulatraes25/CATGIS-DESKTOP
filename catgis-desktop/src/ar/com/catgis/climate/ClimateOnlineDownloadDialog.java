@@ -505,6 +505,12 @@ public class ClimateOnlineDownloadDialog extends JDialog {
         }
         layer.setSourceCRS(layerOperationalCrs);
 
+        CatgisLogger.debug("Clima online: capa=" + layerName
+                + " CRS=" + layerOperationalCrs
+                + " bands=" + rasterData.getBandCount()
+                + " env=" + rasterData.getEnvelope()
+                + " pixels=" + rasterData.getImage().getWidth() + "x" + rasterData.getImage().getHeight());
+
         AppContext.project().addLayer(layer);
         if (CatgisDesktopApp.layersPanel != null) {
             AppContext.addLayer(layer);
@@ -514,6 +520,7 @@ public class ClimateOnlineDownloadDialog extends JDialog {
             AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
             AppContext.mapPanel().showOpenedFile(layer.getName());
             AppContext.mapPanel().zoomToLayer(layer);
+            AppContext.mapPanel().repaint();
         }
         CatgisDesktopApp.markProjectDirty();
         if (CatgisDesktopApp.statusBar != null) {
