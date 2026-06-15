@@ -473,15 +473,29 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         // from the current MapPanel view. LayoutMap elements are intended
         // for additional/inset maps only. This avoids dual-map rendering.
 
-        LayoutLegend legend = new LayoutLegend("main-legend", 155, 55, 75, 40);
+        // Legend — placed below the map area with subtle background for contrast
+        LayoutLegend legend = new LayoutLegend("main-legend", 15, 148, 267, 40);
         legend.setZOrder(layoutModel.nextZ());
         legend.setAutoHeight(true);
-        legend.setShowBackground(false);
-        legend.setShowBorder(false);
+        legend.setShowBackground(true);
+        legend.setShowBorder(true);
         legend.setName("Leyenda");
         legend.setTitle("Leyenda");
         populateLegendFromProject(legend);
         layoutModel.addElement(legend);
+
+        // Scale bar — bottom left of page
+        LayoutScaleBar scale = new LayoutScaleBar("main-scale", 15, 197, 120, 10);
+        scale.setZOrder(layoutModel.nextZ());
+        scale.setName("Escala");
+        scale.setUnitLabel("m");
+        layoutModel.addElement(scale);
+
+        // North arrow — top right of map area
+        LayoutNorthArrow north = new LayoutNorthArrow("main-north", 272, 30, 16, 22);
+        north.setZOrder(layoutModel.nextZ());
+        north.setName("Norte");
+        layoutModel.addElement(north);
 
         // Header: title and subtitle as LayoutElements
         String titleText = defaultTitle();
