@@ -96,9 +96,17 @@ public final class FlatGeobufLoader {
             headerSizeBuf.flip();
             int headerSize = headerSizeBuf.getInt();
             long fileSize = channel.size();
+
+            // GDAL >= 3.13 writes an extra 4-byte marker after magic.
+            // Detect: if headerSize is garbage, skip 4 bytes and re-read.
             if (headerSize <= 0 || headerSize > fileSize - 8) {
-                return ValidationResult.invalid(
-                        "Tamaño de encabezado inválido: " + headerSize + " bytes.");
+                headerSizeBuf.clear();
+                if (channel.read(headerSizeBuf) < 4
+                        || (headerSize = headerSizeBuf.flip().getInt()) <= 0
+                        || headerSize > fileSize - 12) {
+                    return ValidationResult.invalid(
+                            "Tamaño de encabezado inválido: " + headerSize + " bytes.");
+                }
             }
 
             ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
@@ -161,6 +169,15 @@ public final class FlatGeobufLoader {
             channel.read(headerSizeBuf);
             headerSizeBuf.flip();
             int headerSize = headerSizeBuf.getInt();
+            int headerOffset = 8; // magic(4) + headerSize(4)
+
+            // GDAL >= 3.13: skip extra 4-byte marker after magic
+            if (headerSize <= 0 || headerSize > fileSize - 8) {
+                headerSizeBuf.clear();
+                channel.read(headerSizeBuf);
+                headerSize = headerSizeBuf.flip().getInt();
+                headerOffset = 12; // magic(4) + marker(4) + headerSize(4)
+            }
 
             // Read header
             ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
@@ -181,7 +198,7 @@ public final class FlatGeobufLoader {
             long featuresCount = header.featuresCount;
             int indexNodeSize = header.indexNodeSize;
 
-            long dataOffset = 8 + headerSize; // magic(4) + headerSize(4) + header
+            long dataOffset = headerOffset + headerSize;
             if (indexNodeSize > 0 && featuresCount > 0) {
                 long indexBytes = estimateIndexSize(featuresCount, indexNodeSize);
                 dataOffset += indexBytes;
