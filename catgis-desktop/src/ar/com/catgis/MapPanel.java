@@ -3401,7 +3401,6 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         if (selectionFlashTimer != null) {
             selectionFlashTimer.stop();
         }
-        cleanup();
     }
 
     /**
