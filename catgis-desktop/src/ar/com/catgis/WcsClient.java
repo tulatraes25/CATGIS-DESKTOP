@@ -38,8 +38,12 @@ public final class WcsClient {
     public static List<WcsCoverage> getCoverages(String serviceUrl) throws Exception {
         // Try WCS 2.0.1 first, fallback to 1.0.0
         try {
-            return getCoveragesVersion(serviceUrl, WcsVersion.V2_0_1);
+            List<WcsCoverage> v2 = getCoveragesVersion(serviceUrl, WcsVersion.V2_0_1);
+            if (!v2.isEmpty()) return v2;
+            CatgisLogger.debug("WCS: 2.0.1 returned empty, trying 1.0.0 fallback");
+            return getCoveragesVersion(serviceUrl, WcsVersion.V1_0_0);
         } catch (Exception e) {
+            CatgisLogger.debug("WCS: 2.0.1 failed (" + e.getMessage() + "), trying 1.0.0 fallback");
             return getCoveragesVersion(serviceUrl, WcsVersion.V1_0_0);
         }
     }
