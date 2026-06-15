@@ -1,8 +1,10 @@
 package ar.com.catgis.data.vector;
 
 import ar.com.catgis.AppErrorSupport;
+import ar.com.catgis.CRSDefinitions;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.DefaultFeatureCollection;
@@ -30,7 +32,8 @@ public class ShapefileData {
         this.sourceName = sourceName;
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
-        this.envelope = featureCollection != null ? featureCollection.getBounds() : null;
+        Envelope rawEnvelope = featureCollection != null ? featureCollection.getBounds() : null;
+        this.envelope = normalizeEnvelope(rawEnvelope, this.schema);
         this.features = new ArrayList<>();
 
         if (featureCollection != null) {
@@ -56,12 +59,20 @@ public class ShapefileData {
                          String message,
                          SimpleFeatureType schema) {
         this.features = features != null ? new ArrayList<>(features) : new ArrayList<>();
-        this.envelope = envelope;
         this.sourceName = sourceName;
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
         this.schema = schema != null ? schema : inferSchemaStatic(this.features);
+        this.envelope = normalizeEnvelope(envelope, this.schema);
         this.featureCollection = buildFeatureCollection(this.features, this.schema);
+    }
+
+    private static Envelope normalizeEnvelope(Envelope envelope, SimpleFeatureType schema) {
+        if (schema == null) {
+            return envelope;
+        }
+        CoordinateReferenceSystem crs = schema.getCoordinateReferenceSystem();
+        return CRSDefinitions.normalizeEnvelopeAxisOrder(envelope, crs);
     }
 
     public ShapefileData(List<?> rawFeatures, Object envelopeObj, String sourceName, int featureCount, String message) {

@@ -193,15 +193,22 @@ public class CRSDefinitions {
     public static CoordinateReferenceSystem decode(String code, boolean longitudeFirst) throws Exception {
         String normalized = normalizeCode(code);
         if (normalized.isBlank()) {
-            return org.geotools.referencing.CRS.decode("EPSG:4326");
+            return org.geotools.referencing.CRS.decode("EPSG:4326", true);
         }
 
-        String epsgCode = normalized.toUpperCase(Locale.ROOT).startsWith("EPSG:")
-                ? normalized.substring(5).trim() : normalized;
-
         try {
-            return org.geotools.referencing.CRS.getAuthorityFactory(true)
-                    .createCoordinateReferenceSystem(epsgCode);
+            return org.geotools.referencing.CRS.decode(normalized, longitudeFirst);
+        } catch (org.geotools.api.referencing.NoSuchAuthorityCodeException noCode) {
+            throw new IllegalArgumentException(
+                    "Codigo EPSG no reconocido: " + normalized
+                    + ". Verifique el catalogo mundial de CRS.",
+                    noCode);
+        } catch (org.geotools.api.referencing.FactoryException factoryEx) {
+            throw new IllegalStateException(
+                    "Error critico: no se pudo inicializar la fabrica de autoridades EPSG de GeoTools. "
+                    + "Verifique que la dependencia gt-epsg-hsql este en el classpath. "
+                    + "Codigo solicitado: " + normalized,
+                    factoryEx);
         } catch (Throwable t) {
             try {
                 return org.geotools.referencing.CRS.decode(normalized);
@@ -223,6 +230,31 @@ public class CRSDefinitions {
                 || trimmed.contains("GEOCCS[") || trimmed.contains("COMPD_CS[")
                 || trimmed.contains("VERT_CS[") || trimmed.contains("+proj=")
                 || trimmed.startsWith("urn:") || trimmed.startsWith("AUTO:");
+    }
+
+    public static boolean isLatLonAxisOrder(CoordinateReferenceSystem crs) {
+        if (crs == null) {
+            return false;
+        }
+        try {
+            org.geotools.api.referencing.cs.CoordinateSystem cs = crs.getCoordinateSystem();
+            if (cs != null && cs.getDimension() >= 2) {
+                String first = cs.getAxis(0).getDirection().name();
+                return first.contains("NORTH") || first.contains("SOUTH");
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    public static org.locationtech.jts.geom.Envelope normalizeEnvelopeAxisOrder(
+            org.locationtech.jts.geom.Envelope envelope, CoordinateReferenceSystem crs) {
+        if (envelope == null || envelope.isNull() || !isLatLonAxisOrder(crs)) {
+            return envelope;
+        }
+        return new org.locationtech.jts.geom.Envelope(
+                envelope.getMinY(), envelope.getMaxY(),
+                envelope.getMinX(), envelope.getMaxX());
     }
 
     public static String buildManualDefinitionValue(String raw) {

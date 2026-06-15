@@ -1,4 +1,4 @@
-package ar.com.catgis;
+package ar.com.catgis;
 import ar.com.catgis.data.vector.ShapefileData;
 
 import org.geotools.api.data.SimpleFeatureSource;
@@ -107,7 +107,10 @@ public class ShapefileLoader {
             int featureCount = features.size();
             String message = "Shapefile cargado: " + file.getName() + " | entidades: " + featureCount;
 
-            return new ShapefileData(features, envelope, sourceName, featureCount, message, schema);
+            Envelope normalizedEnvelope = CRSDefinitions.normalizeEnvelopeAxisOrder(
+                    envelope, schema != null ? schema.getCoordinateReferenceSystem() : null);
+
+            return new ShapefileData(features, normalizedEnvelope, sourceName, featureCount, message, schema);
 
         } finally {
             if (store != null) {
