@@ -609,7 +609,8 @@ public class MainMenuBar extends JMenuBar {
             TerrainHydrologyAnalysisDialog.open();
         });
 
-        JMenuItem itemCuencaOutlet = createItem("Cuenca desde outlet...", AppIcons.pointIcon());
+        JMenuItem itemCuencaOutlet = createItem("Cuencas...", AppIcons.pointIcon());
+        itemCuencaOutlet.setToolTipText("Delimitar cuenca desde punto de salida — Requiere GDAL");
         itemCuencaOutlet.addActionListener(e -> {
             if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
                 TopographyWorkflowSupport.showNoRasterMessage();
@@ -668,9 +669,11 @@ public class MainMenuBar extends JMenuBar {
         itemNetwork.addActionListener(e -> NetworkAnalysisDialog.open());
 
         JMenuItem itemPgRouting = createItem("pgRouting (PostGIS)...", null);
+        itemPgRouting.setToolTipText("Ruteo sobre red de calles — Requiere PostGIS + tabla de ruteo");
         itemPgRouting.addActionListener(e -> PgRoutingDialog.open());
 
         JMenuItem itemH3Binning = createItem("H3 hexagonal binning...", null);
+        itemH3Binning.setToolTipText("Indexación espacial H3 de Uber — Experimental");
         itemH3Binning.addActionListener(e -> H3BinningDialog.open());
 
         menuRedes.add(itemNetwork);
@@ -680,10 +683,12 @@ public class MainMenuBar extends JMenuBar {
         // 4e. Teledetección
         JMenu menuTeledeteccion = new JMenu(I18n.t("Teledetección"));
 
-        JMenuItem itemSpectral = createItem("Índices espectrales (NDVI/NDWI)...", null);
+        JMenuItem itemSpectral = createItem("Índices (NDVI, NDWI, EVI...)", null);
+        itemSpectral.setToolTipText("Calcular índices espectrales desde bandas raster");
         itemSpectral.addActionListener(e -> SpectralIndexDialog.open());
 
         JMenuItem itemSmileML = createItem("Clasificación ML (Smile)...", null);
+        itemSmileML.setToolTipText("Clasificación supervisada con Machine Learning — Experimental");
         itemSmileML.addActionListener(e -> SmileClassificationDialog.open());
 
         JMenuItem itemRasterCalc = createItem("Calculadora raster...", null);
@@ -783,10 +788,12 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemDemOnline = createItem("DEM online...", AppIcons.propertiesIcon());
         itemDemOnline.addActionListener(e -> OnlineDemDownloadDialog.open());
 
-        JMenuItem itemWcs = createItem("WCS - Descargar coberturas...", null);
+        JMenuItem itemWcs = createItem("WCS — Descargar coberturas...", null);
+        itemWcs.setToolTipText("Web Coverage Service — Requiere internet — Experimental");
         itemWcs.addActionListener(e -> WcsDialog.open());
 
-        JMenuItem itemStac = createItem("STAC - Catálogo de assets...", null);
+        JMenuItem itemStac = createItem("STAC — Catálogo de assets...", null);
+        itemStac.setToolTipText("SpatioTemporal Asset Catalog — Requiere internet — Experimental");
         itemStac.addActionListener(e -> StacDialog.open());
 
         menuOnline.add(itemOsm);
