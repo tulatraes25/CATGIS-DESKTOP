@@ -83,7 +83,7 @@ public class ClimateOnlineDownloadDialog extends JDialog {
         setLayout(new BorderLayout(10, 10));
         ((JPanel) getContentPane()).setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
-        providerCombo = new JComboBox<>(OnlineClimateProvider.values());
+        providerCombo = new JComboBox<>(new OnlineClimateProvider[]{OnlineClimateProvider.OPEN_METEO});
         datasetCombo = new JComboBox<>();
         apiKeyLabel = new JLabel(I18n.t("API key:"));
         apiKeyField = new JPasswordField(ClimateSettings.getWorldCleanApiKey(), 28);
