@@ -779,6 +779,14 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemEsriNatGeo = createItem("Esri NatGeo World Map", AppIcons.basemapIcon());
         itemEsriNatGeo.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_NATGEO));
 
+        JMenuItem itemOpenTopo = createItem("OpenTopoMap — Topográfico", AppIcons.basemapIcon());
+        itemOpenTopo.setToolTipText("Mapa topográfico libre con curvas de nivel — Gratis, sin API key");
+        itemOpenTopo.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OPENTOPOMAP));
+
+        JMenuItem itemCartoDb = createItem("CartoDB Voyager — Claro", AppIcons.basemapIcon());
+        itemCartoDb.setToolTipText("Mapa base moderno y limpio — Gratis, sin API key");
+        itemCartoDb.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_CARTODB_VOYAGER));
+
         JMenuItem itemWms = createItem("Agregar WMS...", AppIcons.basemapIcon());
         itemWms.addActionListener(e -> AddWmsAction.openDialog());
 
@@ -802,6 +810,8 @@ public class MainMenuBar extends JMenuBar {
         menuOnline.add(itemEsriStreet);
         menuOnline.add(itemEsriGray);
         menuOnline.add(itemEsriNatGeo);
+        menuOnline.add(itemOpenTopo);
+        menuOnline.add(itemCartoDb);
         menuOnline.addSeparator();
         menuOnline.add(itemWms);
         menuOnline.add(itemWfs);

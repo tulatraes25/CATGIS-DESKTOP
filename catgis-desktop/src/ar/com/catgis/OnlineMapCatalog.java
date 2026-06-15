@@ -17,8 +17,18 @@ public final class OnlineMapCatalog {
     public static final String SOURCE_ESRI_WORLD_STREET = "esri-world-street";
     public static final String SOURCE_ESRI_LIGHT_GRAY = "esri-light-gray";
     public static final String SOURCE_ESRI_NATGEO = "esri-natgeo";
+    public static final String SOURCE_OPENTOPOMAP = "opentopomap";
+    public static final String SOURCE_CARTODB_VOYAGER = "cartodb-voyager";
+    /** Climate-specific source IDs */
+    public static final String SOURCE_NOAA_GFS_TEMP = "noaa-gfs-temperature";
+    public static final String SOURCE_COPERNICUS_GLO_30 = "copernicus-global-30m";
+    public static final String SOURCE_NASA_GIBS_VIIRS = "nasa-gibs-viirs";
+    public static final String SOURCE_NASA_GIBS_MODIS_AQUA = "nasa-gibs-modis-aqua";
+    public static final String SOURCE_OPENWEATHER = "openweather-temp";
+    public static final String SOURCE_WINDY_LIVE = "windy-live";
 
     private static final Map<String, OnlineRasterSource> SOURCES = new LinkedHashMap<>();
+    private static final Set<String> CLIMATE_SOURCE_IDS = new LinkedHashSet<>();
 
     static {
         register(new OnlineRasterSource(
@@ -111,6 +121,9 @@ public final class OnlineMapCatalog {
                 "EPSG:3857"
         ));
 
+        // Free community tile providers (no API key required)
+        registerFreeCommunitySources();
+
         // Climate WMS/WMTS/XYZ sources
         registerClimateSources();
     }
@@ -122,17 +135,40 @@ public final class OnlineMapCatalog {
     // actual data that can be analyzed (zonal stats, etc.).
     // =========================================================================
 
-    /** Climate-specific source IDs */
-    public static final String SOURCE_NOAA_GFS_TEMP = "noaa-gfs-temperature";
-    public static final String SOURCE_COPERNICUS_GLO_30 = "copernicus-global-30m";
-    public static final String SOURCE_NASA_GIBS_VIIRS = "nasa-gibs-viirs";
-    public static final String SOURCE_NASA_GIBS_MODIS_AQUA = "nasa-gibs-modis-aqua";
-    public static final String SOURCE_OPENWEATHER = "openweather-temp";
-    public static final String SOURCE_WINDY_LIVE = "windy-live";
-
-    private static final Set<String> CLIMATE_SOURCE_IDS = new LinkedHashSet<>();
-
     private OnlineMapCatalog() {
+    }
+
+    /**
+     * Register free community tile providers.
+     * These are XYZ tile services that require no API key and are
+     * suitable for terrain visualization and general-purpose mapping.
+     */
+    private static void registerFreeCommunitySources() {
+        register(new OnlineRasterSource(
+                SOURCE_OPENTOPOMAP,
+                "OpenTopoMap — Topográfico libre",
+                "OpenTopoMap",
+                OnlineServiceType.XYZ,
+                "https://tile.opentopomap.org/{z}/{x}/{y}.png",
+                0, 17, 256,
+                "© OpenStreetMap contributors, SRTM | opentopomap.org",
+                "https://opentopomap.org/about",
+                false,
+                "EPSG:3857"
+        ));
+
+        register(new OnlineRasterSource(
+                SOURCE_CARTODB_VOYAGER,
+                "CartoDB Voyager — Mapa base claro",
+                "CartoDB",
+                OnlineServiceType.XYZ,
+                "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+                0, 19, 256,
+                "© OpenStreetMap contributors, CartoDB",
+                "https://carto.com/basemaps",
+                false,
+                "EPSG:3857"
+        ));
     }
 
     /**
