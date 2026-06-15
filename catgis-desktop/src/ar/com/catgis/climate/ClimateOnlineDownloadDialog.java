@@ -9,6 +9,7 @@ import ar.com.catgis.AppErrorSupport;
 import ar.com.catgis.AppIcons;
 import ar.com.catgis.CRSDefinitions;
 import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.DialogKeyboardSupport;
 import ar.com.catgis.FileChooserSupport;
 import ar.com.catgis.I18n;
@@ -358,6 +359,13 @@ public class ClimateOnlineDownloadDialog extends JDialog {
             NotificationManager.warn(this, null, I18n.t("Debes elegir una fuente y una variable climática."));
             return;
         }
+        if (provider == OnlineClimateProvider.WORLDCLIM) {
+            NotificationManager.warn(this, I18n.t("WorldClim no disponible"),
+                    I18n.t("El servidor de WorldClim (biogeo.ucar.edu) no responde. "
+                            + "Use Open-Meteo como alternativa gratuita."));
+            CatgisLogger.warn("Clima online: WorldClim bloqueado (servidor caído)", null);
+            return;
+        }
         if (outputText.isBlank()) {
             NotificationManager.warn(this, null, I18n.t("Debes indicar un archivo de salida para los datos climáticos."));
             return;
@@ -441,6 +449,14 @@ public class ClimateOnlineDownloadDialog extends JDialog {
         AppErrorSupport.showErrorDialog(this, I18n.t("Clima online"), intro, ex);
     }
 
+    private Layer findLayerByName(String name) {
+        if (AppContext.project() == null) return null;
+        for (Layer l : AppContext.project().getLayers()) {
+            if (name.equals(l.getName())) return l;
+        }
+        return null;
+    }
+
     private void addRasterLayer(File file, String datasetName, String sourceLabel, String sourceCrsCode,
                                 ClimateDatasetOption dataset) throws Exception {
         if (file == null || !file.exists()) {
@@ -450,7 +466,17 @@ public class ClimateOnlineDownloadDialog extends JDialog {
             AppContext.setCurrentProject(new Project(I18n.t("Proyecto actual")));
         }
 
-        String layerName = datasetName + " - " + file.getName();
+        // Build unique layer name with timestamp to avoid duplicates
+        String providerLabel = sourceLabel != null ? " — " + sourceLabel : "";
+        String layerName = datasetName + providerLabel;
+
+        // Remove any existing layer with the same name (replace on re-download)
+        Layer existing = findLayerByName(layerName);
+        if (existing != null) {
+            AppContext.project().removeLayer(existing);
+            CatgisLogger.debug("Clima online: reemplazando capa existente '" + layerName + "'");
+        }
+
         RasterLayer layer = new RasterLayer(layerName, file.getAbsolutePath());
         layer.setSourceName(sourceLabel);
 
