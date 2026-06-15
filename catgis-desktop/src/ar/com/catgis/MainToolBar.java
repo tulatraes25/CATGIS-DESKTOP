@@ -25,47 +25,34 @@ public class MainToolBar extends JToolBar {
         setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
         setRollover(true);
 
+        // ================================================================
+        // 12-button simplified toolbar per UI_REORGANIZATION_PROPOSAL.md Table 3
+        // ================================================================
+
+        // --- Block 1: Project ---
         JButton btnAbrirProyecto = createButton(I18n.t("Abrir proyecto"), AppIcons.projectIcon());
         btnAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
 
         JButton btnAgregarCapa = createButton(I18n.t("Agregar capa al proyecto actual"), AppIcons.addLayerIcon());
         btnAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
 
-        JButton btnNuevaCapaVectorial = createButton(I18n.t("Crear nueva capa vectorial"), AppIcons.pointIcon());
-        btnNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
-
-        JButton btnTablaPuntos = createButton(I18n.t("Cargar tabla externa"), AppIcons.importTableIcon());
-        btnTablaPuntos.addActionListener(e -> OpenTablePointsAction.openTablePoints());
-
         JButton btnGuardar = createButton(I18n.t("Guardar proyecto"), AppIcons.saveIcon());
         btnGuardar.addActionListener(e -> SaveProjectAction.saveProject());
 
-        JButton btnGuardarComo = createButton(I18n.t("Guardar proyecto como..."), AppIcons.attrCopyIcon());
-        btnGuardarComo.addActionListener(e -> SaveProjectAction.saveProjectAs());
+        add(createLabeledButton(btnAbrirProyecto, "Abrir"));
+        add(createLabeledButton(btnAgregarCapa, "Capa+"));
+        add(createLabeledButton(btnGuardar, "Guardar"));
+        addSeparator();
 
-        JButton btnSalvarVista = createButton(I18n.t("Salvar vista del mapa"), AppIcons.attrRefreshIcon());
-        btnSalvarVista.addActionListener(e -> SaveMapViewAction.saveCurrentView());
-
-        JButton btnModulos = createButton(I18n.t("Gestor de modulos"), AppIcons.toolboxIcon());
-        btnModulos.addActionListener(e -> ModuleManagerDialog.open());
-
+        // --- Block 2: Navigation ---
         JButton btnZoomMas = createButton(I18n.t("Acercar"), AppIcons.zoomInIcon());
         btnZoomMas.addActionListener(e -> AppContext.mapPanel().zoomIn());
 
         JButton btnZoomMenos = createButton(I18n.t("Alejar"), AppIcons.zoomOutIcon());
         btnZoomMenos.addActionListener(e -> AppContext.mapPanel().zoomOut());
 
-        JButton btnZoomCapa = createButton(I18n.t("Zoom a capa seleccionada"), AppIcons.zoomLayerIcon());
-        btnZoomCapa.addActionListener(e -> AppContext.mapPanel().zoomToSelectedLayerPublic());
-
         JButton btnZoomTodo = createButton(I18n.t("Zoom a todas las capas"), AppIcons.zoomAllIcon());
         btnZoomTodo.addActionListener(e -> AppContext.mapPanel().zoomToAllLayers());
-
-        JButton btnVistaAnterior = createButton(I18n.t("Vista anterior"), AppIcons.viewPreviousIcon());
-        btnVistaAnterior.addActionListener(e -> AppContext.mapPanel().zoomPrevious());
-
-        JButton btnVistaSiguiente = createButton(I18n.t("Vista siguiente"), AppIcons.viewNextIcon());
-        btnVistaSiguiente.addActionListener(e -> AppContext.mapPanel().zoomNext());
 
         JButton btnMover = createButton(I18n.t("Desplazar mapa"), AppIcons.panIcon());
         btnMover.addActionListener(e -> AppContext.mapPanel().enablePanMode());
@@ -73,14 +60,16 @@ public class MainToolBar extends JToolBar {
         JButton btnIdentificar = createButton(I18n.t("Consultar entidades"), AppIcons.identifyIcon());
         btnIdentificar.addActionListener(e -> AppContext.mapPanel().enableIdentifyMode());
 
-        JButton btnBuscarCoord = createButton(I18n.t("Buscar por coordenadas"), AppIcons.crsIcon());
-        btnBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
+        add(createLabeledButton(btnZoomMas, "\u2212"));
+        add(createLabeledButton(btnZoomMenos, "+"));
+        add(createLabeledButton(btnZoomTodo, "\u2316 Todo"));
+        add(createLabeledButton(btnMover, "\u270B Mover"));
+        add(createLabeledButton(btnIdentificar, "\u2139 Info"));
+        addSeparator();
 
+        // --- Block 3: Drawing ---
         JButton btnPunto = createButton(I18n.t("Dibujar puntos"), AppIcons.pointIcon());
         btnPunto.addActionListener(e -> AppContext.mapPanel().enableDrawPointMode());
-
-        JButton btnMultiPunto = createButton(I18n.t("Dibujar multipunto"), AppIcons.multiPointIcon());
-        btnMultiPunto.addActionListener(e -> AppContext.mapPanel().enableDrawMultiPointMode());
 
         JButton btnLinea = createButton(I18n.t("Dibujar lineas"), AppIcons.lineIcon());
         btnLinea.addActionListener(e -> AppContext.mapPanel().enableDrawLineMode());
@@ -88,13 +77,75 @@ public class MainToolBar extends JToolBar {
         JButton btnPoligono = createButton(I18n.t("Dibujar poligonos"), AppIcons.polygonIcon());
         btnPoligono.addActionListener(e -> AppContext.mapPanel().enableDrawPolygonMode());
 
+        add(createLabeledButton(btnPunto, "\u2022 Punto"));
+        add(createLabeledButton(btnLinea, "\u2215 L\u00EDnea"));
+        add(createLabeledButton(btnPoligono, "\u25AD Pol\u00EDgono"));
+        addSeparator();
+
+        // --- Block 4: CATMAP ---
+        JButton btnCatmap = createButton(I18n.t("Compositor cartografico CATMAP"), AppIcons.toolboxIcon());
+        btnCatmap.addActionListener(e -> MapLayoutComposerDialog.open());
+
+        add(createLabeledButton(btnCatmap, "\u229E CATMAP"));
+
+        // ================================================================
+        // HIDDEN — moved to menus per UI_REORGANIZATION_PROPOSAL.md
+        // Buttons created but not added to toolbar; ActionListeners
+        // preserved so they can be wired into menu items later.
+        // ================================================================
+
+        // hidden — moved to menu: Archivo
+        JButton btnGuardarComo = createButton(I18n.t("Guardar proyecto como..."), AppIcons.attrCopyIcon());
+        btnGuardarComo.addActionListener(e -> SaveProjectAction.saveProjectAs());
+
+        // hidden — moved to menu: Mapa Final
+        JButton btnSalvarVista = createButton(I18n.t("Salvar vista del mapa"), AppIcons.attrRefreshIcon());
+        btnSalvarVista.addActionListener(e -> SaveMapViewAction.saveCurrentView());
+
+        // hidden — moved to menu: Capas
+        JButton btnNuevaCapaVectorial = createButton(I18n.t("Crear nueva capa vectorial"), AppIcons.pointIcon());
+        btnNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
+
+        JButton btnTablaPuntos = createButton(I18n.t("Cargar tabla externa"), AppIcons.importTableIcon());
+        btnTablaPuntos.addActionListener(e -> OpenTablePointsAction.openTablePoints());
+
+        JButton btnZoomCapa = createButton(I18n.t("Zoom a capa seleccionada"), AppIcons.zoomLayerIcon());
+        btnZoomCapa.addActionListener(e -> AppContext.mapPanel().zoomToSelectedLayerPublic());
+
+        JButton btnVistaAnterior = createButton(I18n.t("Vista anterior"), AppIcons.viewPreviousIcon());
+        btnVistaAnterior.addActionListener(e -> AppContext.mapPanel().zoomPrevious());
+
+        JButton btnVistaSiguiente = createButton(I18n.t("Vista siguiente"), AppIcons.viewNextIcon());
+        btnVistaSiguiente.addActionListener(e -> AppContext.mapPanel().zoomNext());
+
+        JButton btnBuscarCoord = createButton(I18n.t("Buscar por coordenadas"), AppIcons.crsIcon());
+        btnBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
+
+        JButton btnTabla = createButton(I18n.t("Abrir tabla de atributos"), AppIcons.tableIcon());
+        btnTabla.addActionListener(e -> OpenAttributeTableAction.openAttributeTable());
+
+        JButton btnProjectCRS = createButton(I18n.t("Definir CRS del proyecto"), AppIcons.crsIcon());
+        btnProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
+
+        JButton btnCRS = createButton(I18n.t("Conversor de coordenadas"), AppIcons.attrCalculatorIcon());
+        btnCRS.addActionListener(e -> CoordinateConverterDialog.openDialog());
+
+        JButton btnMultiPunto = createButton(I18n.t("Dibujar multipunto"), AppIcons.multiPointIcon());
+        btnMultiPunto.addActionListener(e -> AppContext.mapPanel().enableDrawMultiPointMode());
+
         JButton btnMedirDist = createButton(I18n.t("Medir distancia"), AppIcons.distanceIcon());
         btnMedirDist.addActionListener(e -> AppContext.mapPanel().enableMeasureDistanceMode());
 
         JButton btnMedirArea = createButton(I18n.t("Medir area"), AppIcons.areaIcon());
         btnMedirArea.addActionListener(e -> AppContext.mapPanel().enableMeasureAreaMode());
 
+        // hidden — moved to menu: Avanzado
+        JButton btnModulos = createButton(I18n.t("Gestor de modulos"), AppIcons.toolboxIcon());
+        btnModulos.addActionListener(e -> ModuleManagerDialog.open());
+
+        // hidden — shown dynamically during drawing/measurement
         JButton btnTerminar = createButton(I18n.t("Finalizar dibujo o medicion"), AppIcons.finishIcon());
+        btnTerminar.setVisible(false);
         btnTerminar.addActionListener(e -> {
             if (AppContext.mapPanel().isMeasurementActive()) {
                 AppContext.mapPanel().finishCurrentMeasurement();
@@ -104,6 +155,7 @@ public class MainToolBar extends JToolBar {
         });
 
         JButton btnCancelar = createButton(I18n.t("Cancelar dibujo o medicion"), AppIcons.cancelIcon());
+        btnCancelar.setVisible(false);
         btnCancelar.addActionListener(e -> {
             if (AppContext.mapPanel().isMeasurementActive()) {
                 AppContext.mapPanel().cancelCurrentMeasurement();
@@ -111,52 +163,21 @@ public class MainToolBar extends JToolBar {
                 AppContext.mapPanel().cancelCurrentDrawing();
             }
         });
+        add(btnTerminar);
+        add(btnCancelar);
 
-        JButton btnTabla = createButton(I18n.t("Abrir tabla de atributos"), AppIcons.tableIcon());
-        btnTabla.addActionListener(e -> OpenAttributeTableAction.openAttributeTable());
+        // hidden — custom-drawn buttons, kept invisible
+        JButton btnToggleStyle = createToggleStyleButton();
+        btnToggleStyle.setVisible(false);
+        add(btnToggleStyle);
 
-        JButton btnCRS = createButton(I18n.t("Conversor de coordenadas"), AppIcons.attrCalculatorIcon());
-        btnCRS.addActionListener(e -> CoordinateConverterDialog.openDialog());
+        JButton btnRasterCalc = createRasterCalcButton();
+        btnRasterCalc.setVisible(false);
+        add(btnRasterCalc);
 
-        JButton btnProjectCRS = createButton(I18n.t("Definir CRS del proyecto"), AppIcons.crsIcon());
-        btnProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
-
-        // Bloque global de proyecto y datos
-        add(createLabeledButton(btnAbrirProyecto, "Abrir"));
-        add(createLabeledButton(btnAgregarCapa, "Capa"));
-        add(createLabeledButton(btnNuevaCapaVectorial, "Nueva"));
-        add(createLabeledButton(btnGuardar, "Guardar"));
-        addSeparator();
-        // Bloque de navegacion del mapa
-        add(createLabeledButton(btnZoomMas, "+"));
-        add(createLabeledButton(btnZoomMenos, "-"));
-        add(createLabeledButton(btnZoomCapa, "Zoom capa"));
-        add(createLabeledButton(btnZoomTodo, "Todo"));
-        add(createLabeledButton(btnMover, "Mover"));
-        add(createLabeledButton(btnIdentificar, "Info"));
-        add(createLabeledButton(btnBuscarCoord, "Buscar"));
-        addSeparator();
-        // Bloque de dibujo
-        add(createLabeledButton(btnPunto, "Punto"));
-        add(createLabeledButton(btnLinea, "Linea"));
-        add(createLabeledButton(btnPoligono, "Poligono"));
-        add(createLabeledButton(btnMedirDist, "Distancia"));
-        add(createLabeledButton(btnMedirArea, "Area"));
-        add(createLabeledButton(btnTerminar, I18n.t("Terminar")));
-        add(createLabeledButton(btnCancelar, I18n.t("Cancelar")));
-        addSeparator();
-        // Bloque de herramientas
-        add(createLabeledButton(btnTabla, "Tabla"));
-        add(createLabeledButton(btnProjectCRS, "CRS"));
-        add(createLabeledButton(btnCRS, "Coord"));
-        add(createLabeledButton(btnModulos, "Modulos"));
-        addSeparator();
-        // Estilo rapido
-        add(createToggleStyleButton());
-        addSeparator();
-        // Analisis
-        add(createRasterCalcButton());
-        add(createAnalysisButton());
+        JButton btnAnalysis = createAnalysisButton();
+        btnAnalysis.setVisible(false);
+        add(btnAnalysis);
     }
 
     private JButton createButton(String tooltip, Icon icon) {

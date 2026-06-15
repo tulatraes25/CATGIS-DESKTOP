@@ -28,17 +28,12 @@ import ar.com.catgis.core.model.Layer;
 public class MainMenuBar extends JMenuBar {
 
     public MainMenuBar() {
-        JMenu menuArchivo = new JMenu(I18n.t("Archivo"));
-        JMenu menuVer = new JMenu(I18n.t("Ver"));
-        JMenu menuDatos = new JMenu(I18n.t("Datos"));
-        JMenu menuEdicion = new JMenu(I18n.t("Edicion"));
-        JMenu menuAnalisis = new JMenu(I18n.t("Analisis"));
-        JMenu menuSalida = new JMenu(I18n.t("Salida"));
-        JMenu menuHerramientas = new JMenu(I18n.t("Herramientas"));
-        JMenu menuAyuda = new JMenu(I18n.t("Ayuda"));
-        JMenu menuCad = new JMenu("CAD");
-        JMenu menuModulos = new ModulesMenu();
         int menuMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+
+        // =====================================================================
+        // 1. ARCHIVO
+        // =====================================================================
+        JMenu menuArchivo = new JMenu(I18n.t("Archivo"));
 
         JMenuItem itemNuevoProyecto = createItem("Nuevo proyecto", createNewProjectIcon());
         itemNuevoProyecto.addActionListener(e -> NewProjectAction.newProject());
@@ -46,52 +41,6 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemAbrirProyecto = createItem("Abrir proyecto", createOpenProjectIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_O, menuMask));
         itemAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
-
-        JMenuItem itemAgregarCapa = createItem("Agregar capa", createOpenLayerIcon());
-        itemAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
-
-        JMenuItem itemDemOnline = createItem("DEM online...", AppIcons.propertiesIcon());
-        itemDemOnline.addActionListener(e -> OnlineDemDownloadDialog.open());
-
-        JMenuItem itemCargarDem = createItem("Cargar datos DEM...", AppIcons.openIcon());
-        itemCargarDem.addActionListener(e -> DemLocalLoadAction.openDialog());
-
-        JMenuItem itemEscorrentias = createItem("Generar escorrentias...", AppIcons.drainageIcon());
-        itemEscorrentias.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            DrainageExtractionDialog.open();
-        });
-
-        JMenuItem itemAnalisisHidro = createItem("Analisis topohidrologico...", AppIcons.terrainAnalysisIcon());
-        itemAnalisisHidro.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            TerrainHydrologyAnalysisDialog.open();
-        });
-
-        JMenuItem itemCuencaOutlet = createItem("Cuenca desde outlet...", AppIcons.pointIcon());
-        itemCuencaOutlet.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            BasinFromOutletDialog.open();
-        });
-
-        JMenuItem itemNuevaCapaVectorial = createItem("Nueva capa vectorial", createNewVectorLayerIcon());
-        itemNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
-
-        JMenuItem itemAbrirTabla = createItem("Cargar tabla externa", AppIcons.importTableIcon());
-        itemAbrirTabla.addActionListener(e -> OpenTablePointsAction.openTablePoints());
-
-        JMenuItem itemCatserver = createItem("Conectar CATSERVER...", AppIcons.projectIcon());
-        itemCatserver.setToolTipText(I18n.t("Conectar CATSERVER a cualquier servidor PostgreSQL/PostGIS."));
-        itemCatserver.addActionListener(e -> PostgisDataSourceAction.openCatserverBrowser());
 
         JMenuItem itemGuardarProyecto = createItem("Guardar proyecto", AppIcons.saveIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_S, menuMask));
@@ -101,222 +50,33 @@ public class MainMenuBar extends JMenuBar {
                 KeyStroke.getKeyStroke(KeyEvent.VK_S, menuMask | InputEvent.SHIFT_DOWN_MASK));
         itemGuardarProyectoComo.addActionListener(e -> SaveProjectAction.saveProjectAs());
 
+        JMenu recentMenu = new JMenu("Proyectos recientes");
+        loadRecentFiles(recentMenu);
+
         JMenuItem itemSalvarVista = createItem("Salvar vista del mapa", createCameraIcon());
         itemSalvarVista.addActionListener(e -> SaveMapViewAction.saveCurrentView());
 
-        JMenuItem itemOsm = createItem("OpenStreetMap", AppIcons.basemapIcon());
-        itemOsm.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM));
-
-        JMenuItem itemEsri = createItem("Esri World Imagery", AppIcons.imageryIcon());
-        itemEsri.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY));
-
-        JMenuItem itemWfs = createItem("Agregar WFS...", AppIcons.tableIcon());
-        itemWfs.addActionListener(e -> AddWfsAction.openDialog());
-
-        JMenuItem itemSuelosOnline = createItem("Suelos online...", AppIcons.basemapIcon());
-        itemSuelosOnline.addActionListener(e -> OnlineSoilDownloadDialog.open());
-
-        JMenuItem itemClimaOnline = createItem("Clima online...", AppIcons.propertiesIcon());
-        itemClimaOnline.addActionListener(e -> ar.com.catgis.climate.ClimateOnlineDownloadDialog.open());
-
-        JMenuItem itemRecortarDem = createItem("Recortar DEM...", AppIcons.cutIcon());
-        itemRecortarDem.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            DemClipDialog.open();
-        });
-
-        JMenuItem itemCurvasNivel = createItem("Curvas de nivel...", AppIcons.lineIcon());
-        itemCurvasNivel.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            ContourGenerationDialog.open();
-        });
-
-        JMenuItem itemInundacion = createItem("Inundacion preliminar...", AppIcons.areaIcon());
-        itemInundacion.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            FloodScenarioDialog.open();
-        });
-
-        JMenuItem itemRiesgoBooleano = createItem("Riesgo booleano preliminar...", AppIcons.terrainAnalysisIcon());
-        itemRiesgoBooleano.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().size() < 2) {
-                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
-                        I18n.t("Necesitas al menos un DEM y un raster de suelos cargados para generar riesgo booleano preliminar."));
-                return;
-            }
-            BooleanRiskDialog.open();
-        });
-
-        JMenuItem itemPerfilTopografico = createItem("Perfil topografico...", AppIcons.distanceIcon());
-        itemPerfilTopografico.addActionListener(e -> {
-            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
-                TopographyWorkflowSupport.showNoRasterMessage();
-                return;
-            }
-            TopographicProfileDialog.open();
-        });
+        JMenuItem itemSalir = createItem("Salir", null);
+        itemSalir.addActionListener(e -> System.exit(0));
 
         menuArchivo.add(itemNuevoProyecto);
         menuArchivo.add(itemAbrirProyecto);
-        // Recent files submenu
-        JMenu recentMenu = new JMenu("Proyectos recientes");
-        loadRecentFiles(recentMenu);
-        menuArchivo.add(recentMenu);
         menuArchivo.addSeparator();
         menuArchivo.add(itemGuardarProyecto);
         menuArchivo.add(itemGuardarProyectoComo);
+        menuArchivo.addSeparator();
+        menuArchivo.add(recentMenu);
+        menuArchivo.addSeparator();
         menuArchivo.add(itemSalvarVista);
+        menuArchivo.addSeparator();
+        menuArchivo.add(itemSalir);
 
-        JMenuItem itemCompositorCartografico = createItem("Abrir CATMAP...", AppIcons.projectIcon());
-        itemCompositorCartografico.addActionListener(e -> MapLayoutComposerDialog.open());
+        // =====================================================================
+        // 2. EDITAR
+        // =====================================================================
+        JMenu menuEditar = new JMenu(I18n.t("Editar"));
 
-        JMenuItem itemSimbologiaCapa = createItem("Simbologia de capa seleccionada...", AppIcons.propertiesIcon());
-        itemSimbologiaCapa.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
-            if (layer == null) {
-                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("Selecciona una capa para editar su simbologia."));
-                return;
-            }
-            LayerPropertiesDialog.open(layer);
-        });
-
-        JMenuItem itemTematicaCampo = createItem("Simbologia por campo...", AppIcons.propertiesIcon());
-        itemTematicaCampo.addActionListener(e -> {
-            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
-            if (layer == null) {
-                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null, I18n.t("Selecciona una capa vectorial."));
-                return;
-            }
-            CategorizedSymbologyDialog.open(layer);
-        });
-
-        menuDatos.add(itemAgregarCapa);
-        menuDatos.add(itemNuevaCapaVectorial);
-        menuDatos.add(itemAbrirTabla);
-        menuDatos.addSeparator();
-        menuDatos.add(itemCatserver);
-        menuDatos.add(itemWfs);
-        menuDatos.addSeparator();
-        menuDatos.add(itemOsm);
-        menuDatos.add(itemEsri);
-        menuDatos.addSeparator();
-        menuDatos.add(itemDemOnline);
-        menuDatos.add(itemCargarDem);
-        menuDatos.add(itemSuelosOnline);
-        menuDatos.add(itemClimaOnline);
-
-        menuAnalisis.add(itemRecortarDem);
-        menuAnalisis.add(itemCurvasNivel);
-        menuAnalisis.add(itemEscorrentias);
-        menuAnalisis.add(itemAnalisisHidro);
-        menuAnalisis.add(itemCuencaOutlet);
-        menuAnalisis.add(itemInundacion);
-        menuAnalisis.add(itemRiesgoBooleano);
-        menuAnalisis.add(itemPerfilTopografico);
-        menuAnalisis.addSeparator();
-        // Topology validation
-        JMenuItem itemTopologyNoGaps = createItem("Validar gaps entre polígonos", null);
-        itemTopologyNoGaps.addActionListener(e -> runTopologyValidation("NO_GAPS"));
-        menuAnalisis.add(itemTopologyNoGaps);
-        JMenuItem itemTopologyNoOverlaps = createItem("Validar superposiciones", null);
-        itemTopologyNoOverlaps.addActionListener(e -> runTopologyValidation("NO_OVERLAPS"));
-        menuAnalisis.add(itemTopologyNoOverlaps);
-        JMenuItem itemTopologyNoSelfInt = createItem("Validar geometrías inválidas", null);
-        itemTopologyNoSelfInt.addActionListener(e -> runTopologyValidation("NO_SELF_INTERSECTION"));
-        menuAnalisis.add(itemTopologyNoSelfInt);
-        JMenuItem itemTopologyLineConn = createItem("Validar conectividad de líneas", null);
-        itemTopologyLineConn.addActionListener(e -> runTopologyValidation("NO_DANGLES"));
-        menuAnalisis.add(itemTopologyLineConn);
-        menuAnalisis.addSeparator();
-
-        JMenuItem itemGeoAnalyzer = createItem("Analizador GEO (un clic)...", AppIcons.terrainAnalysisIcon());
-        itemGeoAnalyzer.addActionListener(e ->
-            ar.com.catgis.climate.UnifiedAnalysisDialog.open(MainMenuBar.this));
-        menuAnalisis.add(itemGeoAnalyzer);
-
-        JMenuItem itemNetwork = createItem("Analisis de red...", null);
-        itemNetwork.addActionListener(e -> NetworkAnalysisDialog.open());
-        menuAnalisis.add(itemNetwork);
-
-        JMenuItem itemPgRouting = createItem("pgRouting (PostGIS)...", null);
-        itemPgRouting.addActionListener(e -> PgRoutingDialog.open());
-        menuAnalisis.add(itemPgRouting);
-
-        JMenuItem itemHillshade = createItem("Hillshade / Sombreado...", null);
-        itemHillshade.addActionListener(e -> HillshadeDialog.open());
-        menuAnalisis.add(itemHillshade);
-
-        JMenuItem itemWhitebox = createItem("WhiteboxTools (terrain/hydro)...", null);
-        itemWhitebox.addActionListener(e -> WhiteboxToolDialog.open());
-        menuAnalisis.add(itemWhitebox);
-
-        JMenuItem itemSpectral = createItem("Indices espectrales (NDVI/NDWI)...", null);
-        itemSpectral.addActionListener(e -> SpectralIndexDialog.open());
-        menuAnalisis.add(itemSpectral);
-
-        JMenuItem itemH3Binning = createItem("H3 hexagonal binning...", null);
-        itemH3Binning.addActionListener(e -> H3BinningDialog.open());
-        menuAnalisis.add(itemH3Binning);
-
-        JMenuItem itemBatch = createItem("Procesamiento por lotes...", null);
-        itemBatch.addActionListener(e -> BatchProcessorDialog.open());
-        menuAnalisis.add(itemBatch);
-
-        JMenuItem itemWcs = createItem("WCS - Descargar coberturas...", null);
-        itemWcs.addActionListener(e -> WcsDialog.open());
-        menuAnalisis.add(itemWcs);
-
-        JMenuItem itemStac = createItem("STAC - Catalogo de assets...", null);
-        itemStac.addActionListener(e -> StacDialog.open());
-        menuAnalisis.add(itemStac);
-
-        JMenuItem itemSmileML = createItem("Clasificacion ML (Smile)...", null);
-        itemSmileML.addActionListener(e -> SmileClassificationDialog.open());
-        menuAnalisis.add(itemSmileML);
-
-        menuSalida.add(itemCompositorCartografico);
-        menuSalida.add(itemSimbologiaCapa);
-        menuSalida.add(itemTematicaCampo);
-
-        JMenuItem itemExportKml = createItem("Exportar capa a KML...", null);
-        itemExportKml.addActionListener(e -> {
-            Layer layer = AppContext.mapPanel() != null
-                    ? AppContext.mapPanel().getSelectedLayerRef()
-                    : null;
-            if (layer != null) KmlExportEngine.exportLayerWithDialog(MainMenuBar.this, layer);
-        });
-        menuSalida.add(itemExportKml);
-
-        JMenuItem itemExportSld = createItem("Exportar capa a SLD...", null);
-        itemExportSld.addActionListener(e -> {
-            Layer layer = AppContext.mapPanel() != null
-                    ? AppContext.mapPanel().getSelectedLayerRef()
-                    : null;
-            if (layer != null) {
-                JFileChooser chooser = new JFileChooser();
-                chooser.setSelectedFile(new java.io.File(layer.getName() + ".sld"));
-                if (chooser.showSaveDialog(MainMenuBar.this) == JFileChooser.APPROVE_OPTION) {
-                    try {
-                        ar.com.catgis.sld.SldSupport.exportToFile(layer, chooser.getSelectedFile());
-                    } catch (Exception ex) {
-                        NotificationManager.error(MainMenuBar.this,
-                                "Error", "Error al exportar SLD: " + ex.getMessage());
-                    }
-                }
-            }
-        });
-        menuSalida.add(itemExportSld);
-
-        JMenuItem itemCortar = createItem("Cortar selección", AppIcons.cutIcon(),
+        JMenuItem itemCortar = createItem("Cortar", AppIcons.cutIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_X, menuMask));
         itemCortar.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
@@ -324,7 +84,7 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
-        JMenuItem itemCopiar = createItem("Copiar selección", AppIcons.attrCopyIcon(),
+        JMenuItem itemCopiar = createItem("Copiar", AppIcons.attrCopyIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_C, menuMask));
         itemCopiar.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
@@ -332,7 +92,7 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
-        JMenuItem itemPegar = createItem("Pegar en capa editable", AppIcons.openIcon(),
+        JMenuItem itemPegar = createItem("Pegar", AppIcons.openIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_V, menuMask));
         itemPegar.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
@@ -344,19 +104,7 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
-        JMenuItem itemCopiarACapaEditable = createItem("Copiar selección a capa editable", AppIcons.attrAssignIcon(),
-                KeyStroke.getKeyStroke(KeyEvent.VK_V, menuMask | InputEvent.SHIFT_DOWN_MASK));
-        itemCopiarACapaEditable.addActionListener(e -> {
-            if (AppContext.mapPanel() != null) {
-                Layer layer = getPreferredVectorLayer();
-                if (layer != null) {
-                    AppContext.mapPanel().prepareLayerForEditing(layer);
-                }
-                AppContext.mapPanel().copySelectedFeaturesToEditingLayer();
-            }
-        });
-
-        JMenuItem itemBorrar = createItem("Borrar selección", AppIcons.removeIcon(),
+        JMenuItem itemBorrar = createItem("Borrar", AppIcons.removeIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
         itemBorrar.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
@@ -404,7 +152,46 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
-        JMenuItem itemGuardarEdicion = createItem("Guardar cambios de edición", AppIcons.saveIcon(),
+        JMenuItem itemUnirElementos = createItem("Unir elementos", AppIcons.saveIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_J, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemUnirElementos.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().mergeSelectedFeatures();
+            }
+        });
+
+        JMenuItem itemExplotar = createItem("Explotar entidades", AppIcons.exportIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_E, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemExplotar.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().explodeSelectedFeatures();
+            }
+        });
+
+        JMenuItem itemCopiarACapaEditable = createItem("Copiar a editable", AppIcons.attrAssignIcon(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_V, menuMask | InputEvent.SHIFT_DOWN_MASK));
+        itemCopiarACapaEditable.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                Layer layer = getPreferredVectorLayer();
+                if (layer != null) {
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
+                }
+                AppContext.mapPanel().copySelectedFeaturesToEditingLayer();
+            }
+        });
+
+        JMenuItem itemPegarEnEditable = createItem("Pegar en editable", AppIcons.openIcon());
+        itemPegarEnEditable.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                Layer layer = getPreferredVectorLayer();
+                if (layer != null) {
+                    AppContext.mapPanel().prepareLayerForEditing(layer);
+                }
+                AppContext.mapPanel().pasteCopiedFeatures();
+            }
+        });
+
+        JMenuItem itemGuardarEdicion = createItem("Guardar cambios", AppIcons.saveIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_G, menuMask));
         itemGuardarEdicion.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
@@ -427,47 +214,13 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
-        JMenuItem itemUnirElementos = createItem("Unir elementos seleccionados", AppIcons.saveIcon(),
-                KeyStroke.getKeyStroke(KeyEvent.VK_J, menuMask | InputEvent.SHIFT_DOWN_MASK));
-        itemUnirElementos.addActionListener(e -> {
-            if (AppContext.mapPanel() != null) {
-                AppContext.mapPanel().mergeSelectedFeatures();
-            }
-        });
-
-        JMenuItem itemExplotar = createItem("Explotar entidades seleccionadas", AppIcons.exportIcon(),
-                KeyStroke.getKeyStroke(KeyEvent.VK_E, menuMask | InputEvent.SHIFT_DOWN_MASK));
-        itemExplotar.addActionListener(e -> {
-            if (AppContext.mapPanel() != null) {
-                AppContext.mapPanel().explodeSelectedFeatures();
-            }
-        });
+        // CAD submenu
+        JMenu menuCad = new JMenu("CAD");
 
         JMenuItem itemContinuarLinea = createItem("Continuar linea", AppIcons.lineIcon());
         itemContinuarLinea.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
                 AppContext.mapPanel().enableContinueLineMode();
-            }
-        });
-
-        JMenuItem itemRectangulo = createItem("Rectangulo", AppIcons.rectangleIcon());
-        itemRectangulo.addActionListener(e -> {
-            if (AppContext.mapPanel() != null) {
-                AppContext.mapPanel().enableDrawRectangleMode();
-            }
-        });
-
-        JMenuItem itemCirculo = createItem("Circulo", AppIcons.circleIcon());
-        itemCirculo.addActionListener(e -> {
-            if (AppContext.mapPanel() != null) {
-                AppContext.mapPanel().enableDrawCircleMode();
-            }
-        });
-
-        JMenuItem itemCirculo3P = createItem("Circulo por 3 puntos", AppIcons.circleThreePointsIcon());
-        itemCirculo3P.addActionListener(e -> {
-            if (AppContext.mapPanel() != null) {
-                AppContext.mapPanel().enableDrawCircleThreePointMode();
             }
         });
 
@@ -499,8 +252,26 @@ public class MainMenuBar extends JMenuBar {
             }
         });
 
-        JMenuItem itemCadIntegration = createItem("Integracion DWG / CAD...", AppIcons.propertiesIcon());
-        itemCadIntegration.addActionListener(e -> CadIntegrationDialog.open());
+        JMenuItem itemRectanguloCad = createItem("Rectangulo", AppIcons.rectangleIcon());
+        itemRectanguloCad.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawRectangleMode();
+            }
+        });
+
+        JMenuItem itemCirculo = createItem("Circulo", AppIcons.circleIcon());
+        itemCirculo.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawCircleMode();
+            }
+        });
+
+        JMenuItem itemCirculo3P = createItem("Circulo por 3 puntos", AppIcons.circleThreePointsIcon());
+        itemCirculo3P.addActionListener(e -> {
+            if (AppContext.mapPanel() != null) {
+                AppContext.mapPanel().enableDrawCircleThreePointMode();
+            }
+        });
 
         JMenuItem itemCadGeoref = createItem("Georreferenciar capa CAD seleccionada...", AppIcons.crsIcon());
         itemCadGeoref.addActionListener(e -> {
@@ -514,13 +285,16 @@ public class MainMenuBar extends JMenuBar {
             CadWorkflowSupport.openCadInternalLayers(CatgisDesktopApp.getMainFrameSafe(), layer);
         });
 
+        JMenuItem itemCadIntegration = createItem("Integracion DWG / CAD...", AppIcons.propertiesIcon());
+        itemCadIntegration.addActionListener(e -> CadIntegrationDialog.open());
+
         menuCad.add(itemContinuarLinea);
         menuCad.add(itemExtenderLinea);
         menuCad.add(itemAcortarLinea);
         menuCad.add(itemParalela);
         menuCad.add(itemPerpendicular);
         menuCad.addSeparator();
-        menuCad.add(itemRectangulo);
+        menuCad.add(itemRectanguloCad);
         menuCad.add(itemCirculo);
         menuCad.add(itemCirculo3P);
         menuCad.addSeparator();
@@ -528,25 +302,83 @@ public class MainMenuBar extends JMenuBar {
         menuCad.add(itemCadInternalLayers);
         menuCad.add(itemCadIntegration);
 
-        menuEdicion.add(itemCortar);
-        menuEdicion.add(itemCopiar);
-        menuEdicion.add(itemCopiarACapaEditable);
-        menuEdicion.add(itemPegar);
-        menuEdicion.add(itemBorrar);
-        menuEdicion.addSeparator();
-        menuEdicion.add(itemDeshacer);
-        menuEdicion.add(itemRehacer);
-        menuEdicion.addSeparator();
-        menuEdicion.add(itemMoverSeleccion);
-        menuEdicion.add(itemCortarGeometria);
-        menuEdicion.add(itemUnirVertices);
-        menuEdicion.add(menuCad);
-        menuEdicion.add(itemUnirElementos);
-        menuEdicion.add(itemExplotar);
-        menuEdicion.addSeparator();
-        menuEdicion.add(itemGuardarEdicion);
-        menuEdicion.add(itemTerminarEdicion);
-        menuEdicion.add(itemCancelarEdicion);
+        menuEditar.add(itemCortar);
+        menuEditar.add(itemCopiar);
+        menuEditar.add(itemPegar);
+        menuEditar.add(itemBorrar);
+        menuEditar.addSeparator();
+        menuEditar.add(itemDeshacer);
+        menuEditar.add(itemRehacer);
+        menuEditar.addSeparator();
+        menuEditar.add(itemMoverSeleccion);
+        menuEditar.add(itemCortarGeometria);
+        menuEditar.add(itemUnirVertices);
+        menuEditar.add(itemUnirElementos);
+        menuEditar.add(itemExplotar);
+        menuEditar.addSeparator();
+        menuEditar.add(itemCopiarACapaEditable);
+        menuEditar.add(itemPegarEnEditable);
+        menuEditar.addSeparator();
+        menuEditar.add(itemGuardarEdicion);
+        menuEditar.add(itemTerminarEdicion);
+        menuEditar.add(itemCancelarEdicion);
+        menuEditar.addSeparator();
+        menuEditar.add(menuCad);
+
+        // =====================================================================
+        // 3. CAPAS
+        // =====================================================================
+        JMenu menuCapas = new JMenu(I18n.t("Capas"));
+
+        JMenuItem itemAgregarCapa = createItem("Agregar capa", createOpenLayerIcon());
+        itemAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
+
+        JMenuItem itemQuitarCapa = createItem("Quitar capa", AppIcons.removeIcon());
+        itemQuitarCapa.addActionListener(e -> {
+            Layer layer = AppContext.getSelectedLayer();
+            if (layer != null && AppContext.mapPanel() != null) {
+                AppContext.mapPanel().removeLayer(layer);
+            } else {
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Selecciona una capa para quitar."));
+            }
+        });
+
+        JMenuItem itemSubirCapa = createItem("Subir capa", AppIcons.upIcon());
+        itemSubirCapa.addActionListener(e -> {
+            Layer layer = AppContext.getSelectedLayer();
+            if (layer != null && AppContext.mapPanel() != null) {
+                AppContext.mapPanel().moveLayerUp(layer);
+            }
+        });
+
+        JMenuItem itemBajarCapa = createItem("Bajar capa", AppIcons.downIcon());
+        itemBajarCapa.addActionListener(e -> {
+            Layer layer = AppContext.getSelectedLayer();
+            if (layer != null && AppContext.mapPanel() != null) {
+                AppContext.mapPanel().moveLayerDown(layer);
+            }
+        });
+
+        JMenuItem itemPropiedadesCapa = createItem("Propiedades de capa...", AppIcons.propertiesIcon());
+        itemPropiedadesCapa.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
+            if (layer == null) {
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Selecciona una capa para ver sus propiedades."));
+                return;
+            }
+            LayerPropertiesDialog.open(layer);
+        });
+
+        JMenuItem itemNuevaCapaVectorial = createItem("Nueva capa vectorial", createNewVectorLayerIcon());
+        itemNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
+
+        JMenuItem itemAbrirTabla = createItem("Cargar tabla externa", AppIcons.importTableIcon());
+        itemAbrirTabla.addActionListener(e -> OpenTablePointsAction.openTablePoints());
+
+        JMenuItem itemRenombrarProyecto = createItem("Renombrar proyecto", AppIcons.renameIcon());
+        itemRenombrarProyecto.addActionListener(e -> CatgisDesktopApp.renameCurrentProject());
 
         JMenuItem itemZoomMas = createItem("Zoom +", AppIcons.zoomInIcon());
         itemZoomMas.addActionListener(e -> AppContext.mapPanel().zoomIn());
@@ -566,29 +398,17 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemVistaSiguiente = createItem("Vista siguiente", AppIcons.viewNextIcon());
         itemVistaSiguiente.addActionListener(e -> AppContext.mapPanel().zoomNext());
 
-        menuVer.add(itemZoomMas);
-        menuVer.add(itemZoomMenos);
-        menuVer.addSeparator();
-        menuVer.add(itemZoomCapa);
-        menuVer.add(itemZoomTodo);
-        menuVer.addSeparator();
-        menuVer.add(itemVistaAnterior);
-        menuVer.add(itemVistaSiguiente);
-
         JMenuItem itemMover = createItem("Mover", AppIcons.panIcon());
         itemMover.addActionListener(e -> AppContext.mapPanel().enablePanMode());
 
         JMenuItem itemIdentificar = createItem("Identificar", AppIcons.identifyIcon());
         itemIdentificar.addActionListener(e -> AppContext.mapPanel().enableIdentifyMode());
 
-        JMenuItem itemBuscarCoord = createItem("Buscar por coordenadas", createSearchXYIcon());
+        JMenuItem itemBuscarCoord = createItem("Buscar coordenadas", createSearchXYIcon());
         itemBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
 
         JMenuItem itemPunto = createItem("Dibujar punto", AppIcons.pointIcon());
         itemPunto.addActionListener(e -> AppContext.mapPanel().enableDrawPointMode());
-
-        JMenuItem itemMultiPunto = createItem("Dibujar multipunto", AppIcons.multiPointIcon());
-        itemMultiPunto.addActionListener(e -> AppContext.mapPanel().enableDrawMultiPointMode());
 
         JMenuItem itemLinea = createItem("Dibujar línea", AppIcons.lineIcon());
         itemLinea.addActionListener(e -> AppContext.mapPanel().enableDrawLineMode());
@@ -623,6 +443,9 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemTabla = createItem("Tabla de atributos", AppIcons.tableIcon());
         itemTabla.addActionListener(e -> OpenAttributeTableAction.openAttributeTable());
 
+        JMenuItem itemConsultas = createItem("Constructor de consultas", AppIcons.identifyIcon());
+        itemConsultas.addActionListener(e -> OpenAttributeTableAction.openQueryBuilderForSelectedLayer());
+
         JMenuItem itemCalculadoraCampos = createItem("Calculadora de campos", createCalculatorIcon());
         itemCalculadoraCampos.addActionListener(e -> OpenAttributeTableAction.openFieldCalculatorForSelectedLayer());
 
@@ -632,83 +455,437 @@ public class MainMenuBar extends JMenuBar {
         JMenuItem itemConversor = createItem("Conversor CRS / EPSG", createConverterIcon());
         itemConversor.addActionListener(e -> CoordinateConverterDialog.openDialog());
 
-        JMenuItem itemConsultas = createItem("Constructor de consultas", AppIcons.identifyIcon());
-        itemConsultas.addActionListener(e -> OpenAttributeTableAction.openQueryBuilderForSelectedLayer());
-
         JMenuItem itemProjectCRS = createItem("CRS del proyecto", createProjectCrsIcon());
         itemProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
 
-        JMenuItem itemRenombrarProyecto = createItem("Renombrar proyecto", AppIcons.renameIcon());
-        itemRenombrarProyecto.addActionListener(e -> CatgisDesktopApp.renameCurrentProject());
-
-        menuHerramientas.add(itemMover);
-        menuHerramientas.add(itemIdentificar);
-        menuHerramientas.add(itemBuscarCoord);
-        menuHerramientas.addSeparator();
-        JMenuItem itemRectanguloDibujo = createItem("Dibujar rectangulo", AppIcons.rectangleIcon());
-        itemRectanguloDibujo.addActionListener(e -> AppContext.mapPanel().enableDrawRectangleMode());
-
-        menuHerramientas.add(itemPunto);
-        menuHerramientas.add(itemMultiPunto);
-        menuHerramientas.add(itemLinea);
-        menuHerramientas.add(itemRectanguloDibujo);
-        menuHerramientas.add(itemPoligono);
-        menuHerramientas.addSeparator();
-        menuHerramientas.add(itemMedirDist);
-        menuHerramientas.add(itemMedirArea);
-        menuHerramientas.addSeparator();
-        menuHerramientas.add(itemTerminar);
-        menuHerramientas.add(itemCancelar);
-        menuHerramientas.addSeparator();
-        menuHerramientas.add(itemTabla);
-        menuHerramientas.add(itemConsultas);
-        menuHerramientas.add(itemCalculadoraCampos);
-        menuHerramientas.add(itemAsignarValor);
-        menuHerramientas.add(itemConversor);
-        menuHerramientas.addSeparator();
-        menuHerramientas.add(itemProjectCRS);
-
         JMenuItem itemCustomCrs = createItem("Definir CRS personalizado...", null);
         itemCustomCrs.addActionListener(e -> CustomCrsDialog.open());
-        menuHerramientas.add(itemCustomCrs);
 
-        menuHerramientas.add(itemRenombrarProyecto);
-        menuHerramientas.addSeparator();
-        menuHerramientas.add(menuModulos);
-        menuHerramientas.addSeparator();
-        // Scripting
+        menuCapas.add(itemAgregarCapa);
+        menuCapas.add(itemQuitarCapa);
+        menuCapas.add(itemSubirCapa);
+        menuCapas.add(itemBajarCapa);
+        menuCapas.add(itemPropiedadesCapa);
+        menuCapas.addSeparator();
+        menuCapas.add(itemNuevaCapaVectorial);
+        menuCapas.add(itemAbrirTabla);
+        menuCapas.add(itemRenombrarProyecto);
+        menuCapas.addSeparator();
+        menuCapas.add(itemZoomMas);
+        menuCapas.add(itemZoomMenos);
+        menuCapas.add(itemZoomCapa);
+        menuCapas.add(itemZoomTodo);
+        menuCapas.addSeparator();
+        menuCapas.add(itemVistaAnterior);
+        menuCapas.add(itemVistaSiguiente);
+        menuCapas.addSeparator();
+        menuCapas.add(itemMover);
+        menuCapas.add(itemIdentificar);
+        menuCapas.add(itemBuscarCoord);
+        menuCapas.addSeparator();
+        menuCapas.add(itemPunto);
+        menuCapas.add(itemLinea);
+        menuCapas.add(itemPoligono);
+        menuCapas.addSeparator();
+        menuCapas.add(itemMedirDist);
+        menuCapas.add(itemMedirArea);
+        menuCapas.add(itemTerminar);
+        menuCapas.add(itemCancelar);
+        menuCapas.addSeparator();
+        menuCapas.add(itemTabla);
+        menuCapas.add(itemConsultas);
+        menuCapas.add(itemCalculadoraCampos);
+        menuCapas.add(itemAsignarValor);
+        menuCapas.addSeparator();
+        menuCapas.add(itemConversor);
+        menuCapas.add(itemProjectCRS);
+        menuCapas.add(itemCustomCrs);
+
+        // =====================================================================
+        // 4. ANALISIS (with 6 submenus)
+        // =====================================================================
+        JMenu menuAnalisis = new JMenu(I18n.t("Análisis"));
+
+        // 4a. Relieve
+        JMenu menuRelieve = new JMenu(I18n.t("Relieve"));
+
+        JMenuItem itemPerfilTopografico = createItem("Perfil topográfico...", AppIcons.distanceIcon());
+        itemPerfilTopografico.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            TopographicProfileDialog.open();
+        });
+
+        JMenuItem itemCurvasNivel = createItem("Curvas de nivel...", AppIcons.lineIcon());
+        itemCurvasNivel.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            ContourGenerationDialog.open();
+        });
+
+        JMenuItem itemHillshade = createItem("Hillshade / Sombreado...", null);
+        itemHillshade.addActionListener(e -> HillshadeDialog.open());
+
+        JMenuItem itemPendiente = createItem("Pendiente...", null);
+        itemPendiente.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            TerrainHydrologyAnalysisDialog.open();
+        });
+
+        JMenuItem itemAspecto = createItem("Aspecto...", null);
+        itemAspecto.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            TerrainHydrologyAnalysisDialog.open();
+        });
+
+        JMenuItem itemVisibilidad = createItem("Visibilidad / Viewshed...", null);
+        itemVisibilidad.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            TerrainHydrologyAnalysisDialog.open();
+        });
+
+        JMenuItem itemRecortarDem = createItem("Recortar DEM...", AppIcons.cutIcon());
+        itemRecortarDem.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            DemClipDialog.open();
+        });
+
+        JMenuItem itemWhitebox = createItem("WhiteboxTools...", null);
+        itemWhitebox.addActionListener(e -> WhiteboxToolDialog.open());
+
+        JMenuItem itemProRaster = createItem("Pro Raster...", null);
+        itemProRaster.addActionListener(e -> {
+            NotificationManager.info(CatgisDesktopApp.getMainFrameSafe(), "Pro Raster",
+                    "Usa el menu contextual sobre una capa raster Pro para generar productos derivados.");
+        });
+
+        menuRelieve.add(itemPerfilTopografico);
+        menuRelieve.add(itemCurvasNivel);
+        menuRelieve.add(itemHillshade);
+        menuRelieve.addSeparator();
+        menuRelieve.add(itemPendiente);
+        menuRelieve.add(itemAspecto);
+        menuRelieve.add(itemVisibilidad);
+        menuRelieve.addSeparator();
+        menuRelieve.add(itemRecortarDem);
+        menuRelieve.add(itemWhitebox);
+        menuRelieve.addSeparator();
+        menuRelieve.add(itemProRaster);
+
+        // 4b. Drenaje
+        JMenu menuDrenaje = new JMenu(I18n.t("Drenaje"));
+
+        JMenuItem itemEscorrentias = createItem("Generar escorrentías...", AppIcons.drainageIcon());
+        itemEscorrentias.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            DrainageExtractionDialog.open();
+        });
+
+        JMenuItem itemAnalisisHidro = createItem("Análisis topohidrológico...", AppIcons.terrainAnalysisIcon());
+        itemAnalisisHidro.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            TerrainHydrologyAnalysisDialog.open();
+        });
+
+        JMenuItem itemCuencaOutlet = createItem("Cuenca desde outlet...", AppIcons.pointIcon());
+        itemCuencaOutlet.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            BasinFromOutletDialog.open();
+        });
+
+        JMenuItem itemInundacion = createItem("Inundación preliminar...", AppIcons.areaIcon());
+        itemInundacion.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
+                TopographyWorkflowSupport.showNoRasterMessage();
+                return;
+            }
+            FloodScenarioDialog.open();
+        });
+
+        menuDrenaje.add(itemEscorrentias);
+        menuDrenaje.add(itemAnalisisHidro);
+        menuDrenaje.add(itemCuencaOutlet);
+        menuDrenaje.add(itemInundacion);
+
+        // 4c. Ambiente
+        JMenu menuAmbiente = new JMenu(I18n.t("Ambiente"));
+
+        JMenuItem itemClimaOnline = createItem("Clima online...", AppIcons.propertiesIcon());
+        itemClimaOnline.addActionListener(e -> ar.com.catgis.climate.ClimateOnlineDownloadDialog.open());
+
+        JMenuItem itemSuelosOnline = createItem("Suelos online...", AppIcons.basemapIcon());
+        itemSuelosOnline.addActionListener(e -> OnlineSoilDownloadDialog.open());
+
+        JMenuItem itemGeoAnalyzer = createItem("Análisis unificado GEO...", AppIcons.terrainAnalysisIcon());
+        itemGeoAnalyzer.addActionListener(e ->
+            ar.com.catgis.climate.UnifiedAnalysisDialog.open(MainMenuBar.this));
+
+        JMenuItem itemRiesgoBooleano = createItem("Riesgo booleano preliminar...", AppIcons.terrainAnalysisIcon());
+        itemRiesgoBooleano.addActionListener(e -> {
+            if (TopographyWorkflowSupport.getAvailableRasterLayers().size() < 2) {
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Necesitas al menos un DEM y un raster de suelos cargados para generar riesgo booleano preliminar."));
+                return;
+            }
+            BooleanRiskDialog.open();
+        });
+
+        menuAmbiente.add(itemClimaOnline);
+        menuAmbiente.add(itemSuelosOnline);
+        menuAmbiente.add(itemGeoAnalyzer);
+        menuAmbiente.addSeparator();
+        menuAmbiente.add(itemRiesgoBooleano);
+
+        // 4d. Redes
+        JMenu menuRedes = new JMenu(I18n.t("Redes"));
+
+        JMenuItem itemNetwork = createItem("Análisis de red...", null);
+        itemNetwork.addActionListener(e -> NetworkAnalysisDialog.open());
+
+        JMenuItem itemPgRouting = createItem("pgRouting (PostGIS)...", null);
+        itemPgRouting.addActionListener(e -> PgRoutingDialog.open());
+
+        JMenuItem itemH3Binning = createItem("H3 hexagonal binning...", null);
+        itemH3Binning.addActionListener(e -> H3BinningDialog.open());
+
+        menuRedes.add(itemNetwork);
+        menuRedes.add(itemPgRouting);
+        menuRedes.add(itemH3Binning);
+
+        // 4e. Teledetección
+        JMenu menuTeledeteccion = new JMenu(I18n.t("Teledetección"));
+
+        JMenuItem itemSpectral = createItem("Índices espectrales (NDVI/NDWI)...", null);
+        itemSpectral.addActionListener(e -> SpectralIndexDialog.open());
+
+        JMenuItem itemSmileML = createItem("Clasificación ML (Smile)...", null);
+        itemSmileML.addActionListener(e -> SmileClassificationDialog.open());
+
+        JMenuItem itemRasterCalc = createItem("Calculadora raster...", null);
+        itemRasterCalc.addActionListener(e -> ar.com.catgis.analysis.raster.RasterCalculatorDialog.open());
+
+        JMenuItem itemBatch = createItem("Procesamiento por lotes...", null);
+        itemBatch.addActionListener(e -> BatchProcessorDialog.open());
+
+        menuTeledeteccion.add(itemSpectral);
+        menuTeledeteccion.add(itemSmileML);
+        menuTeledeteccion.add(itemRasterCalc);
+        menuTeledeteccion.add(itemBatch);
+
+        // 4f. Avanzado
+        JMenu menuAvanzado = new JMenu(I18n.t("Avanzado"));
+
+        // Topology
+        JMenu menuTopologia = new JMenu(I18n.t("Topología"));
+        JMenuItem itemTopologyNoGaps = createItem("Validar gaps entre polígonos", null);
+        itemTopologyNoGaps.addActionListener(e -> runTopologyValidation("NO_GAPS"));
+        menuTopologia.add(itemTopologyNoGaps);
+        JMenuItem itemTopologyNoOverlaps = createItem("Validar superposiciones", null);
+        itemTopologyNoOverlaps.addActionListener(e -> runTopologyValidation("NO_OVERLAPS"));
+        menuTopologia.add(itemTopologyNoOverlaps);
+        JMenuItem itemTopologyNoSelfInt = createItem("Validar geometrías inválidas", null);
+        itemTopologyNoSelfInt.addActionListener(e -> runTopologyValidation("NO_SELF_INTERSECTION"));
+        menuTopologia.add(itemTopologyNoSelfInt);
+        JMenuItem itemTopologyLineConn = createItem("Validar conectividad de líneas", null);
+        itemTopologyLineConn.addActionListener(e -> runTopologyValidation("NO_DANGLES"));
+        menuTopologia.add(itemTopologyLineConn);
+
+        JMenuItem itemGeoprocesamiento = createItem("Geoprocesamiento...", null);
+        itemGeoprocesamiento.addActionListener(e -> ar.com.catgis.analysis.vector.GeoprocessingAssistantDialog.open());
+
+        JMenuItem itemExportPostgis = createItem("Exportar capa a PostGIS...", AppIcons.exportIcon());
+        itemExportPostgis.addActionListener(e -> PostgisDataSourceAction.exportSelectedLayerToPostgis());
+
+        // Scripting (moved from old Herramientas)
         JMenu menuScripting = new JMenu("Scripting");
         JMenuItem itemRunScript = createItem("Ejecutar script Python...", null);
         itemRunScript.addActionListener(e -> runPythonScript());
         menuScripting.add(itemRunScript);
-        menuHerramientas.add(menuScripting);
 
-        JMenuItem itemVentanaPrincipal = createItem("Traer CATGIS al frente", AppIcons.projectIcon());
-        itemVentanaPrincipal.addActionListener(e -> {
-            javax.swing.JFrame frame = CatgisDesktopApp.getMainFrame();
-            if (frame != null) {
-                frame.setState(javax.swing.JFrame.NORMAL);
-                frame.setVisible(true);
-                frame.toFront();
-                frame.requestFocus();
+        // Modules (Plugins)
+        JMenu menuModulos = new ModulesMenu();
+
+        JMenuItem itemCatserver = createItem("Conectar CATSERVER...", AppIcons.projectIcon());
+        itemCatserver.setToolTipText(I18n.t("Conectar CATSERVER a cualquier servidor PostgreSQL/PostGIS."));
+        itemCatserver.addActionListener(e -> PostgisDataSourceAction.openCatserverBrowser());
+
+        menuAvanzado.add(menuTopologia);
+        menuAvanzado.add(itemGeoprocesamiento);
+        menuAvanzado.addSeparator();
+        menuAvanzado.add(itemCadIntegration);
+        menuAvanzado.add(itemCatserver);
+        menuAvanzado.add(itemExportPostgis);
+        menuAvanzado.addSeparator();
+        menuAvanzado.add(menuScripting);
+        menuAvanzado.add(menuModulos);
+
+        menuAnalisis.add(menuRelieve);
+        menuAnalisis.add(menuDrenaje);
+        menuAnalisis.add(menuAmbiente);
+        menuAnalisis.add(menuRedes);
+        menuAnalisis.add(menuTeledeteccion);
+        menuAnalisis.add(menuAvanzado);
+
+        // =====================================================================
+        // 5. ONLINE
+        // =====================================================================
+        JMenu menuOnline = new JMenu(I18n.t("Online"));
+
+        JMenuItem itemOsm = createItem("OpenStreetMap", AppIcons.basemapIcon());
+        itemOsm.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_OSM));
+
+        JMenuItem itemEsri = createItem("Esri World Imagery", AppIcons.imageryIcon());
+        itemEsri.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_IMAGERY));
+
+        JMenuItem itemEsriTopo = createItem("Esri World Topo", AppIcons.basemapIcon());
+        itemEsriTopo.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_TOPO));
+
+        JMenuItem itemEsriStreet = createItem("Esri World Street", AppIcons.basemapIcon());
+        itemEsriStreet.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_WORLD_STREET));
+
+        JMenuItem itemEsriGray = createItem("Esri Light Gray Canvas", AppIcons.basemapIcon());
+        itemEsriGray.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_LIGHT_GRAY));
+
+        JMenuItem itemEsriNatGeo = createItem("Esri NatGeo World Map", AppIcons.basemapIcon());
+        itemEsriNatGeo.addActionListener(e -> OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_ESRI_NATGEO));
+
+        JMenuItem itemWms = createItem("Agregar WMS...", AppIcons.basemapIcon());
+        itemWms.addActionListener(e -> AddWmsAction.openDialog());
+
+        JMenuItem itemWfs = createItem("Agregar WFS...", AppIcons.tableIcon());
+        itemWfs.addActionListener(e -> AddWfsAction.openDialog());
+
+        JMenuItem itemDemOnline = createItem("DEM online...", AppIcons.propertiesIcon());
+        itemDemOnline.addActionListener(e -> OnlineDemDownloadDialog.open());
+
+        JMenuItem itemWcs = createItem("WCS - Descargar coberturas...", null);
+        itemWcs.addActionListener(e -> WcsDialog.open());
+
+        JMenuItem itemStac = createItem("STAC - Catálogo de assets...", null);
+        itemStac.addActionListener(e -> StacDialog.open());
+
+        menuOnline.add(itemOsm);
+        menuOnline.add(itemEsri);
+        menuOnline.add(itemEsriTopo);
+        menuOnline.add(itemEsriStreet);
+        menuOnline.add(itemEsriGray);
+        menuOnline.add(itemEsriNatGeo);
+        menuOnline.addSeparator();
+        menuOnline.add(itemWms);
+        menuOnline.add(itemWfs);
+        menuOnline.add(itemWcs);
+        menuOnline.add(itemStac);
+        menuOnline.addSeparator();
+        menuOnline.add(itemDemOnline);
+        menuOnline.add(itemSuelosOnline);
+        menuOnline.add(itemClimaOnline);
+
+        // =====================================================================
+        // 6. MAPA FINAL
+        // =====================================================================
+        JMenu menuMapaFinal = new JMenu(I18n.t("Mapa Final"));
+
+        JMenuItem itemCompositorCartografico = createItem("Abrir CATMAP...", AppIcons.projectIcon());
+        itemCompositorCartografico.addActionListener(e -> MapLayoutComposerDialog.open());
+
+        JMenuItem itemSimbologiaCapa = createItem("Simbología de capa...", AppIcons.propertiesIcon());
+        itemSimbologiaCapa.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
+            if (layer == null) {
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Selecciona una capa para editar su simbología."));
+                return;
+            }
+            LayerPropertiesDialog.open(layer);
+        });
+
+        JMenuItem itemTematicaCampo = createItem("Simbología por campo...", AppIcons.propertiesIcon());
+        itemTematicaCampo.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
+            if (layer == null) {
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Selecciona una capa vectorial."));
+                return;
+            }
+            CategorizedSymbologyDialog.open(layer);
+        });
+
+        JMenuItem itemEtiquetas = createItem("Etiquetas...", AppIcons.labelsIcon());
+        itemEtiquetas.addActionListener(e -> {
+            Layer layer = CatgisDesktopApp.layersPanel != null ? AppContext.getSelectedLayer() : null;
+            if (layer == null) {
+                NotificationManager.warn(CatgisDesktopApp.getMainFrameSafe(), null,
+                        I18n.t("Selecciona una capa para configurar etiquetas."));
+                return;
+            }
+            LayerPropertiesDialog.open(layer);
+        });
+
+        JMenuItem itemExportKml = createItem("Exportar capa a KML...", null);
+        itemExportKml.addActionListener(e -> {
+            Layer layer = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getSelectedLayerRef()
+                    : null;
+            if (layer != null) KmlExportEngine.exportLayerWithDialog(MainMenuBar.this, layer);
+        });
+
+        JMenuItem itemExportSld = createItem("Exportar capa a SLD...", null);
+        itemExportSld.addActionListener(e -> {
+            Layer layer = AppContext.mapPanel() != null
+                    ? AppContext.mapPanel().getSelectedLayerRef()
+                    : null;
+            if (layer != null) {
+                JFileChooser chooser = new JFileChooser();
+                chooser.setSelectedFile(new java.io.File(layer.getName() + ".sld"));
+                if (chooser.showSaveDialog(MainMenuBar.this) == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        ar.com.catgis.sld.SldSupport.exportToFile(layer, chooser.getSelectedFile());
+                    } catch (Exception ex) {
+                        NotificationManager.error(MainMenuBar.this,
+                                "Error", "Error al exportar SLD: " + ex.getMessage());
+                    }
+                }
             }
         });
 
-        JMenuItem itemVentanaTabla = createItem("Tabla de atributos de la capa seleccionada", AppIcons.tableIcon());
-        itemVentanaTabla.addActionListener(e -> OpenAttributeTableAction.openAttributeTable());
+        menuMapaFinal.add(itemCompositorCartografico);
+        menuMapaFinal.addSeparator();
+        menuMapaFinal.add(itemSimbologiaCapa);
+        menuMapaFinal.add(itemTematicaCampo);
+        menuMapaFinal.add(itemEtiquetas);
+        menuMapaFinal.addSeparator();
+        menuMapaFinal.add(itemExportKml);
+        menuMapaFinal.add(itemExportSld);
 
-        JMenuItem itemVentanaConsultas = createItem("Constructor de consultas de la capa seleccionada", AppIcons.identifyIcon());
-        itemVentanaConsultas.addActionListener(e -> OpenAttributeTableAction.openQueryBuilderForSelectedLayer());
-
-        JMenuItem itemVentanaTablasAbiertas = createItem("Traer tablas abiertas al frente", AppIcons.tableIcon());
-        itemVentanaTablasAbiertas.addActionListener(e -> OpenAttributeTableAction.focusOpenTables());
-
-        menuVer.addSeparator();
-        menuVer.add(itemVentanaPrincipal);
-        menuVer.addSeparator();
-        menuVer.add(itemVentanaTabla);
-        menuVer.add(itemVentanaConsultas);
-        menuVer.add(itemVentanaTablasAbiertas);
+        // =====================================================================
+        // 7. AYUDA
+        // =====================================================================
+        JMenu menuAyuda = new JMenu(I18n.t("Ayuda"));
 
         JMenuItem itemPanelAyuda = createItem("Panel de ayuda", createHelpIcon(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
@@ -723,13 +900,15 @@ public class MainMenuBar extends JMenuBar {
         menuAyuda.addSeparator();
         menuAyuda.add(itemAcercaDe);
 
+        // =====================================================================
+        // Add menus to bar
+        // =====================================================================
         add(menuArchivo);
-        add(menuVer);
-        add(menuDatos);
-        add(menuEdicion);
+        add(menuEditar);
+        add(menuCapas);
         add(menuAnalisis);
-        add(menuSalida);
-        add(menuHerramientas);
+        add(menuOnline);
+        add(menuMapaFinal);
         add(menuAyuda);
     }
 
