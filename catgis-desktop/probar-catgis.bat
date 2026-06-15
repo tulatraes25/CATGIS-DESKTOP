@@ -16,5 +16,5 @@ if errorlevel 1 (
 
 echo [CATGIS] Validacion completa OK. Iniciando aplicacion...
 echo [CATGIS] Validacion completa OK. Iniciando aplicacion... >> "%LOG_FILE%"
-call gradlew.bat --no-daemon run >> "%LOG_FILE%" 2>&1
+start "CATGIS Desktop" gradlew.bat --no-daemon run
 exit /b 0
