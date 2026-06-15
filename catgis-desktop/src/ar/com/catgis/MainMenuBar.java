@@ -811,6 +811,25 @@ public class MainMenuBar extends JMenuBar {
         menuOnline.add(itemDemOnline);
         menuOnline.add(itemSuelosOnline);
         menuOnline.add(itemClimaOnline);
+        menuOnline.addSeparator();
+
+        // Climate visualization submenu
+        JMenu menuClimaVisual = new JMenu("Clima (satélite)");
+        menuClimaVisual.setToolTipText("Capas climáticas de visualización — datos satelitales NASA");
+
+        JMenuItem itemNasaViirs = createItem("NASA VIIRS — Color real", AppIcons.imageryIcon());
+        itemNasaViirs.setToolTipText("Imagen satelital diaria (Suomi-NPP) — Gratis, sin API key");
+        itemNasaViirs.addActionListener(e ->
+            OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_NASA_GIBS_VIIRS));
+
+        JMenuItem itemNasaModisSst = createItem("NASA MODIS — Temp. del mar", AppIcons.imageryIcon());
+        itemNasaModisSst.setToolTipText("Temperatura superficial del mar (MODIS Aqua) — Gratis, sin API key");
+        itemNasaModisSst.addActionListener(e ->
+            OnlineBaseMapAction.addBaseMap(OnlineMapCatalog.SOURCE_NASA_GIBS_MODIS_AQUA));
+
+        menuClimaVisual.add(itemNasaViirs);
+        menuClimaVisual.add(itemNasaModisSst);
+        menuOnline.add(menuClimaVisual);
 
         // =====================================================================
         // 6. MAPA FINAL

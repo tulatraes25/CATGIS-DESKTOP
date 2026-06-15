@@ -44,8 +44,10 @@ public final class FlatGeobufLoader {
 
     private static final GeometryFactory GEOM_FACTORY = new GeometryFactory();
 
-    // FlatGeobuf magic bytes as read by wololo library
-    private static final int FGB_MAGIC = 0x67666267;
+    // FlatGeobuf magic bytes as read by wololo library (legacy)
+    private static final int FGB_MAGIC_LEGACY = 0x67666267;
+    // Official FlatGeobuf spec magic: f g b 0x03 = LE 0x03626766
+    private static final int FGB_MAGIC_SPEC  = 0x03626766;
 
     // ---- Public API ----
 
@@ -81,7 +83,7 @@ public final class FlatGeobufLoader {
             }
             magicBuf.flip();
             int magic = magicBuf.getInt();
-            if (magic != FGB_MAGIC) {
+            if (magic != FGB_MAGIC_LEGACY && magic != FGB_MAGIC_SPEC) {
                 return ValidationResult.invalid(
                         "El archivo no es FlatGeobuf válido (magic incorrecto: 0x"
                                 + Integer.toHexString(magic) + ").");
