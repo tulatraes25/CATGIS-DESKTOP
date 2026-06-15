@@ -219,7 +219,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnLine = createToggleButton("Dibujar linea", AppIcons.lineIcon());
         btnLine.addActionListener(e -> activateDrawMode("LINE"));
 
-        btnContinueLine = createActionButton("Continuar edicion de linea", AppIcons.lineIcon());
+        btnContinueLine = createActionButton("Continuar edicion de linea", AppIcons.circleIcon());
         btnContinueLine.addActionListener(e -> {
             if (!ensureFeatureSelection("continuar la linea")) {
                 return;
@@ -300,7 +300,7 @@ public class FloatingVectorEditToolbar extends JPanel {
         btnCut = createActionButton("Dividir linea o cortar geometria", AppIcons.cutIcon());
         btnCut.addActionListener(e -> activateCutFeatureMode());
 
-        btnSplitPolygon = createActionButton("Dividir poligono", AppIcons.cutIcon());
+        btnSplitPolygon = createActionButton("Dividir poligono", AppIcons.toolboxIcon());
         btnSplitPolygon.addActionListener(e -> activateCutFeatureMode());
 
         btnHole = createActionButton("Crear agujero", AppIcons.holeIcon());
@@ -324,10 +324,10 @@ public class FloatingVectorEditToolbar extends JPanel {
             refreshState();
         });
 
-        btnAdjacentPolygon = createActionButton("Generar poligono adyacente", AppIcons.polygonIcon());
+        btnAdjacentPolygon = createActionButton("Generar poligono adyacente", AppIcons.holeIcon());
         btnAdjacentPolygon.addActionListener(e -> activateAdjacentPolygonMode());
 
-        btnMerge = createActionButton("Unir elementos", AppIcons.saveIcon());
+        btnMerge = createActionButton("Unir elementos", AppIcons.attrApplyIcon());
         btnMerge.addActionListener(e -> {
             if (AppContext.mapPanel() != null) {
                 AppContext.mapPanel().mergeSelectedFeatures();

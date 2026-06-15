@@ -28,10 +28,10 @@ public class MainToolBar extends JToolBar {
         JButton btnAbrirProyecto = createButton(I18n.t("Abrir proyecto"), AppIcons.projectIcon());
         btnAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
 
-        JButton btnAgregarCapa = createButton(I18n.t("Agregar capa al proyecto actual"), createOpenLayerIcon());
+        JButton btnAgregarCapa = createButton(I18n.t("Agregar capa al proyecto actual"), AppIcons.addLayerIcon());
         btnAgregarCapa.addActionListener(e -> AddLayerAction.openLayer());
 
-        JButton btnNuevaCapaVectorial = createButton(I18n.t("Crear nueva capa vectorial"), createNewVectorLayerIcon());
+        JButton btnNuevaCapaVectorial = createButton(I18n.t("Crear nueva capa vectorial"), AppIcons.pointIcon());
         btnNuevaCapaVectorial.addActionListener(e -> NewVectorLayerAction.createNewVectorLayer(null, CatgisDesktopApp.getMainFrameSafe()));
 
         JButton btnTablaPuntos = createButton(I18n.t("Cargar tabla externa"), AppIcons.importTableIcon());
@@ -43,10 +43,10 @@ public class MainToolBar extends JToolBar {
         JButton btnGuardarComo = createButton(I18n.t("Guardar proyecto como..."), AppIcons.attrCopyIcon());
         btnGuardarComo.addActionListener(e -> SaveProjectAction.saveProjectAs());
 
-        JButton btnSalvarVista = createButton(I18n.t("Salvar vista del mapa"), createCameraIcon());
+        JButton btnSalvarVista = createButton(I18n.t("Salvar vista del mapa"), AppIcons.attrRefreshIcon());
         btnSalvarVista.addActionListener(e -> SaveMapViewAction.saveCurrentView());
 
-        JButton btnModulos = createButton(I18n.t("Gestor de modulos"), AppIcons.propertiesIcon());
+        JButton btnModulos = createButton(I18n.t("Gestor de modulos"), AppIcons.toolboxIcon());
         btnModulos.addActionListener(e -> ModuleManagerDialog.open());
 
         JButton btnZoomMas = createButton(I18n.t("Acercar"), AppIcons.zoomInIcon());
@@ -73,7 +73,7 @@ public class MainToolBar extends JToolBar {
         JButton btnIdentificar = createButton(I18n.t("Consultar entidades"), AppIcons.identifyIcon());
         btnIdentificar.addActionListener(e -> AppContext.mapPanel().enableIdentifyMode());
 
-        JButton btnBuscarCoord = createButton(I18n.t("Buscar por coordenadas"), createSearchXYIcon());
+        JButton btnBuscarCoord = createButton(I18n.t("Buscar por coordenadas"), AppIcons.crsIcon());
         btnBuscarCoord.addActionListener(e -> GoToCoordinatesDialog.openDialog());
 
         JButton btnPunto = createButton(I18n.t("Dibujar puntos"), AppIcons.pointIcon());
@@ -115,10 +115,10 @@ public class MainToolBar extends JToolBar {
         JButton btnTabla = createButton(I18n.t("Abrir tabla de atributos"), AppIcons.tableIcon());
         btnTabla.addActionListener(e -> OpenAttributeTableAction.openAttributeTable());
 
-        JButton btnCRS = createButton(I18n.t("Conversor de coordenadas"), createConverterIcon());
+        JButton btnCRS = createButton(I18n.t("Conversor de coordenadas"), AppIcons.attrCalculatorIcon());
         btnCRS.addActionListener(e -> CoordinateConverterDialog.openDialog());
 
-        JButton btnProjectCRS = createButton(I18n.t("Definir CRS del proyecto"), createProjectCrsIcon());
+        JButton btnProjectCRS = createButton(I18n.t("Definir CRS del proyecto"), AppIcons.crsIcon());
         btnProjectCRS.addActionListener(e -> ProjectCRSDialog.openDialog());
 
         // Bloque global de proyecto y datos
