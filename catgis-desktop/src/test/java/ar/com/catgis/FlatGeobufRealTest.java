@@ -1,7 +1,7 @@
 package ar.com.catgis;
 
 import ar.com.catgis.data.vector.ShapefileData;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.locationtech.jts.geom.Coordinate;
@@ -18,24 +18,49 @@ import static org.junit.jupiter.api.Assertions.*;
  * Round-trip tests for FlatGeobufLoader with valid .fgb files
  * generated via ogr2ogr (OSGeo4W / GDAL).
  * <p>
- * Requires: GDAL ogr2ogr at C:\OSGeo4W64\bin\ogr2ogr.exe.
- * Tests skip silently if GDAL is not installed.
+ * Assumes GDAL < 3.13 — GDAL 3.13+ FlatGeobuf is incompatible with
+ * org.wololo:flatgeobuf:3.26.2 reader library (issue upstream).
  */
-@Disabled("GDAL >= 3.13 writes FlatGeobuf in official spec format incompatible with org.wololo:flatgeobuf:3.26.2 reader. Requires library update.")
 class FlatGeobufRealTest {
 
     private static final String OGR2OGR = "C:\\OSGeo4W64\\bin\\ogr2ogr.exe";
-
-    @TempDir
-    Path tempDir;
 
     private static boolean ogr2ogrAvailable() {
         return new File(OGR2OGR).exists();
     }
 
+    /** Check if GDAL version is compatible with wololo reader. */
+    private static boolean gdalCompatible() {
+        try {
+            Process p = new ProcessBuilder(OGR2OGR, "--version")
+                    .redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes());
+            p.waitFor();
+            // Parse "GDAL 3.13.1" → major.minor
+            int dot1 = out.indexOf('.');
+            int dot2 = out.indexOf('.', dot1 + 1);
+            if (dot1 < 0 || dot2 < 0) return true; // can't parse, assume compatible
+            int major = Integer.parseInt(out.substring(dot1 - 1, dot1).trim());
+            int minor = Integer.parseInt(out.substring(dot1 + 1, dot2));
+            return major < 3 || (major == 3 && minor < 13);
+        } catch (Exception e) {
+            if (e instanceof org.opentest4j.TestAbortedException) throw (RuntimeException) e;
+            return true; // can't check, assume compatible
+        }
+    }
+
+    private void assumeGdalCompatible() {
+        Assumptions.assumeTrue(gdalCompatible(),
+                "Skipped: GDAL >= 3.13 FlatGeobuf format incompatible with wololo reader library");
+    }
+
+    @TempDir
+    Path tempDir;
+
     @Test
     void loadSinglePolygonRoundtrip() throws Exception {
         if (!ogr2ogrAvailable()) return;
+        assumeGdalCompatible();
 
         File geojson = tempDir.resolve("test.geojson").toFile();
         Files.writeString(geojson.toPath(),
@@ -68,6 +93,7 @@ class FlatGeobufRealTest {
     @Test
     void validateFileAcceptsValidFgb() throws Exception {
         if (!ogr2ogrAvailable()) return;
+        assumeGdalCompatible();
 
         File geojson = tempDir.resolve("v.geojson").toFile();
         Files.writeString(geojson.toPath(),
@@ -88,6 +114,7 @@ class FlatGeobufRealTest {
     @Test
     void loadTwoPolygonsRoundtrip() throws Exception {
         if (!ogr2ogrAvailable()) return;
+        assumeGdalCompatible();
 
         File geojson = tempDir.resolve("two.geojson").toFile();
         Files.writeString(geojson.toPath(),
@@ -111,6 +138,7 @@ class FlatGeobufRealTest {
     @Test
     void loadEmptyFeaturesFile() throws Exception {
         if (!ogr2ogrAvailable()) return;
+        assumeGdalCompatible();
 
         File geojson = tempDir.resolve("empty.geojson").toFile();
         Files.writeString(geojson.toPath(),
