@@ -6,6 +6,9 @@ import ar.com.catgis.RasterLayer;
 import ar.com.catgis.climate.WindRoseRenderer;
 import ar.com.catgis.layout.*;
 
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
@@ -358,10 +361,7 @@ public final class LayoutExportEngine {
             org.apache.pdfbox.pdmodel.PDPageContentStream cs,
             String text, double pageWidthPt, double pageHeightPt) throws Exception {
         cs.saveGraphicsState();
-        java.lang.reflect.Field field =
-                org.apache.pdfbox.pdmodel.font.PDType1Font.class.getField("Helvetica");
-        org.apache.pdfbox.pdmodel.font.PDFont font =
-                (org.apache.pdfbox.pdmodel.font.PDFont) field.get(null);
+        PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
         cs.beginText();
         cs.setFont(font, 36f);
         cs.setNonStrokingColor(new Color(200, 200, 200, 60));
@@ -402,10 +402,25 @@ public final class LayoutExportEngine {
     }
 
     private static org.apache.pdfbox.pdmodel.font.PDFont documentFont(
-            org.apache.pdfbox.pdmodel.PDPageContentStream cs, String baseName) throws Exception {
-        // Return standard font by name using reflection on PDType1Font
-        java.lang.reflect.Field field = org.apache.pdfbox.pdmodel.font.PDType1Font.class.getField(baseName);
-        return (org.apache.pdfbox.pdmodel.font.PDFont) field.get(null);
+            org.apache.pdfbox.pdmodel.PDPageContentStream cs, String baseName) {
+        Standard14Fonts.FontName fontName = resolveBase14FontName(baseName);
+        return new PDType1Font(fontName);
+    }
+
+    private static Standard14Fonts.FontName resolveBase14FontName(String baseName) {
+        if (baseName == null || baseName.isBlank()) {
+            return Standard14Fonts.FontName.HELVETICA;
+        }
+        String key = baseName.trim()
+                .replace("BoldOblique", "Bold_Oblique")
+                .replace("BoldItalic", "Bold_Italic")
+                .toUpperCase()
+                .replace('-', '_');
+        try {
+            return Standard14Fonts.FontName.valueOf(key);
+        } catch (IllegalArgumentException ignored) {
+            return Standard14Fonts.FontName.HELVETICA;
+        }
     }
 
     /**

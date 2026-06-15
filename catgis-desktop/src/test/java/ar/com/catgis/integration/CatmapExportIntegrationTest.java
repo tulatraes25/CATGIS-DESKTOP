@@ -11,7 +11,6 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import javax.imageio.ImageIO;
@@ -34,9 +33,6 @@ class CatmapExportIntegrationTest {
     }
 
     @Test
-    @Disabled("PDFBox 3.x migration pending: PDType1Font reflection API removed. "
-            + "LayoutExportEngine.drawWatermark() needs rewrite to use Standard14Fonts. "
-            + "See LayoutExportEngine.java:362")
     void exportsLayoutToPngAndPdfHeadless() throws Exception {
         LayoutModel model = new LayoutModel();
 
