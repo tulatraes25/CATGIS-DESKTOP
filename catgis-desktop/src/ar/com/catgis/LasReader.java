@@ -203,7 +203,7 @@ public final class LasReader {
      */
     public static org.locationtech.jts.geom.Envelope getBounds(File file) throws Exception {
         LasHeader h = readHeader(file);
-        return new org.locationtech.jts.geom.Envelope(h.minX(), h.minY(), h.maxX(), h.maxY());
+        return new org.locationtech.jts.geom.Envelope(h.minX(), h.maxX(), h.minY(), h.maxY());
     }
 
     // --- I/O helpers ---
