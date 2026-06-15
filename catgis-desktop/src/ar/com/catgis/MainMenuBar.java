@@ -610,7 +610,7 @@ public class MainMenuBar extends JMenuBar {
         });
 
         JMenuItem itemCuencaOutlet = createItem("Cuencas...", AppIcons.pointIcon());
-        itemCuencaOutlet.setToolTipText("Delimitar cuenca desde punto de salida — Requiere GDAL");
+        itemCuencaOutlet.setToolTipText("Delimitar cuenca desde punto de salida — Requiere DEM raster + GDAL");
         itemCuencaOutlet.addActionListener(e -> {
             if (TopographyWorkflowSupport.getAvailableRasterLayers().isEmpty()) {
                 TopographyWorkflowSupport.showNoRasterMessage();
