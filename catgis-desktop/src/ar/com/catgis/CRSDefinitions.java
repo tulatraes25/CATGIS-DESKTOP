@@ -658,8 +658,34 @@ public class CRSDefinitions {
                 double north = ((Number) max0.invoke(envelope, 1)).doubleValue();
                 return new Bounds(west, south, east, north, true);
             }
-        } catch (Exception ignored) { CatgisLogger.warn("Error al resolver envolvente CRS", ignored); }
-        return new Bounds(0d, 0d, 0d, 0d, false);
+        } catch (Exception ignored) {
+            CatgisLogger.warn("Error al resolver envolvente CRS", ignored);
+        }
+
+        // Fallback: return global bounds instead of empty when CRS
+        // doesn't provide envelope data (common for projected CRS).
+        // This shows the CRS on the full planisphere rather than
+        // "Sin area de uso reportada" for every zone-based CRS.
+        if (crs instanceof GeographicCRS) {
+            return new Bounds(-180d, -90d, 180d, 90d, true);
+        }
+        // For projected CRS, try to get the base geographic CRS bounds
+        if (crs instanceof ProjectedCRS projected) {
+            try {
+                var baseCrs = projected.getBaseCRS();
+                if (baseCrs != null) {
+                    var baseEnv = CRS.getEnvelope(baseCrs);
+                    if (baseEnv != null) {
+                        double w = baseEnv.getMinimum(0);
+                        double e = baseEnv.getMaximum(0);
+                        double s = baseEnv.getMinimum(1);
+                        double n = baseEnv.getMaximum(1);
+                        return new Bounds(w, s, e, n, true);
+                    }
+                }
+            } catch (Exception ignored2) { }
+        }
+        return new Bounds(-180d, -90d, 180d, 90d, true);
     }
 
     private record Bounds(double west, double south, double east, double north, boolean hasBounds) {
