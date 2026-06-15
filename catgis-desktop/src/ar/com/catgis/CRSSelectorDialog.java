@@ -1152,26 +1152,29 @@ public class CRSSelectorDialog extends JDialog {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-                int pad = 14;
+                int pad = 10;
+                int headerH = 22;
+                int footerH = 20;
                 int w = Math.max(1, getWidth() - (pad * 2));
                 int h = Math.max(1, getHeight() - (pad * 2));
                 int x = pad;
                 int y = pad;
-                Rectangle mapRect = new Rectangle(x + 8, y + 26, Math.max(20, w - 16), Math.max(20, h - 44));
+                Rectangle mapRect = new Rectangle(x + 6, y + headerH, Math.max(20, w - 12), Math.max(20, h - headerH - footerH));
 
-                g2.setColor(new Color(239, 246, 255));
-                g2.fillRoundRect(x, y, w, h, 16, 16);
+                g2.setColor(new Color(248, 250, 252));
+                g2.fillRoundRect(x, y, w, h, 12, 12);
 
-                g2.setColor(new Color(203, 213, 225));
-                g2.setStroke(new BasicStroke(1.2f));
-                g2.drawRoundRect(x, y, w, h, 16, 16);
+                g2.setColor(new Color(180, 190, 205));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(x, y, w, h, 12, 12);
 
-                g2.setColor(new Color(226, 232, 240));
-                for (int i = 1; i < 6; i++) {
-                    int xx = x + Math.round((w / 6f) * i);
-                    int yy = y + Math.round((h / 6f) * i);
-                    g2.drawLine(xx, y + 6, xx, y + h - 6);
-                    g2.drawLine(x + 6, yy, x + w - 6, yy);
+                // Subtle grid
+                g2.setColor(new Color(215, 222, 232));
+                for (int i = 1; i < 7; i++) {
+                    int xx = x + Math.round((w / 7f) * i);
+                    int yy = y + Math.round(((h - headerH - footerH) / 5f) * i) + headerH;
+                    g2.drawLine(xx, y + headerH, xx, y + h - footerH);
+                    g2.drawLine(x + 4, yy, x + w - 4, yy);
                 }
 
                 // El recurso PNG se genera desde Natural Earth en coordenadas lon/lat equirectangulares.
@@ -1236,15 +1239,16 @@ public class CRSSelectorDialog extends JDialog {
             int ry2 = latToY(south, mapRect.y, mapRect.height);
             int left = Math.min(rx1, rx2);
             int top = Math.min(ry1, ry2);
-            int rw = Math.max(8, Math.abs(rx2 - rx1));
-            int rh = Math.max(8, Math.abs(ry2 - ry1));
+            int rw = Math.max(10, Math.abs(rx2 - rx1));
+            int rh = Math.max(10, Math.abs(ry2 - ry1));
 
             Graphics2D copy = (Graphics2D) g2.create();
             try {
-                copy.setColor(new Color(37, 99, 235, 64));
+                // Red fill with border for visibility
+                copy.setColor(new Color(220, 38, 38, 50));
                 copy.fillRoundRect(left, top, rw, rh, 10, 10);
-                copy.setColor(new Color(29, 78, 216, 230));
-                copy.setStroke(new BasicStroke(2.4f));
+                copy.setColor(new Color(185, 28, 28, 220));
+                copy.setStroke(new BasicStroke(2f));
                 copy.drawRoundRect(left, top, rw, rh, 10, 10);
 
                 int cx = left + rw / 2;
@@ -1386,12 +1390,12 @@ public class CRSSelectorDialog extends JDialog {
 
             Graphics2D copy = (Graphics2D) g2.create();
             try {
-                copy.setColor(new Color(255, 252, 242, 245));
+                copy.setColor(new Color(220, 215, 200, 240));
                 for (double[][] land : landMasses) {
                     fillContinent(copy, x, y, width, height, land);
                 }
-                copy.setColor(new Color(18, 24, 38, 230));
-                copy.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                copy.setColor(new Color(80, 80, 70, 230));
+                copy.setStroke(new BasicStroke(1.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 for (double[][] land : landMasses) {
                     drawContinentOutline(copy, x, y, width, height, land);
                 }
@@ -1399,9 +1403,9 @@ public class CRSSelectorDialog extends JDialog {
                 copy.dispose();
             }
 
-            g2.setColor(new Color(29, 78, 216, 210));
-            g2.setFont(g2.getFont().deriveFont(Font.BOLD, 11f));
-            g2.drawString(I18n.t("Planisferio equirectangular"), x + width - 166, y + height - 14);
+            g2.setColor(new Color(29, 78, 216, 180));
+            g2.setFont(g2.getFont().deriveFont(Font.BOLD, 10f));
+            g2.drawString(I18n.t("Planisferio equirectangular"), x + width - 156, y + height - 12);
         }
 
         private void fillContinent(Graphics2D g2, int x, int y, int width, int height, double[][] points) {
