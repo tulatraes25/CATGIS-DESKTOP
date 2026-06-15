@@ -9,6 +9,17 @@ import java.awt.geom.RoundRectangle2D
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 
+import org.gradle.internal.os.OperatingSystem
+
+def findGdalBin() {
+    def paths = ['C:\\OSGeo4W64\\bin', 'C:\\OSGeo4W\\bin',
+                 System.getenv('CATGIS_OSGEO4W') ? "${System.getenv('CATGIS_OSGEO4W')}\\bin" : null]
+    for (p in paths) {
+        if (p != null && new File(p, 'gdal_translate.exe').exists()) return p
+    }
+    return '' // not found — GDAL features won't work but app won't crash
+}
+
 plugins {
     id 'java'
     id 'application'
@@ -105,7 +116,8 @@ sourceSets {
 
 application {
     mainClass = 'ar.com.catgis.Main'
-    applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8']
+    applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8',
+                                 '-Djava.library.path=' + findGdalBin()]
 }
 
 tasks.withType(JavaCompile).configureEach {
