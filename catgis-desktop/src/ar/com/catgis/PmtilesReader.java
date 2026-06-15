@@ -66,16 +66,16 @@ public final class PmtilesReader {
             raf.seek(HEADER_SIZE);
 
             // Read directory entries
-            byte[] entryBuf = new byte[20]; // Each entry is 20 bytes
+            byte[] entryBuf = new byte[24]; // Each entry is 24 bytes (z:int x:int y:int offset:long length:int)
             for (int i = 0; i < header.numTiles(); i++) {
-                if (raf.read(entryBuf) < 20) break;
+                if (raf.read(entryBuf) < 24) break;
 
                 ByteBuffer buf = ByteBuffer.wrap(entryBuf).order(ByteOrder.LITTLE_ENDIAN);
                 int z = buf.getInt(0);
                 int x = buf.getInt(4);
                 int y = buf.getInt(8);
                 long offset = buf.getLong(12);
-                int length = buf.getInt(16);
+                int length = buf.getInt(20);
 
                 entries.add(new TileEntry(z, x, y, offset, length, header.compression()));
             }
