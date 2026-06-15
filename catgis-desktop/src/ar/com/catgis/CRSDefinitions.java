@@ -251,10 +251,71 @@ public class CRSDefinitions {
         return fast;
     }
 
+    /**
+     * Hardcoded bounds for Argentine POSGAR 94 and POSGAR 2007 zones.
+     * EPSG database often lacks bbox data for these projected CRS.
+     * Each zone is approximately 3° wide centered on its meridian:
+     *   Faja 2: meridian -72°, bounds [-73.5, -55, -70.5, -22]
+     *   Faja 3: meridian -69°, bounds [-70.5, -55, -67.5, -22]
+     *   Faja 4: meridian -66°, bounds [-67.5, -55, -64.5, -22]
+     *   Faja 5: meridian -63°, bounds [-64.5, -55, -61.5, -22]
+     *   Faja 6: meridian -60°, bounds [-61.5, -55, -58.5, -22]
+     *   Faja 7: meridian -57°, bounds [-58.5, -55, -55.5, -22]
+     */
+    private static CrsTechnicalDetails argentineZoneBounds(String normalized) {
+        int zone = -1;
+        String label = null;
+        try {
+            if (normalized.contains("2218")) {
+                zone = Integer.parseInt(normalized.substring(normalized.length() - 1));
+                label = "POSGAR 94 / Argentina " + zone;
+            } else if (normalized.contains("534")) {
+                zone = Integer.parseInt(normalized.substring(normalized.length() - 1));
+                label = "POSGAR 2007 / Argentina " + zone;
+            } else if (normalized.contains("2219")) {
+                zone = Integer.parseInt(normalized.substring(normalized.length() - 1));
+                label = "POSGAR 98 / Argentina " + zone;
+            }
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (zone < 1 || zone > 7 || label == null) return null;
+
+        // Argentine continental bounds: lat -55 to -22, lon ~ -73 to -53
+        double[] longs = {-73.5, -73.5, -70.5, -67.5, -64.5, -61.5, -58.5};
+        String[] meridianLabels = {"-72°", "-72°", "-69°", "-66°", "-63°", "-60°", "-57°"};
+        int idx = Math.max(0, Math.min(6, zone - 1));
+        double west = longs[idx];
+        double east = west + 3.0;
+        String areaName = String.format(Locale.US,
+                "Argentina faja %d (meridiano %s W)", zone, meridianLabels[idx]);
+
+        return new CrsTechnicalDetails(
+                normalized,
+                label,
+                label + " — " + areaName,
+                "Proyectado (Gauss-Krüger)",
+                "POSGAR",
+                "m",
+                String.format(Locale.US, "Oeste %.4f, Sur %.4f, Este %.4f, Norte %.4f",
+                        west, -55.0, east, -22.0),
+                "Transverse Mercator",
+                "Latitud de origen -90, factor de escala 1.0",
+                west, -55.0, east, -22.0, true, false, false
+        );
+    }
+
     private static CrsTechnicalDetails buildFastDetails(String normalized) {
         if (normalized.isBlank()) {
             return CrsTechnicalDetails.unavailable(DEFAULT_CRS);
         }
+
+        // Hardcoded bounds for Argentine POSGAR zones (EPSG database lacks bbox for these)
+        CrsTechnicalDetails argBounds = argentineZoneBounds(normalized);
+        if (argBounds != null) {
+            return argBounds;
+        }
+
         for (CrsCatalogEntry entry : getCatalogEntries()) {
             if (normalized.equalsIgnoreCase(entry.code())) {
                 boolean geographicHint = entry.searchText() != null
