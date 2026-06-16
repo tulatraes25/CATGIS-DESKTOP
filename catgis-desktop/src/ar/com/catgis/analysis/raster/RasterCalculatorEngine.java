@@ -268,7 +268,7 @@ public final class RasterCalculatorEngine {
                     case "sin","cos","tan","sqrt","log","log10","ln","abs","pow","exp",
                          "floor","ceil","round","if","ndvi","ndwi","nbr","savi","evi",
                          "asin","acos","atan","atan2","degrees","radians","sign",
-                         "hypot","min","max","clamp","mod","pi","e","random",
+                         "hypot","min","max","clamp","mod","pi","e","euler","random",
                          "cot","sec","csc",
                          "x","y" -> true;
                     default -> false;
@@ -276,6 +276,10 @@ public final class RasterCalculatorEngine {
 
                 if (isFunc) {
                     tokens.add(new Token(TokenType.FUNCTION, word));
+                } else if (word.equalsIgnoreCase("pi")) {
+                    tokens.add(new Token(TokenType.FUNCTION, "pi"));
+                } else if (word.equalsIgnoreCase("euler")) {
+                    tokens.add(new Token(TokenType.FUNCTION, "e"));
                 } else if (word.equalsIgnoreCase("a")) {
                     tokens.add(new Token(0));
                 } else if (word.equalsIgnoreCase("b")) {

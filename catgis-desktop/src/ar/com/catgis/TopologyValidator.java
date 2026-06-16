@@ -71,7 +71,10 @@ public final class TopologyValidator {
                     Geometry p2 = polygons.get(j);
                     if (!p1.getEnvelopeInternal().intersects(p2.getEnvelopeInternal())) continue;
                     Geometry union = p1.union(p2);
-                    Geometry gap = p1.symDifference(p2).difference(union);
+                    // Gap detection: area within combined envelope not covered by either polygon
+                    Envelope combinedEnv = new Envelope(p1.getEnvelopeInternal());
+                    combinedEnv.expandToInclude(p2.getEnvelopeInternal());
+                    Geometry gap = new org.locationtech.jts.geom.GeometryFactory().toGeometry(combinedEnv).difference(union);
                     if (gap != null && !gap.isEmpty() && gap.getArea() > tolerance) {
                         issues.add(new TopologyIssue("NO_GAPS", "Gap found between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), gap));
                     }
