@@ -17,7 +17,7 @@ if exist "%GDAL_BIN%\gdalalljni.dll" (
 echo [CATGIS] Iniciando validacion completa...
 echo [CATGIS] Iniciando validacion completa... > "%LOG_FILE%"
 
-call gradlew.bat --no-daemon clean test build >> "%LOG_FILE%" 2>&1
+call gradlew.bat --no-daemon compileJava test >> "%LOG_FILE%" 2>&1
 if errorlevel 1 (
     echo [CATGIS] La validacion fallo. Revisar "%LOG_FILE%".
     pause
