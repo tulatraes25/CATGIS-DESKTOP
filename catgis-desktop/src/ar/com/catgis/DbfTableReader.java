@@ -17,10 +17,8 @@ public class DbfTableReader {
         }
 
         TablePointData data = new TablePointData();
-        DBFReader reader = null;
-
-        try {
-            reader = new DBFReader(new FileInputStream(file));
+        try (FileInputStream fis = new FileInputStream(file);
+             DBFReader reader = new DBFReader(fis)) {
 
             int fieldCount = reader.getFieldCount();
             if (fieldCount <= 0) {
@@ -56,8 +54,6 @@ public class DbfTableReader {
                 }
             }
 
-        } finally {
-            DBFUtils.close(reader);
         }
 
         return data;

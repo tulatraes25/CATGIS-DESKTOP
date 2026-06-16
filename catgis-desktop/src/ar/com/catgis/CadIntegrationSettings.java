@@ -45,7 +45,7 @@ public final class CadIntegrationSettings {
         }
         try (InputStream inputStream = Files.newInputStream(file)) {
             properties.load(inputStream);
-        } catch (Exception ignored) { CatgisLogger.warn("CadIntegrationSettings: operation failed", ignored); }
+        } catch (Exception ignored) { CatgisLogger.warn("CadIntegrationSettings: failed to load settings", ignored); }
         return properties;
     }
 
@@ -56,6 +56,6 @@ public final class CadIntegrationSettings {
             try (OutputStream outputStream = Files.newOutputStream(file)) {
                 properties.store(outputStream, "CATGIS CAD integration");
             }
-        } catch (Exception ignored) { CatgisLogger.warn("CadIntegrationSettings: operation failed", ignored); }
+        } catch (Exception ignored) { CatgisLogger.warn("CadIntegrationSettings: failed to save settings", ignored); }
     }
 }
