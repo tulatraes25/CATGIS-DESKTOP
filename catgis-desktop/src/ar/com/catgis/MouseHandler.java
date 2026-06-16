@@ -11,6 +11,7 @@ import org.locationtech.jts.geom.Coordinate;
 class MouseHandler extends MouseAdapter {
 
     private final MapPanel map;
+    private int lastPanX, lastPanY;
 
     MouseHandler(MapPanel map) {
         this.map = map;
@@ -123,6 +124,8 @@ class MouseHandler extends MouseAdapter {
 
         if (SwingUtilities.isLeftMouseButton(e) && !map.isDrawingActive() && !map.isMeasurementActive()) {
             map.dragging = true;
+            lastPanX = e.getX();
+            lastPanY = e.getY();
         }
 
         map.activeTool.mousePressed(e, map);
@@ -279,7 +282,18 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        map.activeTool.mouseDragged(e, map);
+        // Direct pan implementation (matching working CATGIS_PRO behavior)
+        int dx = e.getX() - lastPanX;
+        int dy = e.getY() - lastPanY;
+        if (dx != 0 || dy != 0) {
+            double zf = map.viewController.getZoomFactor();
+            map.viewMinX -= dx / zf;
+            map.viewMinY += dy / zf;
+            map.syncViewToController();
+            map.repaint();
+        }
+        lastPanX = e.getX();
+        lastPanY = e.getY();
         logIfSlow("mouseDragged", startedAt, e);
     }
 
