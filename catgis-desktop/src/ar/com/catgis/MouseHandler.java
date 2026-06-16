@@ -108,6 +108,10 @@ class MouseHandler extends MouseAdapter {
             }
         }
 
+        if (SwingUtilities.isLeftMouseButton(e) && !map.isDrawingActive() && !map.isMeasurementActive()) {
+            map.dragging = true;
+        }
+
         map.activeTool.mousePressed(e, map);
     }
 
