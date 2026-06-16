@@ -34,12 +34,13 @@ public final class WfsCapabilitiesService {
         connection.setRequestProperty("User-Agent", USER_AGENT);
         connection.setRequestProperty("Accept", "application/xml,text/xml,*/*;q=0.8");
 
-        int status = connection.getResponseCode();
-        if (status < 200 || status >= 300) {
-            throw new IllegalArgumentException("El servicio respondio con codigo HTTP " + status + ".");
-        }
+        try {
+            int status = connection.getResponseCode();
+            if (status < 200 || status >= 300) {
+                throw new IllegalArgumentException("El servicio respondio con codigo HTTP " + status + ".");
+            }
 
-        try (InputStream input = connection.getInputStream()) {
+            try (InputStream input = connection.getInputStream()) {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
             factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
@@ -60,6 +61,9 @@ public final class WfsCapabilitiesService {
             List<WfsFeatureTypeInfo> featureTypes = parseFeatureTypes(root);
 
             return new WfsCapabilities(serviceTitle, serviceAbstract, version, featureTypes);
+            }
+        } finally {
+            connection.disconnect();
         }
     }
 

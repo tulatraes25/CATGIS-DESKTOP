@@ -216,7 +216,8 @@ public final class FlatGeobufLoader {
 
             int skipped = 0;
 
-            try (FileChannel dataChannel = new FileInputStream(file).getChannel()) {
+            try (FileInputStream dataFis = new FileInputStream(file);
+                 FileChannel dataChannel = dataFis.getChannel()) {
                 dataChannel.position(dataOffset);
                 ByteBuffer dataBuf = ByteBuffer.allocateDirect(capacity);
                 dataChannel.read(dataBuf);

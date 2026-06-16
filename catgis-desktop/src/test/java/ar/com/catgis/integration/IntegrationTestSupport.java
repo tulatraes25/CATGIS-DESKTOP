@@ -17,6 +17,8 @@ import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 
 import javax.swing.SwingUtilities;
+import java.io.File;
+import java.lang.reflect.Method;
 
 final class IntegrationTestSupport {
 
@@ -82,6 +84,18 @@ final class IntegrationTestSupport {
         if (failure[0] != null) {
             throw failure[0];
         }
+    }
+
+    static boolean saveProject(File file, boolean allowRasterPrompts) throws Exception {
+        Method method = ar.com.catgis.SaveProjectAction.class.getDeclaredMethod("saveProjectToFile", File.class, boolean.class);
+        method.setAccessible(true);
+        return (Boolean) method.invoke(null, file, allowRasterPrompts);
+    }
+
+    static boolean loadProject(File file, boolean fromRecent) throws Exception {
+        Method method = ar.com.catgis.LoadProjectAction.class.getDeclaredMethod("loadProjectFile", File.class, boolean.class);
+        method.setAccessible(true);
+        return (Boolean) method.invoke(null, file, fromRecent);
     }
 
     @FunctionalInterface
