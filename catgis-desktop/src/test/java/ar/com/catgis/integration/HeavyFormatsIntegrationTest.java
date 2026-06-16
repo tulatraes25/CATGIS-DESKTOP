@@ -104,7 +104,7 @@ class HeavyFormatsIntegrationTest {
     @Test
     void flatgeobufRoundTripWorksWhenOgr2ogrIsAvailable() throws Exception {
         Assumptions.assumeTrue(new File(OGR2OGR).exists(), "ogr2ogr no disponible");
-        Assumptions.assumeTrue(gdalCompatible(), "GDAL >= 3.13 incompatible con lector FlatGeobuf actual");
+        Assumptions.assumeTrue(gdalCompatible(), "GDAL >= 3.13: formato FlatGeobuf incompatible con wololo reader");
 
         File geojson = tempDir.resolve("flatgeobuf.geojson").toFile();
         Files.writeString(geojson.toPath(),
@@ -126,7 +126,7 @@ class HeavyFormatsIntegrationTest {
     @Test
     void spatialiteRoundTripWorksWhenOgr2ogrIsAvailable() throws Exception {
         Assumptions.assumeTrue(new File(OGR2OGR).exists(), "ogr2ogr no disponible");
-        Assumptions.assumeTrue(gdalCompatible(), "GDAL >= 3.13 incompatible con stack SpatiaLite actual");
+        Assumptions.assumeTrue(gdalCompatible(), "GDAL >= 3.13: formato SQLite/SpatiaLite incompatible");
 
         File geojson = tempDir.resolve("spatialite.geojson").toFile();
         Files.writeString(geojson.toPath(),
