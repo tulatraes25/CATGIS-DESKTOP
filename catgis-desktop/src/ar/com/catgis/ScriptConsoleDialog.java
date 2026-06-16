@@ -79,19 +79,31 @@ public class ScriptConsoleDialog extends JDialog {
         runButton.addActionListener(e -> {
             runButton.setEnabled(false);
             statusLabel.setText("Running...");
-            new Thread(() -> {
-                String code = codeArea.getText();
-                ScriptEngine.ScriptResult result = ScriptEngine.executeCode(code);
-                SwingUtilities.invokeLater(() -> {
-                    outputArea.setText(result.output());
-                    if (!result.error().isEmpty()) {
-                        outputArea.append("\n--- ERROR ---\n" + result.error());
-                    }
-                    outputArea.append("\n--- " + (result.success() ? "SUCCESS" : "FAILED") + " ---");
-                    runButton.setEnabled(true);
-                    statusLabel.setText(result.success() ? "Completed" : "Failed");
-                });
-            }).start();
+            Thread scriptThread = new Thread(() -> {
+                try {
+                    String code = codeArea.getText();
+                    ScriptEngine.ScriptResult result = ScriptEngine.executeCode(code);
+                    SwingUtilities.invokeLater(() -> {
+                        outputArea.setText(result.output());
+                        if (!result.error().isEmpty()) {
+                            outputArea.append("\n--- ERROR ---\n" + result.error());
+                        }
+                        outputArea.append("\n--- " + (result.success() ? "SUCCESS" : "FAILED") + " ---");
+                        runButton.setEnabled(true);
+                        statusLabel.setText(result.success() ? "Completed" : "Failed");
+                    });
+                } catch (Exception ex) {
+                    CatgisLogger.error("ScriptConsole: error executing script", ex);
+                    SwingUtilities.invokeLater(() -> {
+                        outputArea.append("\n--- INTERNAL ERROR ---\n" + ex.getMessage());
+                        runButton.setEnabled(true);
+                        statusLabel.setText("Error");
+                    });
+                }
+            });
+            scriptThread.setName("CATGIS-ScriptConsole");
+            scriptThread.setDaemon(true);
+            scriptThread.start();
         });
 
         loadButton.addActionListener(e -> {

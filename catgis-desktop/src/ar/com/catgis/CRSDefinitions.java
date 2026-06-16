@@ -209,10 +209,10 @@ public class CRSDefinitions {
                     + "Verifique que la dependencia gt-epsg-hsql este en el classpath. "
                     + "Codigo solicitado: " + normalized,
                     factoryEx);
-        } catch (Throwable t) {
+        } catch (Exception t) {
             try {
                 return org.geotools.referencing.CRS.decode(normalized);
-            } catch (Throwable t2) {
+            } catch (Exception t2) {
                 throw new Exception(
                         "No se pudo validar el CRS " + normalized
                         + ". Verifique el codigo o seleccione del catalogo mundial.",
@@ -397,8 +397,8 @@ public class CRSDefinitions {
             );
             cachedDetails.put(normalized, details);
             return details;
-        } catch (Throwable t) {
-            CatgisLogger.warn("No se pudo describir el CRS " + normalized, t instanceof Exception ? (Exception) t : new Exception(t));
+        } catch (Exception t) {
+            CatgisLogger.warn("No se pudo describir el CRS " + normalized, t);
             return CrsTechnicalDetails.unavailable(normalized);
         }
     }

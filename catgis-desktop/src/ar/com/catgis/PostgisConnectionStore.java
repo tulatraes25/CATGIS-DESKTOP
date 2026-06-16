@@ -150,7 +150,8 @@ public final class PostgisConnectionStore {
             System.arraycopy(ciphertext, 0, combined, salt.length + iv.length, ciphertext.length);
             return java.util.Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
-            return "";
+            CatgisLogger.error("PostgisConnectionStore: fallo al encriptar credenciales", e);
+            throw new RuntimeException("Error al proteger las credenciales PostGIS", e);
         }
     }
 
@@ -159,7 +160,11 @@ public final class PostgisConnectionStore {
         String passphrase = getMachinePassphrase();
         PBEKeySpec spec = new PBEKeySpec(
                 passphrase.toCharArray(), salt, 100_000, 256);
-        return factory.generateSecret(spec).getEncoded();
+        try {
+            return factory.generateSecret(spec).getEncoded();
+        } finally {
+            spec.clearPassword();
+        }
     }
 
     private static String getMachinePassphrase() {
@@ -207,7 +212,8 @@ public final class PostgisConnectionStore {
             cipher.init(Cipher.DECRYPT_MODE, keySpec, new GCMParameterSpec(128, iv));
             return new String(cipher.doFinal(ciphertext), java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
-            return "";
+            CatgisLogger.error("PostgisConnectionStore: fallo al encriptar credenciales", e);
+            throw new RuntimeException("Error al proteger las credenciales PostGIS", e);
         }
     }
 
@@ -223,7 +229,8 @@ public final class PostgisConnectionStore {
             }
             return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
         } catch (Exception e) {
-            return "";
+            CatgisLogger.error("PostgisConnectionStore: fallo al encriptar credenciales", e);
+            throw new RuntimeException("Error al proteger las credenciales PostGIS", e);
         }
     }
 
