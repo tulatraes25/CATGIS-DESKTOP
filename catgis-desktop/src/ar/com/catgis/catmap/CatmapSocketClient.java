@@ -20,7 +20,7 @@ public final class CatmapSocketClient {
     private static Socket socket;
     private static PrintWriter out;
     private static BufferedReader in;
-    private static boolean connected = false;
+    private static volatile boolean connected = false;
 
     private CatmapSocketClient() {}
 

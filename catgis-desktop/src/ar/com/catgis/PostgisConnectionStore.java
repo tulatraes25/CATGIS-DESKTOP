@@ -174,9 +174,13 @@ public final class PostgisConnectionStore {
             String[] cmd = {"powershell", "-NoProfile", "-Command",
                     "(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Cryptography' -Name MachineGuid).MachineGuid"};
             Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            if (p.waitFor(3, TimeUnit.SECONDS) && p.exitValue() == 0) {
-                String output = new String(p.getInputStream().readAllBytes()).trim();
-                if (!output.isBlank()) return output;
+            try {
+                if (p.waitFor(3, TimeUnit.SECONDS) && p.exitValue() == 0) {
+                    String output = new String(p.getInputStream().readAllBytes()).trim();
+                    if (!output.isBlank()) return output;
+                }
+            } finally {
+                p.destroy();
             }
         } catch (Exception ignored) {
             CatgisLogger.warn("PostgisConnectionStore: no se pudo obtener machine-id del sistema", null);

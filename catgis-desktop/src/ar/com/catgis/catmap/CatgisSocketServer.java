@@ -23,7 +23,7 @@ public final class CatgisSocketServer {
 
     private static ServerSocket serverSocket;
     private static Thread listenerThread;
-    private static boolean running = false;
+    private static volatile boolean running = false;
     private static final int PORT = 8899;
 
     private CatgisSocketServer() {}

@@ -34,10 +34,13 @@ public final class PostgisConnectionFactory {
         }
 
         String fingerprint = info.buildFingerprint();
-        HikariDataSource ds = poolCache.get(fingerprint);
-        if (ds == null || ds.isClosed()) {
-            ds = createPool(info);
-            poolCache.put(fingerprint, ds);
+        HikariDataSource ds;
+        synchronized (poolCache) {
+            ds = poolCache.get(fingerprint);
+            if (ds == null || ds.isClosed()) {
+                ds = createPool(info);
+                poolCache.put(fingerprint, ds);
+            }
         }
 
         Map<String, Object> params = new HashMap<>();

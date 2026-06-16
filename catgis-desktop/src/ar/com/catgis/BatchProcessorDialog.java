@@ -200,7 +200,7 @@ public class BatchProcessorDialog extends JDialog {
                             default -> throw new RuntimeException("Operacion no soportada: " + operation);
                         }
                     } catch (Exception e) {
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("Error en operacion batch '" + operation + "' sobre " + input.getName(), e);
                     }
                 }, progress -> SwingUtilities.invokeLater(() -> progressBar.setValue(progress)));
             }

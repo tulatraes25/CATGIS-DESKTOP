@@ -95,10 +95,10 @@ import ar.com.catgis.renderer.labels.LabelPlacementEngine;
 
 public class MapPanel extends JPanel implements SnapContext, MapViewportContext, UndoRedoContext, ScreenCoordinateContext, MapPopupMenuBuilder.PopupContext {
 
-    final Map<Layer, ShapefileData> shapefileLayers = new LinkedHashMap<>();
-    final Map<Layer, LocalRasterData> rasterLayers = new LinkedHashMap<>();
-    final Map<Layer, OnlineRasterSource> onlineTileLayers = new LinkedHashMap<>();
-    final Map<Layer, OnlineWmsLayer> onlineWmsLayers = new LinkedHashMap<>();
+    final Map<Layer, ShapefileData> shapefileLayers = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
+    final Map<Layer, LocalRasterData> rasterLayers = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
+    final Map<Layer, OnlineRasterSource> onlineTileLayers = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
+    final Map<Layer, OnlineWmsLayer> onlineWmsLayers = java.util.Collections.synchronizedMap(new LinkedHashMap<>());
     final Map<Layer, LocalRasterData> getRasterLayers() { return rasterLayers; }
     final Map<Layer, ShapefileData> getShapefileLayers() { return shapefileLayers; }
     final Map<Layer, OnlineRasterSource> getOnlineTileLayers() { return onlineTileLayers; }
