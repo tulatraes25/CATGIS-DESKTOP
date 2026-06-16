@@ -3404,6 +3404,18 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     /**
+     * Swing lifecycle: re-registers listeners when the panel is added
+     * back to a container (e.g., after removeNotify during layout changes).
+     */
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        addMouseListener(mouseHandler);
+        addMouseMotionListener(mouseHandler);
+        addMouseWheelListener(mouseHandler);
+    }
+
+    /**
      * Release heavy resources: dispose raster images and clear caches.
      * Call before closing a project or when memory is constrained.
      */
