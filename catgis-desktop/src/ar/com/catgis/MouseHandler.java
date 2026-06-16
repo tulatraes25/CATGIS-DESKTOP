@@ -273,7 +273,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if (!map.dragging || !"MOVE".equalsIgnoreCase(map.currentTool) || map.isDrawingActive() || map.isMeasurementActive()) {
+        if (!map.dragging || map.isDrawingActive() || map.isMeasurementActive()) {
             map.repaint();
             logIfSlow("mouseDragged", startedAt, e);
             return;
