@@ -1741,6 +1741,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     void fitToEnvelope(Envelope env) {
         viewController.fitToEnvelope(env);
         syncViewFromController();
+        repaint();
     }
 
     Envelope getLayerEnvelope(Layer layer, ShapefileData data) {

@@ -2296,6 +2296,7 @@ class MapEditingEngine {
             map.viewMinX -= dx / zf;
             map.viewMinY += dy / zf;
             map.syncViewToController();
+            map.repaint();
         }
     }
 
