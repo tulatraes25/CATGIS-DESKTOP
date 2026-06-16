@@ -35,6 +35,7 @@ public final class OnlineLayerRenderer {
     private OnlineLayerRenderer() {}
 
     public static void drawOnlineTileLayer(MapPanel panel, Graphics2D g2, OnlineTileLayer layer, OnlineRasterSource source) {
+        long startedAt = System.nanoTime();
         if (panel == null || layer == null || source == null || panel.getWidth() <= 0 || panel.getHeight() <= 0) {
             return;
         }
@@ -141,6 +142,19 @@ public final class OnlineLayerRenderer {
             panel.onlineResolutionNoticeVisible = true;
             panel.onlineResolutionNotice = "Algunas teselas no estan disponibles en este zoom. Se mantiene el ultimo detalle disponible.";
             panel.pushTileStatusToBar();
+        }
+
+        long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        if (elapsedMs >= 75L) {
+            CatgisLogger.info("[EMERGENCY-PERF] drawOnlineTileLayer took " + elapsedMs + " ms"
+                    + " layer=" + layer.getName()
+                    + " source=" + source.getName()
+                    + " zoom=" + zoom
+                    + " desiredZoom=" + desiredZoom
+                    + " tileCount=" + range.tileCount()
+                    + " renderedTiles=" + renderedTiles
+                    + " fallback=" + usedFallbackTile
+                    + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread());
         }
     }
 
@@ -527,6 +541,17 @@ public final class OnlineLayerRenderer {
     public static void drawHeatmapOverlay(MapPanel panel, Graphics2D g2) {
         if (panel.shapefileLayers.isEmpty()) return;
 
+        // Early return: check if ANY layer has heatmap enabled before iterating features
+        boolean anyHeatmap = false;
+        for (Layer layer : panel.layerManager.getRenderOrderLayers()) {
+            if (layer != null && panel.layerManager.isLayerEffectivelyVisible(layer)
+                    && layer.isHeatmapEnabled()) {
+                anyHeatmap = true;
+                break;
+            }
+        }
+        if (!anyHeatmap) return;
+
         java.util.List<java.awt.geom.Point2D> allPoints = new java.util.ArrayList<>();
         int radius = 30;
         float opacity = 0.6f;
@@ -578,6 +603,17 @@ public final class OnlineLayerRenderer {
 
     public static void drawPointClusters(MapPanel panel, Graphics2D g2) {
         if (panel.shapefileLayers.isEmpty()) return;
+
+        // Early return: check if ANY layer has clustering enabled before iterating features
+        boolean anyClustering = false;
+        for (Layer layer : panel.layerManager.getRenderOrderLayers()) {
+            if (layer != null && panel.layerManager.isLayerEffectivelyVisible(layer)
+                    && layer.isClusteringEnabled()) {
+                anyClustering = true;
+                break;
+            }
+        }
+        if (!anyClustering) return;
 
         java.util.List<java.awt.geom.Point2D> allPoints = new java.util.ArrayList<>();
         int radius = 30;

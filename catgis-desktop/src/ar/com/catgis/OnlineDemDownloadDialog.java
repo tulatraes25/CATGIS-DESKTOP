@@ -244,6 +244,8 @@ public class OnlineDemDownloadDialog extends JDialog {
     }
 
     private void startDownload() {
+        CatgisLogger.info("[EMERGENCY-DEM] startDownload invoked"
+                + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread());
         OnlineDemProvider provider = (OnlineDemProvider) providerCombo.getSelectedItem();
         OnlineDemDatasetOption dataset = (OnlineDemDatasetOption) datasetCombo.getSelectedItem();
         PublicDemDetailLevel detailLevel = (PublicDemDetailLevel) detailLevelCombo.getSelectedItem();
@@ -304,17 +306,25 @@ public class OnlineDemDownloadDialog extends JDialog {
         new SwingWorker<DownloadedRasterResult, Void>() {
             @Override
             protected DownloadedRasterResult doInBackground() throws Exception {
+                long startedAt = System.nanoTime();
                 return switch (provider) {
                     case PUBLIC_TERRAIN_TILES -> {
                         TerrainTilesDataset terrainDataset = (TerrainTilesDataset) dataset;
                         PublicTerrainTilesDemService.FileDownloadResult result =
                                 PublicTerrainTilesDemService.download(terrainDataset, bbox, detailLevel, outputFile);
+                        CatgisLogger.info("[EMERGENCY-DEM] background download finished in "
+                                + ((System.nanoTime() - startedAt) / 1_000_000L)
+                                + " ms provider=PUBLIC_TERRAIN_TILES file=" + result.file());
                         yield new DownloadedRasterResult(result.file(), terrainDataset.getDisplayName(), terrainDataset.getSourceLabel(), terrainDataset.getSourceCrsCode());
                     }
                     case OPEN_TOPOGRAPHY -> {
                         OpenTopographyDataset openTopographyDataset = (OpenTopographyDataset) dataset;
                         OpenTopographyDemService.FileDownloadResult result =
                                 OpenTopographyDemService.download(openTopographyDataset, bbox, "EPSG:4326", apiKey, outputFile);
+                        CatgisLogger.info("[EMERGENCY-DEM] background download finished in "
+                                + ((System.nanoTime() - startedAt) / 1_000_000L)
+                                + " ms provider=OPEN_TOPOGRAPHY file=" + result.file()
+                                + " request=" + result.requestUri());
                         yield new DownloadedRasterResult(result.file(), openTopographyDataset.getDisplayName(), openTopographyDataset.getSourceLabel(), openTopographyDataset.getSourceCrsCode());
                     }
                 };
@@ -322,9 +332,15 @@ public class OnlineDemDownloadDialog extends JDialog {
 
             @Override
             protected void done() {
+                long startedAt = System.nanoTime();
                 try {
                     DownloadedRasterResult result = get();
+                    CatgisLogger.info("[EMERGENCY-DEM] done() entered"
+                            + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread()
+                            + " file=" + result.file());
                     addRasterLayer(result.file(), result.displayName(), result.sourceLabel(), result.sourceCrsCode());
+                    CatgisLogger.info("[EMERGENCY-DEM] addRasterLayer finished in "
+                            + ((System.nanoTime() - startedAt) / 1_000_000L) + " ms");
                     dispose();
                 } catch (Exception ex) {
                     AppErrorSupport.logFailure("No se pudo descargar el DEM online", ex);
@@ -339,6 +355,7 @@ public class OnlineDemDownloadDialog extends JDialog {
     }
 
     private void addRasterLayer(File file, String datasetName, String sourceLabel, String sourceCrsCode) throws Exception {
+        long startedAt = System.nanoTime();
         if (file == null || !file.exists()) {
             throw new IllegalArgumentException(I18n.t("El archivo descargado del DEM no existe."));
         }
@@ -354,6 +371,12 @@ public class OnlineDemDownloadDialog extends JDialog {
                 ? AppContext.project().getProjectCRS()
                 : sourceCrsCode;
         LocalRasterData rasterData = RasterImageLoader.loadReal(file, projectCrs, sourceCrsCode);
+        CatgisLogger.info("[EMERGENCY-DEM] RasterImageLoader.loadReal finished in "
+                + ((System.nanoTime() - startedAt) / 1_000_000L)
+                + " ms file=" + file.getAbsolutePath()
+                + " projectCrs=" + projectCrs
+                + " sourceCrs=" + sourceCrsCode
+                + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread());
         layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
 
         AppContext.project().addLayer(layer);
@@ -370,6 +393,9 @@ public class OnlineDemDownloadDialog extends JDialog {
         if (CatgisDesktopApp.statusBar != null) {
             AppContext.setStatusMessage(I18n.t("DEM online incorporado: ") + layer.getName());
         }
+        CatgisLogger.info("[EMERGENCY-DEM] addRasterLayer total "
+                + ((System.nanoTime() - startedAt) / 1_000_000L)
+                + " ms layer=" + layerName);
     }
 
     private void updateDatasetNote() {

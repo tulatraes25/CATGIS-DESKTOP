@@ -39,6 +39,7 @@ public final class PublicTerrainTilesDemService {
                                               Envelope latLonEnvelope,
                                               PublicDemDetailLevel detailLevel,
                                               java.io.File outputFile) throws Exception {
+        long startedAt = System.nanoTime();
         if (dataset == null) {
             throw new IllegalArgumentException("Debes elegir una fuente DEM publica.");
         }
@@ -56,7 +57,16 @@ public final class PublicTerrainTilesDemService {
         }
 
         DownloadPlan plan = choosePlan(normalized, detailLevel);
+        CatgisLogger.info("[EMERGENCY-DEM] Terrain download plan"
+                + " bbox=" + normalized
+                + " zoom=" + plan.zoom
+                + " tiles=" + plan.tileCount
+                + " output=" + plan.outputWidth + "x" + plan.outputHeight
+                + " file=" + outputFile.getAbsolutePath());
         writeGeoTiff(plan, outputFile);
+        CatgisLogger.info("[EMERGENCY-DEM] Terrain download finished in "
+                + ((System.nanoTime() - startedAt) / 1_000_000L)
+                + " ms file=" + outputFile.getAbsolutePath());
         return new FileDownloadResult(outputFile, normalized, plan.zoom, plan.tileCount, plan.outputWidth, plan.outputHeight, dataset.getSourceLabel());
     }
 
@@ -206,6 +216,8 @@ public final class PublicTerrainTilesDemService {
 
         HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            CatgisLogger.info("[EMERGENCY-DEM] Terrain tile HTTP "
+                    + response.statusCode() + " uri=" + uri);
             throw new IOException("Terrain Tiles devolvio " + response.statusCode() + " para " + uri);
         }
 

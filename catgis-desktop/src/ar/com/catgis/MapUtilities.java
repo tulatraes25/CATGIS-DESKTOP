@@ -191,6 +191,7 @@ public class MapUtilities {
     // 9. reprojectEnvelopeIfNeeded — reproject envelope between CRS codes
     // ========================================================================
     public Envelope reprojectEnvelopeIfNeeded(Envelope env, String sourceCode, String targetCode) {
+        long startedAt = System.nanoTime();
         if (env == null || env.isNull()) {
             return env;
         }
@@ -208,6 +209,8 @@ public class MapUtilities {
             return JTS.transform(env, null, transform, 10);
         } catch (Exception ex) {
             return env;
+        } finally {
+            logSlowTransform("reprojectEnvelopeIfNeeded", startedAt, sourceCode, targetCode, env);
         }
     }
 
@@ -215,6 +218,7 @@ public class MapUtilities {
     // 10. reprojectPoint — reproject a single point between CRS codes
     // ========================================================================
     static double[] reprojectPoint(double x, double y, String sourceCode, String targetCode) {
+        long startedAt = System.nanoTime();
         try {
             if (sourceCode == null || sourceCode.isBlank()) return null;
             if (targetCode == null || targetCode.isBlank()) return null;
@@ -232,12 +236,33 @@ public class MapUtilities {
             return dst;
         } catch (Exception ex) {
             return null;
+        } finally {
+            long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+            if (elapsedMs >= 40L && javax.swing.SwingUtilities.isEventDispatchThread()) {
+                CatgisLogger.info("[EMERGENCY-PERF] reprojectPoint took " + elapsedMs + " ms"
+                        + " source=" + sourceCode
+                        + " target=" + targetCode
+                        + " point=" + formatNumber(x) + "," + formatNumber(y)
+                        + " edt=true");
+            }
         }
     }
 
     /** Public entry point for transformPoint used by MapPanel delegator. */
     public double[] transformPoint(double x, double y, String sourceCode, String targetCode) {
         return reprojectPoint(x, y, sourceCode, targetCode);
+    }
+
+    private void logSlowTransform(String operation, long startedAt, String sourceCode, String targetCode, Envelope env) {
+        long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        if (elapsedMs < 40L || !javax.swing.SwingUtilities.isEventDispatchThread()) {
+            return;
+        }
+        CatgisLogger.info("[EMERGENCY-PERF] " + operation + " took " + elapsedMs + " ms"
+                + " source=" + sourceCode
+                + " target=" + targetCode
+                + " envelope=" + (env != null ? env.toString() : "<null>")
+                + " edt=true");
     }
 
     // ========================================================================

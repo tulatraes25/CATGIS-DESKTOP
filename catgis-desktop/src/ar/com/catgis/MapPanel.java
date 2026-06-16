@@ -1977,6 +1977,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     @Override
     protected void paintComponent(Graphics g) {
+        long paintStartedAt = System.nanoTime();
         super.paintComponent(g);
 
         Graphics2D g2 = (Graphics2D) g.create();
@@ -1994,28 +1995,37 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             if (layer == null || !layerManager.isLayerEffectivelyVisible(layer)) {
                 continue;
             }
+            long layerStartedAt = System.nanoTime();
+            String renderKind = "vector";
 
             OnlineRasterSource onlineSource = onlineTileLayers.get(layer);
             if (layer instanceof OnlineTileLayer && onlineSource != null) {
+                renderKind = "online-tile";
                 drawOnlineTileLayer(g2, (OnlineTileLayer) layer, onlineSource);
+                logSlowLayerPaint(layer, renderKind, layerStartedAt);
                 continue;
             }
 
             OnlineWmsLayer wmsLayer = onlineWmsLayers.get(layer);
             if (wmsLayer != null) {
+                renderKind = "online-wms";
                 drawOnlineWmsLayer(g2, wmsLayer);
+                logSlowLayerPaint(layer, renderKind, layerStartedAt);
                 continue;
             }
 
             LocalRasterData rasterData = rasterLayers.get(layer);
             if (rasterData != null) {
+                renderKind = "raster";
                 drawRasterLayer(g2, layer, rasterData);
+                logSlowLayerPaint(layer, renderKind, layerStartedAt);
                 continue;
             }
 
             ShapefileData shapeData = shapefileLayers.get(layer);
             if (shapeData != null) {
                 drawLayer(g2, layer, shapeData);
+                logSlowLayerPaint(layer, renderKind, layerStartedAt);
             }
         }
 
@@ -2061,7 +2071,29 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         }
         } finally {
             g2.dispose();
+            long paintElapsedMs = (System.nanoTime() - paintStartedAt) / 1_000_000L;
+            if (paintElapsedMs >= 150L) {
+                CatgisLogger.info("[EMERGENCY-PERF] paintComponent took " + paintElapsedMs + " ms"
+                        + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread()
+                        + " vectors=" + shapefileLayers.size()
+                        + " rasters=" + rasterLayers.size()
+                        + " onlineTiles=" + onlineTileLayers.size()
+                        + " onlineWms=" + onlineWmsLayers.size()
+                        + " size=" + getWidth() + "x" + getHeight()
+                        + " projectCrs=" + (AppContext.project() != null ? AppContext.project().getProjectCRS() : ""));
+            }
         }
+    }
+
+    private void logSlowLayerPaint(Layer layer, String kind, long startedAt) {
+        long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        if (elapsedMs < 75L) {
+            return;
+        }
+        CatgisLogger.info("[EMERGENCY-PERF] layer render took " + elapsedMs + " ms"
+                + " kind=" + kind
+                + " layer=" + (layer != null ? layer.getName() : "<null>")
+                + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread());
     }
 
     private void drawPointClusters(Graphics2D g2) {

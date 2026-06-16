@@ -18,35 +18,42 @@ class MouseHandler extends MouseAdapter {
 
     @Override
     public void mousePressed(MouseEvent e) {
+        long startedAt = System.nanoTime();
         if (SwingUtilities.isMiddleMouseButton(e)) {
             map.beginTemporaryMiddlePan(e);
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
         if (map.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.cancelCadPlacementDrag();
+                logIfSlow("mousePressed", startedAt, e);
                 return;
             }
             if (SwingUtilities.isLeftMouseButton(e)) {
                 map.beginCadPlacementDrag(e);
             }
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
         if (map.cadEngine.pointCaptureActive) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.cancelPointCapture();
             }
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
         if (map.topographicProfileTool.isActive()) {
             if (SwingUtilities.isRightMouseButton(e)) {
                 map.topographicProfileTool.cancelCapture();
             }
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
         if (SwingUtilities.isRightMouseButton(e)) {
             if (map.isDrawingActive() || map.isMeasurementActive()) {
                 map.showMapPopup(e);
+                logIfSlow("mousePressed", startedAt, e);
                 return;
             }
         }
@@ -57,6 +64,7 @@ class MouseHandler extends MouseAdapter {
                 map.pushUndoSnapshotForSelectedLayer();
                 map.activeEditVertexIndex = vertexIndex;
                 map.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                logIfSlow("mousePressed", startedAt, e);
                 return;
             }
         }
@@ -70,15 +78,18 @@ class MouseHandler extends MouseAdapter {
             map.moveSelectionLastProjectX = map.screenToWorldX(e.getX());
             map.moveSelectionLastProjectY = map.screenToWorldY(e.getY());
             map.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
 
         if (e.isPopupTrigger() || e.getButton() == MouseEvent.BUTTON3) {
             map.showMapPopup(e);
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
 
         if (map.isDrawingActive() || map.isMeasurementActive()) {
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
 
@@ -95,6 +106,7 @@ class MouseHandler extends MouseAdapter {
             map.selectionBoxStartY = e.getY();
             map.selectionBoxEndX = e.getX();
             map.selectionBoxEndY = e.getY();
+            logIfSlow("mousePressed", startedAt, e);
             return;
         }
 
@@ -104,6 +116,7 @@ class MouseHandler extends MouseAdapter {
                 map.pinManager.activePin = pin;
                 map.draggingPin = true;
                 map.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                logIfSlow("mousePressed", startedAt, e);
                 return;
             }
         }
@@ -113,32 +126,39 @@ class MouseHandler extends MouseAdapter {
         }
 
         map.activeTool.mousePressed(e, map);
+        logIfSlow("mousePressed", startedAt, e);
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        long startedAt = System.nanoTime();
         if (map.temporaryMiddlePanActive && SwingUtilities.isMiddleMouseButton(e)) {
             map.finishTemporaryMiddlePan();
+            logIfSlow("mouseReleased", startedAt, e);
             return;
         }
         if (map.cadEngine.cadPlacementDragActive) {
             if (SwingUtilities.isLeftMouseButton(e)) {
                 map.finishCadPlacementDrag();
             }
+            logIfSlow("mouseReleased", startedAt, e);
             return;
         }
         if (map.cadEngine.pointCaptureActive) {
             map.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+            logIfSlow("mouseReleased", startedAt, e);
             return;
         }
         if (map.topographicProfileTool.isActive()) {
             map.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+            logIfSlow("mouseReleased", startedAt, e);
             return;
         }
         if (e.isPopupTrigger()) {
             if (!map.isDrawingActive() && !map.isMeasurementActive()) {
                 map.showMapPopup(e);
             }
+            logIfSlow("mouseReleased", startedAt, e);
             return;
         }
 
@@ -192,26 +212,31 @@ class MouseHandler extends MouseAdapter {
         map.dragging = false;
 
         map.applyCursorForCurrentMode();
+        logIfSlow("mouseReleased", startedAt, e);
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
+        long startedAt = System.nanoTime();
         map.updateStatusCoordinates(e.getX(), e.getY());
 
         map.updateHoverAndSnap(e.getX(), e.getY());
 
         if (map.temporaryMiddlePanActive) {
             map.dragViewTemporarily(e);
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
         if (map.topographicProfileTool.isActive()) {
             map.repaint();
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
         if (map.cadEngine.cadPlacementDragActive && map.cadEngine.cadPlacementDragStarted) {
             map.updateCadPlacementDrag(e);
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
@@ -219,6 +244,7 @@ class MouseHandler extends MouseAdapter {
             map.pinManager.getActivePin().setX(map.screenToWorldX(e.getX()));
             map.pinManager.getActivePin().setY(map.screenToWorldY(e.getY()));
             map.repaint();
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
@@ -226,12 +252,14 @@ class MouseHandler extends MouseAdapter {
             Coordinate targetCoordinate = map.resolveInteractiveCoordinate(e.getX(), e.getY(), true);
             map.moveSelectedVertex(targetCoordinate.x, targetCoordinate.y, map.activeEditVertexIndex);
             map.repaint();
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
         if (map.movingSelectedFeatures && MapPanel.EDIT_OP_MOVE_FEATURE.equals(map.featureEditOperation)) {
             map.moveSelectedFeatures(map.screenToWorldX(e.getX()), map.screenToWorldY(e.getY()));
             map.repaint();
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
@@ -241,15 +269,33 @@ class MouseHandler extends MouseAdapter {
             map.selectionBoxDragging = Math.abs(map.selectionBoxEndX - map.selectionBoxStartX) >= MapPanel.SELECTION_BOX_DRAG_THRESHOLD_PX
                     || Math.abs(map.selectionBoxEndY - map.selectionBoxStartY) >= MapPanel.SELECTION_BOX_DRAG_THRESHOLD_PX;
             map.repaint();
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
         if (!map.dragging || !"MOVE".equalsIgnoreCase(map.currentTool) || map.isDrawingActive() || map.isMeasurementActive()) {
             map.repaint();
+            logIfSlow("mouseDragged", startedAt, e);
             return;
         }
 
         map.activeTool.mouseDragged(e, map);
+        logIfSlow("mouseDragged", startedAt, e);
+    }
+
+    private void logIfSlow(String phase, long startedAt, MouseEvent e) {
+        long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        if (elapsedMs < 75L) {
+            return;
+        }
+        CatgisLogger.info("[EMERGENCY-PERF] " + phase
+                + " took " + elapsedMs + " ms"
+                + " tool=" + map.currentTool
+                + " button=" + e.getButton()
+                + " point=" + e.getX() + "," + e.getY()
+                + " dragging=" + map.dragging
+                + " tempMiddlePan=" + map.temporaryMiddlePanActive
+                + " edt=" + SwingUtilities.isEventDispatchThread());
     }
 
     @Override

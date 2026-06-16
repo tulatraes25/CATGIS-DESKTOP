@@ -21,9 +21,34 @@ import java.util.function.BiConsumer;
 public class SelectionManager2 {
 
     private final MapPanel panel;
+    
+    // CRS transform cache: featureId -> reprojected geometry
+    // Invalidated when layer is added/removed or CRS changes
+    private final java.util.Map<String, Geometry> crsCache = new java.util.LinkedHashMap<>(1000, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, Geometry> eldest) {
+            return size() > 5000; // Limit cache size
+        }
+    };
+    private String lastProjectCrs = "";
+    private int lastLayerCount = -1;
 
     public SelectionManager2(MapPanel panel) {
         this.panel = panel;
+    }
+    
+    /**
+     * Invalidate CRS cache when layers or CRS change.
+     * Call this from paintComponent or when layers change.
+     */
+    void invalidateCrsCacheIfNeeded() {
+        String currentCrs = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
+        int currentLayerCount = panel.layerManager != null ? panel.layerManager.getRenderOrderLayers().size() : 0;
+        if (!currentCrs.equals(lastProjectCrs) || currentLayerCount != lastLayerCount) {
+            crsCache.clear();
+            lastProjectCrs = currentCrs;
+            lastLayerCount = currentLayerCount;
+        }
     }
 
     List<String> getSelectedFeatureIdsForLayer(Layer layer) {
@@ -332,6 +357,10 @@ public class SelectionManager2 {
         if (layers == null || consumer == null) {
             return;
         }
+        
+        // Invalidate cache if CRS or layers changed
+        invalidateCrsCacheIfNeeded();
+        
         for (Layer layer : layers) {
             if (!panel.layerManager.isLayerEffectivelyVisible(layer)) {
                 continue;
@@ -353,7 +382,15 @@ public class SelectionManager2 {
                         continue;
                     }
 
-                    Geometry geometry = panel.reprojectGeometryIfNeeded(layer, (Geometry) geomObj);
+                    // Use cached CRS transform if available
+                    String featureId = feature.getID();
+                    Geometry geometry = crsCache.get(featureId);
+                    if (geometry == null) {
+                        geometry = panel.reprojectGeometryIfNeeded(layer, (Geometry) geomObj);
+                        if (geometry != null && !geometry.isEmpty()) {
+                            crsCache.put(featureId, geometry);
+                        }
+                    }
                     if (geometry == null || geometry.isEmpty()) {
                         continue;
                     }

@@ -1043,6 +1043,7 @@ class MapRenderer {
     // ── 27. drawRasterLayer ─────────────────────────────────────────────────
 
     void drawRasterLayer(Graphics2D g2, Layer layer, LocalRasterData data) {
+        long startedAt = System.nanoTime();
         if (data == null || data.getImage() == null) {
             return;
         }
@@ -1078,12 +1079,35 @@ class MapRenderer {
             copy.drawImage(display, drawX, drawY, drawW, drawH, null);
         } finally {
             copy.dispose();
+            long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
+            if (elapsedMs >= 75L) {
+                CatgisLogger.info("[EMERGENCY-PERF] drawRasterLayer took " + elapsedMs + " ms"
+                        + " layer=" + (layer != null ? layer.getName() : "<null>")
+                        + " sourceCrs=" + (layer != null ? layer.getSourceCRS() : "")
+                        + " displayCrs=" + data.getDisplayCRS()
+                        + " image=" + data.getImage().getWidth() + "x" + data.getImage().getHeight()
+                        + " draw=" + drawW + "x" + drawH
+                        + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread());
+            }
         }
     }
 
     // ── 28. drawAllLabels ───────────────────────────────────────────────────
 
     void drawAllLabels(Graphics2D g2) {
+        // Early return: check if ANY layer has labels enabled before iterating features
+        boolean anyLabelsEnabled = false;
+        for (Layer layer : map.layerManager.getRenderOrderLayers()) {
+            if (layer != null && map.layerManager.isLayerEffectivelyVisible(layer)
+                    && layer.isLabelsVisible()
+                    && layer.getLabelField() != null && !layer.getLabelField().isBlank()
+                    && layer.isLabelVisibleAtScale(map.getCurrentScaleDenominator())) {
+                anyLabelsEnabled = true;
+                break;
+            }
+        }
+        if (!anyLabelsEnabled) return;
+
         map.globalLabelBoxes.clear();
         Object prevHint = g2.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);

@@ -67,6 +67,7 @@ public final class OpenTopographyDemService {
                                               String projectCrs,
                                               String apiKey,
                                               java.io.File outputFile) throws Exception {
+        long startedAt = System.nanoTime();
         if (outputFile == null) {
             throw new IllegalArgumentException("Debes indicar un archivo de salida para el DEM.");
         }
@@ -80,6 +81,7 @@ public final class OpenTopographyDemService {
             latLonEnvelope = RasterCoverageSupport.reprojectEnvelope(projectEnvelope, projectCrs, "EPSG:4326");
         }
         URI uri = buildDownloadUri(dataset, latLonEnvelope, apiKey);
+        CatgisLogger.info("[EMERGENCY-DEM] OpenTopography request uri=" + uri);
 
         HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
         HttpRequest request = HttpRequest.newBuilder(uri)
@@ -89,6 +91,10 @@ public final class OpenTopographyDemService {
                 .build();
 
         HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        CatgisLogger.info("[EMERGENCY-DEM] OpenTopography response"
+                + " status=" + response.statusCode()
+                + " contentType=" + response.headers().firstValue("Content-Type").orElse("")
+                + " file=" + outputFile.getAbsolutePath());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             String errorText = readBodyText(response.body());
             throw new IOException("OpenTopography devolvio " + response.statusCode() + ": " + sanitizeError(errorText));
@@ -108,6 +114,9 @@ public final class OpenTopographyDemService {
                 latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null,
                 dataset != null ? dataset.getSourceCrsCode() : "EPSG:4326"
         );
+        CatgisLogger.info("[EMERGENCY-DEM] OpenTopography download finished in "
+                + ((System.nanoTime() - startedAt) / 1_000_000L)
+                + " ms file=" + outputFile.getAbsolutePath());
         return new FileDownloadResult(outputFile, latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null, uri);
     }
 
