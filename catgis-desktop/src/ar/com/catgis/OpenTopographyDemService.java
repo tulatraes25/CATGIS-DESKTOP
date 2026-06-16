@@ -83,10 +83,14 @@ public final class OpenTopographyDemService {
         URI uri = buildDownloadUri(dataset, latLonEnvelope, apiKey);
         CatgisLogger.info("[EMERGENCY-DEM] OpenTopography request uri=" + uri);
 
-        HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(java.time.Duration.ofSeconds(15))
+                .build();
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .header("Accept", "*/*")
-                .header("User-Agent", "CATGIS Desktop Review")
+                .header("User-Agent", "CATGIS Desktop")
+                .timeout(java.time.Duration.ofSeconds(60))
                 .GET()
                 .build();
 

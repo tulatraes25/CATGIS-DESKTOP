@@ -161,7 +161,10 @@ public final class PublicTerrainTilesDemService {
         WritableRaster raster = WritableRaster.createWritableRaster(sampleModel, buffer, null);
         float[] elevationData = buffer.getData();
 
-        HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
+        HttpClient client = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(java.time.Duration.ofSeconds(15))
+                .build();
         int mosaicWidth = ((plan.tileMaxX - plan.tileMinX) + 1) * TILE_SIZE;
 
         for (int tileY = plan.tileMinY; tileY <= plan.tileMaxY; tileY++) {
@@ -210,7 +213,8 @@ public final class PublicTerrainTilesDemService {
         URI uri = URI.create(TILE_BASE + "/" + plan.zoom + "/" + tileX + "/" + tileY + ".png");
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .header("Accept", "image/png")
-                .header("User-Agent", "CATGIS Desktop Review")
+                .header("User-Agent", "CATGIS Desktop")
+                .timeout(java.time.Duration.ofSeconds(30))
                 .GET()
                 .build();
 
