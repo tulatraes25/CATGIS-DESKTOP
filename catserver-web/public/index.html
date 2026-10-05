@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CATSERVER Web</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css" integrity="sha384-MGCxhspF/+ufueUgol3FDkiAYQbpSNRhBT0VWHJt64U8qIy9qlnXWx8LAbj6niPH" crossorigin="anonymous">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand-card">
+                <p class="eyebrow">Municipalidad de Comodoro Rivadavia</p>
+                <h1>CATSERVER Web</h1>
+                <p class="lede">Visor base para capas municipales, búsquedas urbanas y consulta rápida de datos territoriales.</p>
+            </div>
+
+            <div class="toolbar-card">
+                <label for="catalogMode">Modo de catálogo</label>
+                <select id="catalogMode">
+                    <option value="municipal">Estructura municipal</option>
+                    <option value="thematic">Organización temática</option>
+                </select>
+                <p class="helper-text">Municipal usa secretarías y subsecretarías. Temática muestra la organización GIS técnica.</p>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-button active" data-tab="layers">Capas</button>
+                <button class="tab-button" data-tab="search">Búsqueda</button>
+                <button class="tab-button" data-tab="detail">Ficha</button>
+            </div>
+
+            <section class="tab-panel active" data-panel="layers">
+                <div class="panel-head">
+                    <h2>Capas publicadas</h2>
+                    <button id="refreshLayersButton" class="ghost-button">Recargar</button>
+                </div>
+                <p class="helper-text panel-helper-text">Ninguna capa se carga al abrir el visor. Activá solo las que quieras ver.</p>
+                <section id="pozosFiltersCard" class="filter-card">
+                    <div class="panel-head filter-panel-head">
+                        <h3>Filtros de pozos</h3>
+                        <button id="clearPozosFiltersButton" class="ghost-button filter-clear-button" type="button">Limpiar</button>
+                    </div>
+                    <p id="pozosFiltersStatus" class="helper-text filter-status">Se aplican a la capa Pozos petroleros - ejido.</p>
+                    <div class="filter-columns">
+                        <div class="filter-group">
+                            <p class="filter-group-title">Tipo de pozo</p>
+                            <div id="tipopozoOptions" class="filter-options"></div>
+                        </div>
+                        <div class="filter-group">
+                            <p class="filter-group-title">Estado de pozo</p>
+                            <div id="estpozoOptions" class="filter-options"></div>
+                        </div>
+                        <div class="filter-group">
+                            <p class="filter-group-title">Area</p>
+                            <div id="areaOptions" class="filter-options"></div>
+                        </div>
+                        <div class="filter-group">
+                            <p class="filter-group-title">Yacimiento</p>
+                            <div id="yacimientoOptions" class="filter-options"></div>
+                        </div>
+                    </div>
+                </section>
+                <div id="layersTree" class="layers-tree"></div>
+            </section>
+
+            <section class="tab-panel" data-panel="search">
+                <div class="panel-head">
+                    <h2>Buscador</h2>
+                </div>
+                <form id="searchForm" class="search-form">
+                    <input id="searchInput" type="search" placeholder="Barrio, partida, zona...">
+                    <button type="submit">Buscar</button>
+                </form>
+                <p class="helper-text">Ejemplos: <span class="inline-code">Jorge Newbery</span>, <span class="inline-code">37673</span>, <span class="inline-code">Residencial</span>, <span class="inline-code">CFP.Ch.A-226</span>.</p>
+                <div id="searchResults" class="search-results"></div>
+            </section>
+
+            <section class="tab-panel" data-panel="detail">
+                <div class="panel-head">
+                    <h2>Ficha</h2>
+                </div>
+                <div id="featureDetail" class="feature-detail empty">
+                    Hacé click sobre una capa o un resultado de búsqueda para ver sus atributos.
+                </div>
+            </section>
+        </aside>
+
+        <main class="map-shell">
+            <header class="map-topbar">
+                <div>
+                    <strong>Capas visibles</strong>
+                    <span id="visibleSummary">0 activas</span>
+                </div>
+                <div class="topbar-actions">
+                    <button id="toggleSidebarButton" class="ghost-button sidebar-toggle-button" type="button">Ocultar panel</button>
+                    <button id="fitAllButton" class="ghost-button">Zoom general</button>
+                    <span id="mapStatus" class="status-pill">Listo</span>
+                </div>
+            </header>
+            <div id="map"></div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js" integrity="sha384-U054LTKiMIJKEecR8PKFiUZdvkGWHjfPBnen5hSmR9TwfOfgZmKbskC8Rs9dCm/1" crossorigin="anonymous">
+    <script src="/app.js"></script>
+</body>
+</html>

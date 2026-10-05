@@ -1,0 +1,16 @@
+.gradle/
+build/
+bin/
+
+.idea/
+.vscode/
+
+*.class
+*.jar
+*.log
+*.tmp
+
+Thumbs.db
+.DS_Store
+
+src/ar/com/catgis.zip

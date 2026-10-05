@@ -1,0 +1,191 @@
+package ar.com.catgis.integration;
+
+import ar.com.catgis.AppContext;
+import ar.com.catgis.BooleanRiskService;
+import ar.com.catgis.CRSDefinitions;
+import ar.com.catgis.CatgisDesktopApp;
+import ar.com.catgis.DrainageExtractionService;
+import ar.com.catgis.RasterImageLoader;
+import ar.com.catgis.RasterLayer;
+import ar.com.catgis.RasterSidecarSupport;
+import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.raster.RasterCoverageSupport;
+import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.core.model.Layer;
+import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.GridCoverageFactory;
+import org.geotools.gce.geotiff.GeoTiffWriter;
+import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.Envelope;
+
+import java.awt.image.BandedSampleModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferFloat;
+import java.awt.image.WritableRaster;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class BooleanRiskProjectRoundTripIntegrationTest {
+
+    @AfterEach
+    void tearDown() {
+        IntegrationTestSupport.clearAppContext();
+    }
+
+    @Test
+    void persistsBooleanRiskOutputsAcrossSaveAndReload() throws Exception {
+        Path tempDir = Files.createTempDirectory("catgis-integration-boolrisk");
+        Path demPath = tempDir.resolve("dem_boolrisk_3857.tif");
+        Path soilPath = tempDir.resolve("soil_boolrisk_3857.tif");
+        Path projectFile = tempDir.resolve("Proyecto riesgo booleano 22182.catgis");
+        writeDem3857(demPath);
+        writeSoil3857(soilPath);
+
+        IntegrationTestSupport.runOnEdt(() -> {
+            IntegrationTestSupport.initializeAppContext("Proyecto riesgo booleano 22182");
+            AppContext.project().setProjectCRS("EPSG:22182");
+            AppContext.project().setProjectFile(projectFile.toFile());
+
+            RasterLayer demLayer = addRasterLayer(demPath, "DEM riesgo booleano", "DEM local", "EPSG:22182");
+            RasterLayer soilLayer = addRasterLayer(soilPath, "Arcilla SoilGrids", "SoilGrids clay 0-5 cm", "EPSG:22182");
+
+            BooleanRiskService.RiskResult result = BooleanRiskService.generateRisk(
+                    new BooleanRiskService.RiskRequest(
+                            demLayer,
+                            soilLayer,
+                            "Riesgo 22182",
+                            DrainageExtractionService.AnalysisDetail.BALANCED,
+                            DrainageExtractionService.HydrologicConditioning.ROBUST,
+                            BooleanRiskService.RiskRule.from(BooleanRiskService.ComparisonMode.GREATER_THAN, 1d, 1d),
+                            BooleanRiskService.RiskRule.from(BooleanRiskService.ComparisonMode.GREATER_THAN, 300d, 300d),
+                            BooleanRiskService.LogicMode.AND,
+                            true,
+                            true,
+                            true
+                    )
+            );
+
+            for (BooleanRiskService.GeneratedRasterLayer raster : result.rasterLayers()) {
+                AppContext.project().addLayer(raster.layer());
+                CatgisDesktopApp.layersPanel.addLayer(raster.layer());
+                AppContext.mapPanel().addOrUpdateRasterLayer(raster.layer(), raster.data());
+            }
+            if (result.vectorLayer() != null) {
+                AppContext.project().addLayer(result.vectorLayer().layer());
+                CatgisDesktopApp.layersPanel.addLayer(result.vectorLayer().layer());
+                AppContext.mapPanel().addOrUpdateShapefileLayer(result.vectorLayer().layer(), result.vectorLayer().data());
+            }
+
+            assertTrue(IntegrationTestSupport.saveProject(projectFile.toFile(), false));
+        });
+
+        IntegrationTestSupport.runOnEdt(() -> {
+            IntegrationTestSupport.initializeAppContext("Reload riesgo booleano 22182");
+            assertTrue(IntegrationTestSupport.loadProject(projectFile.toFile(), false));
+
+            Layer slopeMask = findLayer("Mascara pendiente - Riesgo 22182");
+            Layer soilMask = findLayer("Mascara suelo - Riesgo 22182");
+            Layer riskRaster = findLayer("Riesgo preliminar - Riesgo 22182");
+            Layer riskVector = findLayer("Zonas riesgo preliminar - Riesgo 22182");
+
+            assertNotNull(slopeMask);
+            assertNotNull(soilMask);
+            assertNotNull(riskRaster);
+            assertNotNull(riskVector);
+
+            assertEquals("EPSG:22182", slopeMask.getSourceCRS());
+            assertEquals("EPSG:22182", soilMask.getSourceCRS());
+            assertEquals("EPSG:22182", riskRaster.getSourceCRS());
+            assertEquals("EPSG:22182", riskVector.getSourceCRS());
+
+            LocalRasterData slopeMaskData = AppContext.mapPanel().getRasterData(slopeMask);
+            LocalRasterData soilMaskData = AppContext.mapPanel().getRasterData(soilMask);
+            LocalRasterData riskRasterData = AppContext.mapPanel().getRasterData(riskRaster);
+            ShapefileData riskVectorData = AppContext.mapPanel().getShapefileData(riskVector);
+
+            assertNotNull(slopeMaskData);
+            assertNotNull(soilMaskData);
+            assertNotNull(riskRasterData);
+            assertNotNull(riskVectorData);
+
+            assertEquals("EPSG:22182", slopeMaskData.getDisplayCRS());
+            assertEquals("EPSG:22182", soilMaskData.getDisplayCRS());
+            assertEquals("EPSG:22182", riskRasterData.getDisplayCRS());
+            assertNotNull(riskVectorData.getSchema().getDescriptor("zone_name"));
+            assertNotNull(riskVectorData.getSchema().getDescriptor("risk_val"));
+            assertTrue(riskVectorData.getEnvelope().intersects(riskRasterData.getEnvelope()));
+        });
+    }
+
+    private static Layer findLayer(String name) {
+        return AppContext.project().getLayers().stream()
+                .filter(layer -> name.equals(layer.getName()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static RasterLayer addRasterLayer(Path rasterPath, String layerName, String sourceName, String projectCrs) throws Exception {
+        LocalRasterData rasterData = RasterImageLoader.loadReal(rasterPath.toFile(), projectCrs, "EPSG:3857");
+        RasterLayer layer = new RasterLayer(layerName, rasterPath.toString());
+        layer.setSourceName(sourceName);
+        layer.setFeatureCount(1);
+        layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCrs));
+        AppContext.project().addLayer(layer);
+        CatgisDesktopApp.layersPanel.addLayer(layer);
+        AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+        return layer;
+    }
+
+    private static void writeDem3857(Path file) throws Exception {
+        int width = 24;
+        int height = 24;
+        float[] values = new float[width * height];
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                float ridge = (float) (320d + (row * 3.5d) + (Math.abs(col - 12) * 6.5d));
+                float channel = (row > 5 && row < 19 && col > 9 && col < 15) ? 24f : 0f;
+                values[(row * width) + col] = ridge - channel;
+            }
+        }
+        writeRaster3857(file, width, height, values, "dem-boolrisk-3857");
+    }
+
+    private static void writeSoil3857(Path file) throws Exception {
+        int width = 24;
+        int height = 24;
+        float[] values = new float[width * height];
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                values[(row * width) + col] = (float) (180d + (col * 11d) + (row * 4d));
+            }
+        }
+        writeRaster3857(file, width, height, values, "soil-boolrisk-3857");
+    }
+
+    private static void writeRaster3857(Path file, int width, int height, float[] values, String name) throws Exception {
+        BandedSampleModel sampleModel = new BandedSampleModel(DataBuffer.TYPE_FLOAT, width, height, 1);
+        DataBufferFloat buffer = new DataBufferFloat(values, values.length);
+        WritableRaster raster = WritableRaster.createWritableRaster(sampleModel, buffer, null);
+        ReferencedEnvelope envelope = new ReferencedEnvelope(
+                -7665200, -7660400,
+                -3881400, -3876600,
+                CRSDefinitions.decode("EPSG:3857", true)
+        );
+        GridCoverage2D coverage = new GridCoverageFactory().create(name, raster, envelope);
+        GeoTiffWriter writer = new GeoTiffWriter(file.toFile());
+        try {
+            writer.write(coverage, (org.geotools.api.parameter.GeneralParameterValue[]) null);
+        } finally {
+            writer.dispose();
+        }
+        RasterSidecarSupport.write(
+                file.toFile(),
+                new Envelope(envelope.getMinX(), envelope.getMaxX(), envelope.getMinY(), envelope.getMaxY()),
+                "EPSG:3857"
+        );
+    }
+}

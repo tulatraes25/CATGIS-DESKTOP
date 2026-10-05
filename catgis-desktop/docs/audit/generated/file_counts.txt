@@ -1,0 +1,86 @@
+================================================================================
+CATGIS DESKTOP — FILE COUNT AUDIT
+Generated: 2026-06-14
+Source: C:\CATGIS\catgis-desktop\src\
+================================================================================
+
+--- SUMMARY ----------------------------------------------------------------
+Main Java files:   480
+Test Java files:    98
+Total Java files:  578
+Packages:           31 (including root)
+Main code lines:   119,497
+Test code lines:    10,179
+Total lines:        129,676
+Test ratio:         8.5% (test lines / main lines)
+
+--- PACKAGE BREAKDOWN (by lines, descending) --------------------------------
+Package                                    Files   Lines
+(ar.com.catgis root)                       336     92,207
+ar.com.catgis.layout                        57      7,651
+ar.com.catgis.climate                       18      4,882
+ar.com.catgis.catmap                         9      3,048
+ar.com.catgis.analysis.vector                2      1,966
+ar.com.catgis.core.model                     7      1,709
+ar.com.catgis.ui.components.layout          13      1,382
+ar.com.catgis.renderer                      10      1,170
+ar.com.catgis.renderer.labels                2      1,054
+ar.com.catgis.analysis.raster                2        673
+ar.com.catgis.data.vector                    2        657
+ar.com.catgis.data.online                    4        651
+ar.com.catgis.data.raster                    2        646
+ar.com.catgis.service                        6        472
+ar.com.catgis.plugins                        2        241
+ar.com.catgis.scripting                      1        226
+ar.com.catgis.sld                            1        226
+ar.com.catgis.renderer.decorations           1        217
+ar.com.catgis.analysis                       2        154
+ar.com.catgis.ui.dialogs                     1        117
+ar.com.catgis.renderer.advanced              1         87
+ar.com.catgis.core.geometry                  1         61
+
+--- TOP 30 FILES BY LINES ---------------------------------------------------
+ 1. MapLayoutComposerDialog.java          4,139  (root)
+ 2. MapPanel.java                         3,676  (root)
+ 3. LayersPanel.java                      2,096  (root)
+ 4. TerrainHydrologyAnalysisService.java  1,980  (root)
+ 5. GeoprocessingAssistantDialog.java     1,715  analysis.vector
+ 6. MapEditingEngine.java                 1,687  (root)
+ 7. ExportVectorLayerAction.java          1,674  (root)
+ 8. LayoutPreviewPanel.java               1,656  (root)
+ 9. Main.java (catmap)                    1,628  catmap
+10. ProRasterDerivedService.java          1,616  (root)
+11. AttributeTableWindow.java             1,562  (root)
+12. DrainageExtractionService.java        1,513  (root)
+13. LayoutPageRenderer.java               1,446  layout
+14. LayerPropertiesDialog.java            1,392  (root)
+15. CRSSelectorDialog.java                1,284  (root)
+16. EditingGeometryOperations.java        1,064  (root)
+17. MapRenderer.java                      1,054  (root)
+18. MainMenuBar.java                        981  (root)
+19. CRSDefinitions.java                     974  (root)
+20. FloatingVectorEditToolbar.java          961  (root)
+21. LoadProjectAction.java                  888  (root)
+22. TopographicProfileDialog.java           870  (root)
+23. LabelExpressionEngine.java              828  renderer.labels
+24. BooleanRiskService.java                 817  (root)
+25. OpenFileAction.java                     809  (root)
+26. Layer.java                              793  core.model
+27. TopographyWorkflowSupport.java          793  (root)
+28. LayoutController.java                   748  layout
+29. LayoutTemplateManager.java              733  layout
+30. ProDatasetOpenService.java              724  (root)
+
+--- GOD CLASS RISK -----------------------------------------------------------
+Files exceeding 2,000 lines:  3
+  MapLayoutComposerDialog  (4,139) — layout composer, UI, business logic, rendering
+  MapPanel                  (3,676) — map display, tools, rendering, events
+  LayersPanel               (2,096) — layer tree, context menus, drag-drop
+
+All three have been the subject of recent extraction refactoring (inner types
+extracted, MapTool strategy pattern applied, JOptionPane migrated).
+
+--- NOTES -------------------------------------------------------------------
+- Main line count excludes test files, generated code, and resource files.
+- Test line count covers all files under src/test/.
+- Package breakdown combines all .java files in each directory tree.

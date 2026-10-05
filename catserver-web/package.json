@@ -1,0 +1,25 @@
+{
+  "name": "catserver-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Visor web base para CATSERVER",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"No tests configured yet. Add unit tests for server.js and public/app.js\" && exit 0",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "main": "server.js",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "prettier": "^3.8.3"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}

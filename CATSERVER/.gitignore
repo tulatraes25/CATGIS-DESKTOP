@@ -1,0 +1,11 @@
+# Inventarios generados localmente
+inventory/*.csv
+!inventory/README.md
+
+# Fuentes y salidas de datos no deben versionarse
+incoming/
+exports/
+backups/
+*.dump
+*.backup
+*.pgdump

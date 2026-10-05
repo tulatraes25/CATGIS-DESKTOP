@@ -1,0 +1,264 @@
+package ar.com.catgis.plugins;
+
+import ar.com.catgis.CatgisLogger;
+
+import ar.com.catgis.MapPanel;
+
+import javax.swing.*;
+import java.io.*;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.jar.JarFile;
+import java.util.jar.Manifest;
+
+/**
+ * <strong>EXPERIMENTAL — Plugin system for CATGIS.</strong>
+ * <p>
+ * Plugins are JAR files placed in the 'plugins' directory.
+ * Each plugin must implement {@link CatgisPlugin} and declare it via
+ * {@code META-INF/services} or a manifest entry.
+ * </p>
+ * <p>
+ * <strong>Security:</strong> Plugins run with the same privileges as the
+ * application and can read/write files, access the network, and execute
+ * arbitrary code. Only install plugins from trusted sources.
+ * </p>
+ * <p>
+ * Supports: hot-reload (rescan directory), enable/disable, SPI discovery.
+ * </p>
+ */
+public final class PluginManager {
+
+    private static final String PLUGINS_DIR = "plugins";
+    private static final String ENABLED_PROPERTY = "catgis.plugins.enabled";
+    private static final Map<String, PluginInfo> loadedPlugins = new LinkedHashMap<>();
+    private static final List<CatgisPlugin> activePlugins = new CopyOnWriteArrayList<>();
+    private static ClassLoader pluginClassLoader;
+    private static long lastScanTime;
+
+    private PluginManager() {}
+
+    public record PluginInfo(String name, String version, String description,
+                              boolean enabled, String mainClass) {}
+
+    /**
+     * Check if plugins are enabled via system property or env var.
+     * Default: disabled (plugins are opt-in for security).
+     */
+    public static boolean isEnabled() {
+        String prop = System.getProperty(ENABLED_PROPERTY);
+        if ("true".equalsIgnoreCase(prop)) return true;
+        String env = System.getenv("CATGIS_PLUGINS_ENABLED");
+        return "true".equalsIgnoreCase(env) || "1".equals(env);
+    }
+
+    // ─── Lifecycle ─────────────────────────────────────────────────────
+
+    /**
+     * Initialize the plugin system. Called at startup.
+     * Plugins are disabled by default — set {@code catgis.plugins.enabled=true}
+     * or the {@code CATGIS_PLUGINS_ENABLED} environment variable to enable.
+     */
+    public static void initialize() {
+        if (!isEnabled()) {
+            CatgisLogger.warn("PluginManager: plugins deshabilitados por defecto. "
+                    + "Para habilitarlos, iniciar con -Dcatgis.plugins.enabled=true "
+                    + "o definir la variable de entorno CATGIS_PLUGINS_ENABLED=true.", null);
+            return;
+        }
+        CatgisLogger.warn("PluginManager: los plugins se ejecutan con los mismos permisos "
+                + "que la aplicacion — solo instalar plugins de fuentes confiables.", null);
+        File dir = new File(PLUGINS_DIR);
+        if (!dir.exists()) dir.mkdirs();
+        loadPlugins();
+    }
+
+    /**
+     * Scan for new/removed plugins (hot-reload).
+     * No-op if plugins are disabled.
+     */
+    public static void scanForChanges() {
+        if (!isEnabled()) return;
+        File dir = new File(PLUGINS_DIR);
+        if (!dir.exists()) return;
+
+        long lastMod = dir.lastModified();
+        if (lastMod == lastScanTime) return;
+        lastScanTime = lastMod;
+
+        // Shutdown removed plugins
+        Set<String> currentJars = new HashSet<>();
+        File[] jars = dir.listFiles((d, n) -> n.endsWith(".jar"));
+        if (jars != null) {
+            for (File jar : jars) currentJars.add(jar.getName());
+        }
+
+        for (String name : new ArrayList<>(loadedPlugins.keySet())) {
+            if (!currentJars.contains(name)) {
+                unloadPlugin(name);
+            }
+        }
+
+        // Load new plugins
+        loadPlugins();
+    }
+
+    // ─── Loading ──────────────────────────────────────────────────────
+
+    private static void loadPlugins() {
+        File dir = new File(PLUGINS_DIR);
+        if (!dir.exists()) return;
+
+        List<URL> jarUrls = new ArrayList<>();
+        File[] jars = dir.listFiles((d, n) -> n.endsWith(".jar"));
+        if (jars == null) return;
+
+        for (File jar : jars) {
+            String name = jar.getName();
+            if (loadedPlugins.containsKey(name)) continue; // already loaded
+
+            try {
+                // Read manifest for plugin metadata
+                String mainClass = null;
+                String version = "1.0";
+                String description = "";
+                try (JarFile jf = new JarFile(jar)) {
+                    Manifest mf = jf.getManifest();
+                    if (mf != null) {
+                        mainClass = mf.getMainAttributes().getValue("Plugin-Class");
+                        if (mainClass == null) {
+                            mainClass = mf.getMainAttributes().getValue("Main-Class");
+                        }
+                        String v = mf.getMainAttributes().getValue("Plugin-Version");
+                        if (v != null) version = v;
+                        String d = mf.getMainAttributes().getValue("Plugin-Description");
+                        if (d != null) description = d;
+                    }
+                }
+
+                URL jarUrl = jar.toURI().toURL();
+                jarUrls.add(jarUrl);
+                loadedPlugins.put(name, new PluginInfo(
+                        name.replace(".jar", ""),
+                        version,
+                        description.isEmpty() ? "Plugin: " + name : description,
+                        true,
+                        mainClass));
+            } catch (Exception e) {
+                loadedPlugins.put(name, new PluginInfo(
+                        name.replace(".jar", ""), "error",
+                        "Failed to load: " + e.getMessage(), false, null));
+            }
+        }
+
+        // Create classloader with all JARs
+        if (!jarUrls.isEmpty()) {
+            // Isolate plugins in their own classloader (URLClassLoader, not a security sandbox)
+            URLClassLoader oldLoader = pluginClassLoader instanceof URLClassLoader ucl ? ucl : null;
+            pluginClassLoader = new URLClassLoader(
+                    jarUrls.toArray(new URL[0]),
+                    PluginManager.class.getClassLoader());
+
+            // Instantiate plugins via SPI
+            for (URL url : jarUrls) {
+                try {
+                    instantiatePlugin(url);
+                } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
+            }
+
+            // Close old loader
+            if (oldLoader != null) {
+                try { oldLoader.close(); } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
+            }
+        }
+    }
+
+    private static void instantiatePlugin(URL jarUrl) {
+        try {
+            // Try ServiceLoader (SPI) approach
+            ServiceLoader<CatgisPlugin> loader = ServiceLoader.load(
+                    CatgisPlugin.class, pluginClassLoader);
+            for (CatgisPlugin plugin : loader) {
+                if (!activePlugins.contains(plugin)) {
+                    activePlugins.add(plugin);
+                    plugin.onEnable();
+                }
+            }
+        } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
+    }
+
+    private static void unloadPlugin(String jarName) {
+        PluginInfo info = loadedPlugins.remove(jarName);
+        if (info != null && info.mainClass() != null) {
+            // Notify plugins of shutdown
+            for (CatgisPlugin p : activePlugins) {
+                if (p.getClass().getName().equals(info.mainClass())) {
+                    p.onDisable();
+                    activePlugins.remove(p);
+                    break;
+                }
+            }
+        }
+    }
+
+    // ─── Access ───────────────────────────────────────────────────────
+
+    /**
+     * Get all loaded plugins (enabled and disabled).
+     */
+    public static Map<String, PluginInfo> getPlugins() {
+        return new LinkedHashMap<>(loadedPlugins);
+    }
+
+    /**
+     * Get active (enabled) plugins.
+     */
+    public static List<CatgisPlugin> getActivePlugins() {
+        return new ArrayList<>(activePlugins);
+    }
+
+    /**
+     * Get plugin class loader.
+     */
+    public static ClassLoader getPluginClassLoader() {
+        return pluginClassLoader != null ? pluginClassLoader
+                : PluginManager.class.getClassLoader();
+    }
+
+    /**
+     * Enable/disable a plugin.
+     */
+    public static void setPluginEnabled(String name, boolean enabled) {
+        PluginInfo info = loadedPlugins.get(name);
+        if (info != null) {
+            loadedPlugins.put(name, new PluginInfo(
+                    info.name(), info.version(), info.description(),
+                    enabled, info.mainClass()));
+
+            // Notify plugin
+            for (CatgisPlugin p : activePlugins) {
+                String className = p.getClass().getName();
+                if (className.equals(info.mainClass())
+                        || name.contains(p.getClass().getSimpleName())) {
+                    if (enabled) p.onEnable();
+                    else p.onDisable();
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Shutdown all plugins.
+     */
+    public static void shutdown() {
+        for (CatgisPlugin p : activePlugins) {
+            try { p.onDisable(); } catch (Exception ignored) { CatgisLogger.warn("PluginManager: operation failed", ignored); }
+        }
+        activePlugins.clear();
+        loadedPlugins.clear();
+    }
+}

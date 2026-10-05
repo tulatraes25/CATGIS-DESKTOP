@@ -1,0 +1,112 @@
+# Dependencias
+node_modules/
+
+# Build
+.gradle/
+build/
+bin/
+out/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Archivos compilados
+*.class
+*.jar
+!catgis-desktop/gradle/wrapper/gradle-wrapper.jar
+*.war
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Configuracion sensible
+**/.env
+**/.env.*
+!**/.env.example
+**/config/local.json
+**/config/local.*.json
+*.pfx
+*.p12
+*.key
+*.jks
+*.keystore
+*.pgpass
+.pgpass
+CATSERVER/docs/07_datos_conexion_catserver.txt
+
+# Backups y temporales
+*.tmp
+*.bak
+*.zip
+*.tar.gz
+*.dump
+*.backup
+*.pgdump
+temp/
+tmp-*/
+tmp_*/
+_old_catgis_extract/
+
+# Directorios de datos (se generan en runtime)
+CATSERVER_DATA/incoming/
+CATSERVER_DATA/exports/
+CATSERVER_DATA/backups/
+CATSERVER_DATA/etl/
+catserver_shapes/incoming/
+catserver_shapes/export/
+
+# Exclusiones existentes de catgis-desktop
+src/ar/com/catgis.zip
+
+# Archivos grandes / binarios / referencias
+*.msi
+*.exe
+*.err
+*.out
+CATGIS-Desktop.jar
+catgis-desktop.zip
+export/
+exports/
+gradle-*/
+gradle-home/
+.gradle-home/
+kosmo_decompilado/
+kosmo-ref/
+kosmo-refs/
+kosmo-sample/
+catserver_cad/
+catserver_tmp/
+gif-frames/
+gif-frames-2/
+ifcb_inspect/
+pdf_audit/
+CATGIS_PRO_source_*.zip
+runtimeClasspath.txt
+mappanel_snippet.txt
+PdfExtractTemp.java
+ChatGPT Image*
+Resumenes chats/
+srczip/
+tmp-flat/
+tools/
+
+# Datos GIS (archivos pesados, no son codigo fuente)
+catserver_shapes/
+
+# Submodulos externos
+CONSULTLAN/
+CONSULTLAN_prescription-settings-phase1/
+CONSULTLAN_professionals_local_phase1/
+
+# Metadatos locales de herramientas/skills
+.atl/
+/catgis-desktop/final_modify.js
+/catgis-desktop/fix_final2.ps1

@@ -1,0 +1,10 @@
+interface:
+  display_name: CATGIS Engineering
+  short_description: Dirige CATGIS con Specs Kiro, GitHub-first y certificacion por SHA
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,23 @@
+CATSERVER - datos de conexion (PLANTILLA PUBLICA)
+
+Servidor: localhost
+Puerto: 5432
+Base de datos: catserver
+
+Usuario administrador:
+- usuario sugerido: catserver_admin_user
+- clave: DEFINIR FUERA DE GIT
+- acceso: lectura y administracion
+
+Usuario visor:
+- usuario sugerido: catserver_viewer_user
+- clave: DEFINIR FUERA DE GIT
+- acceso: solo lectura
+
+Configuracion recomendada:
+- No guardar claves reales en este archivo.
+- Para CATSERVER Web usar variables de entorno (ver catserver-web/.env.example).
+- Para herramientas locales usar un archivo de configuracion ignorado por Git.
+- Rotar inmediatamente cualquier clave que haya sido publicada accidentalmente.
+
+Este archivo es una plantilla y no contiene credenciales reales.
