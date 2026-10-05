@@ -1,6 +1,6 @@
 # T10C — GitHub Support Purge Handoff
 
-Status: CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION (T10C); superseded public lineage under T10D-R2 privacy isolation
+Status: CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION (T10C); superseded public lineage archived by T10D-R2 privacy isolation (CLOSED)
 
 This file contains only repository-safe metadata required to hand T10C to GitHub Support. The private evidence bundle remains outside Git and MUST NOT be committed.
 

@@ -130,3 +130,5 @@ Acceptance:
   - (c) privacy isolation: a superseding public repository is published whose entire reachable history is noreply-only, and the superseded public repository is made private and preserved; no non-noreply commit remains publicly reachable (`PUBLIC_NON_NOREPLY_COMMIT_COUNT=0`).
 - AC-10.4: the repository's licensing posture is documented; current decision is proprietary/source-available, not open source.
 - AC-10.5: only the intended persistent remote branches remain; current certified target is `main` only.
+
+Status at T10D-R2 closure: `ACCOUNT_PRIMARY_EMAIL_VISIBILITY=PRIVATE`; `PUBLIC_PERSONAL_EMAIL_METADATA=ABSENT`; canonical public repository is `tulatraes25/CATGIS-DESKTOP` (ID `1406486908`) published from a single parentless noreply root commit; the superseded public repository (ID `1405554812`) is a preserved private privacy archive; the original repository (ID `1199177324`) remains the private forensic archive.

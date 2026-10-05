@@ -1,7 +1,7 @@
 # Repository Sanitization — Tasks
 
 Status: ACTIVE
-Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_PRIVACY_REMEDIATION_IN_PROGRESS`
+Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_CLOSED_CERTIFIED_BY_PRIVACY_ISOLATION / T10E_CLOSURE_PR_IN_PROGRESS`
 
 ## Completed foundation
 
@@ -171,7 +171,7 @@ Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_PRIVACY_REM
     - cutover performed no file copy and no remote mutation;
     - gate result: `T10C_STATUS=CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION`;
     - GitHub Support path is retired as unnecessary for T10C; sanitized Support evidence remains offline as fallback/archive only.
-  - **T10D — Privacy/license governance: PRIVACY_REMEDIATION_IN_PROGRESS**
+  - **T10D — Privacy/license governance: CLOSED_CERTIFIED_BY_PRIVACY_ISOLATION**
     - local noreply configured;
     - owner decision: `LICENSE_DECISION=PROPRIETARY`; proprietary/source-available notice and README declaration are implemented by the T10 license PR.
     - **T10D-R2 finding:**
@@ -183,8 +183,8 @@ Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_PRIVACY_REM
       - a **second repository isolation** is selected to remove those public metadata objects completely.
     - Historical-author rewrite for the first pre-rewrite history: `NOT_REQUIRED_FOR_FIRST_PRE_REWRITE_HISTORY` (that history is already inside the first private forensic archive and is not part of the canonical public repository).
     - Current post-isolation non-noreply commits: `MUST_BE_REMOVED_BY_SECOND_REPOSITORY_ISOLATION`.
-    - T10D closes as `CLOSED_CERTIFIED_BY_PRIVACY_ISOLATION` only after the second public cutover proves `PUBLIC_NON_NOREPLY_COMMIT_COUNT=0`.
-  - **T10E — Final closure: AUTHORIZED_AFTER_T10D_PUBLIC_CUTOVER**
+    - T10D **CLOSED**: the second repository isolation was executed — the superseded public repository (ID `1405554812`) is now the private `CATGIS-DESKTOP-PRIVACY-ARCHIVE-20261005`; the private staging repository (ID `1406486908`) was published as the new canonical `tulatraes25/CATGIS-DESKTOP` from the single parentless noreply root commit `1cfd0050c831cdd2b34f7621f8ac2692466e5504` (tree `629ee866f009594ee2c69c2d34c9412a3cd1ac81`); ruleset `24546459` active; private CI `37389728300` 3/3 SUCCESS; `ACCOUNT_PRIMARY_EMAIL_VISIBILITY=PRIVATE`; `PUBLIC_PERSONAL_EMAIL_METADATA=ABSENT`; the superseded non-noreply commits are publicly unreachable.
+  - **T10E — Final closure: CLOSURE_PR_IN_PROGRESS**
     - blocked until the second (privacy) repository isolation publishes a public lineage whose entire reachable history is noreply-only;
     - then: from the fresh final public clone, open `docs/t10-final-close` locally, merge through the protected workflow, and reconcile issue #28 (issue #28 lives in the first private forensic archive);
     - branch inventory and README reflect final state;
