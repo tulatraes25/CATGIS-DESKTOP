@@ -1,7 +1,7 @@
 # Repository Sanitization — Tasks
 
-Status: ACTIVE
-Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_CLOSED_CERTIFIED_BY_PRIVACY_ISOLATION / T10E_CLOSURE_PR_IN_PROGRESS`
+Status: CLOSED_CERTIFIED
+Current state: `CLOSED_CERTIFIED`
 
 ## Completed foundation
 
@@ -141,7 +141,7 @@ Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_CLOSED_CERT
     - the original pre-rewrite repository metadata was physically fragmented by failed Windows directory moves before final recovery, so the exact old checkout is no longer intact as one Git repository;
     - REQ-7 remains satisfied because the operational checkout is a clean post-rewrite clone, no active development resumes from the old SHA, and all remaining pre-rewrite material is quarantined/non-pushable.
   - Gate result: `FRESH_CLONE_RECOVERED_VALIDATED`.
-- [-] **T10 — Close sanitation program**
+- [x] **T10 — Close sanitation program**
   - Requirements: REQ-6, REQ-7, REQ-8, REQ-10
   - Executor: GPT/GitHub + local operator for secret rotation
   - **T10A — Governance cleanup: COMPLETE**
@@ -184,11 +184,10 @@ Current state: `T10C_CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION / T10D_CLOSED_CERT
     - Historical-author rewrite for the first pre-rewrite history: `NOT_REQUIRED_FOR_FIRST_PRE_REWRITE_HISTORY` (that history is already inside the first private forensic archive and is not part of the canonical public repository).
     - Current post-isolation non-noreply commits: `MUST_BE_REMOVED_BY_SECOND_REPOSITORY_ISOLATION`.
     - T10D **CLOSED**: the second repository isolation was executed — the superseded public repository (ID `1405554812`) is now the private `CATGIS-DESKTOP-PRIVACY-ARCHIVE-20261005`; the private staging repository (ID `1406486908`) was published as the new canonical `tulatraes25/CATGIS-DESKTOP` from the single parentless noreply root commit `1cfd0050c831cdd2b34f7621f8ac2692466e5504` (tree `629ee866f009594ee2c69c2d34c9412a3cd1ac81`); ruleset `24546459` active; private CI `37389728300` 3/3 SUCCESS; `ACCOUNT_PRIMARY_EMAIL_VISIBILITY=PRIVATE`; `PUBLIC_PERSONAL_EMAIL_METADATA=ABSENT`; the superseded non-noreply commits are publicly unreachable.
-  - **T10E — Final closure: CLOSURE_PR_IN_PROGRESS**
-    - blocked until the second (privacy) repository isolation publishes a public lineage whose entire reachable history is noreply-only;
-    - then: from the fresh final public clone, open `docs/t10-final-close` locally, merge through the protected workflow, and reconcile issue #28 (issue #28 lives in the first private forensic archive);
-    - branch inventory and README reflect final state;
-    - no open sanitation PR;
-    - final post-main CI green;
-    - spec state set to `CLOSED_CERTIFIED`.
+  - **T10E — Final closure: CLOSED_CERTIFIED**
+    - Evidence: `T10E_PR=#1`; `T10E_MERGE_SHA=71bdf2a4955cae556fa2027a11b6191a0f98ce59`; `T10E_POST_MAIN_CI=SUCCESS run 37390604638`; `PUBLIC_NON_PERSONAL_EMAIL_METADATA=PASS`; `FINAL_PHYSICAL_CUTOVER=PASS`.
+    - Canonical local HEAD before documentary reconciliation = `71bdf2a4955cae556fa2027a11b6191a0f98ce59`.
+    - Invariant after normal PR development: all reachable public commits descend solely from the privacy-isolated parentless root and contain no personal email metadata (history count is no longer a fixed `1`).
+    - T10E-R1 (`docs/t10e-final-reconcile`) reconciles the spec documentation to this final state;
+    - branch inventory and README reflect final state; no open sanitation PR; final post-main CI green.
 
