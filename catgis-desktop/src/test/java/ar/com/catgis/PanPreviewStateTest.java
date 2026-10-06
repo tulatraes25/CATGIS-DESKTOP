@@ -115,6 +115,19 @@ class PanPreviewStateTest {
     }
 
     @Test
+    void fallbackSessionRetainsMeasuredSnapshotAttemptDuration() {
+        PanPreviewState state = new PanPreviewState();
+        state.beginFallback(7_000_000L, 3);
+
+        PanPreviewState.Metrics metrics = state.finish(3);
+
+        assertTrue(metrics.fallback());
+        assertEquals(7_000_000L, metrics.snapshotElapsedNanos());
+        assertEquals(7L, metrics.snapshotElapsedNanos() / 1_000_000L);
+        assertEquals(0, metrics.fullRendersDuringPan());
+    }
+
+    @Test
     void finishResetsActivityAndReturnsMetrics() {
         PanPreviewState state = new PanPreviewState();
         state.begin(100_000_000L, 2);

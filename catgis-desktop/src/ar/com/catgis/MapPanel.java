@@ -1471,14 +1471,15 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             panPreviewState.beginFallback(0L, fullSceneRenderCount);
             return;
         }
+        long snapshotStartedAt = System.nanoTime();
         try {
-            // Allocate or reuse the snapshot image
+            // Allocate or reuse the snapshot image. Allocation is part of the
+            // user-visible snapshot hitch, so it is included in snapshotMs.
             if (panPreviewImage == null
                     || panPreviewImage.getWidth() != w
                     || panPreviewImage.getHeight() != h) {
                 panPreviewImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
             }
-            long snapshotStartedAt = System.nanoTime();
             Graphics2D sg = panPreviewImage.createGraphics();
             try {
                 sg.setColor(getBackground());
@@ -1494,8 +1495,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             panPreviewState.begin(snapshotElapsedNanos, fullSceneRenderCount);
         } catch (RuntimeException ex) {
             // Non-fatal: keep normal pan/repaint behavior; record a truthful fallback.
-            CatgisLogger.info("[P0-PAN] fallback snapshot unavailable: " + ex.getClass().getSimpleName());
-            panPreviewState.beginFallback(0L, fullSceneRenderCount);
+            // Keep the machine-readable [P0-PAN] prefix reserved for the single
+            // end-of-session summary emitted by finishPanPreview().
+            long snapshotElapsedNanos = System.nanoTime() - snapshotStartedAt;
+            CatgisLogger.info("[PAN-PREVIEW-WARN] snapshot unavailable: " + ex.getClass().getSimpleName());
+            panPreviewState.beginFallback(snapshotElapsedNanos, fullSceneRenderCount);
         }
     }
 

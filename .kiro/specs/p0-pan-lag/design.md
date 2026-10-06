@@ -41,7 +41,7 @@ If snapshot capture cannot be created, preserve current rendering behavior rathe
 ## Components
 
 ### PanPreviewState (NEW)
-Package-private final class owning only interaction state/metrics: `active`, `offsetX`, `offsetY`, `startedNanos`, `snapshotNanos`, `previewPaintCount`, `maxPreviewPaintNanos`. Methods: `begin(snapshotNanos)`, `shift(dx,dy)`, `recordPreviewPaint(elapsedNanos)`, `finish()`, `reset()`. No Layer/Graphics/Swing references.
+Package-private final class owning only session interaction state/metrics: `active`, `fallback`, `offsetX`, `offsetY`, `snapshotElapsedNanos`, `previewPaintCount`, `maxPreviewPaintNanos`, and `fullSceneRenderBaseline`. It accepts measured elapsed snapshot duration, computes a session-local definitive-render delta on finish, and exposes an immutable `Metrics` result. No Layer/Graphics/Swing references.
 
 ### MapPanel extraction
 Extract the current paint body into:
@@ -51,7 +51,7 @@ Extract the current paint body into:
 Normal rendering output/order must remain equivalent.
 
 ### Pan snapshot
-MapPanel owns one reusable `BufferedImage panPreviewImage`. `beginPanPreview()`: require valid width/height; create or reuse; clear with panel background; `renderScrollableScene()` ONCE; begin `PanPreviewState`. Do not include fixed decorations; do not call `paintComponent` recursively.
+MapPanel owns one reusable `BufferedImage panPreviewImage`. `beginPanPreview()`: require valid width/height; measure the complete snapshot attempt (including first allocation); create or reuse the image; clear with panel background; `renderScrollableScene()` ONCE; then begin a cached `PanPreviewState` session. Invalid dimensions or a non-fatal snapshot `RuntimeException` begin a truthful fallback session with the elapsed attempt time retained. Do not include fixed decorations; do not call `paintComponent` recursively.
 
 ### Preview paint path
 `paintComponent()`: `super.paintComponent(g)`; if a valid pan preview is active AND not rendering an export → draw cached scene at (offsetX,offsetY), `renderFixedScreenDecorations(g2)`, record metrics, return; otherwise normal definitive path. A preview repaint must not call `getRenderOrderLayers()`, `drawOnlineTileLayer()`, `drawOnlineWmsLayer()`, `drawRasterLayer()`, `drawLayer()`, `drawAllLabels()`, `drawHeatmapOverlay()`, `drawPointClusters()` (except during the one-time snapshot capture).
@@ -80,3 +80,9 @@ record Metrics(long snapshotElapsedNanos, int previewPaintCount, long maxPreview
 - `beginFallback(...)` — explicit fallback session; translation disabled, definitive rendering allowed.
 - `finish(...)` — computes `fullRendersDuringPan = lifetime - baseline` (session-local).
 - No Swing/Graphics/Layer references; no global/static performance state; deterministic unit testing (inject elapsed durations, no sleeps).
+
+## P0-A-R2 — Audit hardening
+
+- `snapshotMs` includes first-buffer allocation as part of the user-visible snapshot hitch.
+- A failed snapshot attempt retains its measured elapsed duration instead of reporting a synthetic zero.
+- The reserved `[P0-PAN]` prefix is emitted exactly once per completed pan session by `finishPanPreview()`; snapshot warnings use a different prefix so runtime parsers cannot double-count sessions.
