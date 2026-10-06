@@ -12,6 +12,19 @@ At the start of every engineering gate:
 4. inspect relevant CI;
 5. reconcile the active Kiro spec.
 
+## Execution authority and transfer
+
+Default authority split:
+
+- GPT/ChatGPT authors and repairs repository changes in GitHub.
+- GitHub branch + exact commit SHA + CI are the implementation/testing source of truth.
+- OpenCode synchronizes the exact GitHub SHA and performs Windows/local/runtime validation.
+- OpenCode must not author repository fixes by default. If local validation finds a defect, report evidence and stop; repair in GitHub, produce a new SHA, rerun CI, then resynchronize.
+- Local-first code/spec changes require an explicit user instruction or a spec-declared exception proving the change cannot reasonably be authored GitHub-first.
+- Never use copied source trees or pasted patches as the normal transfer mechanism; use the exact Git SHA.
+
+Repository automated tests run on the GitHub commit before OpenCode receives it. Environment-only checks (Windows GUI, GIS-native dependencies, hardware, local filesystem, packaging) may run only after that GitHub-tested SHA is synchronized.
+
 ## Implementation route
 
 Default:
@@ -21,11 +34,12 @@ Default:
 3. inspect branch diff;
 4. open focused PR;
 5. wait for required CI;
-6. patch the branch if CI exposes a real issue;
-7. optionally synchronize exact tested SHA to Windows/Kiro/OpenCode;
-8. merge using expected head SHA;
-9. inspect post-main CI;
-10. mark tasks/spec state accordingly.
+6. patch the GitHub branch if CI exposes a real issue and rerun CI on the new exact SHA;
+7. synchronize the exact GitHub-tested SHA to Windows/Kiro/OpenCode when local/runtime validation is required;
+8. if local validation finds a defect, stop local mutation, return evidence to GitHub, patch there, rerun CI, and resynchronize the new SHA;
+9. merge using expected head SHA;
+10. inspect post-main CI;
+11. mark tasks/spec state accordingly.
 
 ## Concurrency
 

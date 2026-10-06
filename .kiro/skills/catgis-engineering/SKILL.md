@@ -11,7 +11,7 @@ Use this role split unless the user explicitly changes it:
 
 - **GPT-5.6 Sol:** technical director, architect, investigator, primary GitHub implementation author, reviewer and certification gatekeeper.
 - **GitHub:** authoritative source for source code, `main`, branches, commits, diffs, PRs, CI and exact tested SHAs.
-- **Kiro / OpenCode on the Windows workstation:** local-runtime executor and verifier for Windows, GIS native dependencies, destructive local Git operations, packaging and other work that cannot be safely completed through GitHub APIs.
+- **Kiro / OpenCode on the Windows workstation:** exact-SHA synchronizer, local-runtime executor and verifier for Windows, GIS native dependencies, destructive local Git operations, packaging and other work that cannot be safely completed through GitHub APIs. By default it does not author or repair repository code; fixes return to GPT/GitHub unless an explicit spec authorizes an exception.
 - **User:** product owner. Minimize mechanical hand-offs and do not ask them to restate repository context already recoverable from GitHub/specs.
 
 Canonical repository: `tulatraes25/CATGIS-DESKTOP`.
@@ -127,6 +127,20 @@ Rules:
 - if concurrent work moves `main`, reconcile deliberately rather than force-merging stale work.
 
 Read `references/github-lifecycle.md` for the detailed gate model.
+
+## GitHub → OpenCode transfer rule — standing default
+
+Treat this as a persistent CATGIS rule unless the user explicitly authorizes a different execution path:
+
+1. GPT/ChatGPT investigates, authors and repairs repository changes in GitHub on a branch.
+2. Run the repository's automated tests/CI against the exact GitHub commit first.
+3. Only after that exact GitHub SHA is available for validation, synchronize/replicate that SHA into OpenCode on `C:\CATGIS`.
+4. OpenCode performs local Windows/GUI/native/runtime validation against that exact SHA. It must not silently implement fixes, create replacement commits, push code, or become the source of repository truth.
+5. If OpenCode finds a defect, it returns evidence and stops. Repair the GitHub branch, obtain a new exact SHA, rerun GitHub CI, then resynchronize OpenCode.
+6. Use the exact Git SHA as the transfer unit. Do not transfer implementation state by pasted patches, copied source trees, or ad-hoc local edits.
+7. Local-first implementation is an exception, not the default. Use it only when the user explicitly requests it or an active spec proves the work cannot reasonably be authored through GitHub first.
+
+"GitHub first" does not mean every environment-specific test must run in GitHub. Windows GUI, GIS-native, hardware, filesystem, packaging, or other workstation-only checks run in OpenCode after the GitHub-tested SHA is synchronized.
 
 ## Exact-SHA local validation
 
