@@ -147,10 +147,18 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     boolean dragging = false;
     boolean draggingPin = false;
     boolean temporaryMiddlePanActive = false;
-    private boolean temporaryMiddlePanMoved = false;
+    boolean temporaryMiddlePanMoved = false;
     boolean layoutRenderMode = false;
     int lastMouseX;
     int lastMouseY;
+
+    // P0 pan-preview fast path
+    private final PanPreviewState panPreviewState = new PanPreviewState();
+    private BufferedImage panPreviewImage;
+    private volatile boolean exportingFromPreview = false;
+
+    // Test counters — package-private for direct test assertion
+    int fullSceneRenderCount = 0;
 
     String currentTool = "MOVE";
     MapTool activeTool = new MoveTool();
@@ -1444,6 +1452,75 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     public Envelope getCurrentViewEnvelope() { return editingOps.getCurrentViewEnvelope(); }
 
+    // --- P0 pan-preview fast path ---
+
+    /**
+     * Capture the current scrollable scene into a reusable image and begin
+     * a pan-preview session. If the snapshot cannot be created, the preview
+     * is not activated (fallback to normal rendering).
+     *
+     * <p>Must be called on the EDT.</p>
+     */
+    void beginPanPreview() {
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        // Allocate or reuse the snapshot image
+        if (panPreviewImage == null
+                || panPreviewImage.getWidth() != w
+                || panPreviewImage.getHeight() != h) {
+            panPreviewImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        }
+        Graphics2D sg = panPreviewImage.createGraphics();
+        try {
+            sg.setColor(getBackground());
+            sg.fillRect(0, 0, w, h);
+            sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            renderScrollableScene(sg);
+        } finally {
+            sg.dispose();
+        }
+        panPreviewState.begin(System.nanoTime());
+    }
+
+    /**
+     * Finish the pan-preview session and print a concise diagnostic.
+     *
+     * @return {@code true} if a preview was active and has been finished
+     */
+    boolean finishPanPreview() {
+        if (!panPreviewState.isActive()) {
+            return false;
+        }
+        long snapshotMs = panPreviewState.finish();
+        int previewPaints = panPreviewState.getPreviewPaintCount();
+        long maxPaintMs = panPreviewState.getMaxPreviewPaintNanos() / 1_000_000L;
+        CatgisLogger.info("[P0-PAN] snapshotMs=" + snapshotMs
+                + " previewPaints=" + previewPaints
+                + " maxPreviewPaintMs=" + maxPaintMs
+                + " fullRendersDuringPan=" + fullSceneRenderCount
+                + " fallback=false");
+        return true;
+    }
+
+    /**
+     * Shift the active preview by a pixel delta. No-op if no preview is active.
+     */
+    void shiftPanPreview(int dx, int dy) {
+        panPreviewState.shift(dx, dy);
+    }
+
+    boolean isPanPreviewActive() {
+        return panPreviewState.isActive();
+    }
+
+    // package-private accessor for tests
+    PanPreviewState getPanPreviewState() {
+        return panPreviewState;
+    }
+
     public void restoreView(double viewMinX, double viewMinY, double zoomFactor) { editingOps.restoreView(viewMinX, viewMinY, zoomFactor); }
 
     public void restoreViewOrReset(double savedViewMinX, double savedViewMinY, double savedZoomFactor, boolean hasSavedView) { editingOps.restoreViewOrReset(savedViewMinX, savedViewMinY, savedZoomFactor, hasSavedView); }
@@ -1484,6 +1561,9 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         int oldHeight = getHeight();
         java.awt.Dimension oldPreferredSize = getPreferredSize();
 
+        // P0 export protection: ensure paintComponent uses the definitive path
+        exportingFromPreview = true;
+
         BufferedImage image = new BufferedImage(renderWidth, renderHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = image.createGraphics();
         try {
@@ -1507,6 +1587,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             return image;
         } finally {
             g2.dispose();
+            exportingFromPreview = false;
             viewMinX = oldViewMinX;
             viewMinY = oldViewMinY;
             zoomFactor = oldZoomFactor;
@@ -1991,6 +2072,46 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // P0 pan-preview fast path: draw translated snapshot + fixed decorations only
+            if (panPreviewState.isActive() && panPreviewImage != null && !exportingFromPreview) {
+                long previewStart = System.nanoTime();
+                g2.drawImage(panPreviewImage,
+                        panPreviewState.getOffsetX(),
+                        panPreviewState.getOffsetY(),
+                        null);
+                renderFixedScreenDecorations(g2);
+                panPreviewState.recordPreviewPaint(System.nanoTime() - previewStart);
+                return;
+            }
+
+            // Definitive rendering path
+            renderScrollableScene(g2);
+            renderFixedScreenDecorations(g2);
+            fullSceneRenderCount++;
+        } finally {
+            g2.dispose();
+            long paintElapsedMs = (System.nanoTime() - paintStartedAt) / 1_000_000L;
+            if (paintElapsedMs >= 150L) {
+                CatgisLogger.info("[EMERGENCY-PERF] paintComponent took " + paintElapsedMs + " ms"
+                        + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread()
+                        + " vectors=" + shapefileLayers.size()
+                        + " rasters=" + rasterLayers.size()
+                        + " onlineTiles=" + onlineTileLayers.size()
+                        + " onlineWms=" + onlineWmsLayers.size()
+                        + " size=" + getWidth() + "x" + getHeight()
+                        + " projectCrs=" + (AppContext.project() != null ? AppContext.project().getProjectCRS() : ""));
+            }
+        }
+    }
+
+    /**
+     * Render the full geographical scene: layers, labels, heatmap, clusters,
+     * selection geometries, pins, sketches, snap preview, selection box.
+     * This is the expensive path — called once for snapshot capture and on
+     * definitive repaints, but NOT during active pan preview.
+     */
+    private void renderScrollableScene(Graphics2D g2) {
         onlineResolutionNoticeVisible = false;
         onlineResolutionNotice = "";
 
@@ -2065,9 +2186,15 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             drawSnapPreview(g2);
             drawSelectionBox(g2);
         }
+    }
+
+    /**
+     * Render screen-fixed decorations: online attribution and map decoration pipeline.
+     * These remain screen-fixed during pan preview (they do not translate with the map).
+     */
+    private void renderFixedScreenDecorations(Graphics2D g2) {
         if (!layoutRenderMode) {
             drawOnlineAttribution(g2);
-            // Map decorations on screen
             if (mapDecorations != null) {
                 String crsDesc = AppContext.project() != null
                         ? AppContext.project().getProjectCRS() : "";
@@ -2075,20 +2202,6 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                         getCurrentViewEnvelope(),
                         getCurrentScaleDenominator(),
                         crsDesc);
-            }
-        }
-        } finally {
-            g2.dispose();
-            long paintElapsedMs = (System.nanoTime() - paintStartedAt) / 1_000_000L;
-            if (paintElapsedMs >= 150L) {
-                CatgisLogger.info("[EMERGENCY-PERF] paintComponent took " + paintElapsedMs + " ms"
-                        + " edt=" + javax.swing.SwingUtilities.isEventDispatchThread()
-                        + " vectors=" + shapefileLayers.size()
-                        + " rasters=" + rasterLayers.size()
-                        + " onlineTiles=" + onlineTileLayers.size()
-                        + " onlineWms=" + onlineWmsLayers.size()
-                        + " size=" + getWidth() + "x" + getHeight()
-                        + " projectCrs=" + (AppContext.project() != null ? AppContext.project().getProjectCRS() : ""));
             }
         }
     }

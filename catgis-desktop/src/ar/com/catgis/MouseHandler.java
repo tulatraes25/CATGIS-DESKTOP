@@ -22,6 +22,7 @@ class MouseHandler extends MouseAdapter {
         long startedAt = System.nanoTime();
         if (SwingUtilities.isMiddleMouseButton(e)) {
             map.beginTemporaryMiddlePan(e);
+            map.beginPanPreview(); // P0: snapshot for middle-button pan
             logIfSlow("mousePressed", startedAt, e);
             return;
         }
@@ -126,6 +127,7 @@ class MouseHandler extends MouseAdapter {
             map.dragging = true;
             lastPanX = e.getX();
             lastPanY = e.getY();
+            map.beginPanPreview(); // P0: snapshot for left-button pan
         }
 
         map.activeTool.mousePressed(e, map);
@@ -136,7 +138,11 @@ class MouseHandler extends MouseAdapter {
     public void mouseReleased(MouseEvent e) {
         long startedAt = System.nanoTime();
         if (map.temporaryMiddlePanActive && SwingUtilities.isMiddleMouseButton(e)) {
+            map.finishPanPreview(); // P0: finish preview, definitive repaint next
             map.finishTemporaryMiddlePan();
+            map.updateStatusCoordinates(e.getX(), e.getY());
+            map.updateHoverAndSnap(e.getX(), e.getY());
+            map.repaint(); // definitive render from final viewport
             logIfSlow("mouseReleased", startedAt, e);
             return;
         }
@@ -212,6 +218,13 @@ class MouseHandler extends MouseAdapter {
 
         map.activeTool.mouseReleased(e, map);
 
+        // P0: finish preview and request definitive repaint after left-button pan
+        if (map.finishPanPreview()) {
+            map.updateStatusCoordinates(e.getX(), e.getY());
+            map.updateHoverAndSnap(e.getX(), e.getY());
+            map.repaint(); // definitive render from final viewport
+        }
+
         map.dragging = false;
 
         map.applyCursorForCurrentMode();
@@ -221,15 +234,45 @@ class MouseHandler extends MouseAdapter {
     @Override
     public void mouseDragged(MouseEvent e) {
         long startedAt = System.nanoTime();
-        map.updateStatusCoordinates(e.getX(), e.getY());
 
-        map.updateHoverAndSnap(e.getX(), e.getY());
-
+        // P0: detect pure pan BEFORE expensive status/snap work
         if (map.temporaryMiddlePanActive) {
-            map.dragViewTemporarily(e);
+            int dx = e.getX() - map.lastMouseX;
+            int dy = e.getY() - map.lastMouseY;
+            if (dx != 0 || dy != 0) {
+                map.viewMinX -= dx / map.zoomFactor;
+                map.viewMinY += dy / map.zoomFactor;
+                map.syncViewToController();
+                map.lastMouseX = e.getX();
+                map.lastMouseY = e.getY();
+                map.temporaryMiddlePanMoved = true;
+                map.shiftPanPreview(dx, dy);
+            }
+            map.repaint();
             logIfSlow("mouseDragged", startedAt, e);
             return;
         }
+
+        if (map.dragging && !map.isDrawingActive() && !map.isMeasurementActive()) {
+            int dx = e.getX() - lastPanX;
+            int dy = e.getY() - lastPanY;
+            if (dx != 0 || dy != 0) {
+                double zf = map.viewController.getZoomFactor();
+                map.viewMinX -= dx / zf;
+                map.viewMinY += dy / zf;
+                map.syncViewToController();
+                map.shiftPanPreview(dx, dy);
+                map.repaint();
+            }
+            lastPanX = e.getX();
+            lastPanY = e.getY();
+            logIfSlow("mouseDragged", startedAt, e);
+            return;
+        }
+
+        // Non-pan drag paths: update status/snap as before
+        map.updateStatusCoordinates(e.getX(), e.getY());
+        map.updateHoverAndSnap(e.getX(), e.getY());
 
         if (map.topographicProfileTool.isActive()) {
             map.repaint();
@@ -276,24 +319,7 @@ class MouseHandler extends MouseAdapter {
             return;
         }
 
-        if (!map.dragging || map.isDrawingActive() || map.isMeasurementActive()) {
-            map.repaint();
-            logIfSlow("mouseDragged", startedAt, e);
-            return;
-        }
-
-        // Direct pan implementation (matching working CATGIS_PRO behavior)
-        int dx = e.getX() - lastPanX;
-        int dy = e.getY() - lastPanY;
-        if (dx != 0 || dy != 0) {
-            double zf = map.viewController.getZoomFactor();
-            map.viewMinX -= dx / zf;
-            map.viewMinY += dy / zf;
-            map.syncViewToController();
-            map.repaint();
-        }
-        lastPanX = e.getX();
-        lastPanY = e.getY();
+        map.repaint();
         logIfSlow("mouseDragged", startedAt, e);
     }
 
