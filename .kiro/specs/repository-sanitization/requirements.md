@@ -1,6 +1,6 @@
 # Repository Sanitization — Requirements
 
-Status: ACTIVE
+Status: CLOSED_CERTIFIED
 Spec type: Security / repository governance
 Canonical repository: `tulatraes25/CATGIS-DESKTOP`
 Baseline at spec creation: `3d07252ea9b9af62b2ff3230ff76d11d94297313`
@@ -21,8 +21,10 @@ Complete the final historical sanitation of the public CATGIS repository without
 - Remaining pre-rewrite material is preserved only as quarantined forensic fragments outside active development; any fragment that remains a valid Git repository has push disabled.
 - Repository licensing posture is documented as proprietary/source-available, not open source.
 - **T10B is `CLOSED_CERTIFIED`:** live inventory established `postgres` as the only in-scope PostgreSQL LOGIN; that credential was rotated, new authentication passed, the temporary recovery role was removed, the original HBA hash was restored exactly, temporary trust was absent, PostgreSQL remained running, and the DPAPI vault file had a passing file-level ACL. No historical credential was recovered, printed or committed.
-- **T10C is `CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION`:** the original repository is private and preserved as `CATGIS-DESKTOP-FORENSIC-ARCHIVE-20261005` (repository ID `1199177324`); the canonical public repository is a distinct repository (ID `1405554812`) whose baseline is the single parentless root commit `325d3cb71124bc70e43dd6a0e31cb8869917e484`, tree `816795841a35996a45bbfbd4871387a0c4f5f679`. Required CI passed, ruleset `24496251` is active, the known pre-rewrite control SHAs are publicly unreachable, and the canonical Windows worktree was physically cut over to the one-commit clone with the old local clone archived and push-disabled.
-- Remaining closure gates are T10D account-level email-privacy confirmation or accepted residual choice, the now non-required historical author-email rewrite decision, and T10E documentary closure.
+- **T10C is `CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION`:** the original repository is private and preserved as `CATGIS-DESKTOP-FORENSIC-ARCHIVE-20261005` (repository ID `1199177324`). The first public isolation produced repository ID `1405554812` (baseline root `325d3cb71124bc70e43dd6a0e31cb8869917e484`, tree `816795841a35996a45bbfbd4871387a0c4f5f679`).
+- **T10D is `CLOSED_CERTIFIED_BY_PRIVACY_ISOLATION`:** a second (privacy) isolation superseded the first public lineage; the superseded public repository ID `1405554812` is the private `CATGIS-DESKTOP-PRIVACY-ARCHIVE-20261005`. The final canonical public repository is ID `1406486908` (`tulatraes25/CATGIS-DESKTOP`), published from the single parentless noreply root `1cfd0050c831cdd2b34f7621f8ac2692466e5504` (tree `629ee866f009594ee2c69c2d34c9412a3cd1ac81`). `ACCOUNT_PRIMARY_EMAIL_VISIBILITY=PRIVATE` and `PUBLIC_PERSONAL_EMAIL_METADATA=ABSENT`.
+- **T10E is `CLOSED_CERTIFIED`:** the documentary closure PR merged normally through the protected workflow; post-main CI passed; the physical workstation cutover is PASS and the canonical Windows worktree `C:\CATGIS` is the final public lineage (old local clone archived and push-disabled).
+- **`SANITATION_PROGRAM=CLOSED_CERTIFIED`:** public repository ID `1406486908` is public with ruleset `24546459` ACTIVE (`CATGIS main protection`); `main` is the only persistent branch; 0 open PRs; the known pre-rewrite and superseded non-noreply SHAs are publicly unreachable.
 
 ## Non-goals
 

@@ -79,7 +79,7 @@ Ver [LICENSE](LICENSE). Los componentes de terceros conservan sus propias licenc
 
 El árbol activo de `main` ya no contiene el directorio de fuente decompilada de terceros ni el archivo CATSERVER que expuso credenciales. Las antiguas ramas públicas también fueron neutralizadas para apuntar al estado canónico saneado.
 
-Esto no elimina todavía los objetos de commits históricos. La purga final del historial se ejecuta por separado y está documentada en [HISTORY_SANITIZATION_RUNBOOK.md](docs/repository/HISTORY_SANITIZATION_RUNBOOK.md).
+Los objetos de commits históricos ya no son accesibles públicamente: el saneamiento final se completó mediante aislamiento de repositorio (repositorios históricos preservados como archivos privados + nueva línea pública publicada desde un único root commit saneado). Ver [HISTORY_SANITIZATION_RUNBOOK.md](docs/repository/HISTORY_SANITIZATION_RUNBOOK.md).
 
 No reutilizar ni redistribuir material histórico/de terceros sin una revisión expresa de licencia y procedencia.
 
@@ -96,12 +96,13 @@ La fase de saneamiento del **árbol activo** quedó completada en octubre de 202
 - ramas públicas heredadas neutralizadas contra el estado saneado;
 - CI Java/Checkstyle y Web lint estabilizados.
 
-Estado administrativo/histórico actual:
+Estado administrativo/histórico final (`SANITATION_PROGRAM=CLOSED_CERTIFIED`):
 
 - reescritura histórica publicada y certificada;
 - `main` protegido por ruleset y única rama remota persistente;
-- checkout Windows activo reemplazado por un clon post-rewrite certificado;
+- aislamiento de repositorio completado: los repositorios históricos se preservan como archivos privados y la línea pública final se publicó desde un único root commit saneado, sin metadata de email personal;
+- checkout Windows activo reemplazado por un clon final certificado;
 - licencia propietaria declarada;
-- **pendiente de seguridad:** rotar/revocar credenciales CATSERVER históricamente expuestas;
-- **pendiente externo:** GitHub Support debe purgar objetos/vistas pre-rewrite todavía accesibles por SHA;
-- pendiente confirmar privacidad/noreply a nivel de cuenta GitHub.
+- credenciales CATSERVER históricamente expuestas rotadas/revocadas;
+- visibilidad del email primario de la cuenta GitHub en privado; metadata de email personal ausente de la historia pública;
+- GitHub Support no requerido.
