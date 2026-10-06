@@ -159,6 +159,8 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
 
     // Test counters — package-private for direct test assertion
     int fullSceneRenderCount = 0;
+    // package-private test accessor state: metrics of the last completed pan-preview session
+    private PanPreviewState.Metrics lastPanMetrics;
 
     String currentTool = "MOVE";
     MapTool activeTool = new MoveTool();
@@ -1465,24 +1467,36 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         int w = getWidth();
         int h = getHeight();
         if (w <= 0 || h <= 0) {
+            // Fallback: cannot build a valid snapshot for this panel size.
+            panPreviewState.beginFallback(0L, fullSceneRenderCount);
             return;
         }
-        // Allocate or reuse the snapshot image
-        if (panPreviewImage == null
-                || panPreviewImage.getWidth() != w
-                || panPreviewImage.getHeight() != h) {
-            panPreviewImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        }
-        Graphics2D sg = panPreviewImage.createGraphics();
         try {
-            sg.setColor(getBackground());
-            sg.fillRect(0, 0, w, h);
-            sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            renderScrollableScene(sg);
-        } finally {
-            sg.dispose();
+            // Allocate or reuse the snapshot image
+            if (panPreviewImage == null
+                    || panPreviewImage.getWidth() != w
+                    || panPreviewImage.getHeight() != h) {
+                panPreviewImage = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            }
+            long snapshotStartedAt = System.nanoTime();
+            Graphics2D sg = panPreviewImage.createGraphics();
+            try {
+                sg.setColor(getBackground());
+                sg.fillRect(0, 0, w, h);
+                sg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                renderScrollableScene(sg);
+            } finally {
+                sg.dispose();
+            }
+            long snapshotElapsedNanos = System.nanoTime() - snapshotStartedAt;
+            // The one-time snapshot is NOT counted: capture the lifetime baseline
+            // after the snapshot so fullRendersDuringPan reflects only pan-session renders.
+            panPreviewState.begin(snapshotElapsedNanos, fullSceneRenderCount);
+        } catch (RuntimeException ex) {
+            // Non-fatal: keep normal pan/repaint behavior; record a truthful fallback.
+            CatgisLogger.info("[P0-PAN] fallback snapshot unavailable: " + ex.getClass().getSimpleName());
+            panPreviewState.beginFallback(0L, fullSceneRenderCount);
         }
-        panPreviewState.begin(System.nanoTime());
     }
 
     /**
@@ -1494,15 +1508,19 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         if (!panPreviewState.isActive()) {
             return false;
         }
-        long snapshotMs = panPreviewState.finish();
-        int previewPaints = panPreviewState.getPreviewPaintCount();
-        long maxPaintMs = panPreviewState.getMaxPreviewPaintNanos() / 1_000_000L;
-        CatgisLogger.info("[P0-PAN] snapshotMs=" + snapshotMs
-                + " previewPaints=" + previewPaints
-                + " maxPreviewPaintMs=" + maxPaintMs
-                + " fullRendersDuringPan=" + fullSceneRenderCount
-                + " fallback=false");
+        PanPreviewState.Metrics metrics = panPreviewState.finish(fullSceneRenderCount);
+        lastPanMetrics = metrics;
+        CatgisLogger.info("[P0-PAN] snapshotMs=" + (metrics.snapshotElapsedNanos() / 1_000_000L)
+                + " previewPaints=" + metrics.previewPaintCount()
+                + " maxPreviewPaintMs=" + (metrics.maxPreviewPaintNanos() / 1_000_000L)
+                + " fullRendersDuringPan=" + metrics.fullRendersDuringPan()
+                + " fallback=" + metrics.fallback());
         return true;
+    }
+
+    // package-private test accessor: metrics of the last completed pan-preview session
+    PanPreviewState.Metrics getLastPanMetrics() {
+        return lastPanMetrics;
     }
 
     /**
@@ -2074,7 +2092,8 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             // P0 pan-preview fast path: draw translated snapshot + fixed decorations only
-            if (panPreviewState.isActive() && panPreviewImage != null && !exportingFromPreview) {
+            if (panPreviewState.isActive() && !panPreviewState.isFallback()
+                    && panPreviewImage != null && !exportingFromPreview) {
                 long previewStart = System.nanoTime();
                 g2.drawImage(panPreviewImage,
                         panPreviewState.getOffsetX(),

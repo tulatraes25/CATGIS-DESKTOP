@@ -11,18 +11,31 @@ class PanPreviewStateTest {
     @Test
     void beginResetsOffsetsAndMarksActive() {
         PanPreviewState state = new PanPreviewState();
-        state.begin(1000L);
+        state.begin(0L, 0);
 
         assertTrue(state.isActive());
+        assertFalse(state.isFallback());
         assertEquals(0, state.getOffsetX());
         assertEquals(0, state.getOffsetY());
-        assertEquals(1000L, state.getStartedNanos());
+        assertEquals(0L, state.getSnapshotElapsedNanos());
+        assertEquals(0, state.getFullSceneRenderBaseline());
+    }
+
+    @Test
+    void snapshotDurationIsReportedDeterministically() {
+        PanPreviewState state = new PanPreviewState();
+        state.begin(12_000_000L, 0); // injected 12 ms
+
+        PanPreviewState.Metrics metrics = state.finish(0);
+
+        assertEquals(12_000_000L, metrics.snapshotElapsedNanos());
+        assertEquals(12L, metrics.snapshotElapsedNanos() / 1_000_000L);
     }
 
     @Test
     void shiftsAccumulateExactly() {
         PanPreviewState state = new PanPreviewState();
-        state.begin(0L);
+        state.begin(0L, 0);
 
         state.shift(10, 20);
         assertEquals(10, state.getOffsetX());
@@ -38,18 +51,16 @@ class PanPreviewStateTest {
     }
 
     @Test
-    void shiftWhileInactiveDoesNotCorruptActiveSession() {
+    void shiftWhileInactiveDoesNotCorruptAnything() {
         PanPreviewState first = new PanPreviewState();
-        first.begin(0L);
+        first.begin(0L, 0);
         first.shift(100, 200);
 
-        // A separate instance that was never begun — shift is a no-op
         PanPreviewState dormant = new PanPreviewState();
-        dormant.shift(999, 999);
+        dormant.shift(999, 999); // never begun -> no-op
         assertEquals(0, dormant.getOffsetX());
         assertEquals(0, dormant.getOffsetY());
 
-        // The active session is unaffected
         assertEquals(100, first.getOffsetX());
         assertEquals(200, first.getOffsetY());
     }
@@ -57,64 +68,105 @@ class PanPreviewStateTest {
     @Test
     void previewPaintMetricAccumulation() {
         PanPreviewState state = new PanPreviewState();
-        state.begin(0L);
+        state.begin(0L, 0);
 
         state.recordPreviewPaint(5_000_000L);  // 5 ms
         state.recordPreviewPaint(12_000_000L); // 12 ms
         state.recordPreviewPaint(3_000_000L);  // 3 ms
 
-        assertEquals(3, state.getPreviewPaintCount());
-        assertEquals(12_000_000L, state.getMaxPreviewPaintNanos());
+        PanPreviewState.Metrics metrics = state.finish(0);
+        assertEquals(3, metrics.previewPaintCount());
+        assertEquals(12_000_000L, metrics.maxPreviewPaintNanos());
+    }
+
+    @Test
+    void fullRendersDuringPanIsSessionLocal() {
+        // lifetime counter was already 7 before the session; no render during pan -> 0
+        PanPreviewState clean = new PanPreviewState();
+        clean.begin(1_000_000L, 7);
+        PanPreviewState.Metrics cleanMetrics = clean.finish(7);
+        assertEquals(0, cleanMetrics.fullRendersDuringPan());
+
+        // lifetime 7 -> 8 (one unexpected definitive render during pan) -> 1
+        PanPreviewState regressed = new PanPreviewState();
+        regressed.begin(1_000_000L, 7);
+        PanPreviewState.Metrics regressedMetrics = regressed.finish(8);
+        assertEquals(1, regressedMetrics.fullRendersDuringPan());
+    }
+
+    @Test
+    void cachedSessionReportsFallbackFalse() {
+        PanPreviewState state = new PanPreviewState();
+        state.begin(1_000_000L, 0);
+        PanPreviewState.Metrics metrics = state.finish(0);
+        assertFalse(metrics.fallback());
+    }
+
+    @Test
+    void fallbackSessionReportsFallbackTrue() {
+        PanPreviewState state = new PanPreviewState();
+        state.beginFallback(0L, 3);
+        assertTrue(state.isFallback());
+        state.shift(10, 10); // ignored in fallback
+        assertEquals(0, state.getOffsetX());
+        PanPreviewState.Metrics metrics = state.finish(4);
+        assertTrue(metrics.fallback());
+        assertEquals(1, metrics.fullRendersDuringPan());
     }
 
     @Test
     void finishResetsActivityAndReturnsMetrics() {
         PanPreviewState state = new PanPreviewState();
-        state.begin(100_000_000L); // 100 us
+        state.begin(100_000_000L, 2);
         state.shift(7, 13);
         state.recordPreviewPaint(1_000_000L);
 
-        long snapshotMs = state.finish();
+        PanPreviewState.Metrics metrics = state.finish(2);
 
         assertFalse(state.isActive());
-        // snapshotMs = (snapshotNanos - startedNanos) / 1_000_000
-        // snapshotNanos was set to startedNanos in begin(), so result = 0
-        assertEquals(0L, snapshotMs);
+        assertEquals(100_000_000L, metrics.snapshotElapsedNanos());
+        assertEquals(1, metrics.previewPaintCount());
+        assertEquals(0, metrics.fullRendersDuringPan());
+        assertFalse(metrics.fallback());
     }
 
     @Test
-    void newSessionDoesNotInheritOldOffsets() {
+    void newSessionDoesNotInheritOldState() {
         PanPreviewState state = new PanPreviewState();
 
-        // First session
-        state.begin(0L);
+        state.begin(50_000_000L, 4);
         state.shift(50, 100);
-        state.finish();
+        state.recordPreviewPaint(9_000_000L);
+        state.finish(4);
 
         assertFalse(state.isActive());
 
-        // Second session — must start clean
-        state.begin(1_000_000_000L);
+        state.begin(0L, 0);
         assertTrue(state.isActive());
         assertEquals(0, state.getOffsetX());
         assertEquals(0, state.getOffsetY());
         assertEquals(0, state.getPreviewPaintCount());
         assertEquals(0L, state.getMaxPreviewPaintNanos());
+        assertEquals(0L, state.getSnapshotElapsedNanos());
+        assertEquals(0, state.getFullSceneRenderBaseline());
     }
 
     @Test
     void resetClearsAllState() {
         PanPreviewState state = new PanPreviewState();
-        state.begin(0L);
+        state.begin(0L, 5);
         state.shift(10, 20);
         state.recordPreviewPaint(5_000_000L);
 
         state.reset();
 
         assertFalse(state.isActive());
+        assertFalse(state.isFallback());
         assertEquals(0, state.getOffsetX());
         assertEquals(0, state.getOffsetY());
         assertEquals(0, state.getPreviewPaintCount());
         assertEquals(0L, state.getMaxPreviewPaintNanos());
+        assertEquals(0L, state.getSnapshotElapsedNanos());
+        assertEquals(0, state.getFullSceneRenderBaseline());
     }
 }

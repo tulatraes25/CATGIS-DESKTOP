@@ -58,3 +58,13 @@ Pan preview buffering SHALL use at most one reusable panel-sized image, realloca
 
 - Do not move GeoTools rendering to another thread in this phase.
 - Do not refactor unrelated rendering architecture.
+
+## P0-A-R1 — Evidence contract correction
+
+The `[P0-PAN]` evidence must be session-accurate:
+
+- `snapshotMs` = real wall-clock duration of the one-time snapshot (elapsed, not a zero-width timestamp);
+- `fullRendersDuringPan` = definitive scene renders between snapshot completion and pan release (session-local delta; the snapshot itself is not counted);
+- `fallback` = truthful CACHED/FALLBACK outcome (invalid dimensions or non-fatal snapshot failure ⇒ `fallback=true`).
+
+For a valid cached session: `fallback=false` and `fullRendersDuringPan=0` (AC-P0-1.1).

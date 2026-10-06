@@ -66,3 +66,17 @@ Pure pan detected BEFORE `updateStatusCoordinates()`/`updateHoverAndSnap()`. At 
 - R1: snapshot cost pauses pan start → accept and measure; if unacceptable, return PARTIAL_INITIAL_SNAPSHOT_HITCH (authorizes P0-B warm-frame caching).
 - R2: fixed decorations accidentally included in snapshot → keep them out.
 - R3: memory churn → one reusable image, reallocate only on size change.
+
+## P0-A-R1 — Metrics model
+
+`PanPreviewState` represents session metrics and produces a compact immutable `Metrics` record on `finish(int lifetimeFullSceneRenders)`:
+
+```
+record Metrics(long snapshotElapsedNanos, int previewPaintCount, long maxPreviewPaintNanos,
+               int fullRendersDuringPan, boolean fallback) {}
+```
+
+- `begin(long snapshotElapsedNanos, int fullSceneRenderBaseline)` — stores the MEASURED snapshot duration and the lifetime render baseline captured after the snapshot.
+- `beginFallback(...)` — explicit fallback session; translation disabled, definitive rendering allowed.
+- `finish(...)` — computes `fullRendersDuringPan = lifetime - baseline` (session-local).
+- No Swing/Graphics/Layer references; no global/static performance state; deterministic unit testing (inject elapsed durations, no sleeps).
