@@ -1,0 +1,384 @@
+# CATGIS visible command inventory
+# Baseline: d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a
+# Static command occurrences: 390
+# Unique source/label pairs: 378
+# Unique feature labels: 313
+# source	label	count	feature_id
+CartographyToolbar.java	Abrir CATMAP	1	CMD-ABRIR-CATMAP-8D7A4ACB
+CartographyToolbar.java	CATMAP Standalone	1	CMD-CATMAP-STANDALONE-9AF63156
+FloatingVectorEditToolbar.java	Acortar linea	1	CMD-ACORTAR-LINEA-B8E3B82E
+FloatingVectorEditToolbar.java	Aumentar superficie	1	CMD-AUMENTAR-SUPERFICIE-5DA28581
+FloatingVectorEditToolbar.java	Borrar elemento seleccionado	1	CMD-BORRAR-ELEMENTO-SELECCIONADO-497C6A67
+FloatingVectorEditToolbar.java	Borrar vertice	1	CMD-BORRAR-VERTICE-45ECDC37
+FloatingVectorEditToolbar.java	Cancelar	1	CMD-CANCELAR-EA3D2B54
+FloatingVectorEditToolbar.java	Continuar edicion de linea	1	CMD-CONTINUAR-EDICION-DE-LINEA-9996C82B
+FloatingVectorEditToolbar.java	Copiar elementos seleccionados	1	CMD-COPIAR-ELEMENTOS-SELECCIONADOS-6BC2BFB3
+FloatingVectorEditToolbar.java	Copiar elementos seleccionados a la capa en edicion	1	CMD-COPIAR-ELEMENTOS-SELECCIONADOS-A-LA-CAPA-E-B8DC1060
+FloatingVectorEditToolbar.java	Crear agujero	1	CMD-CREAR-AGUJERO-187BD465
+FloatingVectorEditToolbar.java	Deshacer	1	CMD-DESHACER-97760482
+FloatingVectorEditToolbar.java	Dibujar circulo	1	CMD-DIBUJAR-CIRCULO-651D6117
+FloatingVectorEditToolbar.java	Dibujar circulo por 3 puntos	1	CMD-DIBUJAR-CIRCULO-POR-3-PUNTOS-BFA0FF62
+FloatingVectorEditToolbar.java	Dibujar linea	1	CMD-DIBUJAR-LINEA-D80242FD
+FloatingVectorEditToolbar.java	Dibujar multipunto	1	CMD-DIBUJAR-MULTIPUNTO-E289DC35
+FloatingVectorEditToolbar.java	Dibujar poligono	1	CMD-DIBUJAR-POLIGONO-FAC0B7B7
+FloatingVectorEditToolbar.java	Dibujar punto	1	CMD-DIBUJAR-PUNTO-78F75692
+FloatingVectorEditToolbar.java	Dibujar rectangulo	1	CMD-DIBUJAR-RECTANGULO-52AAB7C8
+FloatingVectorEditToolbar.java	Disminuir superficie	1	CMD-DISMINUIR-SUPERFICIE-491A4674
+FloatingVectorEditToolbar.java	Dividir linea o cortar geometria	1	CMD-DIVIDIR-LINEA-O-CORTAR-GEOMETRIA-D1081FB6
+FloatingVectorEditToolbar.java	Dividir poligono	1	CMD-DIVIDIR-POLIGONO-07D1A405
+FloatingVectorEditToolbar.java	Explotar entidades seleccionadas	1	CMD-EXPLOTAR-ENTIDADES-SELECCIONADAS-5BCE1CC9
+FloatingVectorEditToolbar.java	Extender linea	1	CMD-EXTENDER-LINEA-5FE9EDB7
+FloatingVectorEditToolbar.java	Generar poligono adyacente	1	CMD-GENERAR-POLIGONO-ADYACENTE-14B9F914
+FloatingVectorEditToolbar.java	Insertar vertice	1	CMD-INSERTAR-VERTICE-E93D329D
+FloatingVectorEditToolbar.java	Limpiar seleccion	1	CMD-LIMPIAR-SELECCION-9AAD6E20
+FloatingVectorEditToolbar.java	Linea paralela / desplazamiento lateral	1	CMD-LINEA-PARALELA-DESPLAZAMIENTO-LATERAL-FDA9EE5A
+FloatingVectorEditToolbar.java	Linea perpendicular	1	CMD-LINEA-PERPENDICULAR-323C4432
+FloatingVectorEditToolbar.java	Mover elementos seleccionados	1	CMD-MOVER-ELEMENTOS-SELECCIONADOS-8ABF21F2
+FloatingVectorEditToolbar.java	Mover mapa	1	CMD-MOVER-MAPA-A31476A3
+FloatingVectorEditToolbar.java	Mover vertice	1	CMD-MOVER-VERTICE-370A0944
+FloatingVectorEditToolbar.java	Opciones de capa	1	CMD-OPCIONES-DE-CAPA-539DF9AD
+FloatingVectorEditToolbar.java	Pegar elementos en la capa en edicion	1	CMD-PEGAR-ELEMENTOS-EN-LA-CAPA-EN-EDICION-3769DA17
+FloatingVectorEditToolbar.java	Rehacer	1	CMD-REHACER-8332F28F
+FloatingVectorEditToolbar.java	Salvar cambios	1	CMD-SALVAR-CAMBIOS-16587F08
+FloatingVectorEditToolbar.java	Seleccionar elemento de la capa editable	1	CMD-SELECCIONAR-ELEMENTO-DE-LA-CAPA-EDITABLE-CEB38E19
+FloatingVectorEditToolbar.java	SNAP	1	CMD-SNAP-98C794DD
+FloatingVectorEditToolbar.java	Terminar	1	CMD-TERMINAR-9DC5728F
+FloatingVectorEditToolbar.java	Unir elementos	1	CMD-UNIR-ELEMENTOS-072ACD57
+FloatingVectorEditToolbar.java	Unir vertices	1	CMD-UNIR-VERTICES-5546B23C
+FloatingVectorEditToolbar.java	Ver o editar atributos	1	CMD-VER-O-EDITAR-ATRIBUTOS-E8CE5F2F
+FloatingVectorEditToolbar.java	Zoom al elemento seleccionado	1	CMD-ZOOM-AL-ELEMENTO-SELECCIONADO-47B9B309
+LayerContextMenuBuilder.java	Ajuste CAD...	1	CMD-AJUSTE-CAD-5286A195
+LayerContextMenuBuilder.java	Ajustes de visualizacion...	2	CMD-AJUSTES-DE-VISUALIZACION-6753A094
+LayerContextMenuBuilder.java	Análisis climático por áreas (AID/AII)...	1	CMD-ANALISIS-CLIMATICO-POR-AREAS-AID-AII-18D7F250
+LayerContextMenuBuilder.java	Analisis topohidrologico...	1	CMD-ANALISIS-TOPOHIDROLOGICO-0C332BE8
+LayerContextMenuBuilder.java	Aplicar simbología climática...	1	CMD-APLICAR-SIMBOLOGIA-CLIMATICA-A1C9CCC8
+LayerContextMenuBuilder.java	Arrastrar CAD en mapa...	1	CMD-ARRASTRAR-CAD-EN-MAPA-DC814699
+LayerContextMenuBuilder.java	Bajar	1	CMD-BAJAR-3D217E81
+LayerContextMenuBuilder.java	Bajar grupo	1	CMD-BAJAR-GRUPO-A2C9AB58
+LayerContextMenuBuilder.java	Cambiar estilo...	1	CMD-CAMBIAR-ESTILO-E7EE6DF6
+LayerContextMenuBuilder.java	Capas internas CAD...	1	CMD-CAPAS-INTERNAS-CAD-1F7C29DD
+LayerContextMenuBuilder.java	Comparar con otra fecha...	1	CMD-COMPARAR-CON-OTRA-FECHA-EE3AECE1
+LayerContextMenuBuilder.java	Constructor de consultas...	1	CMD-CONSTRUCTOR-DE-CONSULTAS-26F279C4
+LayerContextMenuBuilder.java	Copiar seleccionadas a capa en edicion	1	CMD-COPIAR-SELECCIONADAS-A-CAPA-EN-EDICION-45D8113F
+LayerContextMenuBuilder.java	Cuenca desde outlet...	1	CMD-CUENCA-DESDE-OUTLET-3843196C
+LayerContextMenuBuilder.java	Definir CRS de capa	2	CMD-DEFINIR-CRS-DE-CAPA-E85D0DE8
+LayerContextMenuBuilder.java	Diagnostico DWG/CAD...	1	CMD-DIAGNOSTICO-DWG-CAD-032ED8A0
+LayerContextMenuBuilder.java	Enviar a CATSERVER...	1	CMD-ENVIAR-A-CATSERVER-832FDD9E
+LayerContextMenuBuilder.java	Etiquetas...	1	CMD-ETIQUETAS-BFD060CA
+LayerContextMenuBuilder.java	Exportar a DXF...	1	CMD-EXPORTAR-A-DXF-F68E5891
+LayerContextMenuBuilder.java	Exportar CAD georreferenciado...	1	CMD-EXPORTAR-CAD-GEORREFERENCIADO-7A71118A
+LayerContextMenuBuilder.java	Exportar capa	1	CMD-EXPORTAR-CAPA-1FF6710F
+LayerContextMenuBuilder.java	Exportar ficha raster...	1	CMD-EXPORTAR-FICHA-RASTER-CF8CD4B4
+LayerContextMenuBuilder.java	Generar curvas de nivel...	1	CMD-GENERAR-CURVAS-DE-NIVEL-51D4B400
+LayerContextMenuBuilder.java	Generar escorrentias...	1	CMD-GENERAR-ESCORRENTIAS-EFB5C071
+LayerContextMenuBuilder.java	Generar mapa tematico raster	1	CMD-GENERAR-MAPA-TEMATICO-RASTER-DB0F83D7
+LayerContextMenuBuilder.java	Georreferenciar CAD por puntos...	1	CMD-GEORREFERENCIAR-CAD-POR-PUNTOS-11869CA0
+LayerContextMenuBuilder.java	Guardar cambios en CATSERVER	1	CMD-GUARDAR-CAMBIOS-EN-CATSERVER-10ACFD0B
+LayerContextMenuBuilder.java	Informacion de la conexion...	1	CMD-INFORMACION-DE-LA-CONEXION-AA2305D5
+LayerContextMenuBuilder.java	Informacion de servicio...	1	CMD-INFORMACION-DE-SERVICIO-777ED647
+LayerContextMenuBuilder.java	Informacion del servicio...	1	CMD-INFORMACION-DEL-SERVICIO-A4EA66DD
+LayerContextMenuBuilder.java	Informacion GeoPackage...	1	CMD-INFORMACION-GEOPACKAGE-C672E52D
+LayerContextMenuBuilder.java	Informacion raster avanzada...	1	CMD-INFORMACION-RASTER-AVANZADA-C87F4357
+LayerContextMenuBuilder.java	Informacion raster...	1	CMD-INFORMACION-RASTER-719367DF
+LayerContextMenuBuilder.java	Marcar como área de influencia...	1	CMD-MARCAR-COMO-AREA-DE-INFLUENCIA-EF5462A3
+LayerContextMenuBuilder.java	Modo actual: 	1	CMD-MODO-ACTUAL-C270AE50
+LayerContextMenuBuilder.java	Nuevo grupo	1	CMD-NUEVO-GRUPO-BBE9DC35
+LayerContextMenuBuilder.java	Propiedades	1	CMD-PROPIEDADES-1933FA0F
+LayerContextMenuBuilder.java	Quitar etiquetas	1	CMD-QUITAR-ETIQUETAS-8350CD96
+LayerContextMenuBuilder.java	Quitar grupo (mantener capas)	1	CMD-QUITAR-GRUPO-MANTENER-CAPAS-ECD99727
+LayerContextMenuBuilder.java	Renombrar	3	CMD-RENOMBRAR-33AFD949
+LayerContextMenuBuilder.java	Renombrar grupo	1	CMD-RENOMBRAR-GRUPO-3BF7BAF0
+LayerContextMenuBuilder.java	Rosa de los vientos...	1	CMD-ROSA-DE-LOS-VIENTOS-C83321D3
+LayerContextMenuBuilder.java	Sacar del grupo	1	CMD-SACAR-DEL-GRUPO-106ECA65
+LayerContextMenuBuilder.java	Subir	1	CMD-SUBIR-362E39D2
+LayerContextMenuBuilder.java	Subir grupo	1	CMD-SUBIR-GRUPO-C94C64BB
+LayerContextMenuBuilder.java	Ver CRS de capa	2	CMD-VER-CRS-DE-CAPA-9D78BE36
+LayerContextMenuBuilder.java	Ver/Editar atributos...	1	CMD-VER-EDITAR-ATRIBUTOS-8E8A7F2D
+LayerContextMenuBuilder.java	Ver/Editar campos...	1	CMD-VER-EDITAR-CAMPOS-682BBBA7
+LayerContextMenuBuilder.java	Vista rapida	1	CMD-VISTA-RAPIDA-024A3DB3
+LayerContextMenuBuilder.java	Zoom a la capa	1	CMD-ZOOM-A-LA-CAPA-C614C863
+LayerContextMenuBuilder.java	Zoom real	1	CMD-ZOOM-REAL-63E988B6
+LayerContextMenuBuilder.java	Zoom virtual	1	CMD-ZOOM-VIRTUAL-3BBECA95
+layout/LayoutToolBar.java	Escala	1	CMD-ESCALA-D37679B6
+layout/LayoutToolBar.java	Exportar PDF	1	CMD-EXPORTAR-PDF-C98B872A
+layout/LayoutToolBar.java	Imagen	1	CMD-IMAGEN-22EC651C
+layout/LayoutToolBar.java	Leyenda	1	CMD-LEYENDA-BA5561BD
+layout/LayoutToolBar.java	Mapa	1	CMD-MAPA-445F1B90
+layout/LayoutToolBar.java	Norte	1	CMD-NORTE-5C5E3E53
+layout/LayoutToolBar.java	Redo	1	CMD-REDO-7412E5E9
+layout/LayoutToolBar.java	Texto	1	CMD-TEXTO-EAC32423
+layout/LayoutToolBar.java	Undo	1	CMD-UNDO-71FD4ACF
+MainMenuBar.java	(vacio)	2	CMD-VACIO-A32C4D4A
+MainMenuBar.java	Abrir CATMAP...	1	CMD-ABRIR-CATMAP-0A7E5357
+MainMenuBar.java	Abrir proyecto	1	CMD-ABRIR-PROYECTO-E7D8EE72
+MainMenuBar.java	Acerca de CATGIS	1	CMD-ACERCA-DE-CATGIS-E069E232
+MainMenuBar.java	Acortar linea	1	CMD-ACORTAR-LINEA-B8E3B82E
+MainMenuBar.java	Agregar capa	1	CMD-AGREGAR-CAPA-112C4221
+MainMenuBar.java	Agregar WFS...	1	CMD-AGREGAR-WFS-07694216
+MainMenuBar.java	Agregar WMS...	1	CMD-AGREGAR-WMS-671E4543
+MainMenuBar.java	Análisis de red...	1	CMD-ANALISIS-DE-RED-2D310075
+MainMenuBar.java	Análisis topohidrológico...	1	CMD-ANALISIS-TOPOHIDROLOGICO-D5291CE4
+MainMenuBar.java	Análisis unificado GEO...	1	CMD-ANALISIS-UNIFICADO-GEO-D8650D32
+MainMenuBar.java	Asignar valor a un campo	1	CMD-ASIGNAR-VALOR-A-UN-CAMPO-826DEA60
+MainMenuBar.java	Aspecto...	1	CMD-ASPECTO-0ACA0428
+MainMenuBar.java	Bajar capa	1	CMD-BAJAR-CAPA-965FF838
+MainMenuBar.java	Borrar	1	CMD-BORRAR-6252C331
+MainMenuBar.java	Buscar coordenadas	1	CMD-BUSCAR-COORDENADAS-5C466946
+MainMenuBar.java	Calculadora de campos	1	CMD-CALCULADORA-DE-CAMPOS-D3625626
+MainMenuBar.java	Calculadora raster...	1	CMD-CALCULADORA-RASTER-5BB17CE5
+MainMenuBar.java	Cancelar	1	CMD-CANCELAR-EA3D2B54
+MainMenuBar.java	Cancelar edición	1	CMD-CANCELAR-EDICION-4F30C2E9
+MainMenuBar.java	Capas internas CAD...	1	CMD-CAPAS-INTERNAS-CAD-1F7C29DD
+MainMenuBar.java	Cargar tabla externa	1	CMD-CARGAR-TABLA-EXTERNA-C8EFDBE4
+MainMenuBar.java	CartoDB Voyager — Claro	1	CMD-CARTODB-VOYAGER-CLARO-22A7C5C6
+MainMenuBar.java	Circulo	1	CMD-CIRCULO-1CA9EB98
+MainMenuBar.java	Circulo por 3 puntos	1	CMD-CIRCULO-POR-3-PUNTOS-1F6AC123
+MainMenuBar.java	Clasificación ML (Smile)...	1	CMD-CLASIFICACION-ML-SMILE-DCD0B325
+MainMenuBar.java	Clima online...	1	CMD-CLIMA-ONLINE-B9F1B648
+MainMenuBar.java	Conectar CATSERVER...	1	CMD-CONECTAR-CATSERVER-EBE20CB1
+MainMenuBar.java	Constructor de consultas	1	CMD-CONSTRUCTOR-DE-CONSULTAS-2766AF26
+MainMenuBar.java	Continuar linea	1	CMD-CONTINUAR-LINEA-93B280DB
+MainMenuBar.java	Conversor CRS / EPSG	1	CMD-CONVERSOR-CRS-EPSG-C9894086
+MainMenuBar.java	Copiar	1	CMD-COPIAR-AFCCD5E7
+MainMenuBar.java	Copiar a editable	1	CMD-COPIAR-A-EDITABLE-03A2F888
+MainMenuBar.java	Cortar	1	CMD-CORTAR-79C25276
+MainMenuBar.java	Cortar geometría	1	CMD-CORTAR-GEOMETRIA-F38869A9
+MainMenuBar.java	CRS del proyecto	1	CMD-CRS-DEL-PROYECTO-FC2A18B7
+MainMenuBar.java	Cuencas...	1	CMD-CUENCAS-473AF9B3
+MainMenuBar.java	Curvas de nivel...	1	CMD-CURVAS-DE-NIVEL-6CE27B32
+MainMenuBar.java	Definir CRS personalizado...	1	CMD-DEFINIR-CRS-PERSONALIZADO-EC311241
+MainMenuBar.java	DEM online...	1	CMD-DEM-ONLINE-4E2CD596
+MainMenuBar.java	Deshacer	1	CMD-DESHACER-97760482
+MainMenuBar.java	Dibujar línea	1	CMD-DIBUJAR-LINEA-CAB30F61
+MainMenuBar.java	Dibujar polígono	1	CMD-DIBUJAR-POLIGONO-390E616B
+MainMenuBar.java	Dibujar punto	1	CMD-DIBUJAR-PUNTO-78F75692
+MainMenuBar.java	Ejecutar script Python...	1	CMD-EJECUTAR-SCRIPT-PYTHON-EE715A8F
+MainMenuBar.java	Esri Light Gray Canvas	1	CMD-ESRI-LIGHT-GRAY-CANVAS-F97FA08D
+MainMenuBar.java	Esri NatGeo World Map	1	CMD-ESRI-NATGEO-WORLD-MAP-74AA4D62
+MainMenuBar.java	Esri World Imagery	1	CMD-ESRI-WORLD-IMAGERY-8A5914B0
+MainMenuBar.java	Esri World Street	1	CMD-ESRI-WORLD-STREET-C5F70673
+MainMenuBar.java	Esri World Topo	1	CMD-ESRI-WORLD-TOPO-D1E557C8
+MainMenuBar.java	Etiquetas...	1	CMD-ETIQUETAS-BFD060CA
+MainMenuBar.java	Explotar entidades	1	CMD-EXPLOTAR-ENTIDADES-BBBCE859
+MainMenuBar.java	Exportar capa a KML...	1	CMD-EXPORTAR-CAPA-A-KML-BF86E182
+MainMenuBar.java	Exportar capa a PostGIS...	1	CMD-EXPORTAR-CAPA-A-POSTGIS-598B62D3
+MainMenuBar.java	Exportar capa a SLD...	1	CMD-EXPORTAR-CAPA-A-SLD-B8C12619
+MainMenuBar.java	Extender linea	1	CMD-EXTENDER-LINEA-5FE9EDB7
+MainMenuBar.java	Generar escorrentías...	1	CMD-GENERAR-ESCORRENTIAS-85C812F5
+MainMenuBar.java	Geoprocesamiento...	1	CMD-GEOPROCESAMIENTO-9CEE9211
+MainMenuBar.java	Georreferenciar capa CAD seleccionada...	1	CMD-GEORREFERENCIAR-CAPA-CAD-SELECCIONADA-8951618A
+MainMenuBar.java	Guardar cambios	1	CMD-GUARDAR-CAMBIOS-DECA50A1
+MainMenuBar.java	Guardar proyecto	1	CMD-GUARDAR-PROYECTO-D0A57548
+MainMenuBar.java	Guardar proyecto como...	1	CMD-GUARDAR-PROYECTO-COMO-A706ED9C
+MainMenuBar.java	H3 hexagonal binning...	1	CMD-H3-HEXAGONAL-BINNING-8A7B01F0
+MainMenuBar.java	Hillshade / Sombreado...	1	CMD-HILLSHADE-SOMBREADO-6C9973EA
+MainMenuBar.java	Identificar	1	CMD-IDENTIFICAR-912EB6B9
+MainMenuBar.java	Índices (NDVI, NDWI, EVI...)	1	CMD-INDICES-NDVI-NDWI-EVI-7EA3F07E
+MainMenuBar.java	Integracion DWG / CAD...	1	CMD-INTEGRACION-DWG-CAD-FDEF1245
+MainMenuBar.java	Inundación preliminar...	1	CMD-INUNDACION-PRELIMINAR-711BBB0E
+MainMenuBar.java	Limpiar recientes	1	CMD-LIMPIAR-RECIENTES-ED2E262F
+MainMenuBar.java	Medir área	1	CMD-MEDIR-AREA-446F5D57
+MainMenuBar.java	Medir distancia	1	CMD-MEDIR-DISTANCIA-9FD1F274
+MainMenuBar.java	Mover	1	CMD-MOVER-78868C32
+MainMenuBar.java	Mover selección	1	CMD-MOVER-SELECCION-1CF4E99F
+MainMenuBar.java	NASA MODIS — Temp. del mar	1	CMD-NASA-MODIS-TEMP-DEL-MAR-8FD50EF5
+MainMenuBar.java	NASA VIIRS — Color real	1	CMD-NASA-VIIRS-COLOR-REAL-8A1EC668
+MainMenuBar.java	Nueva capa vectorial	1	CMD-NUEVA-CAPA-VECTORIAL-7C09AB5A
+MainMenuBar.java	Nuevo proyecto	1	CMD-NUEVO-PROYECTO-7E5939DB
+MainMenuBar.java	OpenStreetMap	1	CMD-OPENSTREETMAP-722BF25C
+MainMenuBar.java	OpenTopoMap — Topográfico	1	CMD-OPENTOPOMAP-TOPOGRAFICO-E9F5905E
+MainMenuBar.java	Panel de ayuda	1	CMD-PANEL-DE-AYUDA-128983D6
+MainMenuBar.java	Paralela / desplazamiento lateral	1	CMD-PARALELA-DESPLAZAMIENTO-LATERAL-D993E1F3
+MainMenuBar.java	Pegar	1	CMD-PEGAR-0362F7D4
+MainMenuBar.java	Pegar en editable	1	CMD-PEGAR-EN-EDITABLE-BF995A89
+MainMenuBar.java	Pendiente...	1	CMD-PENDIENTE-3DDFB4D7
+MainMenuBar.java	Perfil topográfico...	1	CMD-PERFIL-TOPOGRAFICO-6E90F24E
+MainMenuBar.java	Perpendicular	1	CMD-PERPENDICULAR-B963D0B3
+MainMenuBar.java	pgRouting (PostGIS)...	1	CMD-PGROUTING-POSTGIS-BAAE4AE2
+MainMenuBar.java	Pro Raster...	1	CMD-PRO-RASTER-0B820D41
+MainMenuBar.java	Procesamiento por lotes...	1	CMD-PROCESAMIENTO-POR-LOTES-97E0FD04
+MainMenuBar.java	Propiedades de capa...	1	CMD-PROPIEDADES-DE-CAPA-7A278929
+MainMenuBar.java	Quitar capa	1	CMD-QUITAR-CAPA-AB871D64
+MainMenuBar.java	Recortar DEM...	1	CMD-RECORTAR-DEM-5924A7C9
+MainMenuBar.java	Rectangulo	1	CMD-RECTANGULO-3967F765
+MainMenuBar.java	Rehacer	1	CMD-REHACER-8332F28F
+MainMenuBar.java	Renombrar proyecto	1	CMD-RENOMBRAR-PROYECTO-8325351C
+MainMenuBar.java	Riesgo booleano preliminar...	1	CMD-RIESGO-BOOLEANO-PRELIMINAR-3C01D0E6
+MainMenuBar.java	Salir	1	CMD-SALIR-15C8CFA0
+MainMenuBar.java	Salvar vista del mapa	1	CMD-SALVAR-VISTA-DEL-MAPA-57192D71
+MainMenuBar.java	Simbología de capa...	1	CMD-SIMBOLOGIA-DE-CAPA-9EC91443
+MainMenuBar.java	Simbología por campo...	1	CMD-SIMBOLOGIA-POR-CAMPO-D238AA58
+MainMenuBar.java	STAC — Catálogo de assets...	1	CMD-STAC-CATALOGO-DE-ASSETS-810454B4
+MainMenuBar.java	Subir capa	1	CMD-SUBIR-CAPA-48760C5D
+MainMenuBar.java	Suelos online...	1	CMD-SUELOS-ONLINE-149AD795
+MainMenuBar.java	Tabla de atributos	1	CMD-TABLA-DE-ATRIBUTOS-635EDF9B
+MainMenuBar.java	Terminar	1	CMD-TERMINAR-9DC5728F
+MainMenuBar.java	Terminar edición	1	CMD-TERMINAR-EDICION-91F9450E
+MainMenuBar.java	Unir elementos	1	CMD-UNIR-ELEMENTOS-072ACD57
+MainMenuBar.java	Unir vértices	1	CMD-UNIR-VERTICES-2F579D50
+MainMenuBar.java	Validar conectividad de líneas	1	CMD-VALIDAR-CONECTIVIDAD-DE-LINEAS-FC7BE30A
+MainMenuBar.java	Validar gaps entre polígonos	1	CMD-VALIDAR-GAPS-ENTRE-POLIGONOS-BABEF38F
+MainMenuBar.java	Validar geometrías inválidas	1	CMD-VALIDAR-GEOMETRIAS-INVALIDAS-B0550679
+MainMenuBar.java	Validar superposiciones	1	CMD-VALIDAR-SUPERPOSICIONES-5F058191
+MainMenuBar.java	Visibilidad / Viewshed...	1	CMD-VISIBILIDAD-VIEWSHED-E6C70509
+MainMenuBar.java	Vista anterior	1	CMD-VISTA-ANTERIOR-DE4B958E
+MainMenuBar.java	Vista siguiente	1	CMD-VISTA-SIGUIENTE-73AD003D
+MainMenuBar.java	WCS — Descargar coberturas...	1	CMD-WCS-DESCARGAR-COBERTURAS-852ECD38
+MainMenuBar.java	WhiteboxTools...	1	CMD-WHITEBOXTOOLS-FC6D1078
+MainMenuBar.java	Zoom -	1	CMD-ZOOM-BBAF4741
+MainMenuBar.java	Zoom +	1	CMD-ZOOM-PLUS-BDAF4A67
+MainMenuBar.java	Zoom a capa seleccionada	1	CMD-ZOOM-A-CAPA-SELECCIONADA-161A6E57
+MainMenuBar.java	Zoom a todas las capas	1	CMD-ZOOM-A-TODAS-LAS-CAPAS-3911EC0E
+MainToolBar.java	Abrir proyecto	1	CMD-ABRIR-PROYECTO-E7D8EE72
+MainToolBar.java	Abrir tabla de atributos	1	CMD-ABRIR-TABLA-DE-ATRIBUTOS-DE18B6EF
+MainToolBar.java	Acercar	1	CMD-ACERCAR-9047CF50
+MainToolBar.java	Agregar capa al proyecto actual	1	CMD-AGREGAR-CAPA-AL-PROYECTO-ACTUAL-FE741FA5
+MainToolBar.java	Alejar	1	CMD-ALEJAR-7E5FB1E8
+MainToolBar.java	Analisis	1	CMD-ANALISIS-3F0F3A73
+MainToolBar.java	Buscar por coordenadas	1	CMD-BUSCAR-POR-COORDENADAS-2B583093
+MainToolBar.java	Cancelar dibujo o medicion	1	CMD-CANCELAR-DIBUJO-O-MEDICION-2A29DE24
+MainToolBar.java	Cargar tabla externa	1	CMD-CARGAR-TABLA-EXTERNA-C8EFDBE4
+MainToolBar.java	Compositor cartografico CATMAP	1	CMD-COMPOSITOR-CARTOGRAFICO-CATMAP-CEA6D548
+MainToolBar.java	Consultar entidades	1	CMD-CONSULTAR-ENTIDADES-D1C4D381
+MainToolBar.java	Conversor de coordenadas	1	CMD-CONVERSOR-DE-COORDENADAS-30AB41E8
+MainToolBar.java	Crear nueva capa vectorial	1	CMD-CREAR-NUEVA-CAPA-VECTORIAL-D73FA23F
+MainToolBar.java	Definir CRS del proyecto	1	CMD-DEFINIR-CRS-DEL-PROYECTO-B8B904FE
+MainToolBar.java	Desplazar mapa	1	CMD-DESPLAZAR-MAPA-F9EE34CC
+MainToolBar.java	Dibujar lineas	1	CMD-DIBUJAR-LINEAS-998EC58A
+MainToolBar.java	Dibujar multipunto	1	CMD-DIBUJAR-MULTIPUNTO-E289DC35
+MainToolBar.java	Dibujar poligonos	1	CMD-DIBUJAR-POLIGONOS-8161498C
+MainToolBar.java	Dibujar puntos	1	CMD-DIBUJAR-PUNTOS-4E5DC433
+MainToolBar.java	Estilo	1	CMD-ESTILO-3AFDA8A7
+MainToolBar.java	Finalizar dibujo o medicion	1	CMD-FINALIZAR-DIBUJO-O-MEDICION-38ED7AFF
+MainToolBar.java	Gestor de modulos	1	CMD-GESTOR-DE-MODULOS-834B3239
+MainToolBar.java	Guardar proyecto	1	CMD-GUARDAR-PROYECTO-D0A57548
+MainToolBar.java	Guardar proyecto como...	1	CMD-GUARDAR-PROYECTO-COMO-A706ED9C
+MainToolBar.java	Medir area	1	CMD-MEDIR-AREA-5A8EE5D7
+MainToolBar.java	Medir distancia	1	CMD-MEDIR-DISTANCIA-9FD1F274
+MainToolBar.java	Raster	1	CMD-RASTER-C3A88B88
+MainToolBar.java	Salvar vista del mapa	1	CMD-SALVAR-VISTA-DEL-MAPA-57192D71
+MainToolBar.java	Vista anterior	1	CMD-VISTA-ANTERIOR-DE4B958E
+MainToolBar.java	Vista siguiente	1	CMD-VISTA-SIGUIENTE-73AD003D
+MainToolBar.java	Zoom a capa seleccionada	1	CMD-ZOOM-A-CAPA-SELECCIONADA-161A6E57
+MainToolBar.java	Zoom a todas las capas	1	CMD-ZOOM-A-TODAS-LAS-CAPAS-3911EC0E
+MapPopupHandler.java	Agregar pin aqu\u00ed	1	CMD-AGREGAR-PIN-AQUI-1F0252DA
+MapPopupHandler.java	Agregar vertice	1	CMD-AGREGAR-VERTICE-A7A82E00
+MapPopupHandler.java	Aplicar edici\u00f3n	1	CMD-APLICAR-EDICION-194A7FBF
+MapPopupHandler.java	Borrar P	1	CMD-BORRAR-P-A109D069
+MapPopupHandler.java	Borrar todos los pines	2	CMD-BORRAR-TODOS-LOS-PINES-8AC4E545
+MapPopupHandler.java	Cancelar boceto	1	CMD-CANCELAR-BOCETO-4F5383FE
+MapPopupHandler.java	Cancelar dibujo	1	CMD-CANCELAR-DIBUJO-ECEBBB15
+MapPopupHandler.java	Cancelar medici\u00f3n	1	CMD-CANCELAR-MEDICION-830A5649
+MapPopupHandler.java	Cerrar dibujo...	1	CMD-CERRAR-DIBUJO-A1ABE27F
+MapPopupHandler.java	Cerrar entidad actual	1	CMD-CERRAR-ENTIDAD-ACTUAL-D0045483
+MapPopupHandler.java	Convertir pines en capa	2	CMD-CONVERTIR-PINES-EN-CAPA-2C1921FE
+MapPopupHandler.java	Copiar coordenada de P	1	CMD-COPIAR-COORDENADA-DE-P-FE719D96
+MapPopupHandler.java	Copiar coordenada proyecto (X/Y)	1	CMD-COPIAR-COORDENADA-PROYECTO-X-Y-39A7AB2D
+MapPopupHandler.java	Copiar Lat/Long	1	CMD-COPIAR-LAT-LONG-8397C6FD
+MapPopupHandler.java	Copiar Lat/Long de P	1	CMD-COPIAR-LAT-LONG-DE-P-B5803EA4
+MapPopupHandler.java	Copiar Lat/Long DMS	1	CMD-COPIAR-LAT-LONG-DMS-954B7E3D
+MapPopupHandler.java	Copiar Lat/Long DMS de P	1	CMD-COPIAR-LAT-LONG-DMS-DE-P-36BCADE4
+MapPopupHandler.java	Cortar geometria	1	CMD-CORTAR-GEOMETRIA-DCBAEB05
+MapPopupHandler.java	Crear agujero	1	CMD-CREAR-AGUJERO-187BD465
+MapPopupHandler.java	Eliminar vertice	1	CMD-ELIMINAR-VERTICE-45938CF8
+MapPopupHandler.java	Limpiar seleccion	1	CMD-LIMPIAR-SELECCION-9AAD6E20
+MapPopupHandler.java	Mover vertices	1	CMD-MOVER-VERTICES-DBCC8195
+MapPopupHandler.java	Opciones de capa	1	CMD-OPCIONES-DE-CAPA-539DF9AD
+MapPopupHandler.java	Terminar medici\u00f3n	1	CMD-TERMINAR-MEDICION-7941481E
+MapPopupHandler.java	Ver coordenadas de P	1	CMD-VER-COORDENADAS-DE-P-1DD6CF70
+MapPopupHandler.java	Ver coordenadas del punto	1	CMD-VER-COORDENADAS-DEL-PUNTO-E5F2D4D2
+MapPopupHandler.java	Ver informacion	1	CMD-VER-INFORMACION-86E560CB
+MapPopupHandler.java	Zoom a entidad	1	CMD-ZOOM-A-ENTIDAD-AAC5D96C
+MapPopupMenuBuilder.java	Agregar pin aqu\u00ed	1	CMD-AGREGAR-PIN-AQUI-1F0252DA
+MapPopupMenuBuilder.java	Agregar vertice	1	CMD-AGREGAR-VERTICE-A7A82E00
+MapPopupMenuBuilder.java	Aplicar edici\u00f3n	1	CMD-APLICAR-EDICION-194A7FBF
+MapPopupMenuBuilder.java	Borrar todos los pines	1	CMD-BORRAR-TODOS-LOS-PINES-8AC4E545
+MapPopupMenuBuilder.java	Cancelar boceto	1	CMD-CANCELAR-BOCETO-4F5383FE
+MapPopupMenuBuilder.java	Cancelar dibujo	1	CMD-CANCELAR-DIBUJO-ECEBBB15
+MapPopupMenuBuilder.java	Cancelar medici\u00f3n	1	CMD-CANCELAR-MEDICION-830A5649
+MapPopupMenuBuilder.java	Cerrar dibujo...	1	CMD-CERRAR-DIBUJO-A1ABE27F
+MapPopupMenuBuilder.java	Cerrar entidad actual	1	CMD-CERRAR-ENTIDAD-ACTUAL-D0045483
+MapPopupMenuBuilder.java	Convertir pines en capa	1	CMD-CONVERTIR-PINES-EN-CAPA-2C1921FE
+MapPopupMenuBuilder.java	Copiar coordenada proyecto (X/Y)	1	CMD-COPIAR-COORDENADA-PROYECTO-X-Y-39A7AB2D
+MapPopupMenuBuilder.java	Copiar Lat/Long	1	CMD-COPIAR-LAT-LONG-8397C6FD
+MapPopupMenuBuilder.java	Copiar Lat/Long DMS	1	CMD-COPIAR-LAT-LONG-DMS-954B7E3D
+MapPopupMenuBuilder.java	Cortar geometria	1	CMD-CORTAR-GEOMETRIA-DCBAEB05
+MapPopupMenuBuilder.java	Crear agujero	1	CMD-CREAR-AGUJERO-187BD465
+MapPopupMenuBuilder.java	Eliminar vertice	1	CMD-ELIMINAR-VERTICE-45938CF8
+MapPopupMenuBuilder.java	Limpiar seleccion	1	CMD-LIMPIAR-SELECCION-9AAD6E20
+MapPopupMenuBuilder.java	Mover vertices	1	CMD-MOVER-VERTICES-DBCC8195
+MapPopupMenuBuilder.java	Opciones de capa	1	CMD-OPCIONES-DE-CAPA-539DF9AD
+MapPopupMenuBuilder.java	Terminar medici\u00f3n	1	CMD-TERMINAR-MEDICION-7941481E
+MapPopupMenuBuilder.java	Ver coordenadas del punto	1	CMD-VER-COORDENADAS-DEL-PUNTO-E5F2D4D2
+MapPopupMenuBuilder.java	Ver informacion	1	CMD-VER-INFORMACION-86E560CB
+MapPopupMenuBuilder.java	Zoom a entidad	1	CMD-ZOOM-A-ENTIDAD-AAC5D96C
+OnlineConnectionsToolbar.java	Esri	1	CMD-ESRI-05664058
+OnlineConnectionsToolbar.java	OSM	1	CMD-OSM-08FA882E
+OnlineConnectionsToolbar.java	WFS	1	CMD-WFS-910E1759
+PinManager.java	Borrar P	1	CMD-BORRAR-P-A109D069
+PinManager.java	Borrar todos los pines	1	CMD-BORRAR-TODOS-LOS-PINES-8AC4E545
+PinManager.java	Convertir pines en capa	1	CMD-CONVERTIR-PINES-EN-CAPA-2C1921FE
+PinManager.java	Copiar coordenada de P	1	CMD-COPIAR-COORDENADA-DE-P-FE719D96
+PinManager.java	Copiar Lat/Long de P	1	CMD-COPIAR-LAT-LONG-DE-P-B5803EA4
+PinManager.java	Copiar Lat/Long DMS de P	1	CMD-COPIAR-LAT-LONG-DMS-DE-P-36BCADE4
+PinManager.java	Ver coordenadas de P	1	CMD-VER-COORDENADAS-DE-P-1DD6CF70
+ProInterpretationToolbar.java	Agua	1	CMD-AGUA-07CC8397
+ProInterpretationToolbar.java	Comparar	1	CMD-COMPARAR-3D150C0E
+ProInterpretationToolbar.java	Mapa Pro	1	CMD-MAPA-PRO-8E804A1B
+ProInterpretationToolbar.java	Nieve	1	CMD-NIEVE-B248E982
+ProInterpretationToolbar.java	Nubes	1	CMD-NUBES-E1C3B00A
+ProInterpretationToolbar.java	QA Pro	1	CMD-QA-PRO-FE53AA58
+ProInterpretationToolbar.java	Sombra	1	CMD-SOMBRA-6C5903B9
+TopographyToolbar.java	Analisis hidro	1	CMD-ANALISIS-HIDRO-075218F1
+TopographyToolbar.java	Cargar DEM	1	CMD-CARGAR-DEM-200CFC67
+TopographyToolbar.java	Cuenca outlet	1	CMD-CUENCA-OUTLET-CD783877
+TopographyToolbar.java	Curvas de nivel	1	CMD-CURVAS-DE-NIVEL-97A9CABC
+TopographyToolbar.java	Escorrentias	1	CMD-ESCORRENTIAS-9568FD37
+TopographyToolbar.java	Imagen DEM	1	CMD-IMAGEN-DEM-E14F6226
+TopographyToolbar.java	Inundacion	1	CMD-INUNDACION-D5D0D483
+TopographyToolbar.java	Perfil topografico	1	CMD-PERFIL-TOPOGRAFICO-689C9DE8
+TopographyToolbar.java	Recortar DEM	1	CMD-RECORTAR-DEM-64F242D5
+TopographyToolbar.java	Riesgo booleano	1	CMD-RIESGO-BOOLEANO-C2C60C87
+TopographyToolbar.java	Suelos online	1	CMD-SUELOS-ONLINE-A45BBFF1
+ui/components/layout/LayoutPreviewToolbar.java	Abajo	1	CMD-ABAJO-CD94A30A
+ui/components/layout/LayoutPreviewToolbar.java	Abrir	1	CMD-ABRIR-5A216C13
+ui/components/layout/LayoutPreviewToolbar.java	Actualizar	1	CMD-ACTUALIZAR-7CC1E2B3
+ui/components/layout/LayoutPreviewToolbar.java	Agrupar	1	CMD-AGRUPAR-B551EECF
+ui/components/layout/LayoutPreviewToolbar.java	Ajustar	1	CMD-AJUSTAR-A9EBA811
+ui/components/layout/LayoutPreviewToolbar.java	Ajustar ancho	1	CMD-AJUSTAR-ANCHO-B45F3B4C
+ui/components/layout/LayoutPreviewToolbar.java	Arriba	1	CMD-ARRIBA-36698196
+ui/components/layout/LayoutPreviewToolbar.java	Bajar	1	CMD-BAJAR-3D217E81
+ui/components/layout/LayoutPreviewToolbar.java	Bloquear	1	CMD-BLOQUEAR-F802C63E
+ui/components/layout/LayoutPreviewToolbar.java	Centro	1	CMD-CENTRO-30CEF258
+ui/components/layout/LayoutPreviewToolbar.java	Derecha	1	CMD-DERECHA-CFF4289F
+ui/components/layout/LayoutPreviewToolbar.java	Desagrupar	1	CMD-DESAGRUPAR-F014C8D5
+ui/components/layout/LayoutPreviewToolbar.java	Duplicar	1	CMD-DUPLICAR-60A546B1
+ui/components/layout/LayoutPreviewToolbar.java	Editar	1	CMD-EDITAR-39461426
+ui/components/layout/LayoutPreviewToolbar.java	Elipse	1	CMD-ELIPSE-C094BC05
+ui/components/layout/LayoutPreviewToolbar.java	Escala	1	CMD-ESCALA-D37679B6
+ui/components/layout/LayoutPreviewToolbar.java	Exportar	1	CMD-EXPORTAR-AF3C240C
+ui/components/layout/LayoutPreviewToolbar.java	Exportar PNG	1	CMD-EXPORTAR-PNG-DA7C9763
+ui/components/layout/LayoutPreviewToolbar.java	Guardar	1	CMD-GUARDAR-291705DD
+ui/components/layout/LayoutPreviewToolbar.java	Imagen	1	CMD-IMAGEN-22EC651C
+ui/components/layout/LayoutPreviewToolbar.java	Imprimir	1	CMD-IMPRIMIR-45151458
+ui/components/layout/LayoutPreviewToolbar.java	Izquierda	1	CMD-IZQUIERDA-F8B9E603
+ui/components/layout/LayoutPreviewToolbar.java	Leyenda	2	CMD-LEYENDA-BA5561BD
+ui/components/layout/LayoutPreviewToolbar.java	Linea	1	CMD-LINEA-7C19EAD2
+ui/components/layout/LayoutPreviewToolbar.java	Mapa	1	CMD-MAPA-445F1B90
+ui/components/layout/LayoutPreviewToolbar.java	Medio	1	CMD-MEDIO-DF0FE0AD
+ui/components/layout/LayoutPreviewToolbar.java	Norte	2	CMD-NORTE-5C5E3E53
+ui/components/layout/LayoutPreviewToolbar.java	Pan mapa	1	CMD-PAN-MAPA-5E6B9CD1
+ui/components/layout/LayoutPreviewToolbar.java	Plantillas...	1	CMD-PLANTILLAS-60DBD62D
+ui/components/layout/LayoutPreviewToolbar.java	Quitar	1	CMD-QUITAR-BDD858A5
+ui/components/layout/LayoutPreviewToolbar.java	Rectangulo	1	CMD-RECTANGULO-3967F765
+ui/components/layout/LayoutPreviewToolbar.java	Reencuadrar	1	CMD-REENCUADRAR-B067EB0B
+ui/components/layout/LayoutPreviewToolbar.java	Reset	1	CMD-RESET-0AC8A560
+ui/components/layout/LayoutPreviewToolbar.java	Seleccionar	1	CMD-SELECCIONAR-DB5605ED
+ui/components/layout/LayoutPreviewToolbar.java	Subir	1	CMD-SUBIR-362E39D2
+ui/components/layout/LayoutPreviewToolbar.java	SVG	1	CMD-SVG-2A21A5C1
+ui/components/layout/LayoutPreviewToolbar.java	Texto	1	CMD-TEXTO-EAC32423
+ui/components/layout/LayoutPreviewToolbar.java	Texto Dinamico	1	CMD-TEXTO-DINAMICO-3505B927
+ui/components/layout/LayoutPreviewToolbar.java	Visible	1	CMD-VISIBLE-592A4941
+ui/components/layout/LayoutPreviewToolbar.java	Zoom -	2	CMD-ZOOM-BBAF4741
+ui/components/layout/LayoutPreviewToolbar.java	Zoom +	2	CMD-ZOOM-PLUS-BDAF4A67
+ui/components/layout/LayoutPreviewToolbar.java	Zoom mapa	1	CMD-ZOOM-MAPA-5B9575C3

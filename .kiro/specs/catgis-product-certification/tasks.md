@@ -19,14 +19,17 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
 ## Phase F1 — Complete inventory and truth baseline
 
-- [-] **F1.1 — Generate current UI/action inventory**
+- [x] **F1.1 — Generate current UI/action inventory**
   - Requirements: REQ-PC-1, REQ-PC-11
-  - Enumerate menus, toolbars, context actions, dialogs, loaders/exporters and action classes from source.
-  - First blocking tranche: exact production source-surface manifest + executable drift test + dedicated GitHub certification job.
-  - Evidence pending CI on branch `quality/f1-surface-inventory`; menu/control-to-feature-ID mapping continues in F1.2.
-- [ ] **F1.2 — Build FEATURE_CERTIFICATION_MATRIX**
+  - Exact production source-surface manifest locked by `FeatureSurfaceInventoryCertificationTest`.
+  - Evidence: PR #8 merged as `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`; post-main CATGIS CI run `37558982260` SUCCESS and CATGIS Certification run `37558982255` SUCCESS.
+  - Certified inventory: 174 source surfaces across actions, command surfaces, dialogs/windows, exporters, loaders/readers, services and toolbars.
+- [-] **F1.2 — Build FEATURE_CERTIFICATION_MATRIX**
   - Requirements: REQ-PC-1, REQ-PC-12
-  - Seed all current domains; map each visible function to source entry point and tier.
+  - Tranche A: executable static visible-command inventory on `quality/f1-visible-command-matrix`.
+  - Current source evidence: 14 command/toolbar surfaces, 390 static command occurrences, 378 source/label pairs and 313 unique labels.
+  - `VisibleCommandInventoryCertificationTest` exact-match locks the inventory and emits the full TSV as CI evidence.
+  - Tranche B remains: consolidate aliases, inventory dynamic/computed labels and map command/dialog/loader/export capabilities to stable semantic feature IDs and tiers.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
@@ -120,4 +123,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Do not continue P0.8 locally. Build G0.3 certification CI, then execute F1/F2/R1 entirely in GitHub, harden and certify architecture in A0, and only then unlock F3/OpenCode runtime.
+Certify F1.2 Tranche A in GitHub, then build Tranche B semantic feature mapping. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.

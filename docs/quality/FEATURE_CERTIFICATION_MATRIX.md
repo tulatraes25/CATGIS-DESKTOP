@@ -1,10 +1,24 @@
 # CATGIS Feature Certification Matrix
 
-Status: INVENTORY_PENDING
+Status: F1.2_IN_PROGRESS
 Program spec: `.kiro/specs/catgis-product-certification/`
-Baseline at creation: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
+Certified source baseline entering F1.2: `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`
 
-This document becomes the single feature-level certification ledger. Historical audit matrices are inputs only.
+This document is the feature-level certification ledger. Historical audit matrices are inputs only and never current certification evidence.
+
+## Current F1.2 evidence
+
+The first F1.2 tranche converts visible command discovery into an executable GitHub gate:
+
+- command/toolbar source surfaces tracked: **14/14** from `SOURCE_FEATURE_SURFACE_INVENTORY.tsv`;
+- static visible command occurrences: **390**;
+- unique source/label pairs: **378**;
+- unique static labels: **313**;
+- exact inventory fingerprint: **FNV64 `bad0905a00836b51`**;
+- executable guard: `VisibleCommandInventoryCertificationTest`;
+- CI evidence artifact: `certification-visible-command-inventory/visible-command-inventory.tsv`.
+
+This is inventory evidence, not a claim that 313 independent product features are certified. The next F1.2 tranche must consolidate aliases and map each visible command/dynamic capability to stable semantic feature IDs.
 
 ## Status vocabulary
 
@@ -27,7 +41,7 @@ This document becomes the single feature-level certification ledger. Historical 
 
 ## Inventory domains
 
-The F1 gate must populate rows for every current user-facing action in:
+F1.2 must populate rows for every current user-facing capability in:
 
 - Startup / project / CRS
 - Navigation / map canvas
@@ -47,4 +61,12 @@ The F1 gate must populate rows for every current user-facing action in:
 - Help / preferences / diagnostics
 - Installer / first-run / dependency detection
 
-No feature receives a certified status until exact-SHA evidence is linked.
+## F1.2 closure conditions
+
+- Every visible static command maps to exactly one stable semantic feature ID.
+- Dynamic/computed menu labels are explicitly inventoried.
+- Dialog-only, loader/export-only and dependency-gated capabilities are linked to a semantic feature row.
+- Aliases from menu/toolbar/context surfaces converge on the same feature ID where they represent the same behavior.
+- Every row has a declared tier: CORE, BETA, EXPERIMENTAL or EXTERNAL_DEPENDENCY.
+- No row receives a certified runtime state before `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+- Exact-SHA automated evidence is attached before a row can leave TEST_GAP/RUNTIME_PENDING.
