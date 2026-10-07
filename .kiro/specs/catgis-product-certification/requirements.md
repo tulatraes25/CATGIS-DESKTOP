@@ -3,13 +3,15 @@
 Status: ACTIVE
 Owner: CATGIS
 Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
-Program: FUNCTIONAL_E2E -> RELIABILITY -> ARCHITECTURE -> UX -> RELEASE
+Program: GITHUB_AUTOMATED_CERTIFICATION -> ARCHITECTURE_CERTIFICATION -> WINDOWS_RUNTIME_E2E -> UX -> RELEASE
 
 ## Goal
 
 Convert CATGIS Desktop from a feature-rich beta into a product whose visible functions are traceably usable end to end on Windows, whose failures are explicit and recoverable, whose architecture is maintainable/testable, and whose UX is polished only after functionality and architecture are certified.
 
-Historical audit documents are evidence inputs, not current truth. The current repository, exact SHAs, CI, fixtures and Windows runtime evidence are authoritative.
+Historical audit documents are evidence inputs, not current truth. The current repository, exact SHAs, GitHub CI, fixtures and later Windows runtime evidence are authoritative.
+
+Standing execution rule for this program: all deterministic functional, integration, reliability and architectural testing is built and proven in GitHub first. OpenCode/interactive Windows runtime is blocked until the architecture gate is CLOSED_CERTIFIED.
 
 ## Non-goals
 
@@ -18,6 +20,17 @@ Historical audit documents are evidence inputs, not current truth. The current r
 - Do not call a visible feature "working" because its dialog opens.
 - Do not require every optional external dependency on every workstation; certify dependency-gated features in declared environments.
 - Do not rewrite Java/Swing/GeoTools into another stack merely for fashion.
+
+## REQ-PC-0 — GitHub-first architecture gate
+
+UNTIL the automated certification and architecture gates are CLOSED_CERTIFIED, THE SYSTEM SHALL NOT require operator/OpenCode GUI validation as a prerequisite for normal engineering progress.
+
+Acceptance:
+- AC-PC-0.1: Deterministic unit/component/integration/architecture tests execute in GitHub CI first.
+- AC-PC-0.2: GitHub CI includes Linux and Windows Java validation for repository code that is platform-neutral/headless-capable.
+- AC-PC-0.3: Architecture rules are executable and blocking before runtime E2E is unlocked.
+- AC-PC-0.4: OpenCode does not author fixes; defects found later in runtime return to GitHub.
+- AC-PC-0.5: Existing runtime-only PRs may be parked and re-evaluated on the architecture-certified baseline rather than forcing premature manual testing.
 
 ## REQ-PC-1 — Complete user-facing inventory
 
@@ -40,8 +53,8 @@ Acceptance:
 - state/persistence is verified where applicable;
 - no silent data loss or silent failure;
 - no blocking network/disk/external-tool work on the Swing EDT beyond explicitly bounded UI work;
-- automated tests cover deterministic core behavior;
-- Windows runtime evidence covers user interaction when GUI/native behavior matters.
+- automated tests cover every deterministic behavior that can reasonably execute in GitHub;
+- Windows runtime evidence covers remaining GUI/native behavior only after REQ-PC-0 is satisfied.
 
 ## REQ-PC-3 — End-to-end professional workflow
 
@@ -95,7 +108,7 @@ Acceptance includes:
 
 ## REQ-PC-7 — Architectural quality
 
-WHEN the functional baseline is stable, THE SYSTEM SHALL enforce maintainable boundaries without changing user-visible semantics unnecessarily.
+BEFORE interactive Windows E2E certification begins, THE SYSTEM SHALL enforce maintainable boundaries without changing user-visible semantics unnecessarily.
 
 Acceptance:
 - UI event handlers delegate business/GIS work to testable services;
@@ -103,7 +116,10 @@ Acceptance:
 - no new monolithic responsibility growth in known hotspot classes;
 - critical dependencies are injectable or replaceable by deterministic test seams;
 - architecture rules are executable where practical (tests/static checks), not prose only;
-- changes are incremental, behavior-preserving and backed by characterization tests.
+- changes are incremental, behavior-preserving and backed by characterization tests;
+- architecture certification is a blocking gate with zero unresolved CRITICAL/HIGH architecture findings;
+- source dependency rules, EDT/I/O rules and hotspot-growth rules are enforced by GitHub tests/static checks;
+- all architecture refactors run the full GitHub regression suite before merge.
 
 ## REQ-PC-8 — External dependency truthfulness
 
