@@ -10,9 +10,11 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 - [x] **G0.2 — Defer interactive runtime until architecture certification**
   - Requirements: REQ-PC-0, REQ-PC-7
   - PR #3 is parked; exact implementation SHA remains evidence, not merge authority.
-- [-] **G0.3 — Add certification CI**
+- [x] **G0.3 — Add certification CI**
   - Linux full suite, Windows full suite, skip accounting, architecture gate, PostGIS real integration, evidence artifacts.
-  - Branch: `quality/g0-certification-harness`; completion requires all new GitHub jobs green.
+  - Evidence: certification run `37554342919` on SHA `710073b8c2a3569b5e8e86765bc60cf49e63f589` — Linux SUCCESS, Windows SUCCESS, Architecture Guardrails SUCCESS, PostGIS real read/write/reload SUCCESS.
+  - Existing CATGIS CI run `37554342803` on the same SHA — 3/3 SUCCESS.
+  - Observed environment skips: 3 reviewed dependency-gated tests on Linux and Windows; no hidden `@Disabled` tests.
 
 ## Phase F1 — Complete inventory and truth baseline
 
