@@ -3,15 +3,15 @@
 Status: ACTIVE
 Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
-## Phase P0 — Existing critical runtime gate
+## Phase G0 — Runtime freeze / GitHub-only certification
 
-- [-] **P0.1 — Close pan-lag runtime validation**
-  - Requirements: REQ-PC-2, REQ-PC-6, REQ-PC-11
-  - Existing implementation: PR #3
-  - Evidence required: exact-SHA Windows P0.8 metrics + operator interaction matrix
-  - Executor: OpenCode/operator for runtime only; fixes return to GitHub
-- [ ] **P0.2 — Merge/certify P0 or iterate P0-B**
-  - Evidence: PR CI + post-main CI + runtime evidence
+- [x] **G0.1 — Adopt GitHub-first transfer authority**
+  - Skill rule merged and CI-certified.
+- [x] **G0.2 — Defer interactive runtime until architecture certification**
+  - Requirements: REQ-PC-0, REQ-PC-7
+  - PR #3 is parked; exact implementation SHA remains evidence, not merge authority.
+- [ ] **G0.3 — Add certification CI**
+  - Linux full suite, Windows full suite, skip accounting, architecture gate, evidence artifacts.
 
 ## Phase F1 — Complete inventory and truth baseline
 
@@ -44,7 +44,25 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 - [ ] **F2.7 — Experimental dependency contracts**
   - Scripting/plugin/LAS/DWG/WCS/STAC/pgRouting minimum contract or truthful gating.
 
-## Phase F3 — Windows end-to-end certification
+## Phase A0 — Architecture certification (BLOCKING BEFORE RUNTIME)
+
+- [ ] **A0.1 — Create executable architecture baseline**
+  - Requirements: REQ-PC-0, REQ-PC-7
+  - Package/source dependency rules; explicit allowlist only for known debt.
+- [ ] **A0.2 — Characterize hotspot behavior before extraction**
+  - MapPanel, LayersPanel, project persistence, CATMAP composer, network/external process paths.
+- [ ] **A0.3 — EDT/blocking-I/O certification**
+  - Network, disk and external process boundaries must not synchronously block Swing EDT.
+- [ ] **A0.4 — Adapter/seam certification**
+  - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
+- [ ] **A0.5 — Architecture debt burn-down**
+  - Zero unresolved CRITICAL/HIGH architecture findings.
+- [ ] **A0.6 — Full Linux + Windows regression on architecture candidate**
+  - Exact SHA, all GitHub blocking jobs green.
+- [ ] **A0.7 — Declare ARCHITECTURE_STATUS=CLOSED_CERTIFIED**
+  - Only this unlocks F3 runtime.
+
+## Phase F3 — Windows end-to-end certification (LOCKED UNTIL A0.7)
 
 - [ ] **F3.1 — Canonical E2E project workflow**
   - Requirements: REQ-PC-3
@@ -70,26 +88,9 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 - [ ] **R1.6 — Long operation progress/cancel/error**
   - Requirements: REQ-PC-2, REQ-PC-6
 
-## Phase A1 — Architecture hardening
-
-Starts only after characterization coverage exists for touched behavior.
-
-- [ ] **A1.1 — Establish executable architecture rules**
-  - Requirement: REQ-PC-7
-- [ ] **A1.2 — Extract blocking I/O/external adapters from UI paths**
-  - Requirements: REQ-PC-6, REQ-PC-7, REQ-PC-8
-- [ ] **A1.3 — Reduce MapPanel multi-responsibility surface**
-  - Requirement: REQ-PC-7
-- [ ] **A1.4 — Reduce LayersPanel/UI orchestration coupling**
-  - Requirement: REQ-PC-7
-- [ ] **A1.5 — Decompose CATMAP composer responsibilities**
-  - Requirement: REQ-PC-7
-- [ ] **A1.6 — Run full functional regression after each extraction**
-  - Requirement: REQ-PC-2
-
 ## Phase UX1 — Final UX program
 
-BLOCKED until F3 + R1 blocking items + A1 blocking items are certified.
+BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certified.
 
 - [ ] **UX1.1 — Task-flow and information-architecture audit**
   - Requirement: REQ-PC-9
@@ -114,4 +115,4 @@ BLOCKED until F3 + R1 blocking items + A1 blocking items are certified.
 
 ## Current next action
 
-Finish P0.8 on PR #3, then begin F1 inventory from the newly current main without allowing UX work to bypass the functional/architecture sequence.
+Do not continue P0.8 locally. Build G0.3 certification CI, then execute F1/F2/R1 entirely in GitHub, harden and certify architecture in A0, and only then unlock F3/OpenCode runtime.

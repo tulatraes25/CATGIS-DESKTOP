@@ -5,7 +5,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
 ## Current state
 
-CATGIS already has substantial automated coverage and a broad feature set, but existing audit/release documents are dated snapshots and explicitly identify untested real-format, integration, Windows-runtime, performance and long-session paths. P0 pan-lag is currently an open blocking runtime gate in PR #3.
+CATGIS already has substantial automated coverage and a broad feature set, but existing audit/release documents are dated snapshots and explicitly identify untested real-format, integration, performance, architectural and long-session paths. PR #3 contains a useful pan-lag experiment but its runtime gate is now intentionally parked until architecture certification.
 
 The program therefore treats current GitHub + exact-SHA evidence as truth and converts the product into a feature-by-feature certification system.
 
@@ -13,9 +13,9 @@ The program therefore treats current GitHub + exact-SHA evidence as truth and co
 
 The required order is:
 
-`P0/critical runtime -> inventory -> automated contracts -> Windows E2E -> reliability/performance -> architecture -> UX -> release`
+`inventory -> GitHub automated contracts -> GitHub reliability/performance -> architecture hardening/certification -> Windows E2E -> UX -> release`
 
-UX is intentionally last. UX-blocking defects may be fixed earlier only when they prevent testing or safe use.
+Interactive program testing is intentionally deferred until the architecture gate is certified. UX is intentionally last. UX-blocking defects may be fixed earlier only when they prevent automated testing or safe execution.
 
 ## Certification matrix
 
@@ -65,8 +65,17 @@ Use controlled services:
 - external-tool command seam for GDAL/Whitebox command composition;
 - real external dependency validation on Windows when semantics cannot be reproduced in CI.
 
-### 4. Windows E2E
-OpenCode synchronizes the exact GitHub-tested SHA and executes local/native/runtime gates. OpenCode does not author fixes. Operator performs GUI actions when automation cannot drive Swing reliably.
+### 4. GitHub architecture certification
+Before local runtime, GitHub must certify:
+- source/package dependency rules;
+- EDT/blocking-I/O boundaries;
+- explicit external adapters and deterministic seams;
+- hotspot characterization coverage;
+- no unresolved CRITICAL/HIGH architecture finding;
+- full Linux + Windows headless regression on the exact candidate SHA.
+
+### 5. Windows E2E — locked until architecture certification
+Only after `ARCHITECTURE_STATUS=CLOSED_CERTIFIED` may OpenCode synchronize the exact GitHub-tested SHA and execute local/native/runtime gates. OpenCode does not author fixes. Operator performs GUI actions only where automation cannot drive Swing reliably.
 
 ## Canonical E2E datasets
 
@@ -101,9 +110,11 @@ The initial inventory must cover at least:
 
 ## Architecture target
 
+Architecture is now a blocking pre-runtime product gate.
+
 Do not perform a big-bang rewrite.
 
-Characterize behavior first, then extract seams from hotspot classes.
+Characterize behavior first in GitHub, then extract seams from hotspot classes, rerunning the complete automated suite after each tranche.
 
 Target boundaries:
 
@@ -136,18 +147,25 @@ No UX tranche merges with unresolved functional regressions.
 
 ## Branch/CI model
 
-Each coherent gate:
-`exact main -> short branch -> implementation -> diff audit -> PR -> CI -> exact-SHA Windows validation when blocking -> merge -> post-main CI -> matrix/spec update`
+Each pre-runtime coherent gate:
+`exact main -> short branch -> implementation/test -> diff audit -> PR -> Linux CI + Windows CI + architecture gates -> merge -> post-main CI -> matrix/spec update`
 
-Current P0 PR #3 remains independent and must close on runtime evidence before the product program may call navigation certified.
+No OpenCode transfer is required during this pre-runtime campaign.
+
+After architecture certification, runtime gates use:
+`exact certified GitHub SHA -> OpenCode sync -> Windows/native/operator evidence -> defect returns to GitHub -> new exact SHA`.
+
+PR #3 is parked as historical implementation evidence. Do not merge it on the old runtime contract. Re-evaluate/port the pan solution against the architecture-certified baseline before runtime E2E.
 
 ## Program closure
 
 Program status becomes CLOSED_CERTIFIED only when:
 - every matrix row has a terminal certification state;
 - CORE has no FAIL/BLOCKED/UNKNOWN;
-- all required E2E workflows pass;
-- P0 and other P0/P1 reliability blockers are closed;
+- automated certification matrix has no unclassified CORE deterministic behavior;
+- architecture status is CLOSED_CERTIFIED before E2E begins;
+- all required E2E workflows pass after that gate;
+- P0 and other runtime reliability blockers are closed on the architecture-certified baseline;
 - architecture blocking rules pass;
 - UX final regression passes;
 - installer/clean-machine gate passes;
