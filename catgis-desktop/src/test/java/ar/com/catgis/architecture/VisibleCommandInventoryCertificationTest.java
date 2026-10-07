@@ -23,13 +23,14 @@ class VisibleCommandInventoryCertificationTest {
     private static final Path PROD_ROOT = Path.of("src", "ar", "com", "catgis");
     private static final Path SURFACE_INVENTORY =
             Path.of("..", "docs", "quality", "SOURCE_FEATURE_SURFACE_INVENTORY.tsv");
+    private static final Path COMMAND_INVENTORY =
+            Path.of("..", "docs", "quality", "VISIBLE_COMMAND_INVENTORY.tsv");
     private static final Path GENERATED_EVIDENCE =
             Path.of("build", "certification", "visible-command-inventory.tsv");
 
-    private static final int EXPECTED_OCCURRENCES = 390;
-    private static final int EXPECTED_SOURCE_LABEL_PAIRS = 378;
-    private static final int EXPECTED_UNIQUE_LABELS = 313;
-    private static final String EXPECTED_FNV64 = "bad0905a00836b51";
+    private static final int BASELINE_OCCURRENCES = 390;
+    private static final int BASELINE_SOURCE_LABEL_PAIRS = 378;
+    private static final int BASELINE_UNIQUE_LABELS = 313;
 
     private static final Set<String> COMMAND_SOURCES = Set.of(
             "MainMenuBar.java",
@@ -49,21 +50,21 @@ class VisibleCommandInventoryCertificationTest {
     );
 
     private static final List<Pattern> COMMAND_PATTERNS = List.of(
-            Pattern.compile("createItem\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("new JMenuItem\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("createButton\\(\\s*I18n\\.t\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("createButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("new JButton\\(\\s*I18n\\.t\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("new JButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("new JToggleButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("flatButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("\\bflat\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("createActionButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("createToggleButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("LayoutToolbarFactory\\.createToolbarButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("\\.addButton\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("panel\\.createMenuItem\\(\\s*\\"([^\\"]+)\\""),
-            Pattern.compile("panel\\.createMenuItem\\(\\s*I18n\\.t\\(\\s*\\"([^\\"]+)\\"")
+            Pattern.compile("createItem\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JMenuItem\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("createButton\\(\\s*I18n\\.t\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("createButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JButton\\(\\s*I18n\\.t\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JToggleButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("flatButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("\\bflat\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("createActionButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("createToggleButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("LayoutToolbarFactory\\.createToolbarButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("\\.addButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("panel\\.createMenuItem\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("panel\\.createMenuItem\\(\\s*I18n\\.t\\(\\s*\"([^\"]+)\"")
     );
 
     @Test
@@ -81,25 +82,74 @@ class VisibleCommandInventoryCertificationTest {
     }
 
     @Test
-    void visibleStaticCommandInventoryHasNoUnreviewedDrift() throws Exception {
-        Map<String, Integer> counts = discoverCounts();
-        int occurrences = counts.values().stream().mapToInt(Integer::intValue).sum();
-        long uniqueLabels = counts.keySet().stream()
+    void checkedInVisibleCommandInventoryMatchesSourceExactly() throws Exception {
+        Map<String, Integer> expected = readExpectedCounts();
+        Map<String, Integer> actual = discoverCounts();
+
+        assertEquals(expected, actual,
+                "Visible static commands changed. Review source and update VISIBLE_COMMAND_INVENTORY.tsv in the same PR.");
+
+        int occurrences = actual.values().stream().mapToInt(Integer::intValue).sum();
+        long uniqueLabels = actual.keySet().stream()
                 .map(key -> key.substring(key.indexOf('\t') + 1))
                 .distinct()
                 .count();
 
-        assertEquals(EXPECTED_OCCURRENCES, occurrences, "Visible command occurrence count changed.");
-        assertEquals(EXPECTED_SOURCE_LABEL_PAIRS, counts.size(), "Visible source/label pair count changed.");
-        assertEquals(EXPECTED_UNIQUE_LABELS, uniqueLabels, "Visible unique-label count changed.");
-
-        String evidence = renderEvidence(counts);
-        assertEquals(EXPECTED_FNV64, fnv1a64(evidence),
-                "Visible command inventory changed. Review the exact generated evidence and update the F1.2 gate.");
+        assertEquals(BASELINE_OCCURRENCES, occurrences,
+                "F1.2 baseline command occurrence count changed; review before ratcheting.");
+        assertEquals(BASELINE_SOURCE_LABEL_PAIRS, actual.size(),
+                "F1.2 baseline source/label pair count changed; review before ratcheting.");
+        assertEquals(BASELINE_UNIQUE_LABELS, uniqueLabels,
+                "F1.2 baseline unique-label count changed; review before ratcheting.");
 
         Files.createDirectories(GENERATED_EVIDENCE.getParent());
-        Files.writeString(GENERATED_EVIDENCE, evidence, StandardCharsets.UTF_8);
+        Files.writeString(GENERATED_EVIDENCE, renderEvidence(actual), StandardCharsets.UTF_8);
         assertTrue(Files.size(GENERATED_EVIDENCE) > 0, "Generated visible-command evidence is empty.");
+    }
+
+    @Test
+    void featureIdsAreStableAndOneToOneWithStaticLabels() throws Exception {
+        Map<String, String> labelToFeature = new LinkedHashMap<>();
+        Set<String> featureIds = new LinkedHashSet<>();
+
+        for (String line : Files.readAllLines(COMMAND_INVENTORY, StandardCharsets.UTF_8)) {
+            if (line.isBlank() || line.startsWith("#")) {
+                continue;
+            }
+            String[] parts = line.split("\t", -1);
+            assertEquals(4, parts.length, "Malformed command inventory row: " + line);
+            String label = parts[1];
+            String featureId = parts[3];
+
+            assertTrue(featureId.matches("CMD-[A-Z0-9-]+-[0-9A-F]{8}"),
+                    "Malformed feature ID: " + featureId);
+            String previous = labelToFeature.putIfAbsent(label, featureId);
+            if (previous != null) {
+                assertEquals(previous, featureId,
+                        "Same visible label maps to multiple feature IDs: " + label);
+            }
+            featureIds.add(featureId);
+        }
+
+        assertEquals(BASELINE_UNIQUE_LABELS, labelToFeature.size(),
+                "Static label-to-feature mapping count drifted.");
+        assertEquals(labelToFeature.size(), featureIds.size(),
+                "Two different static labels share one feature ID.");
+    }
+
+    private static Map<String, Integer> readExpectedCounts() throws Exception {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String line : Files.readAllLines(COMMAND_INVENTORY, StandardCharsets.UTF_8)) {
+            if (line.isBlank() || line.startsWith("#")) {
+                continue;
+            }
+            String[] parts = line.split("\t", -1);
+            assertEquals(4, parts.length, "Malformed command inventory row: " + line);
+            String key = parts[0] + "\t" + parts[1];
+            assertFalse(counts.containsKey(key), "Duplicate command inventory row: " + key);
+            counts.put(key, Integer.parseInt(parts[2]));
+        }
+        return sortCounts(counts);
     }
 
     private static Map<String, Integer> discoverCounts() throws Exception {
@@ -121,16 +171,19 @@ class VisibleCommandInventoryCertificationTest {
                 }
             }
         }
+        return sortCounts(counts);
+    }
 
+    private static Map<String, Integer> sortCounts(Map<String, Integer> source) {
         Map<String, Integer> sorted = new LinkedHashMap<>();
-        counts.entrySet().stream()
+        source.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .forEach(entry -> sorted.put(entry.getKey(), entry.getValue()));
         return sorted;
     }
 
     private static String renderEvidence(Map<String, Integer> counts) {
-        StringBuilder out = new StringBuilder();
+        StringBuilder out = new StringBuilder("# source\tlabel\tcount\n");
         for (Map.Entry<String, Integer> entry : counts.entrySet()) {
             out.append(entry.getKey())
                     .append('\t')
@@ -138,14 +191,5 @@ class VisibleCommandInventoryCertificationTest {
                     .append('\n');
         }
         return out.toString();
-    }
-
-    private static String fnv1a64(String value) {
-        long hash = 0xcbf29ce484222325L;
-        for (int i = 0; i < value.length(); i++) {
-            hash ^= value.charAt(i);
-            hash *= 0x100000001b3L;
-        }
-        return String.format("%016x", hash);
     }
 }
