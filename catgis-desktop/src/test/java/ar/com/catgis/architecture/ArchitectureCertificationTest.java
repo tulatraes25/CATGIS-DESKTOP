@@ -148,6 +148,7 @@ class ArchitectureCertificationTest {
         try (Stream<Path> stream = Files.walk(root)) {
             for (Path file : stream.filter(Files::isRegularFile)
                     .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.getFileName().toString().equals("ArchitectureCertificationTest.java"))
                     .toList()) {
                 String content = Files.readString(file, StandardCharsets.UTF_8);
                 if (content.contains(needle)) {
