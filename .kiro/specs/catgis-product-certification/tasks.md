@@ -19,10 +19,11 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
 ## Phase F1 — Complete inventory and truth baseline
 
-- [ ] **F1.1 — Generate current UI/action inventory**
+- [-] **F1.1 — Generate current UI/action inventory**
   - Requirements: REQ-PC-1, REQ-PC-11
   - Enumerate menus, toolbars, context actions, dialogs, loaders/exporters and action classes from source.
-  - Evidence: machine/auditable inventory at exact SHA.
+  - First blocking tranche: exact production source-surface manifest + executable drift test + dedicated GitHub certification job.
+  - Evidence pending CI on branch `quality/f1-surface-inventory`; menu/control-to-feature-ID mapping continues in F1.2.
 - [ ] **F1.2 — Build FEATURE_CERTIFICATION_MATRIX**
   - Requirements: REQ-PC-1, REQ-PC-12
   - Seed all current domains; map each visible function to source entry point and tier.
