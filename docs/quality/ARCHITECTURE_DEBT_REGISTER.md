@@ -56,6 +56,27 @@ These lists are exact. New usage fails the architecture test. Removal is encoura
 
 These are ceilings, not targets. Architecture certification requires deliberate reduction of the critical hotspots, not merely staying below the ceiling.
 
+## Coverage baseline and ratchet
+
+GitHub certification run `37554342919` on SHA `710073b8c2a3569b5e8e86765bc60cf49e63f589` established the first measured automated baseline:
+
+| Metric | Covered | Missed | Ratio |
+|---|---:|---:|---:|
+| Lines | 14,128 | 64,219 | 18.03% |
+| Branches | 6,553 | 38,285 | 14.61% |
+| Methods | 2,095 | 7,791 | 21.19% |
+| Classes | 347 | 614 | 36.11% |
+
+The suite executed 753 tests with 0 failures/errors and 3 reviewed environment skips.
+
+The initial blocking floor is intentionally a **no-regression ratchet**, not a certification target:
+- line coverage >= 18%;
+- branch coverage >= 14%.
+
+Architecture/product certification is NOT achieved by meeting these low baseline floors. F1/F2/R1 must add behavior-driven tests and raise coverage, especially for currently weak user-critical hotspots. Coverage thresholds must move upward as each domain is certified; lowering them requires an explicit spec decision.
+
+Current large-class evidence shows severe gaps that make runtime certification premature, including near-zero coverage in major Swing/orchestration surfaces such as MapLayoutComposerDialog, MapEditingEngine, MainMenuBar, LayoutPreviewPanel, FloatingVectorEditToolbar and multiple dialogs.
+
 ## Test-policy debt
 
 Conditional assumptions are currently restricted to five reviewed test files. `@Disabled` is forbidden. Linux CI starts with a maximum skip budget of 3; Windows certification starts with a maximum skip budget of 6. The budget must ratchet downward as external fixtures become reproducible in GitHub.

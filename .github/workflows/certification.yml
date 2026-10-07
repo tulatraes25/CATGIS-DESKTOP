@@ -31,7 +31,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Full tests and coverage
-        run: ./gradlew --no-daemon clean test jacocoTestReport
+        run: ./gradlew --no-daemon clean test jacocoTestReport jacocoTestCoverageVerification
       - name: Account tests and skips
         shell: pwsh
         run: |
