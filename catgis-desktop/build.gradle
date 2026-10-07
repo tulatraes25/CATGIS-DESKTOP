@@ -135,11 +135,31 @@ tasks.named('jar') {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'external-postgis'
+    }
     systemProperty 'java.awt.headless', 'true'
     finalizedBy jacocoTestReport
     testLogging {
         events 'failed', 'skipped'
+        exceptionFormat = 'full'
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+    }
+}
+
+tasks.register('postgisIntegrationTest', Test) {
+    group = 'verification'
+    description = 'Runs real PostGIS integration tests against an explicitly provisioned test database.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'external-postgis'
+    }
+    systemProperty 'java.awt.headless', 'true'
+    testLogging {
+        events 'passed', 'failed', 'skipped'
         exceptionFormat = 'full'
         showExceptions = true
         showCauses = true
@@ -152,6 +172,24 @@ jacocoTestReport {
     reports {
         xml.required = true
         html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.18
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.14
+            }
+        }
     }
 }
 
