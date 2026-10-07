@@ -142,6 +142,32 @@ jobs:
           path: docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv
           if-no-files-found: error
 
+  visible-command-inventory:
+    name: Visible Command Inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Certify visible command inventory
+        run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest"
+      - name: Upload visible command evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-visible-command-inventory
+          path: catgis-desktop/build/certification/visible-command-inventory.tsv
+          if-no-files-found: error
+
   architecture-guardrails:
     name: Architecture Guardrails
     runs-on: ubuntu-latest
