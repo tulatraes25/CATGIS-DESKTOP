@@ -1,0 +1,182 @@
+name: CATGIS Certification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catgis-certification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-full-suite:
+    name: Certification Linux Full Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Full tests and coverage
+        run: ./gradlew --no-daemon clean test jacocoTestReport
+      - name: Account tests and skips
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path build/test-results/test -Filter 'TEST-*.xml' -File
+          if ($files.Count -eq 0) { throw 'No JUnit XML results found.' }
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0
+          foreach ($file in $files) {
+            [xml]$xml = Get-Content -LiteralPath $file.FullName -Raw
+            $suite = $xml.testsuite
+            $tests += [int]$suite.tests
+            $failures += [int]$suite.failures
+            $errors += [int]$suite.errors
+            $skipped += [int]$suite.skipped
+          }
+          "### CATGIS Linux certification" >> $env:GITHUB_STEP_SUMMARY
+          "- tests: $tests" >> $env:GITHUB_STEP_SUMMARY
+          "- failures: $failures" >> $env:GITHUB_STEP_SUMMARY
+          "- errors: $errors" >> $env:GITHUB_STEP_SUMMARY
+          "- skipped: $skipped" >> $env:GITHUB_STEP_SUMMARY
+          if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
+          if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
+          if ($skipped -gt 3) { throw "Linux skip budget exceeded: $skipped > 3" }
+      - name: Upload Linux evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-linux
+          path: |
+            catgis-desktop/build/test-results/test/
+            catgis-desktop/build/reports/tests/test/
+            catgis-desktop/build/reports/jacoco/
+          if-no-files-found: error
+
+  windows-full-suite:
+    name: Certification Windows Full Suite
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Full headless tests
+        shell: pwsh
+        run: .\gradlew.bat --no-daemon clean test
+      - name: Account Windows tests
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path build/test-results/test -Filter 'TEST-*.xml' -File
+          if ($files.Count -eq 0) { throw 'No JUnit XML results found.' }
+          $tests = 0; $failures = 0; $errors = 0; $skipped = 0
+          foreach ($file in $files) {
+            [xml]$xml = Get-Content -LiteralPath $file.FullName -Raw
+            $suite = $xml.testsuite
+            $tests += [int]$suite.tests
+            $failures += [int]$suite.failures
+            $errors += [int]$suite.errors
+            $skipped += [int]$suite.skipped
+          }
+          "### CATGIS Windows certification" >> $env:GITHUB_STEP_SUMMARY
+          "- tests: $tests" >> $env:GITHUB_STEP_SUMMARY
+          "- failures: $failures" >> $env:GITHUB_STEP_SUMMARY
+          "- errors: $errors" >> $env:GITHUB_STEP_SUMMARY
+          "- skipped: $skipped" >> $env:GITHUB_STEP_SUMMARY
+          if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
+          if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
+          if ($skipped -gt 6) { throw "Windows skip budget exceeded: $skipped > 6" }
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-windows
+          path: |
+            catgis-desktop/build/test-results/test/
+            catgis-desktop/build/reports/tests/test/
+          if-no-files-found: error
+
+  architecture-guardrails:
+    name: Architecture Guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Run executable architecture contracts
+        run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.ArchitectureCertificationTest"
+
+  postgis-real:
+    name: PostGIS Real Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgis:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: catgis_test
+          POSTGRES_USER: catgis_test
+          POSTGRES_PASSWORD: catgis_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U catgis_test -d catgis_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    env:
+      CATGIS_TEST_POSTGIS_HOST: localhost
+      CATGIS_TEST_POSTGIS_PORT: '5432'
+      CATGIS_TEST_POSTGIS_DB: catgis_test
+      CATGIS_TEST_POSTGIS_USER: catgis_test
+      CATGIS_TEST_POSTGIS_PASSWORD: catgis_test_password
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Real PostGIS read/write roundtrip
+        run: ./gradlew --no-daemon postgisIntegrationTest
+      - name: Upload PostGIS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certification-postgis
+          path: catgis-desktop/build/test-results/postgisIntegrationTest/
+          if-no-files-found: error
