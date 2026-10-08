@@ -72,7 +72,7 @@ jobs:
         id: gradle-deps
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/caches/modules-2
+          path: D:\\a\\.gradle\\caches\\modules-2
           key: catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -168,7 +168,7 @@ jobs:
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
         with:
-          path: ~/.gradle/caches/modules-2
+          path: D:\\a\\.gradle\\caches\\modules-2
           key: catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}
           fail-on-cache-miss: true
       - name: Setup Gradle
