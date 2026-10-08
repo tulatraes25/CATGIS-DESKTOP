@@ -1,0 +1,51 @@
+# CATGIS dynamic/computed menu command inventory
+# Baseline: 5cb0459735c5826dd315b0dda76cb8bad1d05b94
+# source	kind	expression	count	classification	semantic_id
+AttributeTableWindow.java	JMENUITEM	selectedCount > 1 ? "Copiar filas seleccionadas" : "Copiar fila"	1	STATE_VARIANT	SEM-ATTRIBUTE-COPY-ROWS
+FloatingVectorEditToolbar.java	JMENUITEM	btn.getToolTipText() != null ? btn.getToolTipText() : ""	1	ALIAS_PASSTHROUGH	NON_FEATURE
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	"Modo actual: " + panel.getRasterModeLabel(currentMode)	1	DISPLAY_ONLY	NON_FEATURE
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_CLOUDS)	1	COMPUTED_ACTION	SEM-RASTER-LANDSAT-QA-CLOUD-MASK
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SHADOW)	1	COMPUTED_ACTION	SEM-RASTER-LANDSAT-QA-SHADOW-MASK
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_SNOW)	1	COMPUTED_ACTION	SEM-RASTER-LANDSAT-QA-SNOW-MASK
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	ProRasterDerivedService.landsatQaMaskMenuLabel(ProRasterDerivedService.OP_PRO_MASK_LANDSAT_WATER)	1	COMPUTED_ACTION	SEM-RASTER-LANDSAT-QA-WATER-MASK
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	ProRasterDerivedService.qaMenuLabel(rasterLayer)	1	COMPUTED_ACTION	SEM-RASTER-PRO-QA
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	multipleSelection ? I18n.format("Crear grupo con seleccion ({0})", popupTargetLayers.size()) : "Crear grupo con capa"	1	STATE_VARIANT	SEM-LAYER-GROUP-CREATE
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	readOnlyVector ? "Capa en solo lectura" : "Editar vector"	1	STATE_VARIANT	SEM-VECTOR-EDIT
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	removeLabel	1	STATE_VARIANT	SEM-LAYER-REMOVE
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	selectedGroup.getName()	1	DISPLAY_ONLY	NON_FEATURE
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	selectedGroup.isExpanded() ? "Contraer grupo" : "Expandir grupo"	1	STATE_VARIANT	SEM-GROUP-EXPANSION
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	selectedGroup.isVisible() ? "Ocultar grupo" : "Mostrar grupo"	1	STATE_VARIANT	SEM-GROUP-VISIBILITY
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	selectedLayer.getName()	3	DISPLAY_ONLY	NON_FEATURE
+LayerContextMenuBuilder.java	CREATE_MENU_ITEM	selectedLayer.isVisible() ? hideText : showText	1	STATE_VARIANT	SEM-LAYER-VISIBILITY
+LayersPanel.java	CREATE_MENU_ITEM	group.getName()	1	PARAMETERIZED_ACTION	SEM-LAYER-MOVE-TO-GROUP
+LayersPanel.java	JMENUITEM	text	1	INDIRECTION_FACTORY	NON_FEATURE
+LayoutPreviewPanel.java	JMENUITEM	text	1	INDIRECTION_FACTORY	NON_FEATURE
+MainMenuBar.java	JMENU	I18n.languageMenuLabel()	1	MENU_CONTAINER	NON_FEATURE
+MainMenuBar.java	JMENUITEM	I18n.t(text)	1	INDIRECTION_FACTORY	NON_FEATURE
+MainMenuBar.java	JMENUITEM	f.getName()	1	PARAMETERIZED_ACTION	SEM-PROJECT-OPEN-RECENT
+MainMenuBar.java	RADIO	I18n.languageSelectionLabel(I18n.Language.ENGLISH)	1	COMPUTED_ACTION	SEM-LANGUAGE-ENGLISH
+MainMenuBar.java	RADIO	I18n.languageSelectionLabel(I18n.Language.SPANISH)	1	COMPUTED_ACTION	SEM-LANGUAGE-SPANISH
+MapLayoutComposerDialog.java	JMENUITEM	label	5	INDIRECTION_FACTORY	NON_FEATURE
+MapLayoutComposerDialog.java	JMENUITEM	layer.getName()	1	DISPLAY_ONLY	NON_FEATURE
+MapLayoutComposerDialog.java	JMENUITEM	opt[1]	1	REGISTRY_ACTION	SEM-LAYOUT-AUTO-COMPOSE-PRESET
+MapLayoutComposerDialog.java	JMENUITEM	projectLayerAppearanceLabel(layer)	1	COMPUTED_ACTION	SEM-LAYOUT-LAYER-APPEARANCE
+MapLayoutComposerDialog.java	JMENUITEM	text	1	INDIRECTION_FACTORY	NON_FEATURE
+MapPopupHandler.java	JMENUITEM	"Borrar P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-REMOVE
+MapPopupHandler.java	JMENUITEM	"Copiar Lat/Long DMS de P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-COPY-DMS
+MapPopupHandler.java	JMENUITEM	"Copiar Lat/Long de P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-COPY-LAT-LON
+MapPopupHandler.java	JMENUITEM	"Copiar coordenada de P" + pin.getId() + " (X/Y)"	1	PARAMETERIZED_ACTION	SEM-PIN-COPY-PROJECT-COORDINATES
+MapPopupHandler.java	JMENUITEM	"Ver coordenadas de P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-SHOW-COORDINATES
+MapPopupHandler.java	JMENUITEM	readOnlyLayer ? "Capa en solo lectura" : "Editar vector"	1	STATE_VARIANT	SEM-VECTOR-EDIT
+MapPopupHandler.java	JMENUITEM	readOnlyLayer ? "Ver atributos" : "Editar atributos"	1	STATE_VARIANT	SEM-ATTRIBUTE-OPEN-EDIT
+MapPopupMenuBuilder.java	JMENUITEM	readOnlyLayer ? "Capa en solo lectura" : "Editar vector"	1	STATE_VARIANT	SEM-VECTOR-EDIT
+MapPopupMenuBuilder.java	JMENUITEM	readOnlyLayer ? "Ver atributos" : "Editar atributos"	1	STATE_VARIANT	SEM-ATTRIBUTE-OPEN-EDIT
+ModulesMenu.java	JMENU	category.getDisplayName()	1	MENU_CONTAINER	NON_FEATURE
+ModulesMenu.java	JMENU	module.getName() + (module.isEnabled() ? "" : " (" + I18n.t("Desactivado") + ")")	1	MENU_CONTAINER	NON_FEATURE
+ModulesMenu.java	JMENUITEM	action.getName()	1	REGISTRY_ACTION	SEM-MODULE-ACTION-DISPATCH
+PinManager.java	JMENUITEM	"Borrar P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-REMOVE
+PinManager.java	JMENUITEM	"Copiar Lat/Long DMS de P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-COPY-DMS
+PinManager.java	JMENUITEM	"Copiar Lat/Long de P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-COPY-LAT-LON
+PinManager.java	JMENUITEM	"Copiar coordenada de P" + pin.getId() + " (X/Y)"	1	PARAMETERIZED_ACTION	SEM-PIN-COPY-PROJECT-COORDINATES
+PinManager.java	JMENUITEM	"Ver coordenadas de P" + pin.getId()	1	PARAMETERIZED_ACTION	SEM-PIN-SHOW-COORDINATES
+catmap/Main.java	JMENUITEM	text	1	INDIRECTION_FACTORY	NON_FEATURE
+ui/components/layout/LayoutElementListPanel.java	JMENUITEM	text	2	INDIRECTION_FACTORY	NON_FEATURE
