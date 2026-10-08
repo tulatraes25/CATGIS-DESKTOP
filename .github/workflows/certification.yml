@@ -141,13 +141,15 @@ jobs:
         with:
           cache-disabled: true
       - name: Certify source feature-surface inventory
-        run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest"
+        run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest" --tests "ar.com.catgis.architecture.UiCommandCarrierCoverageCertificationTest"
       - name: Upload inventory evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-source-feature-inventory
-          path: docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv
+          path: |
+            docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv
+            docs/quality/UI_COMMAND_CARRIER_INVENTORY.tsv
           if-no-files-found: error
           retention-days: 7
 
