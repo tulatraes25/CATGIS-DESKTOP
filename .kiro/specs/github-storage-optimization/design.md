@@ -30,17 +30,16 @@ The dominant controllable source is Actions storage:
 - Set `cache-disabled: true` on `gradle/actions/setup-gradle`.
 - Keep npm cache because its key is content-addressed by `package-lock.json` and observed size is small.
 - Upload Java test diagnostics only on failure.
-- Upload JaCoCo report only on `push` to `main`.
-- Set explicit artifact retention to 7 days.
+- Do not upload routine JaCoCo/test artifacts on successful runs; coverage remains executed and blocking in CI.
+- Failed runs may upload diagnostics with explicit 7-day retention.
 
 ### CATGIS Certification
 
 - Set `cache-disabled: true` on every Gradle setup step.
 - Keep all certification jobs and test commands unchanged.
-- Upload evidence only when:
-  - the run is a `push` to `main`, or
-  - the job is failing and diagnostics are useful.
-- Set explicit retention to 7 days.
+- Do not upload routine evidence bundles on successful PR or `main` runs.
+- Upload diagnostics/evidence only when a job fails, with explicit 7-day retention.
+- Exact-SHA positive certification evidence is the workflow/job/step result plus source-controlled manifests; downloadable artifacts are not required for a PASS.
 
 ## Storage maintenance workflow
 
@@ -74,7 +73,7 @@ Certification authority remains:
 - PR and workflow run ID;
 - workflow/job/step status;
 - source-controlled inventories/specs;
-- short-lived artifacts where useful.
+- short-lived failure artifacts where useful.
 
 Artifacts are supplementary evidence, not the sole evidence source.
 
