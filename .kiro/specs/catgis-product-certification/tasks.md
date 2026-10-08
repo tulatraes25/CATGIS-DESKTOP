@@ -48,13 +48,13 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - B2d2 certified baseline: 98 aliases to existing semantic features; 74 action rows -> 65 new semantic IDs; 14 subordinate controls; 2 display-only rows; 3 disabled/unsupported CATMAP sync rows. Semantic matrix total: 541 features, tier distribution CORE 293 / BETA 186 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47.
   - B2d2 evidence: PR #20 head `9d1b824df27737739342b402938cedf92f43ba89`; merge/main `c592918e065389a750af2f21c86db91a4921bc6e`; PR CI/Certification `37852872665`/`37852872557` SUCCESS; post-main CI/Certification `37853323158`/`37853323177` SUCCESS.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
-- [-] **F1.3 — Reconcile visible dead/placeholder actions**
+- [x] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
   - Any visible action without executable minimum behavior becomes explicit implementation work or disabled/gated.
   - Executable gate rejects registered empty UI handlers in visible command carriers without misclassifying switch defaults or defensive callbacks.
   - Unsupported visible commands must remain explicitly classified and visibly gated; current baseline is exactly 3 disabled CATMAP synchronization commands.
   - PR #21 head `09b678bdd765b335c412b8bb490d8505b21c0846`: CATGIS CI `37856236790` SUCCESS, Certification `37856236813` SUCCESS; merged as `4be1e284c789cff0b16e200e42cb5f303843cd41`.
-  - Post-main certification on the merge SHA is required before F1.3 becomes CLOSED_CERTIFIED.
+  - CLOSED_CERTIFIED post-main evidence on merge `4be1e284c789cff0b16e200e42cb5f303843cd41`: CATGIS CI `37858849967` SUCCESS; Certification `37858849921` SUCCESS.
 
 ## Phase F2 — Automated behavior contracts
 
@@ -148,4 +148,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Finish post-main certification of F1.3 merge `4be1e284c789cff0b16e200e42cb5f303843cd41`. In parallel certify F2.1 core project/CRS/save-load contracts on GitHub. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F2.1 core project/CRS/save-load contracts on GitHub from exact baseline `4be1e284c789cff0b16e200e42cb5f303843cd41`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
