@@ -19,6 +19,11 @@ class SpatiaLiteRealTest {
     @TempDir Path tempDir;
     private static boolean ogr2ogrAvailable() { return new File(OGR2OGR).exists(); }
 
+    private void assumeOgr2ogrAvailable() {
+        Assumptions.assumeTrue(ogr2ogrAvailable(),
+                "Skipped: ogr2ogr / OSGeo4W is not available in this environment");
+    }
+
     private void assumeGdalCompatible() {
         try {
             Process p = new ProcessBuilder(OGR2OGR, "--version").redirectErrorStream(true).start();
@@ -43,7 +48,7 @@ class SpatiaLiteRealTest {
     }
 
     @Test void loadSpatiaLiteWithPolygonReturnsShapefileData() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File output = tempDir.resolve("output.sqlite").toFile();
         generateSpatiaLite(output, "{ \"type\": \"FeatureCollection\", \"features\": ["
             + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"Zona A\" },"
@@ -55,7 +60,7 @@ class SpatiaLiteRealTest {
     }
 
     @Test void loadSpatiaLitePreservesAttributes() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File output = tempDir.resolve("multi.sqlite").toFile();
         generateSpatiaLite(output, "{ \"type\": \"FeatureCollection\", \"features\": ["
             + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"Zona Urbana\", \"area_ha\": 150.0 },"
@@ -70,7 +75,7 @@ class SpatiaLiteRealTest {
     }
 
     @Test void validateFileAcceptsSpatiaLite() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File output = tempDir.resolve("pt.sqlite").toFile();
         generateSpatiaLite(output, "{ \"type\": \"FeatureCollection\", \"features\": ["
             + "{ \"type\": \"Feature\", \"properties\": {},"

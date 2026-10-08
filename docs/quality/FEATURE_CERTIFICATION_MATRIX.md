@@ -155,6 +155,20 @@ The current repository already contains real or deterministic coverage for sever
 - required behavior: snapshot A -> edit B -> undo restores A -> redo restores B, selection is restored, new edits invalidate redo, and history remains bounded to 20 snapshots;
 - exact Tranche A baseline: `d5f6db956bf0086d6e63db840ea0993a94b1b93d`.
 
+F2.2 Tranche A CLOSED_CERTIFIED evidence: PR #23 head `3958fa56be4ea1272a4475259114fa9bef4e7729`; PR CATGIS CI `37860301326` SUCCESS and Certification `37860301309` SUCCESS; merge `50a86cba7402591ae6e7780feb72a35da535604a`; post-main CATGIS CI `37860591392` SUCCESS and Certification `37860591449` SUCCESS.
+
+### F2.2 Tranche B — truthful external-format dependency gating
+
+A current-source audit found that 12 real-format tests returned normally when `ogr2ogr` was unavailable, which JUnit reported as PASS rather than SKIP. That behavior overstated automated evidence.
+
+- affected tests: GeoPackage **5**, SpatiaLite **3**, FlatGeobuf **4**;
+- missing `ogr2ogr` now aborts each affected test through a JUnit assumption, producing explicit SKIP evidence;
+- `ExternalFormatDependencyGatingCertificationTest` rejects a return-based silent pass and locks the expected 12-test dependency set;
+- certification skip budget is deliberately bounded at **15** on Linux and Windows: 3 previously reviewed dependency skips + 12 explicit GDAL real-format skips;
+- a 16th skip is a blocking regression requiring review;
+- an explicit SKIP is not format-runtime certification: these rows remain dependency/runtime pending until a certified environment actually executes them;
+- exact Tranche B baseline: `50a86cba7402591ae6e7780feb72a35da535604a`.
+
 ## Status vocabulary
 
 - INVENTORY_PENDING

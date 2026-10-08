@@ -22,6 +22,11 @@ class GeoPackageRealTest {
 
     private static boolean ogr2ogrAvailable() { return new File(OGR2OGR).exists(); }
 
+    private void assumeOgr2ogrAvailable() {
+        Assumptions.assumeTrue(ogr2ogrAvailable(),
+                "Skipped: ogr2ogr / OSGeo4W is not available in this environment");
+    }
+
     private void assumeGdalCompatible() {
         try {
             Process p = new ProcessBuilder(OGR2OGR, "--version").redirectErrorStream(true).start();
@@ -47,7 +52,7 @@ class GeoPackageRealTest {
     }
 
     @Test void loadGpkgWithPolygonReturnsShapefileData() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File gpkg = tempDir.resolve("test.gpkg").toFile();
         generateGpkg(gpkg, polygonGeoJson("Zona A", 0, 0, 10, 10));
         var layer = new SpatiaLiteLayer("test", gpkg.getAbsolutePath());
@@ -57,7 +62,7 @@ class GeoPackageRealTest {
     }
 
     @Test void loadGpkgPreservesGeometryType() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File gpkg = tempDir.resolve("points.gpkg").toFile();
         generateGpkg(gpkg, pointGeoJson("Punto A", 5, 5));
         var layer = new SpatiaLiteLayer("test", gpkg.getAbsolutePath());
@@ -67,7 +72,7 @@ class GeoPackageRealTest {
     }
 
     @Test void loadGpkgPreservesAttributes() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File gpkg = tempDir.resolve("attribs.gpkg").toFile();
         generateGpkg(gpkg, "{ \"type\": \"FeatureCollection\", \"features\": ["
             + "{ \"type\": \"Feature\", \"properties\": { \"nombre\": \"Zona Urbana\", \"area_ha\": 150.0 },"
@@ -82,14 +87,14 @@ class GeoPackageRealTest {
     }
 
     @Test void validateFileAcceptsGpkg() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File gpkg = tempDir.resolve("valid.gpkg").toFile();
         generateGpkg(gpkg, polygonGeoJson("Zona A", 0, 0, 10, 10));
         assertTrue(SpatiaLiteLoader.validateFile(gpkg).isValid());
     }
 
     @Test void listFeatureTypesFindsTable() throws Exception {
-        if (!ogr2ogrAvailable()) return; assumeGdalCompatible();
+        assumeOgr2ogrAvailable(); assumeGdalCompatible();
         File gpkg = tempDir.resolve("multi.gpkg").toFile();
         generateGpkg(gpkg, polygonGeoJson("Zona A", 0, 0, 10, 10));
         var info = new SpatiaLiteConnectionInfo(); info.setFilePath(gpkg.getAbsolutePath());

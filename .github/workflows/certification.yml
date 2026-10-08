@@ -137,7 +137,8 @@ jobs:
           "- skipped: $skipped" >> $env:GITHUB_STEP_SUMMARY
           if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
-          if ($skipped -gt 3) { throw "Linux skip budget exceeded: $skipped > 3" }
+          # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips.
+          if ($skipped -gt 15) { throw "Linux skip budget exceeded: $skipped > 15" }
       - name: Upload Linux evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -199,7 +200,8 @@ jobs:
           "- skipped: $skipped" >> $env:GITHUB_STEP_SUMMARY
           if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
-          if ($skipped -gt 6) { throw "Windows skip budget exceeded: $skipped > 6" }
+          # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips.
+          if ($skipped -gt 15) { throw "Windows skip budget exceeded: $skipped > 15" }
       - name: Upload Windows evidence
         if: failure()
         uses: actions/upload-artifact@v4
