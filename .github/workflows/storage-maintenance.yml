@@ -28,3 +28,38 @@ jobs:
         run: |
           gh cache delete --all --confirm --repo "${GITHUB_REPOSITORY}" || true
           echo "Actions cache purge requested for ${GITHUB_REPOSITORY}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Bootstrap purge existing workflow artifacts
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r artifact_id; do
+            if [ -z "$artifact_id" ]; then
+              continue
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+            count=$((count + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100"               --jq '.artifacts[].id'
+          )
+          echo "Bootstrap workflow artifacts deleted: ${count}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prune workflow artifacts older than seven days
+        if: github.event_name != 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          count=0
+          while IFS= read -r artifact_id; do
+            if [ -z "$artifact_id" ]; then
+              continue
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+            count=$((count + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100"               --jq ".artifacts[] | select(.created_at < \"${cutoff}\") | .id"
+          )
+          echo "Workflow artifacts older than seven days deleted: ${count}." >> "$GITHUB_STEP_SUMMARY"
