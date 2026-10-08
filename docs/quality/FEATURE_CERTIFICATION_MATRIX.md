@@ -11,10 +11,9 @@ This document is the feature-level certification ledger. Historical audit matric
 The first F1.2 tranche converts visible command discovery into an executable GitHub gate:
 
 - command/toolbar source surfaces tracked: **14/14** from `SOURCE_FEATURE_SURFACE_INVENTORY.tsv`;
-- static visible command occurrences: **390**;
-- unique source/label pairs: **378**;
-- unique static labels: **313**;
-- exact inventory fingerprint: **FNV64 `bad0905a00836b51`**;
+- static visible command occurrences: **392**;
+- unique source/label pairs: **380**;
+- unique static labels: **315**;
 - executable guard: `VisibleCommandInventoryCertificationTest`;
 - CI evidence artifact: `certification-visible-command-inventory/visible-command-inventory.tsv`.
 
@@ -43,7 +42,25 @@ The static inventory contains visible-label variants that represent the same pro
 - every alias group has one stable `SEM-*` identifier and one canonical current label;
 - semantic IDs cannot be reused across unrelated collision groups.
 
-B2a does not claim all 313 static labels are semantically resolved. B2b inventories dynamic/computed commands and B2c performs the complete feature/tier mapping.
+B2a does not claim all 315 static labels are semantically resolved. B2b inventories dynamic/computed commands and B2c performs the complete feature/tier mapping.
+
+### F1.2 Tranche B2b — dynamic/computed commands
+
+B2b treats the menu expression as evidence, not as the feature identity. Runtime labels that vary by selection, state, registry entry or user data must therefore be classified explicitly.
+
+- dynamic/computed menu source-expression rows: **48**;
+- concrete source occurrences locked: **55**;
+- action-bearing semantic IDs referenced: **25**;
+- module registry actions locked independently: **38**;
+- dynamic manifest: `docs/quality/DYNAMIC_COMMAND_INVENTORY.tsv`;
+- module action manifest: `docs/quality/MODULE_ACTION_INVENTORY.tsv`;
+- executable guard: `DynamicCommandInventoryCertificationTest`;
+- non-feature expressions are explicitly classified as `DISPLAY_ONLY`, `INDIRECTION_FACTORY`, `MENU_CONTAINER` or `ALIAS_PASSTHROUGH` rather than inflating the feature count;
+- action-bearing expressions are classified as `STATE_VARIANT`, `PARAMETERIZED_ACTION`, `COMPUTED_ACTION` or `REGISTRY_ACTION` and reference stable `SEM-*` IDs;
+- carrier discovery now recognizes `JCheckBoxMenuItem`, `JRadioButtonMenuItem` and `JMenu`;
+- the static scanner now includes literal checkbox/radio menu commands, exposing **Mapa de calor (heatmap)** and **Agrupar puntos (clustering)** that the original Tranche A scanner omitted.
+
+B2b still does not assign tiers or claim behavioral certification. B2c consumes these static/dynamic inventories to build the complete semantic feature rows.
 
 ## Status vocabulary
 

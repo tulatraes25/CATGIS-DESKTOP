@@ -1,0 +1,41 @@
+# CATGIS module action registry inventory
+# Baseline: 5cb0459735c5826dd315b0dda76cb8bad1d05b94
+# action_id	visible_name
+cad-snap	Alternar SNAP
+cad-continue-line	Continuar linea
+cad-rectangle	Rectangulo
+cad-circle	Circulo
+cad-circle-3p	Circulo por 3 puntos
+cad-add-vertex	Agregar vertice
+cad-remove-vertex	Quitar vertice
+cad-grow-area	Aumentar superficie
+cad-shrink-area	Disminuir superficie
+cad-extend-line	Extender linea
+cad-shorten-line	Acortar linea
+cad-parallel	Paralela
+cad-perpendicular	Perpendicular
+cad-merge	Unir elementos
+cad-explode	Explotar entidades
+cad-copy-edit-layer	Copiar seleccion a capa editable
+topology-open	Validar capa
+reproject-export-open	Exportar capa reproyectada
+csv-open	Cargar tabla externa
+kml-open	Abrir KML / KMZ
+geopackage-open	Abrir GeoPackage...
+catserver-open	Conectar CATSERVER...
+catserver-export	Enviar capa a CATSERVER...
+wfs-open	Agregar WFS...
+layout-open	Abrir compositor...
+geoprocess-open	Abrir asistente
+geoprocess-toolbox	Abrir toolbox
+geoprocess-buffer	Buffer
+geoprocess-dissolve	Dissolve
+geoprocess-clip	Clip
+geoprocess-intersection	Interseccion
+geoprocess-merge	Merge
+geoprocess-difference	Diferencia
+geoprocess-spatial-join	Spatial Join
+geoprocess-union	Union geometrica
+online-basemap-osm	OpenStreetMap
+online-basemap-esri	Esri World Imagery
+online-basemap-wfs	Agregar WFS...

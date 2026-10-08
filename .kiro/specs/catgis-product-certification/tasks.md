@@ -32,9 +32,11 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche B1 CLOSED_CERTIFIED: executable source scan covers every production Java UI command/control carrier, including files missed by filename heuristics.
   - B1 baseline: 106 current UI command carriers; 89 already covered by source-surface categories and 17 supplemental carriers.
   - Evidence: PR #14 head `2e080e34093165c0efa274de22507b99ed7a83c7`; merge `757faa594793f208775205ec5d8348b07bc2d64f`; post-main CATGIS CI `37760631382` SUCCESS and Certification `37760631384` SUCCESS.
-  - Tranche B2a in progress: declare and lock static-label aliases to stable semantic feature IDs.
-  - Tranche B2b remains: inventory dynamic/computed commands.
-  - Tranche B2c remains: map command/dialog/loader/export capabilities to stable semantic feature rows and tiers.
+  - Tranche B2a CLOSED_CERTIFIED: 13 normalization-collision groups are explicitly mapped to stable semantic IDs by `StaticCommandAliasCertificationTest`.
+  - B2a evidence: PR #15 head `236ba2a910b0a0b1b97b9700fc62d05ff2eaa659`; merge `4da6b3036d6d59c7b4726d3b906f710215c3c269`. Initial post-main Linux resolution was blocked by OSGeo HTTP 502; the same exact source SHA later passed CATGIS CI `37762106798` and Certification `37762106589` on rerun attempt 3, proving infrastructure rather than source failure.
+  - Tranche B2b in progress: inventory every dynamic/computed menu label, explicitly classify non-feature containers/factories/display rows, lock the 38-action module registry, and extend carrier/static scanners to checkbox/radio menu commands.
+  - B2b source ratchet: static inventory 392 occurrences / 380 source-label pairs / 315 labels; dynamic inventory 48 source-expression rows / 55 occurrences / 25 action-bearing semantic IDs; module registry 38 actions.
+  - B2c remains: map command/dialog/loader/export capabilities to stable semantic feature rows and tiers.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
@@ -128,4 +130,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.2 Tranche B2a static semantic aliases, then execute B2b dynamic/computed command inventory and B2c complete semantic feature mapping. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F1.2 Tranche B2b dynamic/computed command inventory on the post-CDR main baseline, then execute B2c complete semantic feature mapping. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.

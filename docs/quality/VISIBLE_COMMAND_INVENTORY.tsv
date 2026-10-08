@@ -1,8 +1,8 @@
 # CATGIS visible command inventory
-# Baseline: d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a
-# Static command occurrences: 390
-# Unique source/label pairs: 378
-# Unique feature labels: 313
+# Baseline: 5cb0459735c5826dd315b0dda76cb8bad1d05b94
+# Static command occurrences: 392
+# Unique source/label pairs: 380
+# Unique feature labels: 315
 # source	label	count	feature_id
 CartographyToolbar.java	Abrir CATMAP	1	CMD-ABRIR-CATMAP-8D7A4ACB
 CartographyToolbar.java	CATMAP Standalone	1	CMD-CATMAP-STANDALONE-9AF63156
@@ -47,6 +47,7 @@ FloatingVectorEditToolbar.java	Unir elementos	1	CMD-UNIR-ELEMENTOS-072ACD57
 FloatingVectorEditToolbar.java	Unir vertices	1	CMD-UNIR-VERTICES-5546B23C
 FloatingVectorEditToolbar.java	Ver o editar atributos	1	CMD-VER-O-EDITAR-ATRIBUTOS-E8CE5F2F
 FloatingVectorEditToolbar.java	Zoom al elemento seleccionado	1	CMD-ZOOM-AL-ELEMENTO-SELECCIONADO-47B9B309
+LayerContextMenuBuilder.java	Agrupar puntos (clustering)	1	CMD-AGRUPAR-PUNTOS-CLUSTERING-6E9D120A
 LayerContextMenuBuilder.java	Ajuste CAD...	1	CMD-AJUSTE-CAD-5286A195
 LayerContextMenuBuilder.java	Ajustes de visualizacion...	2	CMD-AJUSTES-DE-VISUALIZACION-6753A094
 LayerContextMenuBuilder.java	Análisis climático por áreas (AID/AII)...	1	CMD-ANALISIS-CLIMATICO-POR-AREAS-AID-AII-18D7F250
@@ -80,6 +81,7 @@ LayerContextMenuBuilder.java	Informacion del servicio...	1	CMD-INFORMACION-DEL-S
 LayerContextMenuBuilder.java	Informacion GeoPackage...	1	CMD-INFORMACION-GEOPACKAGE-C672E52D
 LayerContextMenuBuilder.java	Informacion raster avanzada...	1	CMD-INFORMACION-RASTER-AVANZADA-C87F4357
 LayerContextMenuBuilder.java	Informacion raster...	1	CMD-INFORMACION-RASTER-719367DF
+LayerContextMenuBuilder.java	Mapa de calor (heatmap)	1	CMD-MAPA-DE-CALOR-HEATMAP-7C4A1E2B
 LayerContextMenuBuilder.java	Marcar como área de influencia...	1	CMD-MARCAR-COMO-AREA-DE-INFLUENCIA-EF5462A3
 LayerContextMenuBuilder.java	Modo actual: 	1	CMD-MODO-ACTUAL-C270AE50
 LayerContextMenuBuilder.java	Nuevo grupo	1	CMD-NUEVO-GRUPO-BBE9DC35

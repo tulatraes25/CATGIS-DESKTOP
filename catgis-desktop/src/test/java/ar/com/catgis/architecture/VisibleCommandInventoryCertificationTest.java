@@ -28,9 +28,9 @@ class VisibleCommandInventoryCertificationTest {
     private static final Path GENERATED_EVIDENCE =
             Path.of("build", "certification", "visible-command-inventory.tsv");
 
-    private static final int BASELINE_OCCURRENCES = 390;
-    private static final int BASELINE_SOURCE_LABEL_PAIRS = 378;
-    private static final int BASELINE_UNIQUE_LABELS = 313;
+    private static final int BASELINE_OCCURRENCES = 392;
+    private static final int BASELINE_SOURCE_LABEL_PAIRS = 380;
+    private static final int BASELINE_UNIQUE_LABELS = 315;
 
     private static final Set<String> COMMAND_SOURCES = Set.of(
             "MainMenuBar.java",
@@ -57,6 +57,8 @@ class VisibleCommandInventoryCertificationTest {
             Pattern.compile("new JButton\\(\\s*I18n\\.t\\(\\s*\"([^\"]+)\""),
             Pattern.compile("new JButton\\(\\s*\"([^\"]+)\""),
             Pattern.compile("new JToggleButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JCheckBoxMenuItem\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JRadioButtonMenuItem\\(\\s*\"([^\"]+)\""),
             Pattern.compile("flatButton\\(\\s*\"([^\"]+)\""),
             Pattern.compile("\\bflat\\(\\s*\"([^\"]+)\""),
             Pattern.compile("createActionButton\\(\\s*\"([^\"]+)\""),
