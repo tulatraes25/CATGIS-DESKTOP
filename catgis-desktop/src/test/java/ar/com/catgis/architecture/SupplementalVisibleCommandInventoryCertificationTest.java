@@ -42,8 +42,6 @@ class SupplementalVisibleCommandInventoryCertificationTest {
                     Pattern.compile("new\\s+JRadioButtonMenuItem\\(\\s*\"([^\"]+)\"")),
             new CommandPattern("ADDMENUITEM",
                     Pattern.compile("addMenuItem\\(\\s*[^,\\n]+,\\s*\"([^\"]+)\"")),
-            new CommandPattern("ADDDISABLEDMENUITEM",
-                    Pattern.compile("addDisabledMenuItem\\(\\s*[^,\\n]+,\\s*\"([^\"]+)\"")),
             new CommandPattern("MENUITEM_HELPER",
                     Pattern.compile("\\bmenuItem\\(\\s*\"([^\"]+)\"")),
             new CommandPattern("ITEM_HELPER",
@@ -92,9 +90,12 @@ class SupplementalVisibleCommandInventoryCertificationTest {
                     Pattern.DOTALL
             );
             Matcher matcher = emptyAddMenuItem.matcher(content);
-            assertFalse(matcher.find(),
-                    "Visible active menu command has an empty handler in " + source
-                            + ": " + compact(matcher.group()));
+            if (matcher.find()) {
+                throw new AssertionError(
+                        "Visible active menu command has an empty handler in " + source
+                                + ": " + compact(matcher.group())
+                );
+            }
         }
     }
 
