@@ -25,6 +25,7 @@ Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
 
 - [-] **GSO.4 — Add repository storage maintenance workflow**
   - Requirements: REQ-GSO-4, REQ-GSO-5
+  - PR dry-run validates cache/artifact API access with read-only permissions.
   - Bootstrap marker: `[storage-cleanup]`.
   - Bootstrap deletes all current Actions caches and artifacts.
   - Weekly/manual maintenance deletes all caches and artifacts older than 7 days.
