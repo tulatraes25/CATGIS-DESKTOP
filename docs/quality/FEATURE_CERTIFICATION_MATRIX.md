@@ -125,7 +125,7 @@ F1.3 converts placeholder/dead-action review into an executable gate.
 
 Contextual disablement (for example a Paste command when there is nothing to paste) is not classified as dead behavior.
 
-PR #21 candidate evidence: head `09b678bdd765b335c412b8bb490d8505b21c0846`, CATGIS CI `37856236790` SUCCESS, Certification `37856236813` SUCCESS; merge SHA `4be1e284c789cff0b16e200e42cb5f303843cd41`. Post-main evidence remains the closure authority.
+F1.3 CLOSED_CERTIFIED evidence: PR #21 head `09b678bdd765b335c412b8bb490d8505b21c0846`, CATGIS CI `37856236790` SUCCESS, Certification `37856236813` SUCCESS; merge SHA `4be1e284c789cff0b16e200e42cb5f303843cd41`; post-main CATGIS CI `37858849967` SUCCESS and Certification `37858849921` SUCCESS.
 
 ### F2.1 — core project / CRS / save-load contracts
 
