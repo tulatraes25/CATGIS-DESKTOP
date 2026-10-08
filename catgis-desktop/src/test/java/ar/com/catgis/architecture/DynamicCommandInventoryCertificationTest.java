@@ -191,7 +191,7 @@ class DynamicCommandInventoryCertificationTest {
             if (inString) {
                 if (escaped) {
                     escaped = false;
-                } else if (ch == '\\\\') {
+                } else if (ch == '\\') {
                     escaped = true;
                 } else if (ch == '\"') {
                     inString = false;
@@ -269,7 +269,7 @@ class DynamicCommandInventoryCertificationTest {
     }
 
     private static String normalize(Path path) {
-        return path.toString().replace('\\\\', '/');
+        return path.toString().replace('\\', '/');
     }
 
     private record MenuToken(String kind, String token) {}
