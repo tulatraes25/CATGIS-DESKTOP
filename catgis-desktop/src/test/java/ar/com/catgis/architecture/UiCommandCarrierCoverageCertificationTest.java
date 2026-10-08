@@ -97,6 +97,6 @@ class UiCommandCarrierCoverageCertificationTest {
     }
 
     private static String normalize(Path path) {
-        return path.toString().replace('\\\\', '/');
+        return path.toString().replace('\\', '/');
     }
 }
