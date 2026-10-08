@@ -35,6 +35,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche B2a CLOSED_CERTIFIED: 13 normalization-collision groups are explicitly mapped to stable semantic IDs by `StaticCommandAliasCertificationTest`.
   - B2a evidence: PR #15 head `236ba2a910b0a0b1b97b9700fc62d05ff2eaa659`; merge `4da6b3036d6d59c7b4726d3b906f710215c3c269`. Initial post-main Linux resolution was blocked by OSGeo HTTP 502; the same exact source SHA later passed CATGIS CI `37762106798` and Certification `37762106589` on rerun attempt 3, proving infrastructure rather than source failure.
   - Tranche B2b in progress: inventory every dynamic/computed menu label, explicitly classify non-feature containers/factories/display rows, lock the 38-action module registry, and extend carrier/static scanners to checkbox/radio menu commands.
+  - B2b source ratchet: static inventory 392 occurrences / 380 source-label pairs / 315 labels; dynamic inventory 48 source-expression rows / 55 occurrences / 25 action-bearing semantic IDs; module registry 38 actions.
   - B2c remains: map command/dialog/loader/export capabilities to stable semantic feature rows and tiers.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
