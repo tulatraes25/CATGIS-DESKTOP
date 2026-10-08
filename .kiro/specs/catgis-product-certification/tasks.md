@@ -51,13 +51,19 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 - [-] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
   - Any visible action without executable minimum behavior becomes explicit implementation work or disabled/gated.
-  - Current gate: executable scan rejects empty lambda handlers in visible command carriers.
+  - Executable gate rejects registered empty UI handlers in visible command carriers without misclassifying switch defaults or defensive callbacks.
   - Unsupported visible commands must remain explicitly classified and visibly gated; current baseline is exactly 3 disabled CATMAP synchronization commands.
+  - PR #21 head `09b678bdd765b335c412b8bb490d8505b21c0846`: CATGIS CI `37856236790` SUCCESS, Certification `37856236813` SUCCESS; merged as `4be1e284c789cff0b16e200e42cb5f303843cd41`.
+  - Post-main certification on the merge SHA is required before F1.3 becomes CLOSED_CERTIFIED.
 
 ## Phase F2 — Automated behavior contracts
 
-- [ ] **F2.1 — Core project/CRS/save-load contracts**
+- [-] **F2.1 — Core project/CRS/save-load contracts**
   - Requirements: REQ-PC-2, REQ-PC-3, REQ-PC-5
+  - Candidate branch: `quality/f2-core-project-contracts`, exact baseline `4be1e284c789cff0b16e200e42cb5f303843cd41`.
+  - Contract scope: default/normalized project CRS, minimal metadata roundtrip, invalid-header state preservation, truncated-project rejection and failed-save identity preservation.
+  - Initial audit found two integrity defects: payload-free `.catgis` files could replace the current project, and failed saves could repoint `projectFile` before persistence succeeded.
+  - Candidate fixes are behavior-preserving on success paths and harden failure paths; GitHub CI is authoritative.
 - [ ] **F2.2 — Vector format and editing contracts**
   - Shapefile roundtrip, GeoPackage, FlatGeobuf, SpatiaLite, CSV, DXF, editing/snapping/undo/redo.
 - [ ] **F2.3 — Raster/DEM contracts**
@@ -142,4 +148,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.3 visible dead/placeholder reconciliation on GitHub. If green, close F1 and proceed to F2 automated behavior contracts. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Finish post-main certification of F1.3 merge `4be1e284c789cff0b16e200e42cb5f303843cd41`. In parallel certify F2.1 core project/CRS/save-load contracts on GitHub. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
