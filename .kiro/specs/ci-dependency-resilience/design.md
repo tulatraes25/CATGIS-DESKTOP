@@ -49,7 +49,7 @@ Add a Linux dependency-prime job. Java Desktop Build & Test depends on it and ru
 
 ## Storage maintenance
 
-Routine cleanup preserves keys beginning with `catgis-gradle-deps-v1-` and deletes unrelated Actions caches. GitHub also evicts inactive caches, providing a second storage bound.
+Routine cleanup checks out the current dependency-definition files, computes the active dependency hash, preserves only the matching Linux and Windows `catgis-gradle-deps-v1-*` keys, and deletes unrelated or stale-hash caches. This places a repository-controlled upper bound of two active CATGIS dependency caches per current dependency definition.
 
 ## Failure semantics
 
