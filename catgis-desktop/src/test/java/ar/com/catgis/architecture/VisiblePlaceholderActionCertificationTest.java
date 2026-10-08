@@ -23,13 +23,20 @@ class VisiblePlaceholderActionCertificationTest {
     private static final Path SUPPLEMENTAL_SEMANTICS =
             Path.of("..", "docs", "quality", "SUPPLEMENTAL_COMMAND_SEMANTIC_MAP.tsv");
 
-    private static final Pattern EMPTY_LAMBDA = Pattern.compile(
-            "(?:\\([^)]*\\)|[A-Za-z_$][A-Za-z0-9_$]*)\\s*->\\s*\\{\\s*\\}",
+    /*
+     * F1.3 is about visible commands whose registered UI handler is empty. Do not
+     * flag every empty lambda in a carrier: switch defaults and defensive callback
+     * defaults are not themselves visible commands.
+     */
+    private static final Pattern EMPTY_REGISTERED_HANDLER = Pattern.compile(
+            "(?:addActionListener|addItemListener|addChangeListener|addListSelectionListener)"
+                    + "\\s*\\(\\s*(?:\\([^)]*\\)|[A-Za-z_$][A-Za-z0-9_$]*)"
+                    + "\\s*->\\s*\\{\\s*\\}\\s*\\)",
             Pattern.MULTILINE
     );
 
     @Test
-    void visibleCommandCarriersDoNotContainActiveEmptyLambdas() throws Exception {
+    void visibleCommandCarriersDoNotContainRegisteredEmptyHandlers() throws Exception {
         Set<String> carriers = commandCarriers();
         Set<String> findings = new LinkedHashSet<>();
 
@@ -39,7 +46,7 @@ class VisiblePlaceholderActionCertificationTest {
                 continue;
             }
             String content = Files.readString(file, StandardCharsets.UTF_8);
-            Matcher matcher = EMPTY_LAMBDA.matcher(content);
+            Matcher matcher = EMPTY_REGISTERED_HANDLER.matcher(content);
             while (matcher.find()) {
                 int line = 1;
                 for (int i = 0; i < matcher.start(); i++) {
@@ -48,16 +55,13 @@ class VisiblePlaceholderActionCertificationTest {
                     }
                 }
                 String context = lineAt(content, line).trim();
-                if (context.contains("setEnabled(false)")) {
-                    continue;
-                }
                 findings.add(relative + ":" + line + ":" + context);
             }
         }
 
         assertTrue(findings.isEmpty(),
-                "Visible command carriers contain empty lambda handlers. Implement or explicitly gate them: "
-                        + findings);
+                "Visible command carriers contain registered empty UI handlers. "
+                        + "Implement or explicitly gate them: " + findings);
     }
 
     @Test
