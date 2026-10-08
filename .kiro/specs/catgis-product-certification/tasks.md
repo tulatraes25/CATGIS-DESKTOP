@@ -71,6 +71,10 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Current-tree audit supersedes stale historical reports: Shapefile roundtrip already exists in `ReleaseVectorInteropTest`; deterministic CSV/DXF and real/dependency-gated FlatGeobuf/GeoPackage/SpatiaLite suites already exist.
   - Confirmed current gap: `UndoRedoManager` has an explicit test seam (`UndoRedoContext`) but no direct behavioral contract.
   - Tranche A adds deterministic snapshot/edit/undo/redo, redo invalidation and bounded-history contracts without GUI/OpenCode.
+  - Tranche A CLOSED_CERTIFIED: PR #23 head `3958fa56be4ea1272a4475259114fa9bef4e7729`; PR CI `37860301326` SUCCESS; PR Certification `37860301309` SUCCESS; merge `50a86cba7402591ae6e7780feb72a35da535604a`; post-main CI `37860591392` SUCCESS; post-main Certification `37860591449` SUCCESS.
+  - Tranche B baseline: `50a86cba7402591ae6e7780feb72a35da535604a`, branch `quality/f2-truthful-format-gating`.
+  - Audit found 12 GDAL/OSGeo-dependent real-format tests that silently returned PASS when `ogr2ogr` was absent: GeoPackage 5, SpatiaLite 3, FlatGeobuf 4.
+  - Tranche B requires explicit JUnit assumptions for missing external runtime, an executable anti-silent-pass guard, and a bounded skip budget of 15 (= 3 existing reviewed skips + 12 explicit GDAL format skips).
 - [ ] **F2.3 — Raster/DEM contracts**
   - Real tiny GeoTIFF/NoData/multiband/reprojection where supported.
 - [ ] **F2.4 — Web service contracts**
@@ -153,4 +157,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F2.2 Tranche A vector edit history contracts on GitHub from exact baseline `d5f6db956bf0086d6e63db840ea0993a94b1b93d`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F2.2 Tranche B truthful external-format dependency gating on GitHub from exact baseline `50a86cba7402591ae6e7780feb72a35da535604a`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
