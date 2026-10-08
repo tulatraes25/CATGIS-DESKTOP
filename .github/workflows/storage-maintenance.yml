@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Delete repository Actions caches
         run: |
-          gh cache delete --all --confirm --repo "${GITHUB_REPOSITORY}" || true
+          gh cache delete --all --succeed-on-no-caches --repo "${GITHUB_REPOSITORY}"
           echo "Actions cache purge requested for ${GITHUB_REPOSITORY}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Bootstrap purge existing workflow artifacts
