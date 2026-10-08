@@ -81,6 +81,20 @@ B2c materializes one cross-checked semantic catalog across static commands, dyna
 
 The guard rejects uncovered static commands, dynamic semantic IDs without catalog rows, module actions without mapping, uncovered ACTION/DIALOG/LOADER/EXPORT surfaces, duplicate semantic IDs, invalid tiers and any premature runtime-certified status.
 
+### F1.2 Tranche B2d — supplemental carrier commands
+
+A follow-up audit proved that the original static/dynamic scanners did not expand literal command call-sites hidden behind UI helper factories in the 17 supplemental command carriers.
+
+- supplemental carrier command occurrences: **201**;
+- unique source/kind/label rows: **191**;
+- unique labels: **147**;
+- executable inventory: `SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv`;
+- executable guard: `SupplementalVisibleCommandInventoryCertificationTest`;
+- the guard rejects active `addMenuItem(... -> {})` empty handlers;
+- CATMAP commands for selective visible-layer, symbology and label synchronization are disabled until the CATMAP protocol exposes real behavior.
+
+B2d1 locks this newly discovered command universe. B2d2 must map action-bearing rows to stable semantic IDs and explicitly classify non-feature controls before F1.2 can close.
+
 ## Status vocabulary
 
 - INVENTORY_PENDING
