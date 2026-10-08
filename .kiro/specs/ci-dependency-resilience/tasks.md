@@ -1,6 +1,6 @@
 # CI Dependency Resilience — Tasks
 
-Status: ACTIVE
+Status: CLOSED_CERTIFIED
 Baseline: `4da6b3036d6d59c7b4726d3b906f710215c3c269`
 
 - [x] **CDR.1 — Add deterministic Gradle dependency resolver**
@@ -21,21 +21,23 @@ Baseline: `4da6b3036d6d59c7b4726d3b906f710215c3c269`
   - Requirement: REQ-CDR-4
   - Storage maintenance preserves only the two current dependency-hash keys (Linux/Windows) and deletes unrelated or stale-hash caches.
 
-- [-] **CDR.5 — PR certification**
+- [x] **CDR.5 — PR certification**
   - Requirement: REQ-CDR-5
   - First candidate exposed a Windows cache-path mismatch: `setup-gradle` uses `D:\\a\\.gradle`, while the cache action targeted `~/.gradle`; prime succeeded but saved no cache.
-  - Corrected candidate uses the actual Windows Gradle home and must pass CATGIS CI + Certification + Storage validation on one exact head SHA.
+  - Corrected head `b6820731f4c49a1b6d521085099d734e2689db50` passed CATGIS CI `37771524864`, Certification `37771524791` and Storage validation `37771524810`.
 
-- [ ] **CDR.6 — Merge and post-main certification**
+- [x] **CDR.6 — Merge and post-main certification**
   - Requirement: REQ-CDR-5
   - Normal merge with expected head SHA.
-  - Post-main exact SHA must pass all blocking jobs.
+  - Merge SHA `5cb0459735c5826dd315b0dda76cb8bad1d05b94`.
+  - Post-main Storage Maintenance `37772233807` SUCCESS, CATGIS CI `37772233839` SUCCESS and CATGIS Certification `37772233806` SUCCESS.
+  - Linux/Windows primes and all downstream offline consumers passed; no OSGeo live resolution is required after priming.
 
-- [ ] **CDR.7 — Resume product certification**
+- [x] **CDR.7 — Resume product certification**
   - Mark this gate CLOSED_CERTIFIED.
   - Record B2a as source-complete and post-main certified only after infrastructure recovery.
   - Continue F1.2 B2b dynamic/computed command inventory.
 
 ## Current next action
 
-Audit the CDR.1–CDR.4 diff, open the resilience PR, and require CATGIS CI + Certification + Storage validation on the exact head. Do not use OpenCode/GUI.
+Gate closed. Product certification resumes at F1.2 B2b on exact post-CDR main `5cb0459735c5826dd315b0dda76cb8bad1d05b94`. OpenCode/GUI remains blocked until A0.7.
