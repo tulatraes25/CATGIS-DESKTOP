@@ -45,7 +45,7 @@ WHEN priming dependencies, THE SYSTEM SHALL resolve compile/runtime/test compile
 WHEN storage maintenance runs, THE SYSTEM SHALL preserve active CATGIS dependency caches while continuing to delete unrelated regenerable caches.
 
 Acceptance:
-- keys beginning with `catgis-gradle-deps-v1-` are preserved by routine cleanup;
+- only the current Linux and Windows `catgis-gradle-deps-v1-<OS>-<dependency-hash>` keys are preserved by routine cleanup; stale dependency hashes are deleted;
 - setup-gradle automatic caching remains disabled;
 - successful workflow artifacts remain zero;
 - failure diagnostics remain bounded to 7 days.
