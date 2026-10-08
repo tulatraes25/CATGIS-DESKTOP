@@ -48,16 +48,22 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - B2d2 certified baseline: 98 aliases to existing semantic features; 74 action rows -> 65 new semantic IDs; 14 subordinate controls; 2 display-only rows; 3 disabled/unsupported CATMAP sync rows. Semantic matrix total: 541 features, tier distribution CORE 293 / BETA 186 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47.
   - B2d2 evidence: PR #20 head `9d1b824df27737739342b402938cedf92f43ba89`; merge/main `c592918e065389a750af2f21c86db91a4921bc6e`; PR CI/Certification `37852872665`/`37852872557` SUCCESS; post-main CI/Certification `37853323158`/`37853323177` SUCCESS.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
-- [-] **F1.3 — Reconcile visible dead/placeholder actions**
+- [x] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
   - Any visible action without executable minimum behavior becomes explicit implementation work or disabled/gated.
-  - Current gate: executable scan rejects empty lambda handlers in visible command carriers.
+  - Executable gate rejects registered empty UI handlers in visible command carriers without misclassifying switch defaults or defensive callbacks.
   - Unsupported visible commands must remain explicitly classified and visibly gated; current baseline is exactly 3 disabled CATMAP synchronization commands.
+  - PR #21 head `09b678bdd765b335c412b8bb490d8505b21c0846`: CATGIS CI `37856236790` SUCCESS, Certification `37856236813` SUCCESS; merged as `4be1e284c789cff0b16e200e42cb5f303843cd41`.
+  - CLOSED_CERTIFIED post-main evidence on merge `4be1e284c789cff0b16e200e42cb5f303843cd41`: CATGIS CI `37858849967` SUCCESS; Certification `37858849921` SUCCESS.
 
 ## Phase F2 — Automated behavior contracts
 
-- [ ] **F2.1 — Core project/CRS/save-load contracts**
+- [-] **F2.1 — Core project/CRS/save-load contracts**
   - Requirements: REQ-PC-2, REQ-PC-3, REQ-PC-5
+  - Candidate branch: `quality/f2-core-project-contracts`, exact baseline `4be1e284c789cff0b16e200e42cb5f303843cd41`.
+  - Contract scope: default/normalized project CRS, minimal metadata roundtrip, invalid-header state preservation, truncated-project rejection and failed-save identity preservation.
+  - Initial audit found two integrity defects: payload-free `.catgis` files could replace the current project, and failed saves could repoint `projectFile` before persistence succeeded.
+  - Candidate fixes are behavior-preserving on success paths and harden failure paths; GitHub CI is authoritative.
 - [ ] **F2.2 — Vector format and editing contracts**
   - Shapefile roundtrip, GeoPackage, FlatGeobuf, SpatiaLite, CSV, DXF, editing/snapping/undo/redo.
 - [ ] **F2.3 — Raster/DEM contracts**
@@ -142,4 +148,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.3 visible dead/placeholder reconciliation on GitHub. If green, close F1 and proceed to F2 automated behavior contracts. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F2.1 core project/CRS/save-load contracts on GitHub from exact baseline `4be1e284c789cff0b16e200e42cb5f303843cd41`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.

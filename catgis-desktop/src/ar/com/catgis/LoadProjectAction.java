@@ -79,6 +79,7 @@ public class LoadProjectAction extends AbstractAction {
             double savedViewMinX = 0;
             double savedViewMinY = 0;
             double savedZoomFactor = 1.0;
+            boolean hasProjectPayload = false;
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -87,6 +88,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
 
                 if (line.startsWith("PROJECT_CRS|")) {
+                    hasProjectPayload = true;
                     String[] crsParts = line.split("\\|", -1);
                     if (crsParts.length >= 2) {
                         String code = crsParts[1].trim();
@@ -98,6 +100,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
 
                 if (line.startsWith("PROJECT_META|")) {
+                    hasProjectPayload = true;
                     String[] metaParts = line.split("\\|", -1);
                     if (metaParts.length >= 3) {
                         applyProjectMetadata(loadedProject, metaParts[1].trim(), metaParts[2].trim());
@@ -106,6 +109,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
 
                 if (line.startsWith("PROJECT_LAYOUT_ITEM|")) {
+                    hasProjectPayload = true;
                     String[] itemParts = line.split("\\|", 2);
                     if (itemParts.length >= 2) {
                         CatmapLayoutItem item = CatmapLayoutItem.decode(itemParts[1].trim());
@@ -117,6 +121,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
 
                 if (line.startsWith("PROJECT_LEGEND_ITEM|")) {
+                    hasProjectPayload = true;
                     String[] itemParts = line.split("\\|", 2);
                     if (itemParts.length >= 2) {
                         CatmapLegendItem item = CatmapLegendItem.decode(itemParts[1].trim());
@@ -128,6 +133,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
 
                 if (line.startsWith("PROJECT_LAYER_GROUP|")) {
+                    hasProjectPayload = true;
                     String[] groupParts = line.split("\\|", -1);
                     if (groupParts.length >= 2) {
                         LayerGroup group = new LayerGroup(groupParts[1].trim());
@@ -143,6 +149,7 @@ public class LoadProjectAction extends AbstractAction {
                 }
 
                 if (line.startsWith("VIEW|")) {
+                    hasProjectPayload = true;
                     String[] viewParts = line.split("\\|", -1);
                     if (viewParts.length >= 4) {
                         try {
@@ -159,11 +166,19 @@ public class LoadProjectAction extends AbstractAction {
                 if (layer == null) {
                     continue;
                 }
+                hasProjectPayload = true;
 
                 if (layer.isInGroup() && loadedProject.getLayerGroup(layer.getGroupName()) == null) {
                     loadedProject.addLayerGroup(layer.getGroupName());
                 }
                 loadedProject.addLayer(layer);
+            }
+
+            if (!hasProjectPayload) {
+                if (showDialogs) {
+                    NotificationManager.warn(owner, null, "Archivo de proyecto incompleto.");
+                }
+                return false;
             }
 
             normalizeCatserverGrouping(loadedProject);
