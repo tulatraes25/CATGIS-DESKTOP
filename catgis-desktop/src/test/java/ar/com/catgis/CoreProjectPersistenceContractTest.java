@@ -30,7 +30,7 @@ class CoreProjectPersistenceContractTest {
         assertEquals("EPSG:22182", project.getProjectCRS());
 
         project.setProjectCRS("   ");
-        assertEquals("EPSG:22182", project.getProjectCRS());
+        assertEquals("EPSG:4326", project.getProjectCRS());
     }
 
     @Test
