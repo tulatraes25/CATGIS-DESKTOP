@@ -116,17 +116,14 @@ sourceSets {
 
 tasks.register('resolveCiDependencies') {
     group = 'verification'
-    description = 'Resolves deterministic CI compile/runtime/test dependencies without running CATGIS.'
+    description = 'Resolves every resolvable Gradle configuration required by CI without running CATGIS.'
     doLast {
-        [
-                configurations.compileClasspath,
-                configurations.runtimeClasspath,
-                configurations.testCompileClasspath,
-                configurations.testRuntimeClasspath
-        ].each { configuration ->
-            logger.lifecycle("Resolviendo dependencias CI: ${configuration.name}")
-            configuration.resolve()
-        }
+        configurations.findAll { it.canBeResolved }
+                .sort { a, b -> a.name <=> b.name }
+                .each { configuration ->
+                    logger.lifecycle("Resolviendo dependencias CI: ${configuration.name}")
+                    configuration.resolve()
+                }
     }
 }
 
