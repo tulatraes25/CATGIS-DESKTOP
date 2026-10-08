@@ -1,6 +1,6 @@
 # CATGIS Feature Certification Matrix
 
-Status: F1.3_IN_PROGRESS
+Status: F2.1_IN_PROGRESS
 Program spec: `.kiro/specs/catgis-product-certification/`
 Certified source baseline entering F1.2: `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`
 
@@ -124,6 +124,21 @@ F1.3 converts placeholder/dead-action review into an executable gate.
 - executable guard: `VisiblePlaceholderActionCertificationTest`.
 
 Contextual disablement (for example a Paste command when there is nothing to paste) is not classified as dead behavior.
+
+PR #21 candidate evidence: head `09b678bdd765b335c412b8bb490d8505b21c0846`, CATGIS CI `37856236790` SUCCESS, Certification `37856236813` SUCCESS; merge SHA `4be1e284c789cff0b16e200e42cb5f303843cd41`. Post-main evidence remains the closure authority.
+
+### F2.1 — core project / CRS / save-load contracts
+
+F2.1 starts behavioral certification with the minimum project persistence boundary.
+
+- default project CRS must be stable and CRS assignments normalized;
+- a minimal project must round-trip CRS and core metadata;
+- invalid or truncated project input must not replace live project state;
+- a failed save must not repoint the current project file or rename the project;
+- executable contract: `CoreProjectPersistenceContractTest`;
+- candidate branch baseline: `4be1e284c789cff0b16e200e42cb5f303843cd41`.
+
+The initial F2.1 audit found and repairs two negative-path defects: header-only project files were accepted as empty projects, and failed save attempts could mutate project identity before the write succeeded.
 
 ## Status vocabulary
 
