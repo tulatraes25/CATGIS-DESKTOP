@@ -237,7 +237,7 @@ jobs:
         with:
           cache-disabled: true
       - name: Certify source feature-surface inventory
-        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest" --tests "ar.com.catgis.architecture.UiCommandCarrierCoverageCertificationTest"
+        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest" --tests "ar.com.catgis.architecture.UiCommandCarrierCoverageCertificationTest" --tests "ar.com.catgis.architecture.SupplementalVisibleCommandInventoryCertificationTest"
       - name: Upload inventory evidence
         if: failure()
         uses: actions/upload-artifact@v4
