@@ -21,9 +21,10 @@ Baseline: `4da6b3036d6d59c7b4726d3b906f710215c3c269`
   - Requirement: REQ-CDR-4
   - Storage maintenance deletes unrelated caches and preserves `catgis-gradle-deps-v1-*`.
 
-- [ ] **CDR.5 — PR certification**
+- [-] **CDR.5 — PR certification**
   - Requirement: REQ-CDR-5
-  - Exact head SHA; CATGIS CI + Certification + Storage validation green.
+  - First candidate exposed a Windows cache-path mismatch: `setup-gradle` uses `D:\\a\\.gradle`, while the cache action targeted `~/.gradle`; prime succeeded but saved no cache.
+  - Corrected candidate uses the actual Windows Gradle home and must pass CATGIS CI + Certification + Storage validation on one exact head SHA.
 
 - [ ] **CDR.6 — Merge and post-main certification**
   - Requirement: REQ-CDR-5
