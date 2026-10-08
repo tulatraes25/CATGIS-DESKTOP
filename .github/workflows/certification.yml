@@ -30,6 +30,8 @@ jobs:
           distribution: temurin
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
       - name: Full tests and coverage
         run: ./gradlew --no-daemon clean test jacocoTestReport jacocoTestCoverageVerification
       - name: Account tests and skips
@@ -55,7 +57,7 @@ jobs:
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
           if ($skipped -gt 3) { throw "Linux skip budget exceeded: $skipped > 3" }
       - name: Upload Linux evidence
-        if: always()
+        if: failure() || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: certification-linux
@@ -64,6 +66,7 @@ jobs:
             catgis-desktop/build/reports/tests/test/
             catgis-desktop/build/reports/jacoco/
           if-no-files-found: error
+          retention-days: 7
 
   windows-full-suite:
     name: Certification Windows Full Suite
@@ -81,6 +84,8 @@ jobs:
           distribution: temurin
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
       - name: Full headless tests
         shell: pwsh
         run: .\gradlew.bat --no-daemon clean test
@@ -107,7 +112,7 @@ jobs:
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
           if ($skipped -gt 6) { throw "Windows skip budget exceeded: $skipped > 6" }
       - name: Upload Windows evidence
-        if: always()
+        if: failure() || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: certification-windows
@@ -115,6 +120,7 @@ jobs:
             catgis-desktop/build/test-results/test/
             catgis-desktop/build/reports/tests/test/
           if-no-files-found: error
+          retention-days: 7
 
   source-feature-inventory:
     name: Source Feature Surface Inventory
@@ -132,15 +138,18 @@ jobs:
           distribution: temurin
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
       - name: Certify source feature-surface inventory
         run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest"
       - name: Upload inventory evidence
-        if: always()
+        if: failure() || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: certification-source-feature-inventory
           path: docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv
           if-no-files-found: error
+          retention-days: 7
 
   visible-command-inventory:
     name: Visible Command Inventory
@@ -158,15 +167,18 @@ jobs:
           distribution: temurin
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
       - name: Certify visible command inventory
         run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest"
       - name: Upload visible command evidence
-        if: always()
+        if: failure() || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: certification-visible-command-inventory
           path: catgis-desktop/build/certification/visible-command-inventory.tsv
           if-no-files-found: error
+          retention-days: 7
 
   architecture-guardrails:
     name: Architecture Guardrails
@@ -184,6 +196,8 @@ jobs:
           distribution: temurin
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
       - name: Run executable architecture contracts
         run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.ArchitectureCertificationTest"
 
@@ -223,12 +237,15 @@ jobs:
           distribution: temurin
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
       - name: Real PostGIS read/write roundtrip
         run: ./gradlew --no-daemon postgisIntegrationTest
       - name: Upload PostGIS evidence
-        if: always()
+        if: failure() || github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: certification-postgis
           path: catgis-desktop/build/test-results/postgisIntegrationTest/
           if-no-files-found: error
+          retention-days: 7
