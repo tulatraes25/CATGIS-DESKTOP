@@ -30,7 +30,20 @@ Filename heuristics do not identify every Java source that can expose a UI comma
 - executable guard: `UiCommandCarrierCoverageCertificationTest`;
 - evidence manifest: `docs/quality/UI_COMMAND_CARRIER_INVENTORY.tsv`.
 
-B1 closes carrier-classification drift before semantic consolidation. B2 must consolidate aliases and map static/dynamic capabilities to stable semantic feature IDs.
+B1 closes carrier-classification drift before semantic consolidation.
+
+### F1.2 Tranche B2a — static semantic aliases
+
+The static inventory contains visible-label variants that represent the same product action. B2a makes those aliases explicit instead of treating punctuation/accent differences as separate features.
+
+- normalization-collision groups currently declared: **13**;
+- checked-in semantic alias map: `docs/quality/STATIC_COMMAND_ALIAS_MAP.tsv`;
+- executable guard: `StaticCommandAliasCertificationTest`;
+- every detected static normalization collision must be declared;
+- every alias group has one stable `SEM-*` identifier and one canonical current label;
+- semantic IDs cannot be reused across unrelated collision groups.
+
+B2a does not claim all 313 static labels are semantically resolved. B2b inventories dynamic/computed commands and B2c performs the complete feature/tier mapping.
 
 ## Status vocabulary
 

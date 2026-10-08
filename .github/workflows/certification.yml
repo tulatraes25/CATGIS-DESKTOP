@@ -172,13 +172,15 @@ jobs:
         with:
           cache-disabled: true
       - name: Certify visible command inventory
-        run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest"
+        run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.StaticCommandAliasCertificationTest"
       - name: Upload visible command evidence
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-visible-command-inventory
-          path: catgis-desktop/build/certification/visible-command-inventory.tsv
+          path: |
+            catgis-desktop/build/certification/visible-command-inventory.tsv
+            docs/quality/STATIC_COMMAND_ALIAS_MAP.tsv
           if-no-files-found: error
           retention-days: 7
 
