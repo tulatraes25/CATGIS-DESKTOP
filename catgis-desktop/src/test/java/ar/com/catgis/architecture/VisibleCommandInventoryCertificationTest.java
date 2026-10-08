@@ -57,6 +57,8 @@ class VisibleCommandInventoryCertificationTest {
             Pattern.compile("new JButton\\(\\s*I18n\\.t\\(\\s*\"([^\"]+)\""),
             Pattern.compile("new JButton\\(\\s*\"([^\"]+)\""),
             Pattern.compile("new JToggleButton\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JCheckBoxMenuItem\\(\\s*\"([^\"]+)\""),
+            Pattern.compile("new JRadioButtonMenuItem\\(\\s*\"([^\"]+)\""),
             Pattern.compile("flatButton\\(\\s*\"([^\"]+)\""),
             Pattern.compile("\\bflat\\(\\s*\"([^\"]+)\""),
             Pattern.compile("createActionButton\\(\\s*\"([^\"]+)\""),
