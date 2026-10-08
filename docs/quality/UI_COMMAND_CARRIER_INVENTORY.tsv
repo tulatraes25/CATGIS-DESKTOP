@@ -4,19 +4,14 @@
 # filename-based SOURCE_FEATURE_SURFACE_INVENTORY categories.
 # One relative source path per line.
 CatgisDesktopApp.java
-DialogKeyboardSupport.java
 LayersPanel.java
 LayoutPreviewPanel.java
-MapPanel.java
 ModulesMenu.java
-QuickStylePanel.java
 StatusBar.java
 TemporalController.java
 catmap/Main.java
 climate/EnvironmentalAreaMarker.java
 core/model/DataDefinedOverridesPanel.java
-layout/ElementInspectorPanel.java
-plugins/CatgisPlugin.java
 ui/components/layout/LayoutBottomBar.java
 ui/components/layout/LayoutControlsForm.java
 ui/components/layout/LayoutElementListPanel.java
