@@ -37,7 +37,7 @@ class SemanticFeatureMatrixCertificationTest {
         for (String line : dataLines(VISIBLE)) {
             String[] p = line.split("\\t", -1);
             assertEquals(4, p.length, "Malformed visible command row: " + line);
-            assertTrue(expected.add(p[0] + "\t" + p[1] + "\t" + p[2]),
+            assertTrue(expected.add(p[3] + "\t" + p[0] + "\t" + p[1]),
                     "Duplicate visible command key: " + line);
         }
 
