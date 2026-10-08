@@ -29,7 +29,9 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche A: executable static visible-command inventory on `quality/f1-visible-command-matrix`.
   - Current source evidence: 14 command/toolbar surfaces, 390 static command occurrences, 378 source/label pairs and 313 unique labels.
   - `VisibleCommandInventoryCertificationTest` exact-match locks the inventory and emits the full TSV as CI evidence.
-  - Tranche B remains: consolidate aliases, inventory dynamic/computed labels and map command/dialog/loader/export capabilities to stable semantic feature IDs and tiers.
+  - Tranche B1 in progress: classify every production Java source that carries UI commands/controls, including files missed by filename heuristics; executable drift guard + supplemental manifest.
+  - B1 baseline finding: 111 current UI command carriers; 22 require supplemental classification beyond the 174 filename-derived source surfaces.
+  - Tranche B2 remains: consolidate aliases, inventory dynamic/computed labels and map command/dialog/loader/export capabilities to stable semantic feature IDs and tiers.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
@@ -123,4 +125,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.2 Tranche A in GitHub, then build Tranche B semantic feature mapping. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F1.2 Tranche B1 UI command-carrier coverage in GitHub, then execute B2 semantic alias/dynamic-capability mapping. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
