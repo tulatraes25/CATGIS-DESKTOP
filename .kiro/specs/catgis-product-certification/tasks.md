@@ -58,14 +58,19 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
 ## Phase F2 — Automated behavior contracts
 
-- [-] **F2.1 — Core project/CRS/save-load contracts**
+- [x] **F2.1 — Core project/CRS/save-load contracts**
   - Requirements: REQ-PC-2, REQ-PC-3, REQ-PC-5
   - Candidate branch: `quality/f2-core-project-contracts`, exact baseline `4be1e284c789cff0b16e200e42cb5f303843cd41`.
   - Contract scope: default/normalized project CRS, minimal metadata roundtrip, invalid-header state preservation, truncated-project rejection and failed-save identity preservation.
   - Initial audit found two integrity defects: payload-free `.catgis` files could replace the current project, and failed saves could repoint `projectFile` before persistence succeeded.
   - Candidate fixes are behavior-preserving on success paths and harden failure paths; GitHub CI is authoritative.
-- [ ] **F2.2 — Vector format and editing contracts**
+  - CLOSED_CERTIFIED: PR #22 head `11a7753a9b55ab24caebbba00de1177bd092a7fb`; PR CI `37859335916` SUCCESS; PR Certification `37859335855` SUCCESS; merge `d5f6db956bf0086d6e63db840ea0993a94b1b93d`; post-main CI `37859737265` SUCCESS; post-main Certification `37859737268` SUCCESS.
+- [-] **F2.2 — Vector format and editing contracts**
   - Shapefile roundtrip, GeoPackage, FlatGeobuf, SpatiaLite, CSV, DXF, editing/snapping/undo/redo.
+  - Tranche A baseline: `d5f6db956bf0086d6e63db840ea0993a94b1b93d`, branch `quality/f2-vector-edit-contracts`.
+  - Current-tree audit supersedes stale historical reports: Shapefile roundtrip already exists in `ReleaseVectorInteropTest`; deterministic CSV/DXF and real/dependency-gated FlatGeobuf/GeoPackage/SpatiaLite suites already exist.
+  - Confirmed current gap: `UndoRedoManager` has an explicit test seam (`UndoRedoContext`) but no direct behavioral contract.
+  - Tranche A adds deterministic snapshot/edit/undo/redo, redo invalidation and bounded-history contracts without GUI/OpenCode.
 - [ ] **F2.3 — Raster/DEM contracts**
   - Real tiny GeoTIFF/NoData/multiband/reprojection where supported.
 - [ ] **F2.4 — Web service contracts**
@@ -148,4 +153,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F2.1 core project/CRS/save-load contracts on GitHub from exact baseline `4be1e284c789cff0b16e200e42cb5f303843cd41`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F2.2 Tranche A vector edit history contracts on GitHub from exact baseline `d5f6db956bf0086d6e63db840ea0993a94b1b93d`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
