@@ -32,6 +32,8 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
 
       - name: Checkstyle
         run: ./gradlew checkstyleMain checkstyleTest
@@ -40,7 +42,7 @@ jobs:
         run: ./gradlew build jacocoTestReport
 
       - name: Upload test diagnostics
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: java-test-diagnostics
@@ -48,14 +50,16 @@ jobs:
             catgis-desktop/build/test-results/test/
             catgis-desktop/build/reports/tests/test/
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload coverage
-        if: always()
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: jacoco-report
           path: catgis-desktop/build/reports/jacoco/
           if-no-files-found: ignore
+          retention-days: 7
 
   repository-safety:
     name: Repository Safety Checks
