@@ -1,0 +1,30 @@
+name: CATGIS Storage Maintenance
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 0'
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: catgis-storage-maintenance
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Purge regenerable Actions cache
+    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[storage-cleanup]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Delete repository Actions caches
+        run: |
+          gh cache delete --all --confirm --repo "${GITHUB_REPOSITORY}" || true
+          echo "Actions cache purge requested for ${GITHUB_REPOSITORY}." >> "$GITHUB_STEP_SUMMARY"
