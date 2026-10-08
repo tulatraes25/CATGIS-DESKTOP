@@ -218,13 +218,18 @@ public class Main {
         JMenu menuMapa = new JMenu("Mapa");
         menuMapa.setMnemonic(KeyEvent.VK_M);
         addMenuItem(menuMapa, "Actualizar desde CATGIS", 0, e -> refreshFromCatgis());
-        addMenuItem(menuMapa, "Sincronizar capas visibles", 0, e -> {});
-        addMenuItem(menuMapa, "Sincronizar simbología", 0, e ->
-            statusLabel.setText("Sincronizar simbologia: " + (CatmapSocketClient.isConnected()
-                ? "conectado" : "modo standalone")));
-        addMenuItem(menuMapa, "Sincronizar etiquetas", 0, e ->
-            statusLabel.setText("Sincronizar etiquetas: " + (CatmapSocketClient.isConnected()
-                ? "conectado" : "modo standalone")));
+        disableMenuItem(
+                addMenuItem(menuMapa, "Sincronizar capas visibles", 0,
+                        e -> statusLabel.setText("Sincronización de visibilidad no disponible en este protocolo CATMAP.")),
+                "Pendiente: CATMAP no expone todavía un contrato de sincronización selectiva de visibilidad.");
+        disableMenuItem(
+                addMenuItem(menuMapa, "Sincronizar simbología", 0,
+                        e -> statusLabel.setText("Sincronización de simbología no disponible en este protocolo CATMAP.")),
+                "Pendiente: el protocolo CATMAP no expone todavía simbología de capas.");
+        disableMenuItem(
+                addMenuItem(menuMapa, "Sincronizar etiquetas", 0,
+                        e -> statusLabel.setText("Sincronización de etiquetas no disponible en este protocolo CATMAP.")),
+                "Pendiente: el protocolo CATMAP no expone todavía configuración de etiquetas.");
         menuMapa.addSeparator();
         addMenuItem(menuMapa, "Usar extent actual de CATGIS", 0, e -> useCatgisExtent());
         addMenuItem(menuMapa, "Fijar extent del mapa", 0, e -> toggleMapExtentLock());
@@ -1744,11 +1749,17 @@ public class Main {
 
     // --- Helper methods ---
 
-    private static void addMenuItem(JMenu menu, String text, int mnemonic, java.awt.event.ActionListener action) {
+    private static JMenuItem addMenuItem(JMenu menu, String text, int mnemonic, java.awt.event.ActionListener action) {
         JMenuItem item = new JMenuItem(text);
         if (mnemonic != 0) item.setAccelerator(KeyStroke.getKeyStroke(mnemonic, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         item.addActionListener(action);
         menu.add(item);
+        return item;
+    }
+
+    private static void disableMenuItem(JMenuItem item, String reason) {
+        item.setEnabled(false);
+        item.setToolTipText(reason);
     }
 
     private static void addToolButton(JToolBar toolbar, String text, java.awt.event.ActionListener action) {

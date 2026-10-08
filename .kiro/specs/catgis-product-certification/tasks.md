@@ -37,8 +37,12 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche B2b CLOSED_CERTIFIED: dynamic/computed menu expressions classified, non-feature factories/containers separated, 38-action module registry locked, and checkbox/radio menu commands included in the scanners.
   - B2b source ratchet: static inventory 392 occurrences / 380 source-label pairs / 315 labels; dynamic inventory 48 source-expression rows / 55 occurrences / 25 action-bearing semantic IDs; module registry 38 actions.
   - B2b evidence: PR #17 head `f218b61bd35749d0570b56643b917e541e7798be`; merge `9ec0a40814efd17c6f118b8a6ed47a278f26fa62`; post-main CATGIS CI `37774422348` SUCCESS and Certification `37774422364` SUCCESS.
-  - Tranche B2c in progress: complete semantic matrix maps all static commands, dynamic actions, module actions and ACTION/DIALOG/LOADER/EXPORT source surfaces to stable semantic IDs and explicit tiers.
-  - B2c candidate: 476 unique semantic features; 380 static command rows -> 302 semantic IDs; 38 module actions; 132 non-command source surfaces. Tier distribution: CORE 291 / BETA 123 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47. All rows remain `RUNTIME_PENDING` before A0.7.
+  - Tranche B2c CLOSED_CERTIFIED: complete semantic matrix maps the previously inventoried static commands, dynamic actions, module actions and ACTION/DIALOG/LOADER/EXPORT source surfaces to stable semantic IDs and explicit tiers.
+  - B2c certified baseline: 476 unique semantic features; 380 static command rows -> 302 semantic IDs; 38 module actions; 132 non-command source surfaces. Tier distribution: CORE 291 / BETA 123 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47. All rows remain `RUNTIME_PENDING` before A0.7.
+  - B2c evidence: PR #18 head `08d9fe79f689d439a1b4bc1ad1cf58ae64a9588b`; merge `8a4fda51d24a095f692ce1a29ee3a56a12804e8d`; PR CI/Certification `37809101967`/`37809102158` SUCCESS; post-main CI/Certification `37809832989`/`37809832833` SUCCESS.
+  - Tranche B2d in progress: supplemental UI command carriers expose additional direct/helper-generated visible commands that were not represented in the original command scanner.
+  - B2d1 executable baseline: 17 supplemental carriers, 201 command occurrences, 191 source/kind/label rows and 147 unique labels in `SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv`.
+  - B2d also found three CATMAP sync menu entries without real protocol support; they are gated/disabled rather than presented as working features.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
@@ -132,4 +136,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.2 Tranche B2c complete semantic feature matrix on GitHub. If green, close F1.2 and proceed to F1.3 visible dead/placeholder reconciliation. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F1.2 Tranche B2d1 supplemental visible-command inventory on GitHub, then map those supplemental commands semantically in B2d2. Only after B2d closes may F1.2 close and F1.3 begin. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.

@@ -237,7 +237,7 @@ jobs:
         with:
           cache-disabled: true
       - name: Certify source feature-surface inventory
-        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest" --tests "ar.com.catgis.architecture.UiCommandCarrierCoverageCertificationTest"
+        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest" --tests "ar.com.catgis.architecture.UiCommandCarrierCoverageCertificationTest" --tests "ar.com.catgis.architecture.SupplementalVisibleCommandInventoryCertificationTest"
       - name: Upload inventory evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -246,6 +246,7 @@ jobs:
           path: |
             docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv
             docs/quality/UI_COMMAND_CARRIER_INVENTORY.tsv
+            docs/quality/SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv
           if-no-files-found: error
           retention-days: 7
 
