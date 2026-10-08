@@ -25,11 +25,7 @@ The key deliberately excludes workflow name, job name, branch SHA and run number
 
 Add `resolveCiDependencies` to `catgis-desktop/build.gradle`.
 
-It resolves:
-- `compileClasspath`
-- `runtimeClasspath`
-- `testCompileClasspath`
-- `testRuntimeClasspath`
+It resolves every Gradle configuration where `canBeResolved == true`, in deterministic name order. This includes Java compile/runtime/test classpaths plus plugin/tool configurations such as Checkstyle and JaCoCo that downstream jobs also need in offline mode.
 
 No product behavior changes.
 
