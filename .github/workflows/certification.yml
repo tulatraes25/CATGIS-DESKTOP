@@ -275,7 +275,7 @@ jobs:
         with:
           cache-disabled: true
       - name: Certify visible command inventory
-        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.StaticCommandAliasCertificationTest"
+        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.StaticCommandAliasCertificationTest" --tests "ar.com.catgis.architecture.DynamicCommandInventoryCertificationTest"
       - name: Upload visible command evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -284,6 +284,8 @@ jobs:
           path: |
             catgis-desktop/build/certification/visible-command-inventory.tsv
             docs/quality/STATIC_COMMAND_ALIAS_MAP.tsv
+            docs/quality/DYNAMIC_COMMAND_INVENTORY.tsv
+            docs/quality/MODULE_ACTION_INVENTORY.tsv
           if-no-files-found: error
           retention-days: 7
 
