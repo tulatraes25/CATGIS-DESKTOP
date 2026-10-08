@@ -29,6 +29,11 @@ class FlatGeobufRealTest {
         return new File(OGR2OGR).exists();
     }
 
+    private void assumeOgr2ogrAvailable() {
+        Assumptions.assumeTrue(ogr2ogrAvailable(),
+                "Skipped: ogr2ogr / OSGeo4W is not available in this environment");
+    }
+
     /** Check if GDAL version is compatible with wololo reader. */
     private static boolean gdalCompatible() {
         try {
@@ -59,7 +64,7 @@ class FlatGeobufRealTest {
 
     @Test
     void loadSinglePolygonRoundtrip() throws Exception {
-        if (!ogr2ogrAvailable()) return;
+        assumeOgr2ogrAvailable();
         assumeGdalCompatible();
 
         File geojson = tempDir.resolve("test.geojson").toFile();
@@ -92,7 +97,7 @@ class FlatGeobufRealTest {
 
     @Test
     void validateFileAcceptsValidFgb() throws Exception {
-        if (!ogr2ogrAvailable()) return;
+        assumeOgr2ogrAvailable();
         assumeGdalCompatible();
 
         File geojson = tempDir.resolve("v.geojson").toFile();
@@ -113,7 +118,7 @@ class FlatGeobufRealTest {
 
     @Test
     void loadTwoPolygonsRoundtrip() throws Exception {
-        if (!ogr2ogrAvailable()) return;
+        assumeOgr2ogrAvailable();
         assumeGdalCompatible();
 
         File geojson = tempDir.resolve("two.geojson").toFile();
@@ -137,7 +142,7 @@ class FlatGeobufRealTest {
 
     @Test
     void loadEmptyFeaturesFile() throws Exception {
-        if (!ogr2ogrAvailable()) return;
+        assumeOgr2ogrAvailable();
         assumeGdalCompatible();
 
         File geojson = tempDir.resolve("empty.geojson").toFile();
