@@ -9,9 +9,6 @@ CatgisDesktopApp.java	JBUTTON	CATSERVER	1
 CatgisDesktopApp.java	JBUTTON	Guardar y cerrar	1
 CatgisDesktopApp.java	JBUTTON	Herramientas	1
 CatgisDesktopApp.java	JBUTTON	Iniciar edicion	1
-catmap/Main.java	ADDDISABLEDMENUITEM	Sincronizar capas visibles	1
-catmap/Main.java	ADDDISABLEDMENUITEM	Sincronizar etiquetas	1
-catmap/Main.java	ADDDISABLEDMENUITEM	Sincronizar simbología	1
 catmap/Main.java	ADDMENUITEM	Abrir layout...	1
 catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	1
 catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	1
@@ -52,6 +49,9 @@ catmap/Main.java	ADDMENUITEM	Refrescar mapa	1
 catmap/Main.java	ADDMENUITEM	Rehacer	1
 catmap/Main.java	ADDMENUITEM	Salir	1
 catmap/Main.java	ADDMENUITEM	Seleccionar todo	1
+catmap/Main.java	ADDMENUITEM	Sincronizar capas visibles	1
+catmap/Main.java	ADDMENUITEM	Sincronizar etiquetas	1
+catmap/Main.java	ADDMENUITEM	Sincronizar simbología	1
 catmap/Main.java	ADDMENUITEM	Tabla simple	1
 catmap/Main.java	ADDMENUITEM	Texto	1
 catmap/Main.java	ADDMENUITEM	Usar extent actual de CATGIS	1
