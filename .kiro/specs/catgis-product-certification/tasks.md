@@ -24,7 +24,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Exact production source-surface manifest locked by `FeatureSurfaceInventoryCertificationTest`.
   - Evidence: PR #8 merged as `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`; post-main CATGIS CI run `37558982260` SUCCESS and CATGIS Certification run `37558982255` SUCCESS.
   - Certified inventory: 174 source surfaces across actions, command surfaces, dialogs/windows, exporters, loaders/readers, services and toolbars.
-- [-] **F1.2 — Build FEATURE_CERTIFICATION_MATRIX**
+- [x] **F1.2 — Build FEATURE_CERTIFICATION_MATRIX**
   - Requirements: REQ-PC-1, REQ-PC-12
   - Tranche A: executable static visible-command inventory on `quality/f1-visible-command-matrix`.
   - Current source evidence: 14 command/toolbar surfaces, 390 static command occurrences, 378 source/label pairs and 313 unique labels.
@@ -44,12 +44,15 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - B2d1 certified baseline: 17 supplemental carriers, 201 command occurrences, 191 source/kind/label rows and 147 unique labels in `SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv`.
   - B2d1 evidence: PR #19 head `795d33fb434e4b38f6a9197375508b1e55fef68f`; merge `c847374993a218dda4b90eb787fccc36e9b48f9f`; PR CI/Certification `37820925808`/`37820925752` SUCCESS; post-main CI/Certification `37852202139`/`37852201978` SUCCESS.
   - B2d1 also found three CATMAP sync menu entries without real protocol support; they are gated/disabled rather than presented as working features.
-  - Tranche B2d2 in progress: all 191 supplemental rows are explicitly classified and mapped.
-  - B2d2 candidate: 98 aliases to existing semantic features; 74 action rows -> 65 new semantic IDs; 14 subordinate controls; 2 display-only rows; 3 disabled/unsupported CATMAP sync rows. Semantic matrix candidate total: 541 features, tier distribution CORE 293 / BETA 186 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47.
+  - Tranche B2d2 CLOSED_CERTIFIED: all 191 supplemental rows are explicitly classified and mapped.
+  - B2d2 certified baseline: 98 aliases to existing semantic features; 74 action rows -> 65 new semantic IDs; 14 subordinate controls; 2 display-only rows; 3 disabled/unsupported CATMAP sync rows. Semantic matrix total: 541 features, tier distribution CORE 293 / BETA 186 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47.
+  - B2d2 evidence: PR #20 head `9d1b824df27737739342b402938cedf92f43ba89`; merge/main `c592918e065389a750af2f21c86db91a4921bc6e`; PR CI/Certification `37852872665`/`37852872557` SUCCESS; post-main CI/Certification `37853323158`/`37853323177` SUCCESS.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
-- [ ] **F1.3 — Reconcile visible dead/placeholder actions**
+- [-] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
   - Any visible action without executable minimum behavior becomes explicit implementation work or disabled/gated.
+  - Current gate: executable scan rejects empty lambda handlers in visible command carriers.
+  - Unsupported visible commands must remain explicitly classified and visibly gated; current baseline is exactly 3 disabled CATMAP synchronization commands.
 
 ## Phase F2 — Automated behavior contracts
 
@@ -139,4 +142,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.2 Tranche B2d2 supplemental semantic mapping on GitHub. If green, close F1.2 and proceed to F1.3 visible dead/placeholder reconciliation. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F1.3 visible dead/placeholder reconciliation on GitHub. If green, close F1 and proceed to F2 automated behavior contracts. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
