@@ -18,7 +18,19 @@ The first F1.2 tranche converts visible command discovery into an executable Git
 - executable guard: `VisibleCommandInventoryCertificationTest`;
 - CI evidence artifact: `certification-visible-command-inventory/visible-command-inventory.tsv`.
 
-This is inventory evidence, not a claim that 313 independent product features are certified. The next F1.2 tranche must consolidate aliases and map each visible command/dynamic capability to stable semantic feature IDs.
+This is inventory evidence, not a claim that 313 independent product features are certified.
+
+### F1.2 Tranche B1 — UI command-carrier coverage
+
+A second source-level audit found that filename heuristics alone do not identify every Java file that can expose a UI command. The repository therefore also classifies command/control carriers by executable source scan.
+
+- current production UI command carriers discovered: **111**;
+- already covered by filename-derived source-surface categories: **89**;
+- supplemental carriers requiring explicit classification: **22**;
+- executable guard: `UiCommandCarrierCoverageCertificationTest`;
+- evidence manifest: `docs/quality/UI_COMMAND_CARRIER_INVENTORY.tsv`.
+
+This closes the carrier-classification gap before semantic alias consolidation. Tranche B2 must consolidate aliases and map static and dynamic capabilities to stable semantic feature IDs.
 
 ## Status vocabulary
 
