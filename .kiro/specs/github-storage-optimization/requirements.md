@@ -1,6 +1,6 @@
 # GitHub Storage Optimization — Requirements
 
-Status: ACTIVE
+Status: CLOSED_CERTIFIED
 Owner: CATGIS
 Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
 
@@ -45,8 +45,8 @@ Acceptance:
 - Successful pull-request CI does not upload routine Java diagnostics or JaCoCo bundles.
 - Successful pull-request Certification does not upload routine evidence bundles.
 - Failed runs may upload diagnostics.
-- Successful post-main runs may retain certification evidence for a short bounded retention window.
-- Retention for newly uploaded workflow artifacts is explicitly bounded to no more than 7 days in this gate.
+- Successful runs retain no routine workflow artifacts.
+- Failure diagnostics may be uploaded and are bounded to no more than 7 days.
 
 ## REQ-GSO-4 — One-time storage purge
 
