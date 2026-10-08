@@ -57,7 +57,7 @@ jobs:
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
           if ($skipped -gt 3) { throw "Linux skip budget exceeded: $skipped > 3" }
       - name: Upload Linux evidence
-        if: failure() || github.event_name == 'push'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-linux
@@ -112,7 +112,7 @@ jobs:
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
           if ($skipped -gt 6) { throw "Windows skip budget exceeded: $skipped > 6" }
       - name: Upload Windows evidence
-        if: failure() || github.event_name == 'push'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-windows
@@ -143,7 +143,7 @@ jobs:
       - name: Certify source feature-surface inventory
         run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.FeatureSurfaceInventoryCertificationTest"
       - name: Upload inventory evidence
-        if: failure() || github.event_name == 'push'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-source-feature-inventory
@@ -172,7 +172,7 @@ jobs:
       - name: Certify visible command inventory
         run: ./gradlew --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest"
       - name: Upload visible command evidence
-        if: failure() || github.event_name == 'push'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-visible-command-inventory
@@ -242,7 +242,7 @@ jobs:
       - name: Real PostGIS read/write roundtrip
         run: ./gradlew --no-daemon postgisIntegrationTest
       - name: Upload PostGIS evidence
-        if: failure() || github.event_name == 'push'
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: certification-postgis
