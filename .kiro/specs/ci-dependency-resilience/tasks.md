@@ -3,21 +3,21 @@
 Status: ACTIVE
 Baseline: `4da6b3036d6d59c7b4726d3b906f710215c3c269`
 
-- [-] **CDR.1 — Add deterministic Gradle dependency resolver**
+- [x] **CDR.1 — Add deterministic Gradle dependency resolver**
   - Requirements: REQ-CDR-2, REQ-CDR-3
-  - Add `resolveCiDependencies` resolving compile/runtime/test classpaths.
+  - `resolveCiDependencies` resolves every Gradle configuration with `canBeResolved == true`, including Java, Checkstyle and JaCoCo requirements.
 
-- [ ] **CDR.2 — Add bounded Linux/Windows dependency prime jobs**
+- [x] **CDR.2 — Add bounded Linux/Windows dependency prime jobs**
   - Requirements: REQ-CDR-1, REQ-CDR-2
   - Shared keys by OS + dependency hash.
   - setup-gradle internal cache remains disabled.
 
-- [ ] **CDR.3 — Make Java/GIS jobs consume cache offline**
+- [x] **CDR.3 — Make Java/GIS jobs consume cache offline**
   - Requirements: REQ-CDR-2, REQ-CDR-3
   - Downstream cache restore must fail on miss.
   - Gradle commands run `--offline`.
 
-- [ ] **CDR.4 — Preserve bounded CATGIS dependency caches**
+- [x] **CDR.4 — Preserve bounded CATGIS dependency caches**
   - Requirement: REQ-CDR-4
   - Storage maintenance deletes unrelated caches and preserves `catgis-gradle-deps-v1-*`.
 
@@ -37,4 +37,4 @@ Baseline: `4da6b3036d6d59c7b4726d3b906f710215c3c269`
 
 ## Current next action
 
-Implement CDR.1–CDR.4 on `maintenance/ci-osgeo-dependency-resilience`. Do not use OpenCode/GUI.
+Audit the CDR.1–CDR.4 diff, open the resilience PR, and require CATGIS CI + Certification + Storage validation on the exact head. Do not use OpenCode/GUI.
