@@ -30,7 +30,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Current source evidence: 14 command/toolbar surfaces, 390 static command occurrences, 378 source/label pairs and 313 unique labels.
   - `VisibleCommandInventoryCertificationTest` exact-match locks the inventory and emits the full TSV as CI evidence.
   - Tranche B1 in progress: classify every production Java source that carries UI commands/controls, including files missed by filename heuristics; executable drift guard + supplemental manifest.
-  - B1 baseline finding: 111 current UI command carriers; 22 require supplemental classification beyond the 174 filename-derived source surfaces.
+  - B1 baseline finding: 106 current UI command carriers; 17 require supplemental classification beyond the 174 filename-derived source surfaces.
   - Tranche B2 remains: consolidate aliases, inventory dynamic/computed labels and map command/dialog/loader/export capabilities to stable semantic feature IDs and tiers.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
