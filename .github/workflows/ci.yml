@@ -52,14 +52,6 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Upload coverage
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-report
-          path: catgis-desktop/build/reports/jacoco/
-          if-no-files-found: ignore
-          retention-days: 7
 
   repository-safety:
     name: Repository Safety Checks
