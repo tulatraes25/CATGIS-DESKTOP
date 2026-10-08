@@ -24,9 +24,9 @@ This is inventory evidence, not a claim that 313 independent product features ar
 
 A second source-level audit found that filename heuristics alone do not identify every Java file that can expose a UI command. The repository therefore also classifies command/control carriers by executable source scan.
 
-- current production UI command carriers discovered: **111**;
+- current production UI command carriers discovered: **106**;
 - already covered by filename-derived source-surface categories: **89**;
-- supplemental carriers requiring explicit classification: **22**;
+- supplemental carriers requiring explicit classification: **17**;
 - executable guard: `UiCommandCarrierCoverageCertificationTest`;
 - evidence manifest: `docs/quality/UI_COMMAND_CARRIER_INVENTORY.tsv`.
 
