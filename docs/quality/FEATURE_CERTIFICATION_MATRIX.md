@@ -1,6 +1,6 @@
 # CATGIS Feature Certification Matrix
 
-Status: F2.1_IN_PROGRESS
+Status: F2.2_IN_PROGRESS
 Program spec: `.kiro/specs/catgis-product-certification/`
 Certified source baseline entering F1.2: `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`
 
@@ -139,6 +139,21 @@ F2.1 starts behavioral certification with the minimum project persistence bounda
 - candidate branch baseline: `4be1e284c789cff0b16e200e42cb5f303843cd41`.
 
 The initial F2.1 audit found and repairs two negative-path defects: header-only project files were accepted as empty projects, and failed save attempts could mutate project identity before the write succeeded.
+
+F2.1 CLOSED_CERTIFIED evidence: PR #22 head `11a7753a9b55ab24caebbba00de1177bd092a7fb`; PR CATGIS CI `37859335916` SUCCESS and Certification `37859335855` SUCCESS; merge `d5f6db956bf0086d6e63db840ea0993a94b1b93d`; post-main CATGIS CI `37859737265` SUCCESS and Certification `37859737268` SUCCESS.
+
+### F2.2 Tranche A — vector edit history contract
+
+The current repository already contains real or deterministic coverage for several vector-format surfaces that historical audits marked as gaps. F2.2 therefore starts with a confirmed current gap rather than duplicating those tests.
+
+- Shapefile export/reload roundtrip already exists in `ReleaseVectorInteropTest`;
+- CSV and DXF have deterministic inline-fixture suites;
+- FlatGeobuf, GeoPackage and SpatiaLite have real-file suites with explicit external GDAL/compatibility gating where required;
+- `SnapManager` has deterministic context/unit tests;
+- `UndoRedoManager` exposes an explicit `UndoRedoContext` seam but previously had no direct behavioral contract;
+- new executable contract: `UndoRedoManagerContractTest`;
+- required behavior: snapshot A -> edit B -> undo restores A -> redo restores B, selection is restored, new edits invalidate redo, and history remains bounded to 20 snapshots;
+- exact Tranche A baseline: `d5f6db956bf0086d6e63db840ea0993a94b1b93d`.
 
 ## Status vocabulary
 
