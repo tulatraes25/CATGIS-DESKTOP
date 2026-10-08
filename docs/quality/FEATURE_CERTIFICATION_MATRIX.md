@@ -1,6 +1,6 @@
 # CATGIS Feature Certification Matrix
 
-Status: F1.2_IN_PROGRESS
+Status: F1.3_IN_PROGRESS
 Program spec: `.kiro/specs/catgis-product-certification/`
 Certified source baseline entering F1.2: `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`
 
@@ -112,6 +112,18 @@ B2d2 classifies every supplemental command row by behavior rather than label alo
 - all new semantic action rows remain **RUNTIME_PENDING** before A0.7.
 
 Controls, display-only entries and disabled unsupported commands are explicitly `NON_FEATURE`; they do not inflate the feature count.
+
+### F1.3 — visible dead/placeholder reconciliation
+
+F1.3 converts placeholder/dead-action review into an executable gate.
+
+- visible command carriers are scanned for empty lambda handlers;
+- active visible commands with empty behavior are forbidden;
+- deliberately unsupported visible commands must be explicitly classified as `DISABLED_UNSUPPORTED` and remain visibly gated;
+- current unsupported baseline is exactly **3** CATMAP synchronization entries: visible layers, symbology and labels;
+- executable guard: `VisiblePlaceholderActionCertificationTest`.
+
+Contextual disablement (for example a Paste command when there is nothing to paste) is not classified as dead behavior.
 
 ## Status vocabulary
 
