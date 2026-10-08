@@ -3,7 +3,7 @@
 Status: ACTIVE
 Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
 
-- [-] **GSO.1 — Measure current storage sources**
+- [x] **GSO.1 — Measure current storage sources**
   - Requirements: REQ-GSO-1, REQ-GSO-2, REQ-GSO-3
   - Evidence:
     - repository metadata ~10.25 MB;
@@ -13,17 +13,17 @@ Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
     - Gradle logs prove repeated cache restores/writes including ~97–130 MB shared entries and ~5 MB per-job state entries.
   - Decision: do not delete runtime-referenced manual DOCX.
 
-- [ ] **GSO.2 — Stop new Gradle cache writes**
+- [-] **GSO.2 — Stop new Gradle cache writes**
   - Requirement: REQ-GSO-2
   - Add `cache-disabled: true` to all active Gradle setup steps.
 
-- [ ] **GSO.3 — Bound workflow artifact creation**
+- [-] **GSO.3 — Bound workflow artifact creation**
   - Requirement: REQ-GSO-3
   - Successful PR runs should not persist routine diagnostic/evidence bundles.
   - Failed jobs retain useful diagnostics.
   - Successful post-main evidence retention <= 7 days.
 
-- [ ] **GSO.4 — Add repository storage maintenance workflow**
+- [-] **GSO.4 — Add repository storage maintenance workflow**
   - Requirements: REQ-GSO-4, REQ-GSO-5
   - Bootstrap marker: `[storage-cleanup]`.
   - Bootstrap deletes all current Actions caches and artifacts.
@@ -46,4 +46,4 @@ Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
 
 ## Current next action
 
-Implement GSO.2–GSO.4 on the storage branch. Do not modify product/runtime code.
+Certify GSO.2–GSO.4 in GitHub on the storage branch. Do not modify product/runtime code.
