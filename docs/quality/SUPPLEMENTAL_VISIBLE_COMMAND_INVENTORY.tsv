@@ -1,0 +1,197 @@
+# CATGIS supplemental visible command inventory
+# Baseline branch: quality/f1-visible-placeholder-reconciliation
+# Occurrences: 201
+# Unique source/kind/label rows: 191
+# Unique labels: 147
+# source	kind	label	count
+CatgisDesktopApp.java	JBUTTON	Cancelar	1
+CatgisDesktopApp.java	JBUTTON	CATSERVER	1
+CatgisDesktopApp.java	JBUTTON	Guardar y cerrar	1
+CatgisDesktopApp.java	JBUTTON	Herramientas	1
+CatgisDesktopApp.java	JBUTTON	Iniciar edicion	1
+catmap/Main.java	ADDDISABLEDMENUITEM	Sincronizar capas visibles	1
+catmap/Main.java	ADDDISABLEDMENUITEM	Sincronizar etiquetas	1
+catmap/Main.java	ADDDISABLEDMENUITEM	Sincronizar simbología	1
+catmap/Main.java	ADDMENUITEM	Abrir layout...	1
+catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	1
+catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	1
+catmap/Main.java	ADDMENUITEM	Actualizar desde CATGIS	1
+catmap/Main.java	ADDMENUITEM	Ajustar mapa al extent de capas visibles	1
+catmap/Main.java	ADDMENUITEM	Atajos de teclado	1
+catmap/Main.java	ADDMENUITEM	Bloquear elemento	1
+catmap/Main.java	ADDMENUITEM	Configuración de resolución/DPI...	1
+catmap/Main.java	ADDMENUITEM	Configurar atlas...	1
+catmap/Main.java	ADDMENUITEM	Copiar	1
+catmap/Main.java	ADDMENUITEM	Desbloquear elemento	1
+catmap/Main.java	ADDMENUITEM	Deshacer	1
+catmap/Main.java	ADDMENUITEM	Documentación	1
+catmap/Main.java	ADDMENUITEM	Duplicar	1
+catmap/Main.java	ADDMENUITEM	Eliminar	1
+catmap/Main.java	ADDMENUITEM	Elipse	1
+catmap/Main.java	ADDMENUITEM	Escala gráfica	1
+catmap/Main.java	ADDMENUITEM	Exportar imagen...	1
+catmap/Main.java	ADDMENUITEM	Exportar JPG	1
+catmap/Main.java	ADDMENUITEM	Exportar PDF	2
+catmap/Main.java	ADDMENUITEM	Exportar PNG	2
+catmap/Main.java	ADDMENUITEM	Exportar SVG	2
+catmap/Main.java	ADDMENUITEM	Fijar extent del mapa	1
+catmap/Main.java	ADDMENUITEM	Generar atlas desde layout...	1
+catmap/Main.java	ADDMENUITEM	Guardar	1
+catmap/Main.java	ADDMENUITEM	Guardar como...	1
+catmap/Main.java	ADDMENUITEM	Imagen	1
+catmap/Main.java	ADDMENUITEM	Importar tabla climática...	1
+catmap/Main.java	ADDMENUITEM	Imprimir...	1
+catmap/Main.java	ADDMENUITEM	Leyenda	1
+catmap/Main.java	ADDMENUITEM	Línea	1
+catmap/Main.java	ADDMENUITEM	Mapa principal	1
+catmap/Main.java	ADDMENUITEM	Norte	1
+catmap/Main.java	ADDMENUITEM	Nuevo layout	1
+catmap/Main.java	ADDMENUITEM	Pegar	1
+catmap/Main.java	ADDMENUITEM	Rectángulo	1
+catmap/Main.java	ADDMENUITEM	Refrescar mapa	1
+catmap/Main.java	ADDMENUITEM	Rehacer	1
+catmap/Main.java	ADDMENUITEM	Salir	1
+catmap/Main.java	ADDMENUITEM	Seleccionar todo	1
+catmap/Main.java	ADDMENUITEM	Tabla simple	1
+catmap/Main.java	ADDMENUITEM	Texto	1
+catmap/Main.java	ADDMENUITEM	Usar extent actual de CATGIS	1
+catmap/Main.java	ADDMENUITEM	Zoom 100%	1
+catmap/Main.java	ADDMENUITEM	Zoom a página	1
+catmap/Main.java	ADDMENUITEM	Zoom al ancho	1
+catmap/Main.java	CREATETBTN	Abajo	1
+catmap/Main.java	CREATETBTN	Abrir	1
+catmap/Main.java	CREATETBTN	Actualizar	1
+catmap/Main.java	CREATETBTN	Agrupar	1
+catmap/Main.java	CREATETBTN	Ajustar	1
+catmap/Main.java	CREATETBTN	Ajustar ancho	1
+catmap/Main.java	CREATETBTN	Arriba	1
+catmap/Main.java	CREATETBTN	Bajar	1
+catmap/Main.java	CREATETBTN	Centro	1
+catmap/Main.java	CREATETBTN	Derecha	1
+catmap/Main.java	CREATETBTN	Desagrupar	1
+catmap/Main.java	CREATETBTN	Dinamico	1
+catmap/Main.java	CREATETBTN	Duplicar	1
+catmap/Main.java	CREATETBTN	Editar	1
+catmap/Main.java	CREATETBTN	Elipse	1
+catmap/Main.java	CREATETBTN	Escala	1
+catmap/Main.java	CREATETBTN	Export. PDF	1
+catmap/Main.java	CREATETBTN	Export. PNG	1
+catmap/Main.java	CREATETBTN	Guardar	1
+catmap/Main.java	CREATETBTN	Imagen	1
+catmap/Main.java	CREATETBTN	Imprimir	1
+catmap/Main.java	CREATETBTN	Izquierda	1
+catmap/Main.java	CREATETBTN	Leyenda	1
+catmap/Main.java	CREATETBTN	Linea	1
+catmap/Main.java	CREATETBTN	Mapa	1
+catmap/Main.java	CREATETBTN	Medio	1
+catmap/Main.java	CREATETBTN	Norte	1
+catmap/Main.java	CREATETBTN	Quitar	1
+catmap/Main.java	CREATETBTN	Rectangulo	1
+catmap/Main.java	CREATETBTN	Reencuadrar	1
+catmap/Main.java	CREATETBTN	Subir	1
+catmap/Main.java	CREATETBTN	SVG	1
+catmap/Main.java	CREATETBTN	Texto	1
+catmap/Main.java	CREATETBTN	Visible	1
+catmap/Main.java	CREATETBTN	Zoom -	2
+catmap/Main.java	CREATETBTN	Zoom +	2
+catmap/Main.java	JBUTTON	Aceptar	1
+catmap/Main.java	JBUTTON	Aplicar	1
+catmap/Main.java	JBUTTON	Cancelar	3
+catmap/Main.java	JBUTTON	Generar	1
+catmap/Main.java	JBUTTON	Refrescar	1
+catmap/Main.java	JCHECKBOXMENUITEM	Mostrar grilla	1
+catmap/Main.java	JCHECKBOXMENUITEM	Mostrar guías	1
+catmap/Main.java	JCHECKBOXMENUITEM	Mostrar panel de capas	1
+catmap/Main.java	JCHECKBOXMENUITEM	Mostrar panel de propiedades	1
+catmap/Main.java	JCHECKBOXMENUITEM	Mostrar reglas	1
+climate/EnvironmentalAreaMarker.java	JBUTTON	AID	1
+climate/EnvironmentalAreaMarker.java	JBUTTON	AII	1
+climate/EnvironmentalAreaMarker.java	JBUTTON	Amb.	1
+climate/EnvironmentalAreaMarker.java	JBUTTON	Cerrar	1
+core/model/DataDefinedOverridesPanel.java	JBUTTON	- Remove	1
+core/model/DataDefinedOverridesPanel.java	JBUTTON	+ Add	1
+LayersPanel.java	CREATEMENUITEM	No hay grupos todavia	1
+LayersPanel.java	JBUTTON	Grupo	1
+LayersPanel.java	JBUTTON	Propiedades	1
+LayersPanel.java	JBUTTON	Quitar	1
+LayersPanel.java	JBUTTON	Zoom	1
+LayoutPreviewPanel.java	ITEM_HELPER	Actualizar desde capas	1
+LayoutPreviewPanel.java	ITEM_HELPER	Actualizar desde vista actual	1
+LayoutPreviewPanel.java	ITEM_HELPER	Bajar	1
+LayoutPreviewPanel.java	ITEM_HELPER	Duplicar	1
+LayoutPreviewPanel.java	ITEM_HELPER	Eliminar	1
+LayoutPreviewPanel.java	ITEM_HELPER	Enviar atras	1
+LayoutPreviewPanel.java	ITEM_HELPER	Excluir mapas base	1
+LayoutPreviewPanel.java	ITEM_HELPER	Pegar	1
+LayoutPreviewPanel.java	ITEM_HELPER	Propiedades	1
+LayoutPreviewPanel.java	ITEM_HELPER	Renombrar...	1
+LayoutPreviewPanel.java	ITEM_HELPER	Subir	1
+LayoutPreviewPanel.java	ITEM_HELPER	Traer al frente	1
+LayoutPreviewPanel.java	JBUTTON	Aceptar	2
+LayoutPreviewPanel.java	JBUTTON	Actualizar capas	1
+LayoutPreviewPanel.java	JBUTTON	Aplicar	1
+LayoutPreviewPanel.java	JBUTTON	Cancelar	3
+LayoutPreviewPanel.java	JTOGGLEBUTTON	K	1
+LayoutPreviewPanel.java	JTOGGLEBUTTON	N	1
+LayoutPreviewPanel.java	JTOGGLEBUTTON	S	1
+ModulesMenu.java	JMENUITEM	Gestor de modulos...	1
+ModulesMenu.java	JMENUITEM	Modulo desactivado. Activarlo desde el Gestor de modulos.	1
+StatusBar.java	JBUTTON	Ir	1
+TemporalController.java	JBUTTON	⏸ Pause	1
+TemporalController.java	JBUTTON	▶	1
+TemporalController.java	JBUTTON	▶ Play	1
+TemporalController.java	JBUTTON	◀	1
+ui/components/layout/LayoutBottomBar.java	JBUTTON	Cerrar	1
+ui/components/layout/LayoutBottomBar.java	JBUTTON	Exportar imagen	1
+ui/components/layout/LayoutBottomBar.java	JBUTTON	Exportar PDF	1
+ui/components/layout/LayoutBottomBar.java	JBUTTON	Imprimir...	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Actualizar mapa	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Cargar imagen...	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Cargar logo...	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Duplicar	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Elipse	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Imagen	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Linea	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Quitar	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Quitar imagen	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Quitar logo	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Rectangulo	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Restaurar base	1
+ui/components/layout/LayoutControlsForm.java	JBUTTON	Texto	1
+ui/components/layout/LayoutElementListPanel.java	JBUTTON	+ Elemento \u25BE	1
+ui/components/layout/LayoutElementListPanel.java	JBUTTON	Alinear \u25BE	1
+ui/components/layout/LayoutElementListPanel.java	JBUTTON	Orden \u25BE	1
+ui/components/layout/LayoutElementListPanel.java	JBUTTON	Plantillas...	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Bajar uno	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Cartucho	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Enviar atras	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Escala grafica	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Grilla coord.	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Imagen / Logo	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Leyenda	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Mapa	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Norte	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Rectangulo	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Subir uno	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Tabla (CSV)	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Texto	1
+ui/components/layout/LayoutElementListPanel.java	MENUITEM_HELPER	Traer al frente	1
+ui/components/layout/LayoutElementListPanel.java	MINIBTN_HELPER	\u21A9	1
+ui/components/layout/LayoutElementListPanel.java	MINIBTN_HELPER	\u21AA	1
+ui/components/layout/LayoutElementListPanel.java	MINIBTN_HELPER	Bloquear	1
+ui/components/layout/LayoutElementListPanel.java	MINIBTN_HELPER	Duplicar	1
+ui/components/layout/LayoutElementListPanel.java	MINIBTN_HELPER	Eliminar	1
+ui/components/layout/LayoutElementListPanel.java	MINIBTN_HELPER	Visible	1
+ui/components/layout/LayoutInspectorPanel.java	JBUTTON	Aplicar inspector	1
+ui/components/layout/LayoutInspectorPanel.java	JBUTTON	Bloquear/liberar	1
+ui/components/layout/LayoutInspectorPanel.java	JBUTTON	Editor completo...	1
+ui/components/layout/LayoutInspectorPanel.java	JBUTTON	Mostrar/ocultar	1
+ui/components/layout/LayoutProjectLayersSidebar.java	JBUTTON	Bajar	1
+ui/components/layout/LayoutProjectLayersSidebar.java	JBUTTON	Refrescar	1
+ui/components/layout/LayoutProjectLayersSidebar.java	JBUTTON	Simbologia...	1
+ui/components/layout/LayoutProjectLayersSidebar.java	JBUTTON	Subir	1
+ui/components/layout/LayoutProjectLayersSidebar.java	JBUTTON	Visible	1
+ui/components/layout/LayoutScaleEditorPanel.java	JBUTTON	Aplicar	1
+ui/components/layout/LayoutStructureTreePanel.java	JBUTTON	Bloq	1
+ui/components/layout/LayoutStructureTreePanel.java	JBUTTON	Editar	1
+ui/components/layout/LayoutStructureTreePanel.java	JBUTTON	Mostrar	1
