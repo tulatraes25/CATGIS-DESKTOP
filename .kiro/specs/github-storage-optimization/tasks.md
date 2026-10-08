@@ -1,6 +1,6 @@
 # GitHub Storage Optimization — Tasks
 
-Status: ACTIVE
+Status: CLOSED_CERTIFIED
 Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
 
 - [x] **GSO.1 — Measure current storage sources**
@@ -41,12 +41,14 @@ Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
   - Verify storage-maintenance push run executes and succeeds.
   - Merge SHA `7832548c94514135d1908b2cb7f2c15a7665354d`; storage cleanup run `37708022649` SUCCESS; post-main CATGIS CI `37708022736` SUCCESS and CATGIS Certification `37708022676` SUCCESS.
 
-- [-] **GSO.7 — Close storage gate**
+- [x] **GSO.7 — Close storage gate**
   - Bootstrap purge verified: historical artifacts sampled from prior runs now return zero artifacts.
   - Residual successful post-main artifacts after purge were ~9.7 MB, dominated by duplicate JaCoCo/Linux report bundles.
   - Closure hardening on `maintenance/gso-zero-success-artifacts`: successful runs create zero workflow artifacts; failure diagnostics remain bounded to 7 days.
-  - After PR + post-main certification, mark this spec CLOSED_CERTIFIED and return to F1.2 B1/B2.
+  - PR #12 head `9bfb21bec61f7ab3c1b067240b4dfbe6620f6f6e`: CATGIS CI `37711047758` SUCCESS, Certification `37711047728` SUCCESS, Storage validation `37711047913` SUCCESS.
+  - Merge SHA `5b698e037028011698f58cca1a73ece53f6ba051`: cleanup `37716400238` SUCCESS, post-main CI `37716400241` SUCCESS, post-main Certification `37716400282` SUCCESS.
+  - Successful PR/post-main runs verified with zero retained artifacts.
 
 ## Current next action
 
-Certify GSO.7 closure hardening in GitHub, merge with `[storage-cleanup]` to purge the residual ~9.7 MB, verify post-main CI/Certification/storage cleanup, then return to F1.2. Do not modify product/runtime code.
+Return to CATGIS Product Certification F1.2 B1 on the exact post-storage main SHA. OpenCode/GUI remains blocked until A0.7.

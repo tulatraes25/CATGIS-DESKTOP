@@ -1,6 +1,6 @@
 # GitHub Storage Optimization — Design
 
-Status: ACTIVE
+Status: CLOSED_CERTIFIED
 Baseline: `963133c6d585cfde8bc2ea377a35af34b031321b`
 
 ## Scope
@@ -104,3 +104,15 @@ If build time becomes unacceptable:
 1. revert only the cache-disabled workflow changes;
 2. introduce a new cache policy with explicit bounded keys/retention;
 3. do not restore deleted historical artifacts because they are reproducible from exact SHAs.
+
+## Closure evidence
+
+- PR #12 head: `9bfb21bec61f7ab3c1b067240b4dfbe6620f6f6e`.
+- PR #12 CATGIS CI run `37711047758`: SUCCESS.
+- PR #12 CATGIS Certification run `37711047728`: SUCCESS.
+- PR #12 Storage Maintenance validation run `37711047913`: SUCCESS.
+- Merge SHA: `5b698e037028011698f58cca1a73ece53f6ba051`.
+- Post-main Storage Maintenance run `37716400238`: SUCCESS and purge executed.
+- Post-main CATGIS CI run `37716400241`: SUCCESS.
+- Post-main CATGIS Certification run `37716400282`: SUCCESS, including Windows, Linux, PostGIS and architecture jobs.
+- Successful PR and post-main runs sampled after hardening expose **0 workflow artifacts**.
