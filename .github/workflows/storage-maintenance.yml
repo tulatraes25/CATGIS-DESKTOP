@@ -49,12 +49,62 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Delete repository Actions caches
+      - name: Delete unrelated Actions caches
         shell: bash
         run: |
           set -euo pipefail
-          gh cache delete --all --succeed-on-no-caches --repo "${GITHUB_REPOSITORY}"
-          echo "Actions cache purge completed for ${GITHUB_REPOSITORY}." >> "$GITHUB_STEP_SUMMARY"
+          deleted=0
+          preserved=0
+          while IFS=
+      - name: Bootstrap purge existing workflow artifacts
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          count=0
+          while IFS= read -r artifact_id; do
+            if [ -z "$artifact_id" ]; then
+              continue
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+            count=$((count + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100"               --jq '.artifacts[].id'
+          )
+          echo "Bootstrap workflow artifacts deleted: ${count}." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prune workflow artifacts older than seven days
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cutoff="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          count=0
+          while IFS= read -r artifact_id; do
+            if [ -z "$artifact_id" ]; then
+              continue
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+            count=$((count + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100"               --jq ".artifacts[] | select(.created_at < \"${cutoff}\") | .id"
+          )
+          echo "Workflow artifacts older than seven days deleted: ${count}." >> "$GITHUB_STEP_SUMMARY"
+\t' read -r cache_id cache_key; do
+            if [ -z "$cache_id" ]; then
+              continue
+            fi
+            if [[ "$cache_key" == catgis-gradle-deps-v1-* ]]; then
+              preserved=$((preserved + 1))
+              continue
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${cache_id}"
+            deleted=$((deleted + 1))
+          done < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100" \
+              --jq '.actions_caches[] | [.id, .key] | @tsv'
+          )
+          echo "Actions caches deleted: ${deleted}; bounded CATGIS dependency caches preserved: ${preserved}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Bootstrap purge existing workflow artifacts
         if: github.event_name == 'push'
