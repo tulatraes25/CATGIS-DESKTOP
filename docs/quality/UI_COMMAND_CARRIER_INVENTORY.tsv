@@ -1,0 +1,22 @@
+# CATGIS supplemental UI command-carrier inventory
+# Baseline: 963133c6d585cfde8bc2ea377a35af34b031321b
+# These production Java files expose command/control UI but were not captured by the
+# filename-based SOURCE_FEATURE_SURFACE_INVENTORY categories.
+# One relative source path per line.
+CatgisDesktopApp.java
+LayersPanel.java
+LayoutPreviewPanel.java
+ModulesMenu.java
+StatusBar.java
+TemporalController.java
+catmap/Main.java
+climate/EnvironmentalAreaMarker.java
+core/model/DataDefinedOverridesPanel.java
+ui/components/layout/LayoutBottomBar.java
+ui/components/layout/LayoutControlsForm.java
+ui/components/layout/LayoutElementListPanel.java
+ui/components/layout/LayoutInspectorPanel.java
+ui/components/layout/LayoutProjectLayersSidebar.java
+ui/components/layout/LayoutScaleEditorPanel.java
+ui/components/layout/LayoutStructureTreePanel.java
+ui/components/layout/LayoutToolbarFactory.java
