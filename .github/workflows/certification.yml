@@ -246,6 +246,7 @@ jobs:
           path: |
             docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv
             docs/quality/UI_COMMAND_CARRIER_INVENTORY.tsv
+            docs/quality/SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv
           if-no-files-found: error
           retention-days: 7
 
