@@ -114,6 +114,19 @@ sourceSets {
     }
 }
 
+tasks.register('resolveCiDependencies') {
+    group = 'verification'
+    description = 'Resolves every resolvable Gradle configuration required by CI without running CATGIS.'
+    doLast {
+        configurations.findAll { it.canBeResolved }
+                .sort { a, b -> a.name <=> b.name }
+                .each { configuration ->
+                    logger.lifecycle("Resolviendo dependencias CI: ${configuration.name}")
+                    configuration.resolve()
+                }
+    }
+}
+
 application {
     mainClass = 'ar.com.catgis.Main'
     applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8',

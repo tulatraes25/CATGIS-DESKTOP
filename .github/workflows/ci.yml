@@ -14,8 +14,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dependency-cache-linux:
+    name: Prime Linux dependency cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Restore bounded Gradle dependency cache
+        id: gradle-deps
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - name: Resolve CI dependencies
+        if: steps.gradle-deps.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon resolveCiDependencies; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Dependency resolution failed after 3 attempts." >&2
+              exit 1
+            fi
+            sleep $((attempt * 20))
+          done
+
   desktop-build:
     name: Java Desktop Build & Test
+    needs: dependency-cache-linux
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -30,16 +71,23 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Restore bounded Gradle dependency cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}
+          fail-on-cache-miss: true
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: true
 
       - name: Checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest
+        run: ./gradlew --offline checkstyleMain checkstyleTest
 
       - name: Build & Test
-        run: ./gradlew build jacocoTestReport
+        run: ./gradlew --offline build jacocoTestReport
 
       - name: Upload test diagnostics
         if: failure()
