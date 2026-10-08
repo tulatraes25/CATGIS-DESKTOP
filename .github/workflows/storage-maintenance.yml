@@ -6,28 +6,55 @@ on:
     - cron: '23 4 * * 0'
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
-  actions: write
 
 concurrency:
-  group: catgis-storage-maintenance
+  group: catgis-storage-maintenance-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate storage maintenance access
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Validate cache and artifact APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh cache list --limit 1 --repo "${GITHUB_REPOSITORY}" >/dev/null
+          artifact_count="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=1"               --jq '.total_count'
+          )"
+          echo "Current workflow artifact count: ${artifact_count}." >> "$GITHUB_STEP_SUMMARY"
+
   cleanup:
-    name: Purge regenerable Actions cache
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '[storage-cleanup]')
+    name: Purge regenerable Actions storage
+    if: github.event_name != 'pull_request' && (github.event_name != 'push' || contains(github.event.head_commit.message, '[storage-cleanup]'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Delete repository Actions caches
+        shell: bash
         run: |
+          set -euo pipefail
           gh cache delete --all --succeed-on-no-caches --repo "${GITHUB_REPOSITORY}"
-          echo "Actions cache purge requested for ${GITHUB_REPOSITORY}." >> "$GITHUB_STEP_SUMMARY"
+          echo "Actions cache purge completed for ${GITHUB_REPOSITORY}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Bootstrap purge existing workflow artifacts
         if: github.event_name == 'push'
@@ -47,7 +74,7 @@ jobs:
           echo "Bootstrap workflow artifacts deleted: ${count}." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Prune workflow artifacts older than seven days
-        if: github.event_name != 'push'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
