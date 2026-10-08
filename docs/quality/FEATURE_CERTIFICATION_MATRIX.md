@@ -60,7 +60,26 @@ B2b treats the menu expression as evidence, not as the feature identity. Runtime
 - carrier discovery now recognizes `JCheckBoxMenuItem`, `JRadioButtonMenuItem` and `JMenu`;
 - the static scanner now includes literal checkbox/radio menu commands, exposing **Mapa de calor (heatmap)** and **Agrupar puntos (clustering)** that the original Tranche A scanner omitted.
 
-B2b still does not assign tiers or claim behavioral certification. B2c consumes these static/dynamic inventories to build the complete semantic feature rows.
+B2b still does not assign tiers or claim behavioral certification.
+
+### F1.2 Tranche B2c — complete semantic feature matrix
+
+B2c materializes one cross-checked semantic catalog across static commands, dynamic actions, module actions and non-command source surfaces.
+
+- semantic feature rows: **476 unique IDs**;
+- static command mappings: **380 rows -> 302 semantic IDs**;
+- module action mappings: **38**;
+- ACTION/DIALOG/LOADER/EXPORT surface mappings: **132**;
+- tier distribution: **CORE 291 / BETA 123 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47**;
+- all rows remain **RUNTIME_PENDING** until architecture and Windows runtime gates permit promotion;
+- executable guard: `SemanticFeatureMatrixCertificationTest`;
+- checked-in contracts:
+  - `STATIC_COMMAND_SEMANTIC_MAP.tsv`;
+  - `MODULE_ACTION_SEMANTIC_MAP.tsv`;
+  - `SURFACE_SEMANTIC_MAP.tsv`;
+  - `SEMANTIC_FEATURE_MATRIX.tsv`.
+
+The guard rejects uncovered static commands, dynamic semantic IDs without catalog rows, module actions without mapping, uncovered ACTION/DIALOG/LOADER/EXPORT surfaces, duplicate semantic IDs, invalid tiers and any premature runtime-certified status.
 
 ## Status vocabulary
 

@@ -1,0 +1,41 @@
+# CATGIS module action -> semantic feature map
+# Baseline: 9ec0a40814efd17c6f118b8a6ed47a278f26fa62
+# action_id	visible_name	semantic_id
+cad-snap	Alternar SNAP	SEM-MODULE-CAD-SNAP
+cad-continue-line	Continuar linea	SEM-CMD-CONTINUAR-LINEA-93B280DB
+cad-rectangle	Rectangulo	SEM-CMD-RECTANGULO-3967F765
+cad-circle	Circulo	SEM-CMD-CIRCULO-1CA9EB98
+cad-circle-3p	Circulo por 3 puntos	SEM-CMD-CIRCULO-POR-3-PUNTOS-1F6AC123
+cad-add-vertex	Agregar vertice	SEM-CMD-AGREGAR-VERTICE-A7A82E00
+cad-remove-vertex	Quitar vertice	SEM-MODULE-CAD-REMOVE-VERTEX
+cad-grow-area	Aumentar superficie	SEM-CMD-AUMENTAR-SUPERFICIE-5DA28581
+cad-shrink-area	Disminuir superficie	SEM-CMD-DISMINUIR-SUPERFICIE-491A4674
+cad-extend-line	Extender linea	SEM-CMD-EXTENDER-LINEA-5FE9EDB7
+cad-shorten-line	Acortar linea	SEM-CMD-ACORTAR-LINEA-B8E3B82E
+cad-parallel	Paralela	SEM-MODULE-CAD-PARALLEL
+cad-perpendicular	Perpendicular	SEM-CMD-PERPENDICULAR-B963D0B3
+cad-merge	Unir elementos	SEM-CMD-UNIR-ELEMENTOS-072ACD57
+cad-explode	Explotar entidades	SEM-CMD-EXPLOTAR-ENTIDADES-BBBCE859
+cad-copy-edit-layer	Copiar seleccion a capa editable	SEM-MODULE-CAD-COPY-EDIT-LAYER
+topology-open	Validar capa	SEM-MODULE-TOPOLOGY-OPEN
+reproject-export-open	Exportar capa reproyectada	SEM-MODULE-REPROJECT-EXPORT-OPEN
+csv-open	Cargar tabla externa	SEM-CMD-CARGAR-TABLA-EXTERNA-C8EFDBE4
+kml-open	Abrir KML / KMZ	SEM-MODULE-KML-OPEN
+geopackage-open	Abrir GeoPackage...	SEM-MODULE-GEOPACKAGE-OPEN
+catserver-open	Conectar CATSERVER...	SEM-CMD-CONECTAR-CATSERVER-EBE20CB1
+catserver-export	Enviar capa a CATSERVER...	SEM-MODULE-CATSERVER-EXPORT
+wfs-open	Agregar WFS...	SEM-CMD-AGREGAR-WFS-07694216
+layout-open	Abrir compositor...	SEM-MODULE-LAYOUT-OPEN
+geoprocess-open	Abrir asistente	SEM-MODULE-GEOPROCESS-OPEN
+geoprocess-toolbox	Abrir toolbox	SEM-MODULE-GEOPROCESS-TOOLBOX
+geoprocess-buffer	Buffer	SEM-MODULE-GEOPROCESS-BUFFER
+geoprocess-dissolve	Dissolve	SEM-MODULE-GEOPROCESS-DISSOLVE
+geoprocess-clip	Clip	SEM-MODULE-GEOPROCESS-CLIP
+geoprocess-intersection	Interseccion	SEM-MODULE-GEOPROCESS-INTERSECTION
+geoprocess-merge	Merge	SEM-MODULE-GEOPROCESS-MERGE
+geoprocess-difference	Diferencia	SEM-MODULE-GEOPROCESS-DIFFERENCE
+geoprocess-spatial-join	Spatial Join	SEM-MODULE-GEOPROCESS-SPATIAL-JOIN
+geoprocess-union	Union geometrica	SEM-MODULE-GEOPROCESS-UNION
+online-basemap-osm	OpenStreetMap	SEM-CMD-OPENSTREETMAP-722BF25C
+online-basemap-esri	Esri World Imagery	SEM-CMD-ESRI-WORLD-IMAGERY-8A5914B0
+online-basemap-wfs	Agregar WFS...	SEM-CMD-AGREGAR-WFS-07694216
