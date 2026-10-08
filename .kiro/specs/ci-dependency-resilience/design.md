@@ -13,8 +13,9 @@ The fix is one reusable Gradle dependency cache per OS and dependency hash, not 
 
 Use `actions/cache@v4` explicitly.
 
-Path:
-- `~/.gradle/caches/modules-2`
+Paths:
+- Linux: `~/.gradle/caches/modules-2`;
+- Windows hosted runner: `D:\\a\\.gradle\\caches\\modules-2` (the actual `GRADLE_USER_HOME` selected by `setup-gradle` on the runner).
 
 Key:
 - `catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}`
