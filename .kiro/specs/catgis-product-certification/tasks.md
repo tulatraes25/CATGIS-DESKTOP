@@ -34,9 +34,11 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Evidence: PR #14 head `2e080e34093165c0efa274de22507b99ed7a83c7`; merge `757faa594793f208775205ec5d8348b07bc2d64f`; post-main CATGIS CI `37760631382` SUCCESS and Certification `37760631384` SUCCESS.
   - Tranche B2a CLOSED_CERTIFIED: 13 normalization-collision groups are explicitly mapped to stable semantic IDs by `StaticCommandAliasCertificationTest`.
   - B2a evidence: PR #15 head `236ba2a910b0a0b1b97b9700fc62d05ff2eaa659`; merge `4da6b3036d6d59c7b4726d3b906f710215c3c269`. Initial post-main Linux resolution was blocked by OSGeo HTTP 502; the same exact source SHA later passed CATGIS CI `37762106798` and Certification `37762106589` on rerun attempt 3, proving infrastructure rather than source failure.
-  - Tranche B2b in progress: inventory every dynamic/computed menu label, explicitly classify non-feature containers/factories/display rows, lock the 38-action module registry, and extend carrier/static scanners to checkbox/radio menu commands.
+  - Tranche B2b CLOSED_CERTIFIED: dynamic/computed menu expressions classified, non-feature factories/containers separated, 38-action module registry locked, and checkbox/radio menu commands included in the scanners.
   - B2b source ratchet: static inventory 392 occurrences / 380 source-label pairs / 315 labels; dynamic inventory 48 source-expression rows / 55 occurrences / 25 action-bearing semantic IDs; module registry 38 actions.
-  - B2c remains: map command/dialog/loader/export capabilities to stable semantic feature rows and tiers.
+  - B2b evidence: PR #17 head `f218b61bd35749d0570b56643b917e541e7798be`; merge `9ec0a40814efd17c6f118b8a6ed47a278f26fa62`; post-main CATGIS CI `37774422348` SUCCESS and Certification `37774422364` SUCCESS.
+  - Tranche B2c in progress: complete semantic matrix maps all static commands, dynamic actions, module actions and ACTION/DIALOG/LOADER/EXPORT source surfaces to stable semantic IDs and explicit tiers.
+  - B2c candidate: 476 unique semantic features; 380 static command rows -> 302 semantic IDs; 38 module actions; 132 non-command source surfaces. Tier distribution: CORE 291 / BETA 123 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47. All rows remain `RUNTIME_PENDING` before A0.7.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
@@ -130,4 +132,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.2 Tranche B2b dynamic/computed command inventory on the post-CDR main baseline, then execute B2c complete semantic feature mapping. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F1.2 Tranche B2c complete semantic feature matrix on GitHub. If green, close F1.2 and proceed to F1.3 visible dead/placeholder reconciliation. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
