@@ -19,7 +19,7 @@ Baseline: `4da6b3036d6d59c7b4726d3b906f710215c3c269`
 
 - [x] **CDR.4 — Preserve bounded CATGIS dependency caches**
   - Requirement: REQ-CDR-4
-  - Storage maintenance deletes unrelated caches and preserves `catgis-gradle-deps-v1-*`.
+  - Storage maintenance preserves only the two current dependency-hash keys (Linux/Windows) and deletes unrelated or stale-hash caches.
 
 - [-] **CDR.5 — PR certification**
   - Requirement: REQ-CDR-5
