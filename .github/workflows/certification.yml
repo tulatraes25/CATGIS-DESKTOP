@@ -276,7 +276,7 @@ jobs:
         with:
           cache-disabled: true
       - name: Certify visible command inventory
-        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.StaticCommandAliasCertificationTest" --tests "ar.com.catgis.architecture.DynamicCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.SemanticFeatureMatrixCertificationTest"
+        run: ./gradlew --offline --no-daemon test --tests "ar.com.catgis.architecture.VisibleCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.StaticCommandAliasCertificationTest" --tests "ar.com.catgis.architecture.DynamicCommandInventoryCertificationTest" --tests "ar.com.catgis.architecture.SemanticFeatureMatrixCertificationTest" --tests "ar.com.catgis.architecture.SupplementalCommandSemanticCertificationTest"
       - name: Upload visible command evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -291,6 +291,7 @@ jobs:
             docs/quality/MODULE_ACTION_SEMANTIC_MAP.tsv
             docs/quality/SURFACE_SEMANTIC_MAP.tsv
             docs/quality/SEMANTIC_FEATURE_MATRIX.tsv
+            docs/quality/SUPPLEMENTAL_COMMAND_SEMANTIC_MAP.tsv
           if-no-files-found: error
           retention-days: 7
 
