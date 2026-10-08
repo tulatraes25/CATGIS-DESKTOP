@@ -78,7 +78,9 @@ public class SaveProjectAction extends AbstractAction {
         if (file == null) {
             return false;
         }
-        AppContext.project().setProjectFile(file);
+        if (AppContext.project() == null) {
+            return false;
+        }
         if (!persistVectorLayers(file, showDialogs)) {
             return false;
         }
