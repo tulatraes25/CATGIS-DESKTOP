@@ -47,13 +47,14 @@ The dominant controllable source is Actions storage:
 Create `.github/workflows/storage-maintenance.yml`.
 
 Triggers:
+- pull requests to `main` for read-only API validation;
 - weekly schedule;
 - manual `workflow_dispatch`;
 - `push` to `main`, but the cleanup job executes on push only when the head commit message contains `[storage-cleanup]`.
 
 Permissions:
-- `contents: read`;
-- `actions: write`.
+- PR validation job: `contents: read`, `actions: read`;
+- cleanup job: `contents: read`, `actions: write`.
 
 Bootstrap behavior:
 - delete every existing Actions cache;
