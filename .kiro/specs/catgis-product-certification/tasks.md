@@ -40,9 +40,12 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche B2c CLOSED_CERTIFIED: complete semantic matrix maps the previously inventoried static commands, dynamic actions, module actions and ACTION/DIALOG/LOADER/EXPORT source surfaces to stable semantic IDs and explicit tiers.
   - B2c certified baseline: 476 unique semantic features; 380 static command rows -> 302 semantic IDs; 38 module actions; 132 non-command source surfaces. Tier distribution: CORE 291 / BETA 123 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47. All rows remain `RUNTIME_PENDING` before A0.7.
   - B2c evidence: PR #18 head `08d9fe79f689d439a1b4bc1ad1cf58ae64a9588b`; merge `8a4fda51d24a095f692ce1a29ee3a56a12804e8d`; PR CI/Certification `37809101967`/`37809102158` SUCCESS; post-main CI/Certification `37809832989`/`37809832833` SUCCESS.
-  - Tranche B2d in progress: supplemental UI command carriers expose additional direct/helper-generated visible commands that were not represented in the original command scanner.
-  - B2d1 executable baseline: 17 supplemental carriers, 201 command occurrences, 191 source/kind/label rows and 147 unique labels in `SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv`.
-  - B2d also found three CATMAP sync menu entries without real protocol support; they are gated/disabled rather than presented as working features.
+  - Tranche B2d1 CLOSED_CERTIFIED: supplemental UI command carriers expose additional direct/helper-generated visible commands that were not represented in the original command scanner.
+  - B2d1 certified baseline: 17 supplemental carriers, 201 command occurrences, 191 source/kind/label rows and 147 unique labels in `SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv`.
+  - B2d1 evidence: PR #19 head `795d33fb434e4b38f6a9197375508b1e55fef68f`; merge `c847374993a218dda4b90eb787fccc36e9b48f9f`; PR CI/Certification `37820925808`/`37820925752` SUCCESS; post-main CI/Certification `37852202139`/`37852201978` SUCCESS.
+  - B2d1 also found three CATMAP sync menu entries without real protocol support; they are gated/disabled rather than presented as working features.
+  - Tranche B2d2 in progress: all 191 supplemental rows are explicitly classified and mapped.
+  - B2d2 candidate: 98 aliases to existing semantic features; 74 action rows -> 65 new semantic IDs; 14 subordinate controls; 2 display-only rows; 3 disabled/unsupported CATMAP sync rows. Semantic matrix candidate total: 541 features, tier distribution CORE 293 / BETA 186 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47.
   - Old FEATURE_MATRIX/reports may inform names but cannot certify status.
 - [ ] **F1.3 — Reconcile visible dead/placeholder actions**
   - Requirement: REQ-PC-1.4
@@ -136,4 +139,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F1.2 Tranche B2d1 supplemental visible-command inventory on GitHub, then map those supplemental commands semantically in B2d2. Only after B2d closes may F1.2 close and F1.3 begin. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F1.2 Tranche B2d2 supplemental semantic mapping on GitHub. If green, close F1.2 and proceed to F1.3 visible dead/placeholder reconciliation. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.

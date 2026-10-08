@@ -93,7 +93,25 @@ A follow-up audit proved that the original static/dynamic scanners did not expan
 - the guard rejects active `addMenuItem(... -> {})` empty handlers;
 - CATMAP commands for selective visible-layer, symbology and label synchronization are disabled until the CATMAP protocol exposes real behavior.
 
-B2d1 locks this newly discovered command universe. B2d2 must map action-bearing rows to stable semantic IDs and explicitly classify non-feature controls before F1.2 can close.
+B2d1 locks this newly discovered command universe.
+
+### F1.2 Tranche B2d2 — supplemental semantic mapping
+
+B2d2 classifies every supplemental command row by behavior rather than label alone.
+
+- supplemental semantic rows covered: **191/191**;
+- aliases to existing semantic features: **98**;
+- action rows: **74**, converging on **65 new semantic IDs**;
+- subordinate controls: **14**;
+- display-only rows: **2**;
+- disabled/unsupported CATMAP sync rows: **3**;
+- executable guard: `SupplementalCommandSemanticCertificationTest`;
+- checked-in map: `SUPPLEMENTAL_COMMAND_SEMANTIC_MAP.tsv`;
+- semantic feature matrix candidate: **541 unique IDs**;
+- candidate tier distribution: **CORE 293 / BETA 186 / EXPERIMENTAL 15 / EXTERNAL_DEPENDENCY 47**;
+- all new semantic action rows remain **RUNTIME_PENDING** before A0.7.
+
+Controls, display-only entries and disabled unsupported commands are explicitly `NON_FEATURE`; they do not inflate the feature count.
 
 ## Status vocabulary
 
