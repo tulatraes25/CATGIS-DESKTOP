@@ -29,8 +29,8 @@ class ExternalFormatDependencyGatingCertificationTest {
 
             assertFalse(source.contains("if (!ogr2ogrAvailable()) return"),
                     fileName + " silently returns when ogr2ogr is unavailable");
-            assertTrue(source.contains("Assumptions.assumeTrue(ogr2ogrAvailable()"),
-                    fileName + " must report missing ogr2ogr as a JUnit skip");
+            assertTrue(source.contains("assumeOgr2ogrAvailable();"),
+                    fileName + " must invoke the explicit missing-ogr2ogr skip gate");
 
             explicitAvailabilityAssumptions++;
         }
