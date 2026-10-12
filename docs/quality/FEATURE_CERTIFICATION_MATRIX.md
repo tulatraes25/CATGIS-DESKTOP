@@ -169,6 +169,20 @@ A current-source audit found that 12 real-format tests returned normally when `o
 - an explicit SKIP is not format-runtime certification: these rows remain dependency/runtime pending until a certified environment actually executes them;
 - exact Tranche B baseline: `50a86cba7402591ae6e7780feb72a35da535604a`.
 
+F2.2 Tranche B CLOSED_CERTIFIED evidence: PR #24 head `43033f1a25e8c5d21d96091e4210e81205baa0c0`; PR CI `37861328482` SUCCESS / Certification `37861328524` SUCCESS; merge `2411416b00bd00adc14f2763e12f246f77ad1568`; post-main CI `37861638312` SUCCESS / Certification `37861638283` SUCCESS.
+
+### F2.3 — Raster / DEM contract
+
+The current tree already had real GeoTIFF fixtures across DEM workflows, an end-to-end DEM clip test, and a raster reprojection orientation test. F2.3 closes the explicit contract gap without pretending that GUI/runtime deployment has been certified.
+
+- direct real tiny GeoTIFF read through `RasterCoverageSupport.readCoverage`;
+- CRS and geospatial envelope retention;
+- exact single-band elevation samples and three-band samples;
+- NoData/NaN cell persistence in file-backed raster;
+- in-process EPSG:4326 -> EPSG:3857 reprojection;
+- executable `RasterDemContractTest`, no GDAL subprocess;
+- exact baseline `2411416b00bd00adc14f2763e12f246f77ad1568`.
+
 F2.3 CLOSED_CERTIFIED evidence: PR #25 head `059ac99dff5e9fb409fef71bdec09d2f2cb6ba0a`, CATGIS CI `38287182397` SUCCESS / Certification `38287182734` SUCCESS; merged `b6b84455f9621bda84488d3ae01e40e6593e72f3`; post-main CI `38288042583` SUCCESS / Certification `38288042743` SUCCESS.
 
 ### F2.4 — WMS/WFS deterministic URL, XML, error and security contracts
