@@ -181,14 +181,14 @@ public class WhiteboxToolDialog extends JDialog {
                         String detail = failure != null ? failure.getMessage()
                                 : result != null ? result.error() : "Resultado vacio.";
                         NotificationManager.error(this,
-                                "Error", "Error al ejecutar la herramienta:\\n" + detail);
+                                "Error", "Error al ejecutar la herramienta:\n" + detail);
                         return;
                     }
 
                     statusLabel.setText("Completado exitosamente");
                     statusLabel.setForeground(new Color(0, 128, 0));
                     NotificationManager.info(this,
-                            "Exito", "Herramienta ejecutada correctamente.\\n\\n" + result.output());
+                            "Exito", "Herramienta ejecutada correctamente.\n\n" + result.output());
                 }));
     }
 }
