@@ -98,6 +98,28 @@ Both tranches are **partial** A0.3/A0.4 improvements. Synchronous legacy paths
 in PostGIS credentials, GDAL, network clients, and other dialog callbacks remain
 under architectural review. No change to A0.7 status is justified by these gates.
 
+## A0.3 — WMS disk-cache reads during map rendering (Tranche C candidate)
+
+Before this tranche, `OnlineWmsImageCache.getImage` synchronously called
+`File.isFile` and `ImageIO.read(file)` on every memory miss. The map paint
+path calls this method, so a slow or corrupt disk cache file could freeze
+Swing EDT during rendering. The existing network fetch was already asynchronous.
+
+Candidate `quality/a0-wms-disk-cache-off-edt` moves disk probing and image
+decoding to the existing three-worker executor, with the same pending-key
+deduplication, a memory-only fast path on EDT, and repaint notification on
+the EDT after a disk hit. A rejected background submission clears its pending
+marker rather than poisoning future requests.
+
+Executable `OnlineWmsDiskCacheEdtContractTest` creates a tiny real PNG
+under the normal cache path. The first call from Swing EDT must return
+null (rather than decoding synchronously), the worker must schedule an EDT
+repaint, and a subsequent call must return the cached pixel-exact image.
+No remote WMS, external GDAL, or GUI session is needed.
+
+This is only **one additional A0.3 boundary**. Other tile cache, filesystem,
+network and process paths remain in the debt audit. A0.7 is NOT_CERTIFIED.
+
 ## Hotspot ceilings
 
 | File | Ceiling lines | Closure intent |
