@@ -94,11 +94,6 @@ public final class OnlineTileCache {
         }
 
         // Map rendering cannot read tile files synchronously on Swing EDT.
-        Long retryAfter = RETRY_AFTER.get(key);
-        if (retryAfter != null && retryAfter > System.currentTimeMillis()) {
-            return null;
-        }
-
         File tileFile = resolveTileFile(source, z, x, y);
         if (PENDING.add(key)) {
             try {
@@ -138,6 +133,11 @@ public final class OnlineTileCache {
             } catch (Exception error) {
                 CatgisLogger.warn("OnlineTileCache: cached tile decode failed", error);
             }
+        }
+        // Network backoff must never conceal an already cached offline image.
+        Long retryAfter = RETRY_AFTER.get(key);
+        if (retryAfter != null && retryAfter > System.currentTimeMillis()) {
+            return;
         }
         fetchTile(source, z, x, y, key, tileFile, repaintCallback);
     }
