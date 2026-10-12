@@ -57,11 +57,6 @@ public final class OnlineWmsImageCache {
         }
 
         // Called while painting the map: do not probe or decode disk images on EDT.
-        Long retryAfter = RETRY_AFTER.get(key);
-        if (retryAfter != null && retryAfter > System.currentTimeMillis()) {
-            return null;
-        }
-
         File file = new File(CACHE_DIR, key + "." + extension(formatHint));
         if (PENDING.add(key)) {
             try {
@@ -96,6 +91,11 @@ public final class OnlineWmsImageCache {
             } catch (Exception error) {
                 CatgisLogger.warn("OnlineWmsImageCache: disk image read failed", error);
             }
+        }
+        // Network backoff must never conceal an already cached offline image.
+        Long retryAfter = RETRY_AFTER.get(key);
+        if (retryAfter != null && retryAfter > System.currentTimeMillis()) {
+            return;
         }
         fetch(requestUrl, formatHint, key, file, repaintCallback);
     }
