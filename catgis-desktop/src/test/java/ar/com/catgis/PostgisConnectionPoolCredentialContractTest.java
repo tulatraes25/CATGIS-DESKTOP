@@ -47,6 +47,24 @@ class PostgisConnectionPoolCredentialContractTest {
                 PostgisConnectionFactory.poolKey(differentDb));
     }
 
+    @Test
+    void PostgreSqlCaseSensitiveIdentifiersCannotSharePools() {
+        PostgisConnectionInfo original = base("same-secret");
+        PostgisConnectionInfo alternateUser = original.copy();
+        alternateUser.setUser("Catgis_CI");
+        PostgisConnectionInfo alternateDatabase = original.copy();
+        alternateDatabase.setDatabase("CATGIS_CI");
+        PostgisConnectionInfo alternateSchema = original.copy();
+        alternateSchema.setSchema("Public");
+
+        assertNotEquals(PostgisConnectionFactory.poolKey(original),
+                PostgisConnectionFactory.poolKey(alternateUser));
+        assertNotEquals(PostgisConnectionFactory.poolKey(original),
+                PostgisConnectionFactory.poolKey(alternateDatabase));
+        assertNotEquals(PostgisConnectionFactory.poolKey(original),
+                PostgisConnectionFactory.poolKey(alternateSchema));
+    }
+
     private static PostgisConnectionInfo base(String password) {
         PostgisConnectionInfo info = new PostgisConnectionInfo();
         info.setHost("localhost");
