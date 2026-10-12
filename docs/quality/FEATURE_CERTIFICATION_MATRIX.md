@@ -192,7 +192,8 @@ The existing `WmsWfsMockTest` tests ordinary GetCapabilities plus 500/invalid-XM
 - normalize stale WMS/WFS operation parameters while preserving opaque authentication tokens;
 - capture exact local HTTP request semantics without internet dependencies;
 - accept prefixed WMS XML elements and inherited CRS/style metadata;
-- reject XML DTD and external entities without making an outbound request (XXE);
+- reject external XML entities without outbound requests; accept legitimate WMS 1.1.1 DTD declarations without downloading external DTDs;
+- reject other DOCTYPE declarations and entity definitions (XXE);
 - reject HTTP 503 responses rather than silently pretending success;
 - shared fail-closed `OgcCapabilitiesXml` for both protocol services;
 - executable `OgcServiceContractTest`;

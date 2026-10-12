@@ -88,7 +88,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Current-tree audit: `WmsWfsMockTest` already covers ordinary local GetCapabilities, HTTP 500 and invalid XML; missing security, prefixed WMS and precise URL contracts.
   - PR #26 baseline: `b6b84455f9621bda84488d3ae01e40e6593e72f3`; branch `quality/f2-ogc-service-contracts`.
   - `OgcServiceContractTest`: canonical query semantics and preserved tokens, local request capture, namespaced WMS with inherited CRS/style, 503, and XXE exfiltration rejection for WMS/WFS.
-  - `OgcCapabilitiesXml`: fail-closed parser rejecting DOCTYPE and external entities; WMS children/GetMap Format now accept XML namespace prefixes.
+  - `OgcCapabilitiesXml`: reject untrusted entities and non-WMS doctypes while accepting WMS 1.1.1 external-DTD declarations without downloading them; WMS children/GetMap Format accept XML namespace prefixes.
   - No external service or GUI/OpenCode; require all Linux/Windows/architecture/PostGIS checks green before merge.
 - [ ] **F2.5 — PostGIS CI integration**
   - GitHub service container: connect/read/write/schema/pool/crypto/error path.

@@ -112,6 +112,28 @@ class OgcServiceContractTest {
     }
 
     @Test
+    void supportsLegacyWms111DtdWithoutDownloadingItsExternalSchema() throws Exception {
+        AtomicInteger dtdRequests = new AtomicInteger();
+        server.createContext("/capabilities.dtd", exchange -> {
+            dtdRequests.incrementAndGet();
+            respond(exchange, 200, "<!ELEMENT WMT_MS_Capabilities ANY>");
+        });
+        String xml = "<!DOCTYPE WMT_MS_Capabilities SYSTEM \"" + origin
+                + "/capabilities.dtd\" [<!ELEMENT VendorSpecificCapabilities EMPTY>]>"
+                + "<WMT_MS_Capabilities version=\"1.1.1\">"
+                + "<Service><Title>Legacy WMS</Title></Service>"
+                + "<Capability><Layer><Name>legacy_layer</Name><Title>Legacy Layer</Title>"
+                + "</Layer></Capability></WMT_MS_Capabilities>";
+        server.createContext("/legacy-wms", exchange -> respond(exchange, 200, xml));
+
+        WmsCapabilities caps = WmsCapabilitiesService.fetchCapabilities(origin + "/legacy-wms");
+        assertEquals("1.1.1", caps.getVersion());
+        assertEquals("Legacy WMS", caps.getServiceTitle());
+        assertEquals("legacy_layer", caps.getLayers().get(0).getName());
+        assertEquals(0, dtdRequests.get(), "Legacy WMS DTD must never be downloaded.");
+    }
+
+    @Test
     void rejectsExternalXmlEntitiesInBothServicesWithoutFetchingTheEntity() {
         AtomicInteger exfiltrationRequests = new AtomicInteger();
         server.createContext("/private", exchange -> {

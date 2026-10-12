@@ -40,7 +40,7 @@ public final class WfsCapabilitiesService {
             }
 
             try (InputStream input = connection.getInputStream()) {
-            Document document = OgcCapabilitiesXml.parse(input);
+            Document document = OgcCapabilitiesXml.parse(input, false);
             Element root = document.getDocumentElement();
             if (root == null) {
                 throw new IllegalArgumentException("La respuesta del servicio no contiene XML valido.");

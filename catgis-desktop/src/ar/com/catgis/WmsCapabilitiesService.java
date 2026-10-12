@@ -40,7 +40,7 @@ public final class WmsCapabilitiesService {
             }
 
             try (InputStream input = connection.getInputStream()) {
-            Document document = OgcCapabilitiesXml.parse(input);
+            Document document = OgcCapabilitiesXml.parse(input, true);
             Element root = document.getDocumentElement();
             if (root == null) {
                 throw new IllegalArgumentException("La respuesta del servicio no contiene XML valido.");
