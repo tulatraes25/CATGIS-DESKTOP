@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.awt.image.BufferedImage;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,6 +40,14 @@ class OnlineWmsDiskCacheEdtContractTest {
         sample.setRGB(2, 1, Color.MAGENTA.getRGB());
         assertTrue(ImageIO.write(sample, "png", file.toFile()));
 
+        // Simulate an active network cooldown: valid offline tiles must still paint.
+        Field retryField = OnlineWmsImageCache.class.getDeclaredField("RETRY_AFTER");
+        retryField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, Long> retryAfter = (Map<String, Long>) retryField.get(null);
+        String cacheKey = key;
+        retryAfter.put(cacheKey, System.currentTimeMillis() + 60000L);
+
         CountDownLatch loaded = new CountDownLatch(1);
         AtomicBoolean callbackOnEdt = new AtomicBoolean();
         AtomicReference<BufferedImage> first = new AtomicReference<>();
@@ -59,6 +69,7 @@ class OnlineWmsDiskCacheEdtContractTest {
             assertNotNull(warm.get());
             assertEquals(Color.MAGENTA.getRGB(), warm.get().getRGB(2, 1));
         } finally {
+            retryAfter.remove(cacheKey);
             Files.deleteIfExists(file);
         }
     }
