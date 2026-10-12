@@ -332,8 +332,11 @@ public final class StacClient {
             return null;
         }
         int arrayStart = json.indexOf('[', linksIndex);
+        if (arrayStart < 0) {
+            return null;
+        }
         int arrayEnd = findMatchingBracket(json, arrayStart, '[', ']');
-        if (arrayStart < 0 || arrayEnd < 0) {
+        if (arrayEnd < 0) {
             return null;
         }
 
