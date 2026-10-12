@@ -267,7 +267,7 @@ public final class WcsClient {
                 prefix = stagedInput.readNBytes(256);
             }
             String start = new String(prefix, StandardCharsets.UTF_8)
-                    .replace("\\uFEFF", "").stripLeading().toLowerCase(Locale.ROOT);
+                    .replace(String.valueOf((char) 0xFEFF), "").stripLeading().toLowerCase(Locale.ROOT);
             if (start.startsWith("<?xml") || start.startsWith("<exception")
                     || start.startsWith("<ows:exception") || start.startsWith("{")
                     || start.startsWith("[") || start.startsWith("<html")
