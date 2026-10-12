@@ -76,14 +76,20 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Audit found 12 GDAL/OSGeo-dependent real-format tests that silently returned PASS when `ogr2ogr` was absent: GeoPackage 5, SpatiaLite 3, FlatGeobuf 4.
   - Tranche B requires explicit JUnit assumptions for missing external runtime, an executable anti-silent-pass guard, and a bounded skip budget of 15 (= 3 existing reviewed skips + 12 explicit GDAL format skips).
   - Tranche B CLOSED_CERTIFIED: PR #24 head `43033f1a25e8c5d21d96091e4210e81205baa0c0`; PR CI `37861328482` SUCCESS; PR Certification `37861328524` SUCCESS; merge `2411416b00bd00adc14f2763e12f246f77ad1568`; post-main CI `37861638312` SUCCESS; post-main Certification `37861638283` SUCCESS.
-- [-] **F2.3 — Raster/DEM contracts**
+- [x] **F2.3 — Raster/DEM contracts**
   - Real tiny GeoTIFF/NoData/multiband/reprojection where supported.
   - Exact baseline: `2411416b00bd00adc14f2763e12f246f77ad1568`, branch `quality/f2-raster-dem-contracts`.
   - Current-tree audit: real GeoTIFF fixtures and DEM workflows already exist; reprojection orientation already has direct coverage.
   - Confirmed gap: one explicit deterministic contract tying together real GeoTIFF read, CRS/envelope, multiband sample preservation, NoData/NaN sample preservation, and in-process reprojection.
   - Candidate contract: `RasterDemContractTest`; no GUI/OpenCode and no external GDAL dependency.
-- [ ] **F2.4 — Web service contracts**
+  - CLOSED_CERTIFIED: PR #25 head `059ac99dff5e9fb409fef71bdec09d2f2cb6ba0a`; PR CI `38287182397` SUCCESS / Certification `38287182734` SUCCESS; merge `b6b84455f9621bda84488d3ae01e40e6593e72f3`; post-main CI `38288042583` SUCCESS / Certification `38288042743` SUCCESS.
+- [-] **F2.4 — Web service contracts**
   - Deterministic WMS/WFS XML/URL/error tests with local HTTP fixture.
+  - Current-tree audit: `WmsWfsMockTest` already covers ordinary local GetCapabilities, HTTP 500 and invalid XML; missing security, prefixed WMS and precise URL contracts.
+  - PR #26 baseline: `b6b84455f9621bda84488d3ae01e40e6593e72f3`; branch `quality/f2-ogc-service-contracts`.
+  - `OgcServiceContractTest`: canonical query semantics and preserved tokens, local request capture, namespaced WMS with inherited CRS/style, 503, and XXE exfiltration rejection for WMS/WFS.
+  - `OgcCapabilitiesXml`: fail-closed parser rejecting DOCTYPE and external entities; WMS children/GetMap Format now accept XML namespace prefixes.
+  - No external service or GUI/OpenCode; require all Linux/Windows/architecture/PostGIS checks green before merge.
 - [ ] **F2.5 — PostGIS CI integration**
   - GitHub service container: connect/read/write/schema/pool/crypto/error path.
 - [ ] **F2.6 — CATMAP completion**
@@ -162,4 +168,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F2.3 Raster/DEM contract on GitHub from exact baseline `2411416b00bd00adc14f2763e12f246f77ad1568`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F2.4 WMS/WFS URL/XML/error/security contract on GitHub from `b6b84455f9621bda84488d3ae01e40e6593e72f3`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.

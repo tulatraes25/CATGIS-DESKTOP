@@ -1,6 +1,6 @@
 # CATGIS Feature Certification Matrix
 
-Status: F2.3_IN_PROGRESS
+Status: F2.4_IN_PROGRESS
 Program spec: `.kiro/specs/catgis-product-certification/`
 Certified source baseline entering F1.2: `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`
 
@@ -168,6 +168,22 @@ A current-source audit found that 12 real-format tests returned normally when `o
 - a 16th skip is a blocking regression requiring review;
 - an explicit SKIP is not format-runtime certification: these rows remain dependency/runtime pending until a certified environment actually executes them;
 - exact Tranche B baseline: `50a86cba7402591ae6e7780feb72a35da535604a`.
+
+F2.3 CLOSED_CERTIFIED evidence: PR #25 head `059ac99dff5e9fb409fef71bdec09d2f2cb6ba0a`, CATGIS CI `38287182397` SUCCESS / Certification `38287182734` SUCCESS; merged `b6b84455f9621bda84488d3ae01e40e6593e72f3`; post-main CI `38288042583` SUCCESS / Certification `38288042743` SUCCESS.
+
+### F2.4 — WMS/WFS deterministic URL, XML, error and security contracts
+
+The existing `WmsWfsMockTest` tests ordinary GetCapabilities plus 500/invalid-XML paths against a local HTTP fixture. F2.4 adds regression evidence for source-level gaps:
+
+- normalize stale WMS/WFS operation parameters while preserving opaque authentication tokens;
+- capture exact local HTTP request semantics without internet dependencies;
+- accept prefixed WMS XML elements and inherited CRS/style metadata;
+- reject XML DTD and external entities without making an outbound request (XXE);
+- reject HTTP 503 responses rather than silently pretending success;
+- shared fail-closed `OgcCapabilitiesXml` for both protocol services;
+- executable `OgcServiceContractTest`;
+- exact baseline `b6b84455f9621bda84488d3ae01e40e6593e72f3`;
+- no runtime feature certification or GUI/OpenCode until architecture gate A0.7.
 
 ## Status vocabulary
 
