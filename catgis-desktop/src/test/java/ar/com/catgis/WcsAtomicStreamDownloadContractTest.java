@@ -126,6 +126,50 @@ class WcsAtomicStreamDownloadContractTest {
         assertNoStagingFile();
     }
 
+
+    @Test
+    void mislabeledXmlResponseMustNotOverwriteRaster() throws Exception {
+        openServer();
+        server.createContext("/wcs", exchange -> {
+            String query = exchange.getRequestURI().getRawQuery();
+            if (query != null && query.contains("VERSION=2.0.1")) {
+                respond(exchange, 200, "application/octet-stream",
+                        "  <?xml version=\"1.0\"?><ExceptionReport>Denied</ExceptionReport>"
+                                .getBytes(StandardCharsets.UTF_8));
+            } else {
+                respond(exchange, 503, "text/plain", new byte[0]);
+            }
+        });
+        server.start();
+        Path destination = tempDir.resolve("previous-coverage.tif");
+        Files.writeString(destination, "unchanged", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", null, null, 16, 16, destination.toFile()));
+        assertEquals("unchanged", Files.readString(destination, StandardCharsets.UTF_8));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void mislabeledJsonResponseMustNotOverwriteRaster() throws Exception {
+        openServer();
+        server.createContext("/wcs", exchange -> {
+            String query = exchange.getRequestURI().getRawQuery();
+            if (query != null && query.contains("VERSION=2.0.1")) {
+                respond(exchange, 200, "image/tiff",
+                        "{\"error\":\"no coverage\"}".getBytes(StandardCharsets.UTF_8));
+            } else {
+                respond(exchange, 503, "text/plain", new byte[0]);
+            }
+        });
+        server.start();
+        Path destination = tempDir.resolve("previous-json.tif");
+        Files.writeString(destination, "unchanged", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", null, null, 16, 16, destination.toFile()));
+        assertEquals("unchanged", Files.readString(destination, StandardCharsets.UTF_8));
+        assertNoStagingFile();
+    }
+
     private void openServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         origin = "http://127.0.0.1:" + server.getAddress().getPort() + "/wcs";
