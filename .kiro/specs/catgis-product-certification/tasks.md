@@ -82,16 +82,19 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Current-tree audit: real GeoTIFF fixtures and DEM workflows already exist; reprojection orientation already has direct coverage.
   - Confirmed gap: one explicit deterministic contract tying together real GeoTIFF read, CRS/envelope, multiband sample preservation, NoData/NaN sample preservation, and in-process reprojection.
   - Candidate contract: `RasterDemContractTest`; no GUI/OpenCode and no external GDAL dependency.
+  - PR #25 head `059ac99dff5e9fb409fef71bdec09d2f2cb6ba0a` merged as `b6b84455f9621bda84488d3ae01e40e6593e72f3`; post-main CI/Certification SUCCESS.
   - CLOSED_CERTIFIED: PR #25 head `059ac99dff5e9fb409fef71bdec09d2f2cb6ba0a`; PR CI `38287182397` SUCCESS / Certification `38287182734` SUCCESS; merge `b6b84455f9621bda84488d3ae01e40e6593e72f3`; post-main CI `38288042583` SUCCESS / Certification `38288042743` SUCCESS.
 - [-] **F2.4 — Web service contracts**
   - Deterministic WMS/WFS XML/URL/error tests with local HTTP fixture.
+  - PR #26 head `8bcd6e41c01aba65aaf56d3eea57a5c80f7c8a5e`, CI `38289126623` SUCCESS and Certification `38289126648` SUCCESS; merged as `a507fa9560c8d2e54abd2a8485d2d141d1c3c721`; post-main CI/Certification pending at branch creation.
   - Current-tree audit: `WmsWfsMockTest` already covers ordinary local GetCapabilities, HTTP 500 and invalid XML; missing security, prefixed WMS and precise URL contracts.
   - PR #26 baseline: `b6b84455f9621bda84488d3ae01e40e6593e72f3`; branch `quality/f2-ogc-service-contracts`.
   - `OgcServiceContractTest`: canonical query semantics and preserved tokens, local request capture, namespaced WMS with inherited CRS/style, 503, and XXE exfiltration rejection for WMS/WFS.
   - `OgcCapabilitiesXml`: reject untrusted entities and non-WMS doctypes while accepting WMS 1.1.1 external-DTD declarations without downloading them; WMS children/GetMap Format accept XML namespace prefixes.
   - No external service or GUI/OpenCode; require all Linux/Windows/architecture/PostGIS checks green before merge.
-- [ ] **F2.5 — PostGIS CI integration**
+- [-] **F2.5 — PostGIS CI integration**
   - GitHub service container: connect/read/write/schema/pool/crypto/error path.
+  - Tranche A candidate `quality/f2-postgis-pool-credentials`: protect pool identity from password rotation with per-process salted SHA-256 keys and deterministic tests; existing real PostGIS read/write/schema integration is retained.
 - [ ] **F2.6 — CATMAP completion**
   - Fill remaining image/table/graticule/real-project/export gaps.
 - [ ] **F2.7 — Experimental dependency contracts**
