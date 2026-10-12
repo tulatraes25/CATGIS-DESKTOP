@@ -6,7 +6,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -41,10 +40,7 @@ public final class WfsCapabilitiesService {
             }
 
             try (InputStream input = connection.getInputStream()) {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setNamespaceAware(false);
-            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-            Document document = factory.newDocumentBuilder().parse(input);
+            Document document = OgcCapabilitiesXml.parse(input, false);
             Element root = document.getDocumentElement();
             if (root == null) {
                 throw new IllegalArgumentException("La respuesta del servicio no contiene XML valido.");

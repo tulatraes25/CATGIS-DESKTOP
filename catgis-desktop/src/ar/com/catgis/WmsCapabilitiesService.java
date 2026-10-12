@@ -7,7 +7,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -41,10 +40,7 @@ public final class WmsCapabilitiesService {
             }
 
             try (InputStream input = connection.getInputStream()) {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setNamespaceAware(false);
-            factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
-            Document document = factory.newDocumentBuilder().parse(input);
+            Document document = OgcCapabilitiesXml.parse(input, true);
             Element root = document.getDocumentElement();
             if (root == null) {
                 throw new IllegalArgumentException("La respuesta del servicio no contiene XML valido.");
@@ -66,9 +62,8 @@ public final class WmsCapabilitiesService {
 
             List<String> formats = new ArrayList<>();
             if (getMapNode != null) {
-                NodeList formatNodes = getMapNode.getElementsByTagName("Format");
-                for (int i = 0; i < formatNodes.getLength(); i++) {
-                    String fmt = formatNodes.item(i).getTextContent();
+                for (Element formatNode : children(getMapNode, "Format")) {
+                    String fmt = formatNode.getTextContent();
                     if (fmt != null && !fmt.isBlank() && !formats.contains(fmt.trim())) {
                         formats.add(fmt.trim());
                     }
@@ -265,7 +260,7 @@ public final class WmsCapabilitiesService {
         NodeList children = parent.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node node = children.item(i);
-            if (node instanceof Element && name.equalsIgnoreCase(node.getNodeName())) {
+            if (node instanceof Element && name.equalsIgnoreCase(stripPrefix(node.getNodeName()))) {
                 return (Element) node;
             }
         }
@@ -280,11 +275,19 @@ public final class WmsCapabilitiesService {
         NodeList children = parent.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node node = children.item(i);
-            if (node instanceof Element && name.equalsIgnoreCase(node.getNodeName())) {
+            if (node instanceof Element && name.equalsIgnoreCase(stripPrefix(node.getNodeName()))) {
                 out.add((Element) node);
             }
         }
         return out;
+    }
+
+    private static String stripPrefix(String qualifiedName) {
+        if (qualifiedName == null) {
+            return "";
+        }
+        int colon = qualifiedName.indexOf(':');
+        return colon >= 0 ? qualifiedName.substring(colon + 1) : qualifiedName;
     }
 
     private static String attrAny(Element element, String... names) {
