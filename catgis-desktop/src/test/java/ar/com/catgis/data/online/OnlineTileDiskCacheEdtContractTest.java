@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +44,14 @@ class OnlineTileDiskCacheEdtContractTest {
         sample.setRGB(2, 1, Color.ORANGE.getRGB());
         assertTrue(ImageIO.write(sample, "png", tileFile.toFile()));
 
+        // Simulate an active network cooldown: valid offline tiles must still paint.
+        Field retryField = OnlineTileCache.class.getDeclaredField("RETRY_AFTER");
+        retryField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, Long> retryAfter = (Map<String, Long>) retryField.get(null);
+        String cacheKey = id + "_3_2_1";
+        retryAfter.put(cacheKey, System.currentTimeMillis() + 60000L);
+
         CountDownLatch repaint = new CountDownLatch(1);
         AtomicBoolean callbackOnEdt = new AtomicBoolean(false);
         AtomicReference<BufferedImage> first = new AtomicReference<>();
@@ -63,6 +73,7 @@ class OnlineTileDiskCacheEdtContractTest {
             assertNotNull(warm.get());
             assertEquals(Color.ORANGE.getRGB(), warm.get().getRGB(2, 1));
         } finally {
+            retryAfter.remove(cacheKey);
             Files.deleteIfExists(tileFile);
             Files.deleteIfExists(tileFile.getParent());
             Files.deleteIfExists(tileFile.getParent().getParent());
