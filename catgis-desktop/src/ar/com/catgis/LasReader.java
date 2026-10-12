@@ -1,97 +1,109 @@
 package ar.com.catgis;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * LAS LiDAR file reader with scale/offset coordinate transformation.
- * <p>
- * Supports LAS 1.0 through 1.4, point formats 0-3 (with RGB),
- * variable header sizes, and proper coordinate scaling.
- * </p>
- * <p>
- * For production LiDAR processing with LAZ compression or waveform data,
- * use PDAL or LASlib.
- * </p>
+ * Uncompressed LAS 1.0-1.4 reader for legacy point formats 0-3.
+ * LAZ compression and LAS point formats 4-10 require a dedicated decoder.
  */
 public final class LasReader {
 
-    private LasReader() {}
+    private LasReader() {
+    }
 
     public record LasHeader(int versionMajor, int versionMinor, long pointCount,
-                             double minX, double minY, double minZ,
-                             double maxX, double maxY, double maxZ,
-                             double scaleX, double scaleY, double scaleZ,
-                             double offsetX, double offsetY, double offsetZ,
-                             int pointFormat, int recordLength, int headerSize) {}
+                            double minX, double minY, double minZ,
+                            double maxX, double maxY, double maxZ,
+                            double scaleX, double scaleY, double scaleZ,
+                            double offsetX, double offsetY, double offsetZ,
+                            int pointFormat, int recordLength, int headerSize) {
+    }
 
     public record LasPoint(double x, double y, double z, int classification, double intensity,
-                            int red, int green, int blue) {
+                           int red, int green, int blue) {
         public LasPoint(double x, double y, double z, int classification, double intensity) {
             this(x, y, z, classification, intensity, 0, 0, 0);
         }
     }
 
-    /**
-     * Read the LAS file header with scale/offset support.
-     */
-    public static LasHeader readHeader(File file) throws Exception {
-        if (file == null || !file.exists()) {
+    public static LasHeader readHeader(File file) throws IOException {
+        if (file == null || !file.isFile()) {
             throw new IllegalArgumentException("File does not exist: " + file);
         }
 
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             byte[] sig = new byte[4];
-            raf.read(sig);
-            String signature = new String(sig);
-            if (!signature.equals("LASF")) {
-                throw new Exception("Not a valid LAS file (bad signature: " + signature + ")");
+            raf.readFully(sig);
+            String signature = new String(sig, StandardCharsets.US_ASCII);
+            if (!"LASF".equals(signature)) {
+                throw new IOException("Not a valid LAS file (bad signature: " + signature + ")");
             }
 
-            // Version
             raf.seek(24);
-            int versionMajor = raf.read();
-            int versionMinor = raf.read();
+            int versionMajor = raf.readUnsignedByte();
+            int versionMinor = raf.readUnsignedByte();
+            if (versionMajor != 1 || versionMinor > 4) {
+                throw new IOException("Unsupported LAS version: " + versionMajor + "." + versionMinor);
+            }
 
-            // Header size (variable starting from LAS 1.1)
             raf.seek(94);
             int headerSize = readUShort(raf);
-            if (headerSize <= 0) headerSize = 375; // default for LAS 1.0
-
-            // Offset to point data
-            raf.seek(96);
-            long offsetToPoints = readUInt(raf);
-
-            // Point format and record length
-            raf.seek(104);
-            int pointFormat = raf.read() & 0xFF;
-            int recordLength = readUShort(raf);
-
-            // Point count (different positions for different versions)
-            long pointCount;
-            if (versionMajor == 1 && versionMinor >= 4) {
-                raf.seek(247);
-                pointCount = readULong(raf);
-            } else {
-                raf.seek(107);
-                pointCount = readUInt(raf);
+            if (headerSize < 227 || raf.length() < headerSize) {
+                throw new IOException("Invalid or truncated LAS header.");
             }
 
-            // Scale factors
+            raf.seek(96);
+            long pointOffset = readUInt(raf);
+            if (pointOffset < headerSize || pointOffset > raf.length()) {
+                throw new IOException("Invalid LAS point-data offset: " + pointOffset);
+            }
+
+            raf.seek(104);
+            int pointFormat = raf.readUnsignedByte();
+            if (pointFormat > 3) {
+                throw new IOException("Unsupported or compressed LAS point format: " + pointFormat
+                        + ". Use PDAL or an appropriate decoder.");
+            }
+            int recordLength = readUShort(raf);
+            int minimumRecordLength = switch (pointFormat) {
+                case 0 -> 20;
+                case 1 -> 28;
+                case 2 -> 26;
+                case 3 -> 34;
+                default -> throw new IOException("Unsupported LAS point format.");
+            };
+            if (recordLength < minimumRecordLength) {
+                throw new IOException("LAS point record is shorter than its declared format: "
+                        + recordLength + " < " + minimumRecordLength);
+            }
+
+            long legacyPointCount = readUInt(raf);
+            long pointCount = legacyPointCount;
+            if (versionMinor >= 4) {
+                raf.seek(247);
+                long extendedPointCount = readULong(raf);
+                if (extendedPointCount < 0) {
+                    throw new IOException("LAS point count exceeds signed 64-bit range.");
+                }
+                if (extendedPointCount > 0) {
+                    pointCount = extendedPointCount;
+                }
+            }
+
             raf.seek(131);
             double scaleX = readDouble(raf);
             double scaleY = readDouble(raf);
             double scaleZ = readDouble(raf);
 
-            // Offsets
             double offsetX = readDouble(raf);
             double offsetY = readDouble(raf);
             double offsetZ = readDouble(raf);
 
-            // Bounds
             raf.seek(179);
             double maxX = readDouble(raf);
             double minX = readDouble(raf);
@@ -107,130 +119,110 @@ public final class LasReader {
         }
     }
 
-    /**
-     * Read points from a LAS file with proper coordinate scaling.
-     */
-    public static List<LasPoint> readPoints(File file, int maxPoints) throws Exception {
+    public static List<LasPoint> readPoints(File file, int maxPoints) throws IOException {
         LasHeader header = readHeader(file);
         return readPoints(file, maxPoints, header);
     }
 
-    /**
-     * Read points using an already-parsed header.
-     */
-    public static List<LasPoint> readPoints(File file, int maxPoints, LasHeader header) throws Exception {
+    public static List<LasPoint> readPoints(File file, int maxPoints, LasHeader header) throws IOException {
+        if (maxPoints < 0) {
+            throw new IllegalArgumentException("maxPoints must be nonnegative.");
+        }
+        if (header == null) {
+            throw new IllegalArgumentException("LAS header is required.");
+        }
         List<LasPoint> points = new ArrayList<>();
         long pointsToRead = Math.min(header.pointCount(), maxPoints);
-
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            // Seek to point data using header offset
-            raf.seek(0);
             raf.seek(96);
-            long offsetToPoints = readUInt(raf);
-
-            if (offsetToPoints <= 0 || offsetToPoints < header.headerSize()) {
-                offsetToPoints = header.headerSize();
+            long pointOffset = readUInt(raf);
+            if (pointOffset < header.headerSize() || pointOffset > raf.length()) {
+                throw new IOException("Invalid LAS point-data offset: " + pointOffset);
             }
-
-            raf.seek(offsetToPoints);
+            raf.seek(pointOffset);
 
             for (long i = 0; i < pointsToRead; i++) {
-                try {
-                    // X, Y, Z as int32 (scaled integers)
-                    int rawX = readInt(raf);
-                    int rawY = readInt(raf);
-                    int rawZ = readInt(raf);
+                // 20-byte base record: XYZ(12), intensity(2), return flags(1),
+                // classification(1), scan angle(1), user data(1), source ID(2).
+                int rawX = readInt(raf);
+                int rawY = readInt(raf);
+                int rawZ = readInt(raf);
 
-                    // Apply scale/offset
-                    double x = rawX * header.scaleX() + header.offsetX();
-                    double y = rawY * header.scaleY() + header.offsetY();
-                    double z = rawZ * header.scaleZ() + header.offsetZ();
+                double x = rawX * header.scaleX() + header.offsetX();
+                double y = rawY * header.scaleY() + header.offsetY();
+                double z = rawZ * header.scaleZ() + header.offsetZ();
 
-                    // Intensity
-                    int intensity = readUShort(raf);
+                int intensity = readUShort(raf);
+                raf.readUnsignedByte(); // packed return number/return count/flags
+                int classification = raf.readUnsignedByte();
+                raf.readByte();         // scan angle rank
+                raf.readUnsignedByte(); // user data
+                readUShort(raf);        // point source ID
 
-                    // Flags
-                    int returnNumber = raf.read() & 0x07;
-                    int numberOfReturns = raf.read() & 0x07;
-
-                    // Scan direction and edge flags
-                    raf.read(); // scan direction flag
-                    raf.read(); // edge of flight line
-
-                    // Classification
-                    int classification = raf.read() & 0xFF;
-
-                    // Scan angle rank
-                    raf.read(); // raw scan angle
-                    raf.read(); // user data
-                    raf.read(); // point source ID
-
-                    // RGB (formats 2 and 3)
-                    int red = 0, green = 0, blue = 0;
-                    if (header.pointFormat() == 2 || header.pointFormat() == 3) {
-                        red = readUShort(raf);
-                        green = readUShort(raf);
-                        blue = readUShort(raf);
-                    }
-
-                    // Skip remaining bytes based on point format
-                    int bytesRead = 20; // base: 3*4 (xyz) + 2 (intensity) + 7 bytes flags
-                    if (header.pointFormat() == 2 || header.pointFormat() == 3) {
-                        bytesRead += 6; // 3 * 2 bytes RGB
-                    }
-                    int remaining = header.recordLength() - bytesRead;
-                    if (remaining > 0) raf.skipBytes(remaining);
-
-                    points.add(new LasPoint(x, y, z, classification, intensity, red, green, blue));
-                } catch (Exception e) {
-                    break;
+                int bytesRead = 20;
+                if (header.pointFormat() == 1 || header.pointFormat() == 3) {
+                    readDouble(raf);    // GPS time precedes RGB on point format 3
+                    bytesRead += 8;
                 }
+
+                int red = 0;
+                int green = 0;
+                int blue = 0;
+                if (header.pointFormat() == 2 || header.pointFormat() == 3) {
+                    red = readUShort(raf);
+                    green = readUShort(raf);
+                    blue = readUShort(raf);
+                    bytesRead += 6;
+                }
+
+                int remaining = header.recordLength() - bytesRead;
+                if (remaining < 0 || raf.skipBytes(remaining) != remaining) {
+                    throw new IOException("Invalid or truncated LAS point record at index " + i);
+                }
+                points.add(new LasPoint(x, y, z, classification, intensity, red, green, blue));
             }
         }
-
         return points;
     }
 
-    /**
-     * Get point count from a LAS file.
-     */
-    public static long getPointCount(File file) throws Exception {
+    public static long getPointCount(File file) throws IOException {
         return readHeader(file).pointCount();
     }
 
-    /**
-     * Get bounding box from a LAS file.
-     */
-    public static org.locationtech.jts.geom.Envelope getBounds(File file) throws Exception {
+    public static org.locationtech.jts.geom.Envelope getBounds(File file) throws IOException {
         LasHeader h = readHeader(file);
         return new org.locationtech.jts.geom.Envelope(h.minX(), h.maxX(), h.minY(), h.maxY());
     }
 
-    // --- I/O helpers ---
-
     private static int readUShort(RandomAccessFile raf) throws IOException {
-        byte[] b = new byte[2];
-        raf.read(b);
-        return (b[0] & 0xFF) | ((b[1] & 0xFF) << 8);
+        int lo = raf.readUnsignedByte();
+        int hi = raf.readUnsignedByte();
+        return lo | (hi << 8);
     }
 
     private static int readInt(RandomAccessFile raf) throws IOException {
-        byte[] b = new byte[4];
-        raf.read(b);
-        return (b[0] & 0xFF) | ((b[1] & 0xFF) << 8) | ((b[2] & 0xFF) << 16) | ((b[3] & 0xFF) << 24);
+        return raf.readUnsignedByte()
+                | (raf.readUnsignedByte() << 8)
+                | (raf.readUnsignedByte() << 16)
+                | (raf.readUnsignedByte() << 24);
     }
 
     private static long readUInt(RandomAccessFile raf) throws IOException {
-        byte[] b = new byte[4];
-        raf.read(b);
-        return (b[0] & 0xFFL) | ((b[1] & 0xFFL) << 8) | ((b[2] & 0xFFL) << 16) | ((b[3] & 0xFFL) << 24);
+        return (raf.readUnsignedByte() & 0xFFL)
+                | ((raf.readUnsignedByte() & 0xFFL) << 8)
+                | ((raf.readUnsignedByte() & 0xFFL) << 16)
+                | ((raf.readUnsignedByte() & 0xFFL) << 24);
     }
 
     private static long readULong(RandomAccessFile raf) throws IOException {
-        byte[] b = new byte[8];
-        raf.read(b);
-        return (b[0] & 0xFFL) | ((b[1] & 0xFFL) << 8) | ((b[2] & 0xFFL) << 16) | ((b[3] & 0xFFL) << 24)
-                | ((b[4] & 0xFFL) << 32) | ((b[5] & 0xFFL) << 40) | ((b[6] & 0xFFL) << 48) | ((b[7] & 0xFFL) << 56);
+        return (raf.readUnsignedByte() & 0xFFL)
+                | ((raf.readUnsignedByte() & 0xFFL) << 8)
+                | ((raf.readUnsignedByte() & 0xFFL) << 16)
+                | ((raf.readUnsignedByte() & 0xFFL) << 24)
+                | ((raf.readUnsignedByte() & 0xFFL) << 32)
+                | ((raf.readUnsignedByte() & 0xFFL) << 40)
+                | ((raf.readUnsignedByte() & 0xFFL) << 48)
+                | ((raf.readUnsignedByte() & 0xFFL) << 56);
     }
 
     private static double readDouble(RandomAccessFile raf) throws IOException {
