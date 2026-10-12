@@ -24,7 +24,6 @@ import org.locationtech.jts.geom.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * Visual integrity test for CATMAP layout export with real GIS data.
  * <p>
  * Generates a shapefile (3 polygons) and a GeoTIFF DEM in a temp directory,
- * renders a synthetic map preview with elevation gradient, polygon boundaries,
- * labels, and grid, builds a full CATMAP layout, exports to PNG via
- * LayoutExportEngine, and compares against a golden reference image.
+ * renders map previews with elevation gradient or actual shapefile polygons,
+ * builds a full CATMAP layout, exports to PNG via LayoutExportEngine,
+ * and verifies checked-in golden references. Missing fixtures fail the tests.
  */
 class CatmapVisualTest {
 
@@ -56,12 +55,6 @@ class CatmapVisualTest {
 
         BufferedImage actual = LayoutExportEngine.renderLayout(model, DPI);
         assertNotNull(actual);
-
-        Path goldenPath = goldenPath(GOLDEN);
-        if (!Files.exists(goldenPath)) {
-            GoldenImageAssert.saveGoldenImage(actual, goldenPath);
-            return;
-        }
 
         BufferedImage expected = GoldenImageAssert.loadGoldenImage(
                 "ar/com/catgis/catmap/golden/" + GOLDEN);
@@ -100,18 +93,19 @@ class CatmapVisualTest {
         assertTrue(output.exists());
         assertTrue(output.length() > 5000, "Export PNG too small: " + output.length());
 
-        // Compare against golden (first run creates it)
-        Path goldenPath = goldenPath(GOLDEN_REAL);
-        if (!Files.exists(goldenPath)) {
-            GoldenImageAssert.saveGoldenImage(mapPreview, goldenPath);
-            System.err.println("GOLDEN CREATED: " + goldenPath.toAbsolutePath()
-                    + " (non-bg pixels: " + nonBgPixels + ")");
-            return;
-        }
-
+        // The checked-in golden covers the real-shapefile map preview;
+        // the exported CATMAP layout is validated independently below.
         BufferedImage expected = GoldenImageAssert.loadGoldenImage(
                 "ar/com/catgis/catmap/golden/" + GOLDEN_REAL);
         GoldenImageAssert.assertMatches(expected, mapPreview, 1.0, 8);
+
+        BufferedImage exported = javax.imageio.ImageIO.read(output);
+        assertNotNull(exported, "CATMAP PNG export must be readable.");
+        assertTrue(exported.getWidth() > mapPreview.getWidth()
+                        && exported.getHeight() > mapPreview.getHeight(),
+                "CATMAP must export the full page, not just the map-preview bitmap.");
+        assertTrue(countNonBackgroundPixels(exported) > 1000,
+                "The exported CATMAP page is visually blank despite a populated map preview.");
     }
 
     private void createTestData() throws Exception {
@@ -370,12 +364,4 @@ class CatmapVisualTest {
         return model;
     }
 
-    private static Path goldenPath(String name) {
-        Path p = Path.of("").toAbsolutePath();
-        while (p != null && !Files.exists(p.resolve("build.gradle"))) {
-            p = p.getParent();
-        }
-        if (p == null) p = Path.of("").toAbsolutePath();
-        return p.resolve("src/test/resources/ar/com/catgis/catmap/golden").resolve(name);
-    }
 }
