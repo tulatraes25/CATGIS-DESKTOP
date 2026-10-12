@@ -2,6 +2,12 @@ package ar.com.catgis.data.online;
 
 import ar.com.catgis.OnlineServiceType;
 import org.junit.jupiter.api.Test;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.Set;
+import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
@@ -80,4 +86,44 @@ class OnlineTileDiskCacheEdtContractTest {
             Files.deleteIfExists(sourceDir);
         }
     }
+    @Test
+    void missingTileDuringCooldownDoesNotConnectToServer() throws Exception {
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/tiles", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(503, -1);
+            exchange.close();
+        });
+        server.start();
+        String id = "cooldown-miss-" + UUID.randomUUID();
+        OnlineRasterSource source = new OnlineRasterSource(
+                id, "Cooldown test", "CI", OnlineServiceType.XYZ,
+                "http://127.0.0.1:" + server.getAddress().getPort() + "/tiles/{z}/{x}/{y}.png",
+                0, 20, 256, "", "", false, "EPSG:3857");
+        String key = id + "_3_2_1";
+        Field retryField = OnlineTileCache.class.getDeclaredField("RETRY_AFTER");
+        retryField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, Long> cooldowns = (Map<String, Long>) retryField.get(null);
+        Field pendingField = OnlineTileCache.class.getDeclaredField("PENDING");
+        pendingField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Set<String> pending = (Set<String>) pendingField.get(null);
+        cooldowns.put(key, System.currentTimeMillis() + 60000L);
+        try {
+            SwingUtilities.invokeAndWait(() ->
+                    assertNull(OnlineTileCache.getTile(source, 3, 2, 1, null)));
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (pending.contains(key) && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertTrue(!pending.contains(key), "Tile-cache worker must complete.");
+            assertEquals(0, requests.get(), "Network cooldown must block HTTP on disk miss.");
+        } finally {
+            cooldowns.remove(key);
+            server.stop(0);
+        }
+    }
+
 }
