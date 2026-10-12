@@ -102,9 +102,13 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
 ## Phase A0 — Architecture certification (BLOCKING BEFORE RUNTIME)
 
-- [ ] **A0.1 — Create executable architecture baseline**
+- [-] **A0.1 — Create executable architecture baseline**
   - Requirements: REQ-PC-0, REQ-PC-7
   - Package/source dependency rules; explicit allowlist only for known debt.
+  - Tranche A baseline: `a9dd972c21c55d0f21c196b89c059cfb1d4c4623`, branch `quality/a0-layer-boundary-ratchet`.
+  - Existing `ArchitectureCertificationTest` enforces no-growth guards on process/HTTP/Swing/AppContext and class-size hotspots.
+  - New `LayerBoundaryImportRatchetTest` locks 15 core and 11 service outbound source-import debt edges; no new cross-layer coupling without reviewed SPEC and exact baseline update.
+  - A0.1 ratchet is not A0.5 debt resolution nor A0.7 architecture certification.
 - [ ] **A0.2 — Characterize hotspot behavior before extraction**
   - MapPanel, LayersPanel, project persistence, CATMAP composer, network/external process paths.
 - [ ] **A0.3 — EDT/blocking-I/O certification**
