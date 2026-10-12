@@ -79,6 +79,18 @@ class StacCollectionPaginationContractTest {
         assertTrue(failure.getMessage().contains("HTTP(S)"));
     }
 
+    @Test
+    void nullLinkArrayReturnsTheAvailableSinglePageWithoutAnException() throws Exception {
+        initServer();
+        server.createContext("/collections", exchange ->
+                reply(exchange, "{\"collections\":[{\"id\":\"only\"}],\"links\":null}"));
+        server.start();
+
+        List<StacClient.StacCollection> result = StacClient.getCollections(origin);
+        assertEquals(1, result.size());
+        assertEquals("only", result.get(0).id());
+    }
+
     private void initServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         origin = "http://127.0.0.1:" + server.getAddress().getPort() + "/";
