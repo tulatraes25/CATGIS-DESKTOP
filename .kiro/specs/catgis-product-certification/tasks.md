@@ -121,6 +121,9 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Audit found WhiteboxToolDialog performed external executable lookup synchronously in its EDT constructor and silently dropped user parameters before starting WhiteboxTools.
   - Candidate: `ToolAvailabilityProbe` moves discovery into SwingWorker and returns results on EDT; `WhiteboxToolExecutionSupport` validates required parameters and constructs lossless argv including file paths with spaces.
   - Tests: `ToolAvailabilityProbeTest` and `WhiteboxToolExecutionSupportTest`. Tranche A does not certify all EDT, disk, network or external processes.
+  - Tranche B stacked on A0.3 Tranche A: `ExternalToolService.execute` used to block reading stdout to EOF before applying a 300-second `waitFor` deadline, making the timeout ineffective for hanging processes. It also assumed its working directory already existed and collected unbounded output in memory.
+  - Candidate `quality/a0-external-tool-timeout-contract` changes the process boundary to run a concurrent bounded stdout drain, enforce the wait deadline, forcibly destroy timed-out processes and create the tool work directory before launch. `collectProcess(Process,long)` is a deterministic fake-process seam.
+  - `ExternalToolTimeoutContractTest` proves that open stdout cannot bypass timeout, nonzero exit codes surface their output, and large output is capped. A0.3 is still OPEN until every network/disk/process EDT path is reviewed.
 - [ ] **A0.4 — Adapter/seam certification**
   - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
 - [ ] **A0.5 — Architecture debt burn-down**

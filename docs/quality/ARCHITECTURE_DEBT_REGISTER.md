@@ -75,6 +75,29 @@ preventing this simple bypass of the package dependency guard.
 This is source-lexical protection and not a proof of complete architecture.
 Reflection, dynamic class loading and runtime delegation still require A0.3-A0.5.
 
+## A0.3 external tool execution / EDT debt (candidate)
+
+The preexisting WhiteboxTools dialog synchronously queried executable availability in
+its Swing constructor and then silently ignored the user's input/output parameter
+values when executing the selected tool. Tranche A introduces a SwingWorker-based,
+injectable availability probe and a validated argv builder. This prevents GUI freeze
+during dependency detection and preserves paths with spaces. It does **not** certify
+all remaining EDT I/O call sites.
+
+A second independent root cause is present in `ExternalToolService.execute`:
+the old implementation consumed child stdout until EOF before invoking
+`waitFor(timeout)`, so a hung process could bypass the nominal 300-second limit.
+It also buffered unbounded output and expected its working directory to exist.
+Tranche B (PR #35 candidate) drains output on a bounded daemon reader, enforces
+a process deadline independently of EOF, terminates timeout/interruption children,
+caps retained diagnostic text at 1 MiB, and creates the tool directory on demand.
+A package-private `collectProcess(Process,long)` seam permits deterministic
+timeout tests with fake processes, with no shell/GDAL/Whitebox dependency.
+
+Both tranches are **partial** A0.3/A0.4 improvements. Synchronous legacy paths
+in PostGIS credentials, GDAL, network clients, and other dialog callbacks remain
+under architectural review. No change to A0.7 status is justified by these gates.
+
 ## Hotspot ceilings
 
 | File | Ceiling lines | Closure intent |
