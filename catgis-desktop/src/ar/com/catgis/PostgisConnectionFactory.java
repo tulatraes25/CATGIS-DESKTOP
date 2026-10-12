@@ -5,6 +5,9 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.geotools.api.data.DataStore;
 import org.geotools.api.data.DataStoreFinder;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,6 +21,7 @@ public final class PostgisConnectionFactory {
     private static final Map<String, HikariDataSource> poolCache = new ConcurrentHashMap<>();
     private static final int POOL_MAX = 5;
     private static final int POOL_MIN = 1;
+    private static final byte[] POOL_KEY_SALT = createPoolKeySalt();
 
     private PostgisConnectionFactory() {
     }
@@ -33,7 +37,7 @@ public final class PostgisConnectionFactory {
             throw new IllegalArgumentException(validationMessage);
         }
 
-        String fingerprint = info.buildFingerprint();
+        String fingerprint = poolKey(info);
         HikariDataSource ds;
         synchronized (poolCache) {
             ds = poolCache.get(fingerprint);
@@ -66,6 +70,30 @@ public final class PostgisConnectionFactory {
                     "No se pudo crear la conexion PostGIS. Revisa host, base, usuario, clave y dependencia JDBC.");
         }
         return store;
+    }
+
+    // Session-scoped salted key: credential changes must never reuse an authenticated pool.
+    // Neither the password nor its unsalted digest is retained in the cache key.
+    static String poolKey(PostgisConnectionInfo info) {
+        if (info == null) {
+            throw new IllegalArgumentException("Connection info required.");
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(POOL_KEY_SALT);
+            digest.update(info.buildFingerprint().getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(info.getPassword().getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is unavailable.", ex);
+        }
+    }
+
+    private static byte[] createPoolKeySalt() {
+        byte[] salt = new byte[32];
+        new SecureRandom().nextBytes(salt);
+        return salt;
     }
 
     private static HikariDataSource createPool(PostgisConnectionInfo info) {
