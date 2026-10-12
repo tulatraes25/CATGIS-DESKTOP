@@ -65,7 +65,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Initial audit found two integrity defects: payload-free `.catgis` files could replace the current project, and failed saves could repoint `projectFile` before persistence succeeded.
   - Candidate fixes are behavior-preserving on success paths and harden failure paths; GitHub CI is authoritative.
   - CLOSED_CERTIFIED: PR #22 head `11a7753a9b55ab24caebbba00de1177bd092a7fb`; PR CI `37859335916` SUCCESS; PR Certification `37859335855` SUCCESS; merge `d5f6db956bf0086d6e63db840ea0993a94b1b93d`; post-main CI `37859737265` SUCCESS; post-main Certification `37859737268` SUCCESS.
-- [-] **F2.2 — Vector format and editing contracts**
+- [x] **F2.2 — Vector format and editing contracts**
   - Shapefile roundtrip, GeoPackage, FlatGeobuf, SpatiaLite, CSV, DXF, editing/snapping/undo/redo.
   - Tranche A baseline: `d5f6db956bf0086d6e63db840ea0993a94b1b93d`, branch `quality/f2-vector-edit-contracts`.
   - Current-tree audit supersedes stale historical reports: Shapefile roundtrip already exists in `ReleaseVectorInteropTest`; deterministic CSV/DXF and real/dependency-gated FlatGeobuf/GeoPackage/SpatiaLite suites already exist.
@@ -75,8 +75,13 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche B baseline: `50a86cba7402591ae6e7780feb72a35da535604a`, branch `quality/f2-truthful-format-gating`.
   - Audit found 12 GDAL/OSGeo-dependent real-format tests that silently returned PASS when `ogr2ogr` was absent: GeoPackage 5, SpatiaLite 3, FlatGeobuf 4.
   - Tranche B requires explicit JUnit assumptions for missing external runtime, an executable anti-silent-pass guard, and a bounded skip budget of 15 (= 3 existing reviewed skips + 12 explicit GDAL format skips).
-- [ ] **F2.3 — Raster/DEM contracts**
+  - Tranche B CLOSED_CERTIFIED: PR #24 head `43033f1a25e8c5d21d96091e4210e81205baa0c0`; PR CI `37861328482` SUCCESS; PR Certification `37861328524` SUCCESS; merge `2411416b00bd00adc14f2763e12f246f77ad1568`; post-main CI `37861638312` SUCCESS; post-main Certification `37861638283` SUCCESS.
+- [-] **F2.3 — Raster/DEM contracts**
   - Real tiny GeoTIFF/NoData/multiband/reprojection where supported.
+  - Exact baseline: `2411416b00bd00adc14f2763e12f246f77ad1568`, branch `quality/f2-raster-dem-contracts`.
+  - Current-tree audit: real GeoTIFF fixtures and DEM workflows already exist; reprojection orientation already has direct coverage.
+  - Confirmed gap: one explicit deterministic contract tying together real GeoTIFF read, CRS/envelope, multiband sample preservation, NoData/NaN sample preservation, and in-process reprojection.
+  - Candidate contract: `RasterDemContractTest`; no GUI/OpenCode and no external GDAL dependency.
 - [ ] **F2.4 — Web service contracts**
   - Deterministic WMS/WFS XML/URL/error tests with local HTTP fixture.
 - [ ] **F2.5 — PostGIS CI integration**
@@ -157,4 +162,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F2.2 Tranche B truthful external-format dependency gating on GitHub from exact baseline `50a86cba7402591ae6e7780feb72a35da535604a`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify F2.3 Raster/DEM contract on GitHub from exact baseline `2411416b00bd00adc14f2763e12f246f77ad1568`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
