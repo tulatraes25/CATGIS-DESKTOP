@@ -3,10 +3,16 @@ package ar.com.catgis;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 /**
  * WCS (Web Coverage Service) client for downloading raster data.
@@ -142,28 +148,27 @@ public final class WcsClient {
                                                    String bbox, String crs,
                                                    int width, int height,
                                                    String format, WcsVersion version) throws Exception {
+        return fetchUrlBytes(buildCoverageRequestUrl(
+                serviceUrl, coverageName, bbox, crs, width, height, format, version));
+    }
+
+    private static String buildCoverageRequestUrl(String serviceUrl, String coverageName,
+                                                  String bbox, String crs,
+                                                  int width, int height,
+                                                  String format, WcsVersion version) {
         if (bbox == null || bbox.isBlank()) bbox = "-180,-90,180,90";
         if (crs == null || crs.isBlank()) crs = "EPSG:4326";
         if (width <= 0) width = 512;
         if (height <= 0) height = 512;
 
-        String fmt = format;
-        if (fmt == null || fmt.isBlank()) {
-            fmt = "image/tiff"; // default
-        }
-
-        String url;
-        if (version == WcsVersion.V2_0_1) {
-            url = buildGetCoverageUrl20(serviceUrl, coverageName, bbox, crs, width, height, fmt);
-        } else {
-            url = buildGetCoverageUrl10(serviceUrl, coverageName, bbox, crs, width, height, fmt);
-        }
-
-        return fetchUrlBytes(url);
+        String fmt = format == null || format.isBlank() ? "image/tiff" : format;
+        return version == WcsVersion.V2_0_1
+                ? buildGetCoverageUrl20(serviceUrl, coverageName, bbox, crs, width, height, fmt)
+                : buildGetCoverageUrl10(serviceUrl, coverageName, bbox, crs, width, height, fmt);
     }
 
     /**
-     * Download a coverage and save to file.
+     * Download a coverage and save to file, without buffering the raster in RAM.
      */
     public static void downloadCoverageToFile(String serviceUrl, String coverageName,
                                                String bbox, String crs,
@@ -174,19 +179,89 @@ public final class WcsClient {
     }
 
     /**
-     * Download a coverage with format and save to file.
+     * WCS 2.0.1 -> 1.0.0 fallback with staged disk writes. A failed or
+     * truncated response must never replace a previously valid raster.
      */
     public static void downloadCoverageToFile(String serviceUrl, String coverageName,
                                                String bbox, String crs,
                                                int width, int height,
                                                String format, File outputFile) throws Exception {
-        byte[] data = downloadCoverage(serviceUrl, coverageName, bbox, crs,
-                width, height, format);
-        if (data == null || data.length == 0) {
-            throw new Exception("No se pudo descargar la cobertura.");
+        if (outputFile == null) {
+            throw new IllegalArgumentException("WCS output file is required.");
         }
-        try (FileOutputStream fos = new FileOutputStream(outputFile)) {
-            fos.write(data);
+        Path destination = outputFile.toPath().toAbsolutePath();
+        Path parent = destination.getParent();
+        if (parent == null || !Files.isDirectory(parent)) {
+            throw new IOException("WCS output directory does not exist.");
+        }
+
+        Path staging = Files.createTempFile(parent, ".catgis-wcs-", ".part");
+        try {
+            try {
+                streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
+                        width, height, format, WcsVersion.V2_0_1, staging);
+            } catch (Exception v2Failure) {
+                try {
+                    streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
+                            width, height, format, WcsVersion.V1_0_0, staging);
+                } catch (Exception v1Failure) {
+                    v1Failure.addSuppressed(v2Failure);
+                    throw v1Failure;
+                }
+            }
+
+            try {
+                Files.move(staging, destination, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                Files.move(staging, destination, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(staging);
+        }
+    }
+
+    private static void streamCoverageVersion(String serviceUrl, String coverageName,
+                                              String bbox, String crs,
+                                              int width, int height, String format,
+                                              WcsVersion version, Path staging) throws Exception {
+        URL url = new URL(buildCoverageRequestUrl(
+                serviceUrl, coverageName, bbox, crs, width, height, format, version));
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        try {
+            connection.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
+            connection.setRequestProperty("Accept", "image/tiff,application/octet-stream,*/*");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(60000);
+
+            int status = connection.getResponseCode();
+            if (status != 200) {
+                throw new IOException("HTTP " + status + " from WCS server.");
+            }
+            String type = connection.getContentType();
+            String normalizedType = type != null ? type.toLowerCase(Locale.ROOT) : "";
+            if (normalizedType.contains("xml") || normalizedType.contains("json")
+                    || normalizedType.startsWith("text/")) {
+                throw new IOException("WCS returned an error document, not a raster.");
+            }
+
+            long received = 0L;
+            try (InputStream input = connection.getInputStream();
+                 OutputStream output = Files.newOutputStream(staging,
+                         StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+                byte[] buffer = new byte[65536];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, count);
+                    received += count;
+                }
+            }
+            long expected = connection.getContentLengthLong();
+            if (received == 0L || (expected >= 0L && received != expected)) {
+                throw new IOException("WCS raster response is empty or truncated.");
+            }
+        } finally {
+            connection.disconnect();
         }
     }
 
