@@ -40,6 +40,28 @@ Purpose: establish executable no-growth guardrails before architecture burn-down
 
 These lists are exact. New usage fails the architecture test. Removal is encouraged and requires reducing the allowlist in the same PR.
 
+## A0.1 package-boundary import ratchet (candidate)
+
+The executable `LayerBoundaryImportRatchetTest` locks the current core
+and service outbound-import edges in addition to the existing broad source
+guardrails. These are **not approved architectural dependencies**: they are
+explicit, removable debt, and no-growth is the only claim of this tranche.
+
+- `core/`: **15** reviewed outbound import edges, concentrated in
+  `core/model/Layer.java`, `core/model/Project.java`,
+  `core/model/DataDefinedOverrides.java`, and `core/geometry/SpatialIndex.java`
+- `service/`: **11** reviewed outbound import edges, concentrated in
+  `EventBusInitializer.java`, `ToolboxRegistry.java`,
+  `ToolboxAlgorithm.java` and `EventBus.java`
+- inbound imports from UI/application to core do not count as core outbound debt
+- new core-to-UI/service edges and unreviewed service-to-desktop edges are blocked
+- a deliberate removal must reduce the exact test allowlist in the same PR
+
+This import-source ratchet complements `ArchitectureCertificationTest`; it
+does not replace a full dependency graph, UI-thread audit, adapter verification
+or hotspot refactoring. A0.7 remains **NOT_CERTIFIED** until the other
+architecture gates pass on one exact tested SHA.
+
 ## Hotspot ceilings
 
 | File | Ceiling lines | Closure intent |
