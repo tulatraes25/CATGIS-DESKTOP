@@ -124,6 +124,8 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche B stacked on A0.3 Tranche A: `ExternalToolService.execute` used to block reading stdout to EOF before applying a 300-second `waitFor` deadline, making the timeout ineffective for hanging processes. It also assumed its working directory already existed and collected unbounded output in memory.
   - Candidate `quality/a0-external-tool-timeout-contract` changes the process boundary to run a concurrent bounded stdout drain, enforce the wait deadline, forcibly destroy timed-out processes and create the tool work directory before launch. `collectProcess(Process,long)` is a deterministic fake-process seam.
   - `ExternalToolTimeoutContractTest` proves that open stdout cannot bypass timeout, nonzero exit codes surface their output, and large output is capped. A0.3 is still OPEN until every network/disk/process EDT path is reviewed.
+  - Tranches A and B merged as PR #34 `d860bdcea233307eb4378145b7dccdf00105f5ae` and PR #35 `22961526117bf2e090450cd837042241f23af64b`; both post-main CI and Certification succeeded.
+  - Tranche C candidate baseline `22961526117bf2e090450cd837042241f23af64b` on `quality/a0-wms-disk-cache-off-edt`: move WMS disk probing/PNG decoding out of the Swing map painting path; preserve fast memory hit and repaint callback on EDT. Executable contract `OnlineWmsDiskCacheEdtContractTest` requires the initial EDT disk hit to be asynchronous and the decoded image to be pixel exact. This is partial A0.3, not A0.7.
 - [ ] **A0.4 — Adapter/seam certification**
   - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
 - [ ] **A0.5 — Architecture debt burn-down**
@@ -186,4 +188,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify A0.3 Tranche A WhiteboxTools off-EDT executable discovery and lossless tool arguments against exact parent `b19c9d6fd93f4d314b51cbb82acef582f3788222`, after its post-main CI/Certification completes. Then characterize remaining A0.2 hotspots and tackle A0.3/A0.4/A0.5 before architecture A0.7 and any OpenCode or GUI runtime.
+Resolve F2 STAC pagination PR #36 test failure and certify A0.3 Tranche C WMS disk cache on GitHub against `22961526117bf2e090450cd837042241f23af64b`. Continue audit of remaining EDT/network/disk boundaries and A0.2/A0.4/A0.5, then A0.6/A0.7 before GUI/OpenCode.
