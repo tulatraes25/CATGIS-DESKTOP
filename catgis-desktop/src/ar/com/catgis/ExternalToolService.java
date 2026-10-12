@@ -2,6 +2,7 @@ package ar.com.catgis;
 
 import java.io.*;
 import java.nio.file.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -15,6 +16,7 @@ public final class ExternalToolService {
 
     private static final Path TOOLS_DIR = Path.of(System.getProperty("user.home"), ".catgis", "tools");
     private static final int DEFAULT_TIMEOUT_SECONDS = 300;
+    private static final int MAX_OUTPUT_CHARS = 1_048_576;
 
     private ExternalToolService() {}
 
@@ -37,33 +39,94 @@ public final class ExternalToolService {
     }
 
     /**
-     * Execute a CLI command synchronously.
+     * Execute a CLI command synchronously from a worker (never Swing EDT).
+     * Drain output concurrently so the timeout is not bypassed by a process
+     * that never closes its stdout stream.
      */
     public static ToolResult execute(String... command) {
+        Process process = null;
         try {
+            Files.createDirectories(TOOLS_DIR);
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.redirectErrorStream(true);
             pb.directory(TOOLS_DIR.toFile());
-            Process p = pb.start();
+            process = pb.start();
+            return collectProcess(process, TimeUnit.SECONDS.toMillis(DEFAULT_TIMEOUT_SECONDS));
+        } catch (Exception failure) {
+            return new ToolResult(false, "", failure.getMessage(), -1);
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
+    }
 
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
+    /**
+     * Package-private process boundary. A controlled fake Process makes timeout
+     * and stdout-draining behavior testable without launching system binaries.
+     */
+    static ToolResult collectProcess(Process process, long timeoutMillis) {
+        OutputDrain output = new OutputDrain(process.getInputStream());
+        Thread drainThread = new Thread(output, "catgis-tool-output-drain");
+        drainThread.setDaemon(true);
+        drainThread.start();
+
+        try {
+            if (!process.waitFor(Math.max(1L, timeoutMillis), TimeUnit.MILLISECONDS)) {
+                process.destroyForcibly();
+                drainThread.join(1000L);
+                return new ToolResult(false, output.snapshot(),
+                        "Timeout after " + timeoutMillis + " ms", -1);
+            }
+
+            drainThread.join(1000L);
+            String captured = output.snapshot();
+            int exitCode = process.exitValue();
+            return new ToolResult(exitCode == 0, captured,
+                    exitCode == 0 ? "" : captured, exitCode);
+        } catch (InterruptedException interrupted) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+            return new ToolResult(false, output.snapshot(), "External tool interrupted", -1);
+        } finally {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
+    }
+
+    private static final class OutputDrain implements Runnable {
+        private final InputStream stream;
+        private final StringBuilder collected = new StringBuilder();
+        private boolean truncated;
+
+        private OutputDrain(InputStream stream) {
+            this.stream = stream;
+        }
+
+        @Override
+        public void run() {
+            try (Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                char[] chunk = new char[4096];
+                int count;
+                while ((count = reader.read(chunk)) != -1) {
+                    synchronized (this) {
+                        int remaining = MAX_OUTPUT_CHARS - collected.length();
+                        if (remaining > 0) {
+                            collected.append(chunk, 0, Math.min(remaining, count));
+                        }
+                        if (count > remaining) {
+                            truncated = true;
+                        }
+                    }
                 }
+            } catch (IOException ignored) {
+                // A timed-out process is killed and its stdout can close abruptly.
             }
+        }
 
-            boolean finished = p.waitFor(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                p.destroyForcibly();
-                return new ToolResult(false, output.toString(), "Timeout after " + DEFAULT_TIMEOUT_SECONDS + "s", -1);
-            }
-
-            int exitCode = p.exitValue();
-            return new ToolResult(exitCode == 0, output.toString(), exitCode == 0 ? "" : output.toString(), exitCode);
-        } catch (Exception e) {
-            return new ToolResult(false, "", e.getMessage(), -1);
+        private synchronized String snapshot() {
+            return collected.toString() + (truncated ? "\\n[tool output truncated]" : "");
         }
     }
 
