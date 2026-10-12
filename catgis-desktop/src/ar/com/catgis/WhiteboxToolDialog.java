@@ -3,7 +3,9 @@ package ar.com.catgis;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Dialog for selecting and running WhiteboxTools geoprocessing tools.
@@ -15,6 +17,8 @@ public class WhiteboxToolDialog extends JDialog {
     private final JTextArea descriptionArea;
     private final JPanel paramsPanel;
     private final JLabel statusLabel;
+    private final JButton runButton;
+    private String detectedExecutable;
     private List<WhiteboxToolRegistry.ToolInfo> currentTools;
     private WhiteboxToolRegistry.ToolInfo selectedTool;
 
@@ -24,24 +28,15 @@ public class WhiteboxToolDialog extends JDialog {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(8, 8));
 
-        // Check if WhiteboxTools is available
-        boolean available = ExternalToolService.isToolAvailable("whitebox_tools")
-                || ExternalToolService.isToolAvailable("wbt");
-
         // Header
         JPanel header = new JPanel(new BorderLayout());
         header.setBorder(new EmptyBorder(8, 8, 4, 8));
         JLabel title = new JLabel("Herramientas de analisis geoespacial");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 14f));
         header.add(title, BorderLayout.NORTH);
-
-        if (!available) {
-            JLabel warning = new JLabel("<html><b style='color:orange'>WhiteboxTools no detectado.</b> "
-                    + "Descargalo desde <a href='https://www.whiteboxgeo.com/download-whiteboxtools/'>whiteboxgeo.com</a> "
-                    + "y agrega al PATH del sistema.</html>");
-            warning.setBorder(new EmptyBorder(4, 0, 4, 0));
-            header.add(warning, BorderLayout.CENTER);
-        }
+        JLabel availabilityLabel = new JLabel("Comprobando instalacion de WhiteboxTools...");
+        availabilityLabel.setBorder(new EmptyBorder(4, 0, 4, 0));
+        header.add(availabilityLabel, BorderLayout.CENTER);
         add(header, BorderLayout.NORTH);
 
         // Left panel: category + tool list
@@ -80,8 +75,8 @@ public class WhiteboxToolDialog extends JDialog {
 
         // Footer
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton runButton = new JButton("Ejecutar");
-        runButton.setEnabled(available);
+        runButton = new JButton("Ejecutar");
+        runButton.setEnabled(false);
         runButton.addActionListener(e -> executeTool());
         JButton closeButton = new JButton("Cerrar");
         closeButton.addActionListener(e -> dispose());
@@ -94,6 +89,16 @@ public class WhiteboxToolDialog extends JDialog {
         if (!currentTools.isEmpty()) {
             toolList.setSelectedIndex(0);
         }
+
+        // Executable detection can invoke an external process; never run it on EDT.
+        ToolAvailabilityProbe.start(ExternalToolService::findWhiteboxTools, executable -> {
+            detectedExecutable = executable;
+            boolean available = executable != null && !executable.isBlank();
+            runButton.setEnabled(available);
+            availabilityLabel.setText(available
+                    ? "WhiteboxTools detectado. Podes ejecutar las herramientas."
+                    : "WhiteboxTools no detectado. Instalalo y agregalo al PATH.");
+        });
     }
 
     public static void open() {
@@ -143,39 +148,47 @@ public class WhiteboxToolDialog extends JDialog {
     }
 
     private void executeTool() {
-        if (selectedTool == null) return;
-        statusLabel.setText("Ejecutando " + selectedTool.name() + "...");
-        statusLabel.setForeground(Color.BLUE);
+        WhiteboxToolRegistry.ToolInfo tool = selectedTool;
+        if (tool == null || detectedExecutable == null) {
+            return;
+        }
 
-        // Collect parameters
-        StringBuilder args = new StringBuilder();
+        Map<String, String> values = new LinkedHashMap<>();
         for (Component comp : paramsPanel.getComponents()) {
             if (comp instanceof JTextField field && field.getName() != null) {
-                String value = field.getText().trim();
-                if (!value.isEmpty()) {
-                    args.append("--").append(field.getName()).append("=").append(value).append(" ");
-                }
+                values.put(field.getName(), field.getText());
             }
         }
 
-        String finalArgs = args.toString().trim();
-        String[] argArray = finalArgs.isEmpty() ? new String[0] : finalArgs.split("\\s+");
+        String[] command;
+        try {
+            command = WhiteboxToolExecutionSupport.buildCommand(detectedExecutable, tool, values);
+        } catch (IllegalArgumentException invalid) {
+            NotificationManager.warn(this, null, invalid.getMessage());
+            return;
+        }
 
-        ExternalToolService.executeAsync("whitebox_tools", "--run=" + selectedTool.id())
-                .thenAccept(result -> SwingUtilities.invokeLater(() -> {
-                    if (result.success()) {
-                        statusLabel.setText("Completado exitosamente");
-                        statusLabel.setForeground(new Color(0, 128, 0));
-                        NotificationManager.info(this,
-                                "Exito",
-                                "Herramienta ejecutada correctamente.\n\n" + result.output());
-                    } else {
+        runButton.setEnabled(false);
+        statusLabel.setText("Ejecutando " + tool.name() + "...");
+        statusLabel.setForeground(Color.BLUE);
+
+        ExternalToolService.executeAsync(command)
+                .whenComplete((result, failure) -> SwingUtilities.invokeLater(() -> {
+                    runButton.setEnabled(detectedExecutable != null);
+                    if (failure != null || result == null || !result.success()) {
                         statusLabel.setText("Error en la ejecucion");
                         statusLabel.setForeground(Color.RED);
+                        String detail = failure != null ? failure.getMessage()
+                                : result != null ? result.error() : "Resultado vacio.";
                         NotificationManager.error(this,
-                                "Error",
-                                "Error al ejecutar la herramienta:\n" + result.error());
+                                "Error", "Error al ejecutar la herramienta:\n" + detail);
+                        return;
                     }
+
+                    statusLabel.setText("Completado exitosamente");
+                    statusLabel.setForeground(new Color(0, 128, 0));
+                    NotificationManager.info(this,
+                            "Exito", "Herramienta ejecutada correctamente.\n\n" + result.output());
                 }));
     }
 }

@@ -102,17 +102,25 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
 ## Phase A0 — Architecture certification (BLOCKING BEFORE RUNTIME)
 
-- [-] **A0.1 — Create executable architecture baseline**
+- [x] **A0.1 — Create executable architecture baseline**
   - Requirements: REQ-PC-0, REQ-PC-7
   - Package/source dependency rules; explicit allowlist only for known debt.
   - Tranche A baseline: `a9dd972c21c55d0f21c196b89c059cfb1d4c4623`, branch `quality/a0-layer-boundary-ratchet`.
-  - Existing `ArchitectureCertificationTest` enforces no-growth guards on process/HTTP/Swing/AppContext and class-size hotspots.
-  - New `LayerBoundaryImportRatchetTest` locks 15 core and 11 service outbound source-import debt edges; no new cross-layer coupling without reviewed SPEC and exact baseline update.
-  - A0.1 ratchet is not A0.5 debt resolution nor A0.7 architecture certification.
-- [ ] **A0.2 — Characterize hotspot behavior before extraction**
+  - `ArchitectureCertificationTest` enforces no-growth guards on process/HTTP/Swing/AppContext and source class-size hotspots.
+  - `LayerBoundaryImportRatchetTest` locks 15 core and 11 service outbound source-import debt edges; reviewed SPEC required before widening.
+  - PR #31 head `36cb0111c429c45475827f27f73e6f2b01d98a65`, merge `2ee8aee58f2c4440eb6ef63af583c53b58d827ec`; post-main CI `38298373365` SUCCESS and Certification `38298373560` SUCCESS.
+  - This ratchet prevents growth but does not satisfy A0.5 debt removal or A0.7 closure.
+- [-] **A0.2 — Characterize hotspot behavior before extraction**
   - MapPanel, LayersPanel, project persistence, CATMAP composer, network/external process paths.
-- [ ] **A0.3 — EDT/blocking-I/O certification**
+  - Tranche A: `MapPanelRenderStateCharacterizationTest` locks viewport/export rollback and retry after rendering failure.
+  - PR #33 head `50d9c67999401a4b6e827c3b227c775aec652475`; PR CI `38298492919` SUCCESS and Certification `38298492702` SUCCESS; merge `b19c9d6fd93f4d314b51cbb82acef582f3788222`.
+  - Post-main CI/Certification pending at next-branch creation. Other hotspots remain in `docs/quality/HOTSPOT_BEHAVIOR_CHARACTERIZATION.md`.
+- [-] **A0.3 — EDT/blocking-I/O certification**
   - Network, disk and external process boundaries must not synchronously block Swing EDT.
+  - Tranche A baseline `b19c9d6fd93f4d314b51cbb82acef582f3788222`, branch `quality/a0-whitebox-edt-parameter-contracts`.
+  - Audit found WhiteboxToolDialog performed external executable lookup synchronously in its EDT constructor and silently dropped user parameters before starting WhiteboxTools.
+  - Candidate: `ToolAvailabilityProbe` moves discovery into SwingWorker and returns results on EDT; `WhiteboxToolExecutionSupport` validates required parameters and constructs lossless argv including file paths with spaces.
+  - Tests: `ToolAvailabilityProbeTest` and `WhiteboxToolExecutionSupportTest`. Tranche A does not certify all EDT, disk, network or external processes.
 - [ ] **A0.4 — Adapter/seam certification**
   - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
 - [ ] **A0.5 — Architecture debt burn-down**
@@ -175,4 +183,4 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Certify F2.4 WMS/WFS URL/XML/error/security contract on GitHub from `b6b84455f9621bda84488d3ae01e40e6593e72f3`. Do not use OpenCode/GUI until A0.7 declares `ARCHITECTURE_STATUS=CLOSED_CERTIFIED`.
+Certify A0.3 Tranche A WhiteboxTools off-EDT executable discovery and lossless tool arguments against exact parent `b19c9d6fd93f4d314b51cbb82acef582f3788222`, after its post-main CI/Certification completes. Then characterize remaining A0.2 hotspots and tackle A0.3/A0.4/A0.5 before architecture A0.7 and any OpenCode or GUI runtime.
