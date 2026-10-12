@@ -358,7 +358,20 @@ public final class StacClient {
         if (nextHref == null || nextHref.isBlank()) {
             return null;
         }
-        URI resolved = new URI(currentUrl).resolve(nextHref);
+        URI current = new URI(currentUrl);
+        URI next = new URI(nextHref);
+        URI resolved;
+        if (next.getScheme() == null && next.getRawAuthority() == null
+                && (next.getRawPath() == null || next.getRawPath().isEmpty())
+                && next.getRawQuery() != null) {
+            // URI.resolve("?page=2") can drop the final path segment on JDK 17.
+            // STAC query-only pagination must retain /collections, not request /.
+            String currentPath = current.getScheme() + "://" + current.getRawAuthority()
+                    + (current.getRawPath() != null ? current.getRawPath() : "");
+            resolved = new URI(currentPath + nextHref);
+        } else {
+            resolved = current.resolve(next);
+        }
         String scheme = resolved.getScheme();
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
             throw new IOException("STAC next-page link must use HTTP(S).");
