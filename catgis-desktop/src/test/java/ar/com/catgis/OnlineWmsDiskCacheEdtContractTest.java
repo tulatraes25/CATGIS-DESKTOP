@@ -1,6 +1,10 @@
 package ar.com.catgis;
 
 import org.junit.jupiter.api.Test;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
@@ -73,4 +77,42 @@ class OnlineWmsDiskCacheEdtContractTest {
             Files.deleteIfExists(file);
         }
     }
+    @Test
+    void diskMissDuringCooldownNeverSendsHttpRequest() throws Exception {
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/wms", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(503, -1);
+            exchange.close();
+        });
+        server.start();
+        String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/wms?nonce=" + UUID.randomUUID();
+        String key = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-1").digest(url.getBytes(StandardCharsets.UTF_8)));
+        Field retryField = OnlineWmsImageCache.class.getDeclaredField("RETRY_AFTER");
+        retryField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Map<String, Long> cooldowns = (Map<String, Long>) retryField.get(null);
+        Field pendingField = OnlineWmsImageCache.class.getDeclaredField("PENDING");
+        pendingField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Set<String> pending = (Set<String>) pendingField.get(null);
+        cooldowns.put(key, System.currentTimeMillis() + 60000L);
+        try {
+            SwingUtilities.invokeAndWait(() ->
+                    assertNull(OnlineWmsImageCache.getImage(url, "image/png", null)));
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            // Ensure worker has run instead of relying on arbitrary sleeps.
+            while (pending.contains(key) && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertTrue(!pending.contains(key), "Cache worker must complete.");
+            assertEquals(0, requests.get(), "Network cooldown must prevent HTTP after disk miss.");
+        } finally {
+            cooldowns.remove(key);
+            server.stop(0);
+        }
+    }
+
 }
