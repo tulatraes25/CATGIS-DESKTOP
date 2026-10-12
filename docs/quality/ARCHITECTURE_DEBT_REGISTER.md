@@ -40,6 +40,41 @@ Purpose: establish executable no-growth guardrails before architecture burn-down
 
 These lists are exact. New usage fails the architecture test. Removal is encouraged and requires reducing the allowlist in the same PR.
 
+## A0.1 package-boundary import ratchet (candidate)
+
+The executable `LayerBoundaryImportRatchetTest` locks the current core
+and service outbound-import edges in addition to the existing broad source
+guardrails. These are **not approved architectural dependencies**: they are
+explicit, removable debt, and no-growth is the only claim of this tranche.
+
+- `core/`: **15** reviewed outbound import edges, concentrated in
+  `core/model/Layer.java`, `core/model/Project.java`,
+  `core/model/DataDefinedOverrides.java`, and `core/geometry/SpatialIndex.java`
+- `service/`: **11** reviewed outbound import edges, concentrated in
+  `EventBusInitializer.java`, `ToolboxRegistry.java`,
+  `ToolboxAlgorithm.java` and `EventBus.java`
+- inbound imports from UI/application to core do not count as core outbound debt
+- new core-to-UI/service edges and unreviewed service-to-desktop edges are blocked
+- a deliberate removal must reduce the exact test allowlist in the same PR
+
+This import-source ratchet complements `ArchitectureCertificationTest`; it
+does not replace a full dependency graph, UI-thread audit, adapter verification
+or hotspot refactoring. A0.7 remains **NOT_CERTIFIED** until the other
+architecture gates pass on one exact tested SHA.
+
+## A0.1 fully-qualified dependency bypass guard (candidate)
+
+Audit of all 14 current `core/` and `service/` Java source files found a
+fully-qualified `CatgisLogger` call inside `core/geometry/SpatialIndex.java`
+that was not visible to an import-only scanner. The call is changed to its
+existing reviewed import. The executable
+`fullyQualifiedNamesCannotBypassLayerDependencyGuard` test prohibits new
+fully-qualified local references in these layers outside import declarations,
+preventing this simple bypass of the package dependency guard.
+
+This is source-lexical protection and not a proof of complete architecture.
+Reflection, dynamic class loading and runtime delegation still require A0.3-A0.5.
+
 ## Hotspot ceilings
 
 | File | Ceiling lines | Closure intent |
