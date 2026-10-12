@@ -22,7 +22,7 @@ public final class SpatialIndex {
         for (IndexedFeature indexed : features) {
             tree.insert(indexed.envelope(), indexed);
         }
-        try { tree.build(); } catch (Exception e) { ar.com.catgis.CatgisLogger.warn("STRtree build failed in SpatialIndex", e); }
+        try { tree.build(); } catch (Exception e) { CatgisLogger.warn("STRtree build failed in SpatialIndex", e); }
         return tree;
     }
 

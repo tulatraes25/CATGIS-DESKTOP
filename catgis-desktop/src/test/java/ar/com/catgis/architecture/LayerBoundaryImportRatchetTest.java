@@ -67,6 +67,40 @@ class LayerBoundaryImportRatchetTest {
                 "Service outbound imports changed. No unreviewed UI coupling may be introduced.");
     }
 
+
+    // No fully-qualified local source calls may bypass the import-based baseline.
+    @Test
+    void fullyQualifiedNamesCannotBypassLayerDependencyGuard() throws Exception {
+        Set<String> violations = new LinkedHashSet<>();
+        Pattern qualified = Pattern.compile(
+                "\\bar\\.com\\.catgis\\.[A-Za-z_$][A-Za-z0-9_.$]*");
+        for (String folder : new String[]{"core", "service"}) {
+            Path root = PROD_ROOT.resolve(folder);
+            try (Stream<Path> files = Files.walk(root)) {
+                for (Path file : files.filter(Files::isRegularFile)
+                        .filter(path -> path.toString().endsWith(".java"))
+                        .toList()) {
+                    String[] lines = Files.readString(file, StandardCharsets.UTF_8).split("\\R");
+                    for (int index = 0; index < lines.length; index++) {
+                        String trimmed = lines[index].trim();
+                        if (trimmed.startsWith("package ") || trimmed.startsWith("import ")
+                                || trimmed.startsWith("//") || trimmed.startsWith("*")) {
+                            continue;
+                        }
+                        Matcher matcher = qualified.matcher(lines[index]);
+                        while (matcher.find()) {
+                            String relative = root.relativize(file).toString().replace('\\', '/');
+                            violations.add(folder + "/" + relative + ":" + (index + 1)
+                                    + "\\t" + matcher.group());
+                        }
+                    }
+                }
+            }
+        }
+        assertEquals(Set.of(), violations,
+                "Fully qualified local dependencies bypass the import ratchet; use reviewed imports.");
+    }
+
     private static Set<String> externalImports(String packageFolder, Set<String> allowedPrefixes)
             throws Exception {
         Path root = PROD_ROOT.resolve(packageFolder);
