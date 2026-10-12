@@ -2,12 +2,9 @@ package ar.com.catgis.catmap;
 
 import ar.com.catgis.layout.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,16 +16,13 @@ import static org.junit.jupiter.api.Assertions.*;
  * and compares against a golden PNG in
  * {@code src/test/resources/ar/com/catgis/catmap/golden/}.
  * <p>
- * First run creates golden images; subsequent runs compare with
- * 1% pixel tolerance and per-channel delta of 8 to absorb
- * JDK/OS anti-aliasing variance.
+ * Checked-in golden fixtures are mandatory; a missing baseline fails rather
+ * than silently creating a new image and reporting PASS. Images compare with
+ * 1% pixel tolerance and per-channel delta of 8 to absorb JDK/OS anti-aliasing variance.
  */
 class GoldenImageTest {
 
     private static final int DPI = 96;
-
-    @TempDir
-    Path tempDir;
 
     @Test
     void label() throws Exception {
@@ -215,23 +209,9 @@ class GoldenImageTest {
         BufferedImage actual = LayoutExportEngine.renderLayout(model, DPI);
         assertNotNull(actual);
 
-        Path goldenPath = goldenPath(name);
-        if (!Files.exists(goldenPath)) {
-            GoldenImageAssert.saveGoldenImage(actual, goldenPath);
-            return; // golden created
-        }
-
         BufferedImage expected = GoldenImageAssert.loadGoldenImage(
                 "ar/com/catgis/catmap/golden/" + name);
         GoldenImageAssert.assertMatches(expected, actual, 1.0, 8);
     }
 
-    private static Path goldenPath(String name) {
-        Path p = Path.of("").toAbsolutePath();
-        while (p != null && !Files.exists(p.resolve("build.gradle"))) {
-            p = p.getParent();
-        }
-        if (p == null) p = Path.of("").toAbsolutePath();
-        return p.resolve("src/test/resources/ar/com/catgis/catmap/golden").resolve(name);
-    }
 }
