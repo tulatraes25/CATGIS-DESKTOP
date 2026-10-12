@@ -1,6 +1,6 @@
 # CATGIS Feature Certification Matrix
 
-Status: F2.2_IN_PROGRESS
+Status: F2.3_IN_PROGRESS
 Program spec: `.kiro/specs/catgis-product-certification/`
 Certified source baseline entering F1.2: `d0c13e2c16a25e0aa2c9f0b4b9b543d7c48ff36a`
 
