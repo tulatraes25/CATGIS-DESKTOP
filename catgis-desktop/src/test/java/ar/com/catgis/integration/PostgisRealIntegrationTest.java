@@ -23,6 +23,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("external-postgis")
@@ -148,6 +149,20 @@ class PostgisRealIntegrationTest {
 
         ShapefileData reloaded = PostgisLoader.loadLayerData(copyLayer, info);
         assertEquals(2, reloaded.getFeatureCount());
+    }
+
+    @Test
+    void rotatedWrongPasswordCannotReusePreviouslyAuthenticatedPool() throws Exception {
+        PostgisConnectionInfo correct = connectionInfo();
+        PostgisLoader.testConnection(correct);
+
+        PostgisConnectionInfo rejected = correct.copy();
+        rejected.setPassword("catgis-intentionally-invalid-credential-for-ci");
+        assertThrows(Exception.class, () -> PostgisLoader.testConnection(rejected),
+                "An invalid credential must never borrow the previously authenticated pool.");
+
+        // A failed credential rotation must not permanently break the valid identity.
+        PostgisLoader.testConnection(correct);
     }
 
     private static PostgisConnectionInfo connectionInfo() {
