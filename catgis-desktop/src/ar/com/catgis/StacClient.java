@@ -4,7 +4,11 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * STAC (SpatioTemporal Asset Catalog) client.
@@ -17,6 +21,8 @@ import java.util.List;
  * @see <a href="https://stacspec.org/">STAC Specification</a>
  */
 public final class StacClient {
+
+    private static final int MAX_COLLECTION_PAGES = 100;
 
     private StacClient() {}
 
@@ -57,8 +63,12 @@ public final class StacClient {
         String baseUrl = apiUrl.endsWith("/") ? apiUrl : apiUrl + "/";
         List<StacCollection> allCollections = new ArrayList<>();
         String nextUrl = baseUrl + "collections";
+        Set<String> visitedPages = new HashSet<>();
 
         while (nextUrl != null) {
+            if (visitedPages.size() >= MAX_COLLECTION_PAGES || !visitedPages.add(nextUrl)) {
+                throw new IOException("STAC collection pagination loop or page limit exceeded.");
+            }
             String json = fetchUrl(nextUrl);
 
             // Parse this page
@@ -110,9 +120,9 @@ public final class StacClient {
                 idx = end + 1;
             }
 
-            // Check for next page
-            nextUrl = extractNextLink(json);
-            if (nextUrl != null && nextUrl.equals(nextUrl)) break; // safety
+            // Follow relative or absolute next-page links without revisiting pages.
+            String nextHref = extractNextLink(json);
+            nextUrl = resolveNextPageUrl(nextUrl, nextHref);
         }
 
         return allCollections;
@@ -317,11 +327,40 @@ public final class StacClient {
     }
 
     private static String extractNextLink(String json) {
-        int linksIdx = json.indexOf("\"links\":");
-        if (linksIdx < 0) return null;
-        int nextIdx = json.indexOf("\"rel\":\"next\"", linksIdx);
-        if (nextIdx < 0) return null;
-        return extractJsonString(json, "href", nextIdx);
+        int linksIndex = json != null ? json.indexOf("\"links\"") : -1;
+        if (linksIndex < 0) {
+            return null;
+        }
+        int arrayStart = json.indexOf('[', linksIndex);
+        int arrayEnd = findMatchingBracket(json, arrayStart, '[', ']');
+        if (arrayStart < 0 || arrayEnd < 0) {
+            return null;
+        }
+
+        String links = json.substring(arrayStart + 1, arrayEnd);
+        Matcher objectMatcher = Pattern.compile("\\{[^{}]*\\}").matcher(links);
+        Pattern nextRel = Pattern.compile("\"rel\"\\s*:\\s*\"next\"");
+        Pattern href = Pattern.compile("\"href\"\\s*:\\s*\"([^\"]+)\"");
+        while (objectMatcher.find()) {
+            String link = objectMatcher.group();
+            if (nextRel.matcher(link).find()) {
+                Matcher linkHref = href.matcher(link);
+                return linkHref.find() ? linkHref.group(1) : null;
+            }
+        }
+        return null;
+    }
+
+    private static String resolveNextPageUrl(String currentUrl, String nextHref) throws Exception {
+        if (nextHref == null || nextHref.isBlank()) {
+            return null;
+        }
+        URI resolved = new URI(currentUrl).resolve(nextHref);
+        String scheme = resolved.getScheme();
+        if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+            throw new IOException("STAC next-page link must use HTTP(S).");
+        }
+        return resolved.toString();
     }
 
     private static List<String> extractJsonArray(String json, String key) {
