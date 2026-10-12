@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 public final class OnlineTileCache {
 
@@ -42,7 +43,6 @@ public final class OnlineTileCache {
         } else {
             CACHE_DIR = new File(System.getProperty("java.io.tmpdir"), "catgis-online-tiles");
         }
-        CACHE_DIR.mkdirs();
     }
 
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(6, runnable -> {
@@ -93,31 +93,53 @@ public final class OnlineTileCache {
             return cached;
         }
 
+        // Map rendering cannot read tile files synchronously on Swing EDT.
         File tileFile = resolveTileFile(source, z, x, y);
+        if (PENDING.add(key)) {
+            try {
+                EXECUTOR.submit(() -> {
+                    try {
+                        loadDiskOrFetch(source, z, x, y, key, tileFile, repaintCallback);
+                    } finally {
+                        PENDING.remove(key);
+                    }
+                });
+            } catch (RejectedExecutionException shutdown) {
+                PENDING.remove(key);
+            }
+        }
+
+        return null;
+    }
+
+    private static void loadDiskOrFetch(OnlineRasterSource source, int z, int x, int y,
+                                        String key, File tileFile, Runnable repaintCallback) {
         if (tileFile.isFile()) {
             try {
                 BufferedImage image = ImageIO.read(tileFile);
                 if (image != null) {
                     if (isUnavailablePlaceholder(source, image, tileFile.length())) {
                         markPlaceholderUnavailable(key, tileFile);
-                        return null;
+                        return;
                     }
                     MEMORY_CACHE.put(key, image);
-                    return image;
+                    RETRY_AFTER.remove(key);
+                    clearSourceFailure(source);
+                    if (repaintCallback != null) {
+                        SwingUtilities.invokeLater(repaintCallback);
+                    }
+                    return;
                 }
-            } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
+            } catch (Exception error) {
+                CatgisLogger.warn("OnlineTileCache: cached tile decode failed", error);
+            }
         }
-
+        // Network backoff must never conceal an already cached offline image.
         Long retryAfter = RETRY_AFTER.get(key);
         if (retryAfter != null && retryAfter > System.currentTimeMillis()) {
-            return null;
+            return;
         }
-
-        if (PENDING.add(key)) {
-            EXECUTOR.submit(() -> fetchTile(source, z, x, y, key, tileFile, repaintCallback));
-        }
-
-        return null;
+        fetchTile(source, z, x, y, key, tileFile, repaintCallback);
     }
 
     private static void fetchTile(OnlineRasterSource source,
@@ -204,8 +226,6 @@ public final class OnlineTileCache {
         } catch (Exception ex) {
             registerSourceFailure(source, ex.getClass().getSimpleName() + ": " + safeMessage(ex.getMessage()));
             RETRY_AFTER.put(key, System.currentTimeMillis() + RETRY_DELAY_MS);
-        } finally {
-            PENDING.remove(key);
         }
     }
 

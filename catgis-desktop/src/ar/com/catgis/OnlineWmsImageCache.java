@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 public final class OnlineWmsImageCache {
 
@@ -55,26 +56,48 @@ public final class OnlineWmsImageCache {
             return cached;
         }
 
+        // Called while painting the map: do not probe or decode disk images on EDT.
         File file = new File(CACHE_DIR, key + "." + extension(formatHint));
+        if (PENDING.add(key)) {
+            try {
+                EXECUTOR.submit(() -> {
+                    try {
+                        loadDiskOrFetch(requestUrl, formatHint, key, file, repaintCallback);
+                    } finally {
+                        PENDING.remove(key);
+                    }
+                });
+            } catch (RejectedExecutionException shutdown) {
+                // Application shutdown must not leave stale PENDING markers.
+                PENDING.remove(key);
+            }
+        }
+        return null;
+    }
+
+    private static void loadDiskOrFetch(String requestUrl, String formatHint,
+                                        String key, File file, Runnable repaintCallback) {
         if (file.isFile()) {
             try {
                 BufferedImage image = ImageIO.read(file);
                 if (image != null) {
                     MEMORY_CACHE.put(key, image);
-                    return image;
+                    RETRY_AFTER.remove(key);
+                    if (repaintCallback != null) {
+                        SwingUtilities.invokeLater(repaintCallback);
+                    }
+                    return;
                 }
-            } catch (Exception ignored) { CatgisLogger.warn("OnlineWmsImageCache: operation failed", ignored); }
+            } catch (Exception error) {
+                CatgisLogger.warn("OnlineWmsImageCache: disk image read failed", error);
+            }
         }
-
+        // Network backoff must never conceal an already cached offline image.
         Long retryAfter = RETRY_AFTER.get(key);
         if (retryAfter != null && retryAfter > System.currentTimeMillis()) {
-            return null;
+            return;
         }
-
-        if (PENDING.add(key)) {
-            EXECUTOR.submit(() -> fetch(requestUrl, formatHint, key, file, repaintCallback));
-        }
-        return null;
+        fetch(requestUrl, formatHint, key, file, repaintCallback);
     }
 
     private static void fetch(String requestUrl, String formatHint, String key, File file, Runnable repaintCallback) {
@@ -106,8 +129,6 @@ public final class OnlineWmsImageCache {
             }
         } catch (Exception ex) {
             RETRY_AFTER.put(key, System.currentTimeMillis() + 30000L);
-        } finally {
-            PENDING.remove(key);
         }
     }
 
