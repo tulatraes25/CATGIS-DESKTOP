@@ -260,6 +260,20 @@ public final class WcsClient {
             if (received == 0L || (expected >= 0L && received != expected)) {
                 throw new IOException("WCS raster response is empty or truncated.");
             }
+            // Some WCS providers mislabel XML/JSON exception reports as image/tiff
+            // or application/octet-stream. Check a small prefix before publishing.
+            byte[] prefix;
+            try (InputStream stagedInput = Files.newInputStream(staging)) {
+                prefix = stagedInput.readNBytes(256);
+            }
+            String start = new String(prefix, StandardCharsets.UTF_8)
+                    .replace("\\uFEFF", "").stripLeading().toLowerCase(Locale.ROOT);
+            if (start.startsWith("<?xml") || start.startsWith("<exception")
+                    || start.startsWith("<ows:exception") || start.startsWith("{")
+                    || start.startsWith("[") || start.startsWith("<html")
+                    || start.startsWith("<!doctype html")) {
+                throw new IOException("WCS returned an error document disguised as raster bytes.");
+            }
         } finally {
             connection.disconnect();
         }
