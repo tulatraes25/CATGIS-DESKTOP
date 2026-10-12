@@ -5,10 +5,13 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.geotools.api.data.DataStore;
 import org.geotools.api.data.DataStoreFinder;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,18 +21,21 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class PostgisConnectionFactory {
 
-    private static final Map<String, HikariDataSource> poolCache = new ConcurrentHashMap<>();
+    private static final Map<String, PoolEntry> poolCache = new ConcurrentHashMap<>();
     private static final int POOL_MAX = 5;
     private static final int POOL_MIN = 1;
     private static final byte[] POOL_KEY_SALT = createPoolKeySalt();
+
+    private record PoolEntry(String credentialKey, HikariDataSource dataSource) {
+    }
 
     private PostgisConnectionFactory() {
     }
 
     /**
      * Opens a GeoTools DataStore backed by a HikariCP connection pool.
-     * The pool is keyed by connection fingerprint and reused across calls.
-     * The caller is responsible for disposing it (store.dispose()).
+     * A credential rotation invalidates and closes the previous endpoint pool.
+     * The caller is responsible for disposing the returned store.
      */
     public static DataStore openDataStore(PostgisConnectionInfo info) throws Exception {
         String validationMessage = PostgisErrorSupport.validateConnectionInfo(info, true);
@@ -37,14 +43,22 @@ public final class PostgisConnectionFactory {
             throw new IllegalArgumentException(validationMessage);
         }
 
-        String fingerprint = poolKey(info);
+        String endpointKey = identityDigest(info, false);
+        String credentialKey = poolKey(info);
         HikariDataSource ds;
         synchronized (poolCache) {
-            ds = poolCache.get(fingerprint);
-            if (ds == null || ds.isClosed()) {
-                ds = createPool(info);
-                poolCache.put(fingerprint, ds);
+            PoolEntry entry = poolCache.get(endpointKey);
+            if (entry != null && (!credentialKey.equals(entry.credentialKey())
+                    || entry.dataSource().isClosed())) {
+                entry.dataSource().close();
+                poolCache.remove(endpointKey);
+                entry = null;
             }
+            if (entry == null) {
+                entry = new PoolEntry(credentialKey, createPool(info));
+                poolCache.put(endpointKey, entry);
+            }
+            ds = entry.dataSource();
         }
 
         Map<String, Object> params = new HashMap<>();
@@ -60,34 +74,56 @@ public final class PostgisConnectionFactory {
         params.put("validate connections", Boolean.TRUE);
         params.put("Expose primary keys", Boolean.TRUE);
 
-        // Inject HikariCP DataSource — GeoTools reuses connections from the pool
+        // Inject HikariCP DataSource — GeoTools reuses connections from the pool.
         params.put("DataStoreFactory", "org.geotools.data.postgis.PostgisNGDataStoreFactory");
         params.put("DataSource", ds);
 
         DataStore store = DataStoreFinder.getDataStore(params);
         if (store == null) {
+            synchronized (poolCache) {
+                PoolEntry entry = poolCache.get(endpointKey);
+                if (entry != null && entry.dataSource() == ds) {
+                    poolCache.remove(endpointKey);
+                    ds.close();
+                }
+            }
             throw new IllegalArgumentException(
                     "No se pudo crear la conexion PostGIS. Revisa host, base, usuario, clave y dependencia JDBC.");
         }
         return store;
     }
 
-    // Session-scoped salted key: credential changes must never reuse an authenticated pool.
-    // Neither the password nor its unsalted digest is retained in the cache key.
+    // A session-scoped, salted digest, never a plaintext/unsalted credential key.
+    // Database, schema and user remain case-sensitive, as in PostgreSQL.
     static String poolKey(PostgisConnectionInfo info) {
+        return identityDigest(info, true);
+    }
+
+    private static String identityDigest(PostgisConnectionInfo info, boolean includePassword) {
         if (info == null) {
             throw new IllegalArgumentException("Connection info required.");
         }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             digest.update(POOL_KEY_SALT);
-            digest.update(info.buildFingerprint().getBytes(StandardCharsets.UTF_8));
-            digest.update((byte) 0);
-            digest.update(info.getPassword().getBytes(StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(digest.digest());
+            appendComponent(digest, info.getHost().toLowerCase(Locale.ROOT));
+            appendComponent(digest, Integer.toString(info.getPort()));
+            appendComponent(digest, info.getDatabase());
+            appendComponent(digest, info.getSchema());
+            appendComponent(digest, info.getUser());
+            if (includePassword) {
+                appendComponent(digest, info.getPassword());
+            }
+            return HexFormat.of().formatHex(digest.digest());
         } catch (java.security.NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 is unavailable.", ex);
         }
+    }
+
+    private static void appendComponent(MessageDigest digest, String value) {
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array());
+        digest.update(bytes);
     }
 
     private static byte[] createPoolKeySalt() {
@@ -111,14 +147,16 @@ public final class PostgisConnectionFactory {
         return new HikariDataSource(config);
     }
 
-    /**
-     * Shut down all connection pools. Called at application exit.
-     */
+    /** Shut down all connection pools. Called at application exit. */
     public static void shutdown() {
-        for (HikariDataSource ds : poolCache.values()) {
-            try { ds.close(); } catch (Exception ignored) {}
+        synchronized (poolCache) {
+            for (PoolEntry entry : poolCache.values()) {
+                try {
+                    entry.dataSource().close();
+                } catch (Exception ignored) {
+                }
+            }
+            poolCache.clear();
         }
-        poolCache.clear();
     }
 }
-
