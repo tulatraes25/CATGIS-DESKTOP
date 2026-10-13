@@ -327,8 +327,15 @@ public final class WcsClient {
             return true;
         }
         String normalized = requestedFormat.trim().toLowerCase(Locale.ROOT);
+        // WCS providers may advertise format=tif or format=geotiff rather
+        // than MIME types (e.g. GeoServer WCS). Both still need TIFF checks.
         return normalized.startsWith("image/tiff") || normalized.startsWith("image/geotiff")
-                || normalized.equals("geotiff");
+                || normalized.startsWith("image/x-tiff") || normalized.startsWith("image/x-geotiff")
+                || normalized.startsWith("application/geotiff")
+                || normalized.startsWith("application/x-geotiff")
+                || normalized.equals("geotiff") || normalized.equals("tif")
+                || normalized.equals("tiff") || normalized.equals("geotiff8")
+                || normalized.equals("tiff8");
     }
 
     static void validateStagedTiff(Path staging, int requestedWidth, int requestedHeight)
