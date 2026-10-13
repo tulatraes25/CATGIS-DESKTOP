@@ -15,6 +15,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -138,6 +139,19 @@ class OnlineTileSourceIdentityContractTest {
         assertNull(first.get(), "A cold memory cache must not synchronously read disk or HTTP.");
         assertTrue(repainted.await(10, TimeUnit.SECONDS), "Image load must request repaint.");
         assertTrue(callbackOnEdt.get(), "Repaint must execute on Swing EDT.");
+
+        // The repaint is posted before the worker's finally clears PENDING.
+        // Wait for the real worker-complete boundary before evicting RAM.
+        Field pendingField = OnlineTileCache.class.getDeclaredField("PENDING");
+        pendingField.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Set<String> pending = (Set<String>) pendingField.get(null);
+        String key = OnlineTileCache.buildKey(source, 3, 2, 1);
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+        while (pending.contains(key) && System.nanoTime() < deadline) {
+            Thread.sleep(5);
+        }
+        assertFalse(pending.contains(key), "Worker must finish before next cache read.");
 
         AtomicReference<BufferedImage> warm = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> warm.set(
