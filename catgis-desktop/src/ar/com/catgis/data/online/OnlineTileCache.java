@@ -52,19 +52,60 @@ public final class OnlineTileCache {
     static final int MAX_TILE_BYTES = 8 * 1024 * 1024;
     static final int MAX_TILE_DIMENSION = 2048;
     static final long MAX_TILE_PIXELS = 2048L * 2048L;
-    // Use AppData for persistent cache (survives reboots)
+    // Use a persistent per-user cache on Windows, Linux/XDG and macOS.
     private static final File CACHE_DIR;
     private static final int MEMORY_CACHE_MAX = 512;
     // Count-only eviction permits 512 large (2048px) images to consume gigabytes.
     static final long MEMORY_CACHE_MAX_BYTES = 128L * 1024L * 1024L;
     private static final int DISK_CACHE_MAX_MB = 200;
     static {
-        String appData = System.getenv("APPDATA");
-        if (appData != null) {
-            CACHE_DIR = new File(appData, "CATGIS/online-tile-cache");
+        CACHE_DIR = resolveCacheDirectory(
+                System.getProperty("os.name", ""),
+                System.getenv("APPDATA"),
+                System.getenv("XDG_CACHE_HOME"),
+                System.getProperty("user.home"),
+                System.getProperty("java.io.tmpdir"));
+    }
+
+    /**
+     * Resolve a per-user cache location without hardcoding a Windows drive or
+     * using Linux /tmp (which normally disappears after reboot).
+     *
+     * APPDATA stays unchanged on Windows for existing users. Linux follows the
+     * XDG cache location when absolute; otherwise defaults to ~/.cache.
+     * Never treat a relative XDG_CACHE_HOME as an output directory.
+     * Inputs are parameters so both OS policies are tested on Linux and Windows.
+     */
+    static File resolveCacheDirectory(String osName, String appData, String xdgCacheHome,
+                                      String userHome, String temporaryDirectory) {
+        String os = osName == null ? "" : osName.toLowerCase(java.util.Locale.ROOT);
+        if (os.startsWith("windows")) {
+            if (appData != null && !appData.isBlank()) {
+                return new File(appData, "CATGIS/online-tile-cache");
+            }
+            if (userHome != null && !userHome.isBlank()) {
+                return new File(userHome, "AppData/Roaming/CATGIS/online-tile-cache");
+            }
+        } else if (os.contains("mac") || os.contains("darwin")) {
+            if (userHome != null && !userHome.isBlank()) {
+                return new File(userHome, "Library/Caches/CATGIS/online-tile-cache");
+            }
         } else {
-            CACHE_DIR = new File(System.getProperty("java.io.tmpdir"), "catgis-online-tiles");
+            if (xdgCacheHome != null && !xdgCacheHome.isBlank()) {
+                File xdgDirectory = new File(xdgCacheHome);
+                if (xdgDirectory.isAbsolute()) {
+                    return new File(xdgDirectory, "CATGIS/online-tile-cache");
+                }
+            }
+            if (userHome != null && !userHome.isBlank()) {
+                return new File(userHome, ".cache/CATGIS/online-tile-cache");
+            }
         }
+        // Rare service accounts without an accessible home preserve the former
+        // temporary location rather than failing during class initialization.
+        String fallback = temporaryDirectory != null && !temporaryDirectory.isBlank()
+                ? temporaryDirectory : ".";
+        return new File(fallback, "catgis-online-tiles");
     }
 
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(6, runnable -> {
