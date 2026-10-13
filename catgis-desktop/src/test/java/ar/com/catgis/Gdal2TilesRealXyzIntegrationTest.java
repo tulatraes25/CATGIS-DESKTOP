@@ -84,8 +84,21 @@ class Gdal2TilesRealXyzIntegrationTest {
             assertNotNull(image, "GDAL tile must be real decodable PNG: " + relative);
             assertEquals(256, image.getWidth());
             assertEquals(256, image.getHeight());
-            int pixel = image.getRGB(128, 128);
-            if ((pixel >>> 24) != 0 && ((pixel & 0x00ffffff) != 0)) {
+            // The 32-degree source extent occupies less than half of one
+            // zoom-2 WebMercator tile's width; the centre of an otherwise
+            // valid tile may therefore be transparent. Inspect the actual
+            // source-covered pixels rather than assuming the centre is data.
+            boolean containsSourcePixels = false;
+            for (int row = 0; row < image.getHeight() && !containsSourcePixels; row++) {
+                for (int col = 0; col < image.getWidth(); col++) {
+                    int pixel = image.getRGB(col, row);
+                    if ((pixel >>> 24) != 0 && (pixel & 0x00ffffff) != 0) {
+                        containsSourcePixels = true;
+                        break;
+                    }
+                }
+            }
+            if (containsSourcePixels) {
                 colorful++;
             }
         }
