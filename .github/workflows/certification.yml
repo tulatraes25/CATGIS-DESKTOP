@@ -192,6 +192,48 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  windows-appimage-package:
+    needs: dependency-cache-windows
+    name: Windows App Image Package Contract
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Restore bounded Gradle dependency cache
+        uses: actions/cache@v4
+        with:
+          path: D:\a\.gradle\caches\modules-2
+          key: catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}
+          fail-on-cache-miss: true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - name: Generate and verify both Windows app-image launchers
+        shell: pwsh
+        run: .\gradlew.bat --offline --no-daemon verifyWindowsAppImage
+      - name: Record Windows package evidence (do not upload binaries)
+        shell: pwsh
+        run: |
+          $app = Join-Path (Get-Location) 'build/installer/windows/app-image/CATGIS Desktop'
+          $jar = Join-Path $app 'app/catgis-desktop-1.0.jar'
+          if (-not (Test-Path -LiteralPath $jar -PathType Leaf)) { throw 'CATGIS Windows main JAR absent.' }
+          $bytes = (Get-ChildItem -LiteralPath $app -Recurse -File | Measure-Object -Property Length -Sum).Sum
+          $sizeMb = [Math]::Round($bytes / 1MB, 1)
+          $hash = (Get-FileHash -LiteralPath $jar -Algorithm SHA256).Hash.ToLowerInvariant()
+          '### CATGIS Windows runtime-bundled package' >> $env:GITHUB_STEP_SUMMARY
+          "- app image size (MiB): $sizeMb" >> $env:GITHUB_STEP_SUMMARY
+          "- main JAR SHA-256: $hash" >> $env:GITHUB_STEP_SUMMARY
+          '- No packaged binary uploaded. Signed installer and GUI launch remain uncertified.' >> $env:GITHUB_STEP_SUMMARY
+
   windows-full-suite:
     needs: dependency-cache-windows
     name: Certification Windows Full Suite
