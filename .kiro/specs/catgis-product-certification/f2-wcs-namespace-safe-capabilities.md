@@ -22,15 +22,18 @@ untrusted GetCapabilities HTTP input.
    independent of namespace prefix; reject all DOCTYPE/entity payloads.
 2. Preserve WCS 2.0.1 first and 1.0.0 fallback, plus coverage name/title,
    description, supported formats and native resolution where provided.
-3. Limit the capabilities response to 4 MiB before XML parsing: reject an
+3. Require a WCS Capabilities/WCS_Capabilities document root; an HTML proxy
+   error or OWS exception advertised as HTTP 200 must not be treated as an
+   empty but valid coverage inventory.
+4. Limit the capabilities response to 4 MiB before XML parsing: reject an
    oversized Content-Length immediately and stop chunked/unknown-length bodies
    after a bounded 4 MiB + 1 read. Keep existing connect/read timeouts and
    enforce HTTP 200 for capabilities.
-4. Never extract credentials, read local files from XML or issue external XML
+5. Never extract credentials, read local files from XML or issue external XML
    entity fetches. Keep all tests offline and deterministic via loopback HTTP.
-5. This tranche does not alter raster GetCoverage bytes, TIFF validity, URL
+6. This tranche does not alter raster GetCoverage bytes, TIFF validity, URL
    subset/axis-order semantics or GeoTIFF scientific certification (#43).
-6. No new library dependencies, downloads, binary fixtures, interface controls
+7. No new library dependencies, downloads, binary fixtures, interface controls
    or runtime launch.
 
 ## Acceptance scenarios
@@ -39,7 +42,7 @@ untrusted GetCapabilities HTTP input.
   `ows:Title`, `ows:Abstract` and `wcs:SupportedFormat` yield correct
   values and **one** HTTP request; no unjustified WCS 1.0.0 fallback.
 - Namespaced WCS 1.0.0 offering is recognized after the 2.0.1 endpoint fails.
-- A 200 response containing malformed XML or a DOCTYPE/entity is rejected;
+- A 200 response containing malformed XML, an HTML/non-WCS root, or a DOCTYPE/entity is rejected;
   no untrusted service URL or local URI is dereferenced.
 - An oversized declared body and an oversized streamed body with unknown
   Content-Length cannot be parsed or retained unboundedly in memory.
