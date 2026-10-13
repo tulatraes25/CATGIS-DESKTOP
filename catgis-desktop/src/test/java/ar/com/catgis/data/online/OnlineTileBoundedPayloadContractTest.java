@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -245,6 +246,36 @@ class OnlineTileBoundedPayloadContractTest {
             server.stop(0);
             deleteOwnCacheDirectories(cached);
         }
+    }
+
+    @Test
+    void decodedMemoryCacheHasRealByteBudgetAndEvictsLeastRecentlyUsed() {
+        Map<String, BufferedImage> cache = new LinkedHashMap<>(8, 0.75f, true);
+        BufferedImage a = new BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage b = new BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage c = new BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage d = new BufferedImage(4, 4, BufferedImage.TYPE_INT_ARGB);
+        assertEquals(64L, OnlineTileCache.imageDataBytes(a));
+        long budget = OnlineTileCache.imageDataBytes(a) * 2;
+
+        OnlineTileCache.putMemoryTileWithBudget(cache, "a", a, budget);
+        OnlineTileCache.putMemoryTileWithBudget(cache, "b", b, budget);
+        OnlineTileCache.putMemoryTileWithBudget(cache, "c", c, budget);
+        assertFalse(cache.containsKey("a"), "Oldest decoded image must be evicted by bytes.");
+        assertTrue(cache.containsKey("b"));
+        assertTrue(cache.containsKey("c"));
+
+        cache.get("b"); // Access b, now c is least recently used.
+        OnlineTileCache.putMemoryTileWithBudget(cache, "d", d, budget);
+        assertFalse(cache.containsKey("c"));
+        assertTrue(cache.containsKey("b"));
+        assertTrue(cache.containsKey("d"));
+        assertEquals(2, cache.size());
+
+        OnlineTileCache.putMemoryTileWithBudget(cache, "huge", d, budget - 1);
+        assertFalse(cache.containsKey("huge"),
+                "An entry over the total byte budget must not remain cached.");
+        assertTrue(cache.size() <= 1);
     }
 
     private static String awaitFailure(String sourceId) throws InterruptedException {
