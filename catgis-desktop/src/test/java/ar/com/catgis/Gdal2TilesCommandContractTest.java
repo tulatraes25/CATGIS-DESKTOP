@@ -23,7 +23,7 @@ class Gdal2TilesCommandContractTest {
         File tiles = tempDir.resolve("xyz").toFile();
         List<String> args = Gdal2TilesService.buildCommand(
                 "/usr/bin/python3", raster, tiles, 0, -1);
-        assertEquals(List.of("/usr/bin/python3", "-m", "osgeo_utils.gdal2tiles",
+        assertEquals(List.of("/usr/bin/python3", "-m", "osgeo_utils.gdal2tiles", "--xyz",
                         "--processes=4", "--resampling=bilinear",
                         raster.getAbsolutePath(), tiles.getAbsolutePath()), args);
         assertFalse(args.contains("-z"),
@@ -39,6 +39,7 @@ class Gdal2TilesCommandContractTest {
         assertEquals("C:\\OSGeo4W64\\bin\\python.exe", args.get(0));
         assertEquals(1, args.stream().filter("-z"::equals).count());
         assertEquals("3-8", args.get(args.indexOf("-z") + 1));
+        assertTrue(args.contains("--xyz"), "Classic GDAL defaults to TMS without --xyz.");
         assertFalse(args.contains("--processes=4"));
         assertFalse(args.contains("--resampling=bilinear"));
     }
@@ -49,9 +50,9 @@ class Gdal2TilesCommandContractTest {
         File tiles = tempDir.resolve("GIS Results/XYZ Tiles").toFile();
         List<String> args = Gdal2TilesService.buildCommand(
                 "/opt/homebrew/bin/python3", raster, tiles, 1, 4);
-        assertEquals(7, args.size(), "One list member per ProcessBuilder argument.");
-        assertEquals(raster.getAbsolutePath(), args.get(5));
-        assertEquals(tiles.getAbsolutePath(), args.get(6));
+        assertEquals(8, args.size(), "One list member per ProcessBuilder argument.");
+        assertEquals(raster.getAbsolutePath(), args.get(6));
+        assertEquals(tiles.getAbsolutePath(), args.get(7));
     }
 
     @Test
