@@ -80,6 +80,8 @@ public final class OnlineTileCache {
             }
     );
     private static final Set<String> PENDING = ConcurrentHashMap.newKeySet();
+    // Prefetch must not suppress foreground getTile requests or their repaint callback.
+    private static final Set<String> PREFETCH_PENDING = ConcurrentHashMap.newKeySet();
     private static final Map<String, Long> RETRY_AFTER = new ConcurrentHashMap<>();
     private static final Map<String, String> LAST_SOURCE_FAILURE = new ConcurrentHashMap<>();
     private static final Map<String, Long> LAST_SOURCE_FAILURE_AT = new ConcurrentHashMap<>();
@@ -527,7 +529,8 @@ public final class OnlineTileCache {
                 int ny = y + dy;
                 if (nx < 0 || ny < 0) continue;
                 String key = buildKey(source, z, nx, ny);
-                if (MEMORY_CACHE.containsKey(key) || !PENDING.add(key)) {
+                if (MEMORY_CACHE.containsKey(key) || PENDING.contains(key)
+                        || !PREFETCH_PENDING.add(key)) {
                     continue;
                 }
                 File tileFile = resolveTileFile(source, z, nx, ny);
@@ -545,11 +548,11 @@ public final class OnlineTileCache {
                         } catch (Exception error) {
                             CatgisLogger.warn("OnlineTileCache: neighboring tile prefetch failed", error);
                         } finally {
-                            PENDING.remove(key);
+                            PREFETCH_PENDING.remove(key);
                         }
                     });
                 } catch (RejectedExecutionException shutdown) {
-                    PENDING.remove(key);
+                    PREFETCH_PENDING.remove(key);
                 }
             }
         }
