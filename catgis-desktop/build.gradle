@@ -605,9 +605,18 @@ tasks.register('verifyMacAppImage') {
         File runtimeJava = new File(contents, 'runtime/Contents/Home/bin/java')
         File runtimeRelease = new File(contents, 'runtime/Contents/Home/release')
         File jar = new File(contents, "app/${project.name}-${version}.jar")
-        File icon = new File(contents, 'Resources/catgis-desktop.icns')
+        // jpackage normalizes the installed icon name to match the macOS
+        // application identity; it does NOT promise to preserve input basename.
+        File iconDir = new File(contents, 'Resources')
+        File[] nativeIcons = iconDir.listFiles({ File folder, String filename ->
+            filename.toLowerCase(java.util.Locale.ROOT).endsWith('.icns')
+        } as java.io.FilenameFilter)
+        if (nativeIcons == null || nativeIcons.length == 0
+                || !nativeIcons.any { it.isFile() && it.length() > 64L }) {
+            throw new GradleException("macOS packaged ICNS icon missing in ${iconDir}")
+        }
 
-        [info, runtimeRelease, jar, icon].each { resource ->
+        [info, runtimeRelease, jar].each { resource ->
             if (!resource.isFile() || resource.length() == 0L) {
                 throw new GradleException("macOS app bundle file missing: ${resource}")
             }
@@ -627,6 +636,9 @@ tasks.register('verifyMacAppImage') {
         runExternalCommand(['/usr/libexec/PlistBuddy', '-c',
                             'Print :CFBundleExecutable', info.absolutePath], [:],
                 'Missing macOS CFBundleExecutable.')
+        runExternalCommand(['/usr/libexec/PlistBuddy', '-c',
+                            'Print :CFBundleIconFile', info.absolutePath], [:],
+                'Missing macOS CFBundleIconFile.')
         runExternalCommand([runtimeJava.absolutePath, '-version'], [:],
                 'Bundled Java 17 runtime could not execute on macOS.')
         logger.lifecycle("CATGIS macOS native .app verified: ${root}")
