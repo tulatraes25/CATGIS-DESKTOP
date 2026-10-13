@@ -33,12 +33,17 @@ certified on three-platform pipelines (#66).
   the real ProcessBuilder command and its pure command tests, because the
   official classic gdal2tiles defaults to TMS Y orientation. Keep this option
   mandatory for fixed and automatically chosen zoom levels.
-- This is explicitly a *discovery* gate: first verify whether
-  ScriptEngine-selected Python actually imports `osgeo_utils.gdal2tiles`
-  on every native runner; do not trust mere `python --version`.
-  If not available on GDAL 3.13 macOS, implement probed/allowlisted
-  modern `gdal raster tile` backend with strict ProcessBuilder argv,
-  not an unreviewed PyPI module or arbitrary PATH shell execution.
+- Select a **capability-probed native GDAL backend**: search only
+  allowlisted directories for an executable `gdal`, require a bounded
+  successful `gdal raster tile --help` probe, and generate with explicit
+  `--convention xyz`, bilinear resampling, and modern zoom flags. This is
+  preferred for GDAL 3.11+ (including certified Mac GDAL 3.13).
+- If modern CLI is absent, probe the selected Python interpreter for **both**
+  `osgeo.gdal` and `osgeo_utils.gdal2tiles` imports before using the legacy
+  backend with `--xyz`. Python existing by itself MUST NOT constitute GDAL
+  capability. Use bounded 10s probes off Swing EDT and the shared bounded
+  600s output collector for actual generation; never invoke a shell or
+  arbitrary unapproved system executable.
 - Terminate subprocesses under bounded collector; preserve user files
   on failure and never loosen JVM memory/EDT limits.
 - The existing `GdalNativeCliRoundTripIntegrationTest` remains required.
