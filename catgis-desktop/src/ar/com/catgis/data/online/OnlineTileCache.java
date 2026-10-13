@@ -261,35 +261,42 @@ public final class OnlineTileCache {
         return new ArrayList<>(urls);
     }
 
-    public static String getRecentSourceFailure(String sourceId, long maxAgeMillis) {
-        if (sourceId == null || sourceId.isBlank()) {
+    /**
+     * Return diagnostics only for the exact configured source. Looking up by ID
+     * can show another provider's HTTP failure after a user changes its URL.
+     */
+    public static String getRecentSourceFailure(OnlineRasterSource source, long maxAgeMillis) {
+        if (source == null) {
             return "";
         }
-        Long at = LAST_SOURCE_FAILURE_AT.get(sourceId);
+        String identity = cacheNamespace(source);
+        Long at = LAST_SOURCE_FAILURE_AT.get(identity);
         if (at == null || at <= 0L) {
             return "";
         }
         if (maxAgeMillis > 0 && (System.currentTimeMillis() - at) > maxAgeMillis) {
             return "";
         }
-        String failure = LAST_SOURCE_FAILURE.get(sourceId);
+        String failure = LAST_SOURCE_FAILURE.get(identity);
         return failure != null ? failure : "";
     }
 
     private static void registerSourceFailure(OnlineRasterSource source, String reason) {
-        if (source == null || source.getId() == null || source.getId().isBlank()) {
+        if (source == null) {
             return;
         }
-        LAST_SOURCE_FAILURE.put(source.getId(), truncate(reason));
-        LAST_SOURCE_FAILURE_AT.put(source.getId(), System.currentTimeMillis());
+        String identity = cacheNamespace(source);
+        LAST_SOURCE_FAILURE.put(identity, truncate(reason));
+        LAST_SOURCE_FAILURE_AT.put(identity, System.currentTimeMillis());
     }
 
     private static void clearSourceFailure(OnlineRasterSource source) {
-        if (source == null || source.getId() == null || source.getId().isBlank()) {
+        if (source == null) {
             return;
         }
-        LAST_SOURCE_FAILURE.remove(source.getId());
-        LAST_SOURCE_FAILURE_AT.remove(source.getId());
+        String identity = cacheNamespace(source);
+        LAST_SOURCE_FAILURE.remove(identity);
+        LAST_SOURCE_FAILURE_AT.remove(identity);
     }
 
     private static byte[] readAllBytes(InputStream input) throws Exception {
