@@ -272,10 +272,11 @@ class OnlineTileBoundedPayloadContractTest {
         assertTrue(cache.containsKey("d"));
         assertEquals(2, cache.size());
 
-        OnlineTileCache.putMemoryTileWithBudget(cache, "huge", d, budget - 1);
+        OnlineTileCache.putMemoryTileWithBudget(cache, "huge", d,
+                OnlineTileCache.imageDataBytes(d) - 1);
         assertFalse(cache.containsKey("huge"),
-                "An entry over the total byte budget must not remain cached.");
-        assertTrue(cache.size() <= 1);
+                "An entry larger than its own budget must not remain cached.");
+        assertTrue(cache.isEmpty(), "Budget below one image must evict every entry.");
     }
 
     private static String awaitFailure(String sourceId) throws InterruptedException {
