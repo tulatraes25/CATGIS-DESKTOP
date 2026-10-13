@@ -484,8 +484,7 @@ tasks.register('verifyLinuxAppImage') {
         runExternalCommand([runtimeJava.absolutePath, '-version'], [:],
                 'Linux app-image JDK cannot execute.')
         logger.lifecycle("CATGIS Linux self-contained app-image verified: ${imageDir}")
-        logger.lifecycle("CATGIS Linux main JAR SHA-256: ${java.security.MessageDigest
-            .getInstance('SHA-256').digest(mainJar.bytes).encodeHex()}")
+        logger.lifecycle("CATGIS Linux main JAR byte size: ${mainJar.length()}")
     }
 }
 
