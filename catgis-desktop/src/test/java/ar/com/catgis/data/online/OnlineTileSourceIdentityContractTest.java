@@ -108,6 +108,19 @@ class OnlineTileSourceIdentityContractTest {
                 .toPath().getParent().getParent().getParent().getFileName().toString());
     }
 
+    @Test
+    void sanitizedLegacyIdCollisionsMustNotShareDiskDirectories() {
+        String sameUrl = "https://example.invalid/tiles/{z}/{x}/{y}.png";
+        OnlineRasterSource slash = source("same/name", sameUrl, 256, "EPSG:3857");
+        OnlineRasterSource question = source("same?name", sameUrl, 256, "EPSG:3857");
+
+        assertNotEquals(OnlineTileCache.cacheNamespace(slash),
+                OnlineTileCache.cacheNamespace(question));
+        assertNotEquals(OnlineTileCache.resolveTileFile(slash, 3, 2, 1),
+                OnlineTileCache.resolveTileFile(question, 3, 2, 1),
+                "Legacy sanitization made both IDs 'same_name' and reused the disk tile.");
+    }
+
     private static OnlineRasterSource source(String id, String url, int size, String crs) {
         return new OnlineRasterSource(id, "Local identity test", "CI", OnlineServiceType.XYZ,
                 url, 0, 20, size, "", "", false, crs);
