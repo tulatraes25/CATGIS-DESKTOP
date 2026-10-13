@@ -65,6 +65,10 @@ public final class Gdal2TilesService {
         cmd.add(python);
         cmd.add("-m");
         cmd.add("osgeo_utils.gdal2tiles");
+        // gdal2tiles.py defaults to TMS (south-origin Y). CATGIS expects
+        // slippy-map XYZ (north-origin Y). This is geospatial correctness,
+        // not a cosmetic output option.
+        cmd.add("--xyz");
         if (zoomMax > 0) {
             cmd.add("-z");
             cmd.add(zoomMin + "-" + zoomMax);
