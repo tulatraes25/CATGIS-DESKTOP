@@ -64,7 +64,7 @@ public final class Gdal2TilesService {
         List<String> cmd = new ArrayList<>();
         cmd.add(python);
         cmd.add("-m");
-        cmd.add("gdal2tiles");
+        cmd.add("osgeo_utils.gdal2tiles");
         if (zoomMax > 0) {
             cmd.add("-z");
             cmd.add(zoomMin + "-" + zoomMax);
