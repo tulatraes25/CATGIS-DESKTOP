@@ -80,6 +80,17 @@ the per-platform thresholds. Later Mac image-region diagnostic evidence may
 justify replacing this with a reproducible font/line rendering fixture;
 the narrow tolerance is not a substitute for GUI runtime acceptance.
 
+## Second Mac runner acceptance correction
+
+Second real arm64 Mac run `38430995225` successfully compiled the project,
+generated a complete `CATGIS Desktop.app` with `jpackage`, and then failed
+the contract because the test demanded the *input* icon's original basename
+`Contents/Resources/catgis-desktop.icns`. macOS jpackage correctly renames
+the embedded ICNS according to application identity and records it in
+`Info.plist`. The acceptance gate now checks for a nonempty native `.icns`
+in `Contents/Resources` and the `CFBundleIconFile` metadata key instead.
+This is a contract correction, **not** evidence of missing packaging.
+
 ## Explicit residual uncertainty
 
 macOS Intel and Apple Silicon builds must be packaged separately; the output
