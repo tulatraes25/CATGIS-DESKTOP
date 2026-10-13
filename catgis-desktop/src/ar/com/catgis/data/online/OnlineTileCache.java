@@ -343,11 +343,12 @@ public final class OnlineTileCache {
     }
 
     /**
-     * Estimate decoded heap retention from the *actual bank array capacities*.
-     * DataBuffer.getSize() is a logical element count: a reader may wrap a larger
-     * preallocated backing bank, so using logical size alone undercounts memory.
-     * Conservatively retain the maximum of physical arrays, logical storage and
-     * pixel-format geometry. Raster allocation is never performed under cache lock.
+     * Conservatively estimate retained decoded pixels without disrupting Java2D
+     * optimizations for standard tile formats. Standard JDK image layouts use
+     * logical storage and pixel geometry; custom layouts additionally inspect
+     * physical backing banks because DataBuffer.getSize() may undercount them.
+     * This estimates image storage, not all JVM heap, and performs no image
+     * decoding under the cache lock.
      */
     static long imageDataBytes(BufferedImage image) {
         if (image == null) {
