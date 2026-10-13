@@ -13,7 +13,7 @@ import java.util.Set;
 final class GdalSupport {
 
     private static final Set<String> ALLOWED_TOOLS = Set.of(
-            "gdal_translate", "gdalwarp", "gdalinfo");
+            "gdal_translate", "gdalwarp", "gdalinfo", "gdal");
 
     private GdalSupport() {
     }
@@ -78,7 +78,8 @@ final class GdalSupport {
     }
 
     /**
-     * Only three reviewed GDAL commands are valid. Normalize .exe input from
+     * Only reviewed GDAL commands are valid (translate, warp, info and the
+     * modern unified gdal CLI). Normalize .exe input from
      * existing Java callers on Unix and add .exe on Windows as appropriate.
      */
     static String nativeExecutableName(String requestedName, String osName) {
