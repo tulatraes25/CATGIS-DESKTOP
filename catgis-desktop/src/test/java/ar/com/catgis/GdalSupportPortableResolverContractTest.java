@@ -62,8 +62,12 @@ class GdalSupportPortableResolverContractTest {
                 "Linux Mint", null, null, null);
         assertEquals(new File("/usr/bin"), dirs.get(0));
         assertTrue(dirs.contains(new File("/usr/local/bin")));
-        assertFalse(dirs.stream().anyMatch(d ->
-                d.toString().contains("tmp") || !d.isAbsolute()));
+        // File.isAbsolute() uses the HOST operating system's parser.
+        // A Windows runner simulating Linux must not call it on "/usr/bin".
+        // The candidate policy is verified by OS-neutral list membership.
+        assertFalse(dirs.contains(new File("/tmp")));
+        assertFalse(dirs.contains(new File(System.getProperty("java.io.tmpdir"))));
+        assertFalse(dirs.contains(new File(".")));
     }
 
     @Test
