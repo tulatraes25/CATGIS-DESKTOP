@@ -210,7 +210,7 @@ jobs:
               for key in checks:
                   checks[key] += int(suite.attrib.get(key, '0'))
           print('REAL_NATIVE_GDAL:', checks)
-          if checks != {'tests': 1, 'failures': 0, 'errors': 0, 'skipped': 0}:
+          if checks != {'tests': 2, 'failures': 0, 'errors': 0, 'skipped': 0}:
               raise SystemExit('Native GDAL did not execute exactly one successful real integration test')
           PY
           {
@@ -218,7 +218,7 @@ jobs:
             echo "- OS: $RUNNER_OS, architecture: $(uname -m)"
             echo "- GDAL bin: $CATGIS_GDAL_BIN"
             echo "- Version: $(gdalinfo --version)"
-            echo '- Verified 6 real elevation cells, TIFF, EPSG:4326 and EPSG:3857 reprojection'
+            echo '- Verified 6 native elevation cells + real 256px north-origin XYZ PNG tiles, TIFF, EPSG:4326 and EPSG:3857 reprojection'
             echo '- No GDAL executables/rasters/packages uploaded as GitHub artifacts'
           } >> "$GITHUB_STEP_SUMMARY"
 
