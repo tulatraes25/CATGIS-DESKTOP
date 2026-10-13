@@ -12,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
-import java.lang.reflect.Field;
-import java.util.Map;
 import java.awt.image.BufferedImage;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,12 +36,8 @@ class OnlineTileDiskCacheEdtContractTest {
                 "http://127.0.0.1:1/tiles/{z}/{x}/{y}.png",
                 0, 20, 256, "", "", false, "EPSG:3857");
 
-        String appData = System.getenv("APPDATA");
-        Path root = appData != null
-                ? Path.of(appData, "CATGIS", "online-tile-cache")
-                : Path.of(System.getProperty("java.io.tmpdir"), "catgis-online-tiles");
-        Path sourceDir = root.resolve(id);
-        Path tileFile = sourceDir.resolve("3").resolve("2").resolve("1.png");
+        Path tileFile = OnlineTileCache.resolveTileFile(source, 3, 2, 1).toPath();
+        Path sourceDir = tileFile.getParent().getParent().getParent();
         Files.createDirectories(tileFile.getParent());
 
         BufferedImage sample = new BufferedImage(4, 4, BufferedImage.TYPE_INT_RGB);
@@ -55,7 +49,7 @@ class OnlineTileDiskCacheEdtContractTest {
         retryField.setAccessible(true);
         @SuppressWarnings("unchecked")
         Map<String, Long> retryAfter = (Map<String, Long>) retryField.get(null);
-        String cacheKey = id + "_3_2_1";
+        String cacheKey = OnlineTileCache.buildKey(source, 3, 2, 1);
         retryAfter.put(cacheKey, System.currentTimeMillis() + 60000L);
 
         CountDownLatch repaint = new CountDownLatch(1);
@@ -101,7 +95,7 @@ class OnlineTileDiskCacheEdtContractTest {
                 id, "Cooldown test", "CI", OnlineServiceType.XYZ,
                 "http://127.0.0.1:" + server.getAddress().getPort() + "/tiles/{z}/{x}/{y}.png",
                 0, 20, 256, "", "", false, "EPSG:3857");
-        String key = id + "_3_2_1";
+        String key = OnlineTileCache.buildKey(source, 3, 2, 1);
         Field retryField = OnlineTileCache.class.getDeclaredField("RETRY_AFTER");
         retryField.setAccessible(true);
         @SuppressWarnings("unchecked")
