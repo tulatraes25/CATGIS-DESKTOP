@@ -12,6 +12,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -153,6 +155,43 @@ class OnlineTileBoundedPayloadContractTest {
             assertTrue(Files.isRegularFile(cached));
         } finally {
             server.stop(0);
+            deleteOwnCacheDirectories(cached);
+        }
+    }
+
+    @Test
+    void diskNeighborPrefetchWarmsMemoryFromWorkerWithBoundedDecode() throws Exception {
+        String id = "bounded-prefetch-" + UUID.randomUUID();
+        OnlineRasterSource source = new OnlineRasterSource(
+                id, "Cached prefetch", "CI", OnlineServiceType.XYZ,
+                "http://127.0.0.1:1/tiles/{z}/{x}/{y}.png",
+                0, 20, 256, "", "", false, "EPSG:3857");
+        BufferedImage tile = new BufferedImage(32, 32, BufferedImage.TYPE_INT_RGB);
+        for (int y = 0; y < tile.getHeight(); y++) {
+            for (int x = 0; x < tile.getWidth(); x++) {
+                tile.setRGB(x, y, new Color((x * 7) % 256, (y * 11) % 256,
+                        (x * y * 3) % 256).getRGB());
+            }
+        }
+        Path cached = cachePath(source);
+        Files.createDirectories(cached.getParent());
+        byte[] validPng = png(tile);
+        assertTrue(validPng.length > 100, "Prefetch only loads nontrivial cached tiles.");
+        Files.write(cached, validPng);
+        try {
+            SwingUtilities.invokeAndWait(() -> OnlineTileCache.prefetchNeighbors(source, 3, 1, 1));
+            Field field = OnlineTileCache.class.getDeclaredField("MEMORY_CACHE");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, BufferedImage> memory = (Map<String, BufferedImage>) field.get(null);
+            String cacheKey = id + "_3_2_1";
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (!memory.containsKey(cacheKey) && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertNotNull(memory.get(cacheKey), "Background prefetch must warm the expected tile.");
+            assertEquals(tile.getRGB(7, 9), memory.get(cacheKey).getRGB(7, 9));
+        } finally {
             deleteOwnCacheDirectories(cached);
         }
     }
