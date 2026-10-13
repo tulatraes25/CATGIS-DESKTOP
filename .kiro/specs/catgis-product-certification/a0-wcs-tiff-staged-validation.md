@@ -90,3 +90,15 @@ geospatial interop tests (issue #43). Do not claim scientific 100% from these ch
 - TIFF/BigTIFF metadata-only validation is **not** a complete scientific
   proof. WCS 1.0/2.0 coordinate-axis-order, CRS/GeoKeys, NoData/bands and
   pixel read completeness stay in issue #43 and the final architecture gate.
+
+## WCS provider format aliases
+
+The GeoServer WCS output-format catalogue advertises `tif` and `geotiff`
+as literal `format` values, rather than always MIME `image/tiff`.
+A literal `tif` previously bypassed the TIFF-specific structural validation.
+Both aliases, recognized vendor TIFF MIME forms, and OGC-recommended
+`image/tiff; application=geotiff` must take the TIFF validation path;
+explicit non-TIFF formats such as `image/png` remain unaffected.
+Regression: fake octet-stream `format=tif` must fail both WCS versions
+without replacing old output, while generated real GeoTIFF `format=geotiff`
+must publish cleanly.
