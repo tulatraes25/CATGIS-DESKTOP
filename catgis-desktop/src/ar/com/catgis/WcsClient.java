@@ -479,24 +479,67 @@ public final class WcsClient {
         }
     }
 
+    // Returning a byte[] necessarily retains the complete coverage in heap.
+    // Large legitimate downloads must use downloadCoverageToFile instead.
+    static final int MAX_IN_MEMORY_COVERAGE_BYTES = 32 * 1024 * 1024;
+
     private static byte[] fetchUrlBytes(String urlString) throws Exception {
-        URL url = new URL(urlString);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(60000);
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlString).openConnection();
+        try {
+            connection.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(60000);
 
-        int responseCode = conn.getResponseCode();
-        if (responseCode != 200) throw new Exception("HTTP " + responseCode + " from WCS server");
-
-        try (InputStream is = conn.getInputStream();
-             ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) bos.write(buffer, 0, bytesRead);
-            conn.disconnect();
-            return bos.toByteArray();
+            int status = connection.getResponseCode();
+            if (status != 200) {
+                throw new IOException("HTTP " + status + " from WCS server");
+            }
+            long declaredLength = connection.getContentLengthLong();
+            // Reject an oversized declared body before requesting its stream.
+            if (declaredLength > MAX_IN_MEMORY_COVERAGE_BYTES) {
+                throw new IOException("WCS coverage exceeds 32 MiB in-memory limit; "
+                        + "use downloadCoverageToFile.");
+            }
+            try (InputStream input = connection.getInputStream()) {
+                return readBoundedCoverageBytes(input, declaredLength);
+            }
+        } finally {
+            // Previously only the success path disconnected; repeated HTTP
+            // failures could retain underlying sockets longer than necessary.
+            connection.disconnect();
         }
+    }
+
+    static byte[] readBoundedCoverageBytes(InputStream input, long declaredLength)
+            throws IOException {
+        if (declaredLength > MAX_IN_MEMORY_COVERAGE_BYTES) {
+            throw new IOException("WCS coverage exceeds 32 MiB in-memory limit; "
+                    + "use downloadCoverageToFile.");
+        }
+        int initialCapacity = declaredLength > 0
+                ? (int) Math.min(declaredLength, 65536L) : 16384;
+        ByteArrayOutputStream output = new ByteArrayOutputStream(initialCapacity);
+        byte[] buffer = new byte[8192];
+        long received = 0L;
+        int read;
+        while ((read = input.read(buffer)) != -1) {
+            if (read == 0) {
+                continue;
+            }
+            received += read;
+            if (received > MAX_IN_MEMORY_COVERAGE_BYTES) {
+                throw new IOException("WCS coverage exceeds 32 MiB in-memory limit; "
+                        + "use downloadCoverageToFile.");
+            }
+            output.write(buffer, 0, read);
+        }
+        if (received == 0L) {
+            throw new IOException("WCS returned an empty in-memory coverage.");
+        }
+        if (declaredLength >= 0 && declaredLength != received) {
+            throw new IOException("WCS in-memory Content-Length mismatch.");
+        }
+        return output.toByteArray();
     }
 
 }
