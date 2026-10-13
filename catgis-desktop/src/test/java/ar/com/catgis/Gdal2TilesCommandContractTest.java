@@ -23,7 +23,7 @@ class Gdal2TilesCommandContractTest {
         File tiles = tempDir.resolve("xyz").toFile();
         List<String> args = Gdal2TilesService.buildCommand(
                 "/usr/bin/python3", raster, tiles, 0, -1);
-        assertEquals(List.of("/usr/bin/python3", "-m", "gdal2tiles",
+        assertEquals(List.of("/usr/bin/python3", "-m", "osgeo_utils.gdal2tiles",
                         "--processes=4", "--resampling=bilinear",
                         raster.getAbsolutePath(), tiles.getAbsolutePath()), args);
         assertFalse(args.contains("-z"),
