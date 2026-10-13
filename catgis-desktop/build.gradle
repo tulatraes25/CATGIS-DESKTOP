@@ -127,10 +127,34 @@ tasks.register('resolveCiDependencies') {
     }
 }
 
+// A blank -Djava.library.path= suppresses the JRE's own native-library
+// search directories on Linux. Keep the platform default when OSGeo4W is
+// absent, while preserving the configured Windows OSGeo4W directory.
+def detectedGdalBin = findGdalBin()
 application {
     mainClass = 'ar.com.catgis.Main'
-    applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8',
-                                 '-Djava.library.path=' + findGdalBin()]
+    applicationDefaultJvmArgs = ['-Dfile.encoding=UTF-8']
+    if (detectedGdalBin) {
+        applicationDefaultJvmArgs += ["-Djava.library.path=${detectedGdalBin}"]
+    }
+}
+
+// This Gradle-level invariant is run by all Linux and Windows test jobs;
+// checking only Java unit tests would miss an invalid generated app launcher.
+tasks.register('verifyPortableNativeLibraryPath') {
+    group = 'verification'
+    description = 'Ensure the launcher never erases default JRE native paths.'
+    doLast {
+        List<String> nativeArgs = application.applicationDefaultJvmArgs
+                .findAll { it.startsWith('-Djava.library.path=') }
+        if (detectedGdalBin) {
+            if (nativeArgs != ["-Djava.library.path=${detectedGdalBin}"]) {
+                throw new GradleException('CATGIS launcher must retain the configured GDAL native directory.')
+            }
+        } else if (!nativeArgs.isEmpty()) {
+            throw new GradleException('CATGIS launcher must not override native search with an empty path.')
+        }
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -148,6 +172,7 @@ tasks.named('jar') {
 }
 
 tasks.named('test') {
+    dependsOn 'verifyPortableNativeLibraryPath'
     useJUnitPlatform {
         excludeTags 'external-postgis'
     }
