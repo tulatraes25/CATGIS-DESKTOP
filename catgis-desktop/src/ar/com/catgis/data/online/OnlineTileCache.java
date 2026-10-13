@@ -10,6 +10,7 @@ import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -44,6 +45,8 @@ public final class OnlineTileCache {
     // Use AppData for persistent cache (survives reboots)
     private static final File CACHE_DIR;
     private static final int MEMORY_CACHE_MAX = 512;
+    // Count-only eviction permits 512 large (2048px) images to consume gigabytes.
+    static final long MEMORY_CACHE_MAX_BYTES = 128L * 1024L * 1024L;
     private static final int DISK_CACHE_MAX_MB = 200;
     static {
         String appData = System.getenv("APPDATA");
@@ -133,7 +136,7 @@ public final class OnlineTileCache {
                         markPlaceholderUnavailable(key, tileFile);
                         return;
                     }
-                    MEMORY_CACHE.put(key, image);
+                    putMemoryTile(key, image);
                     RETRY_AFTER.remove(key);
                     clearSourceFailure(source);
                     if (repaintCallback != null) {
@@ -214,7 +217,7 @@ public final class OnlineTileCache {
 
                     String format = guessFormat(source);
                     ImageIO.write(image, format, tileFile);
-                    MEMORY_CACHE.put(key, image);
+                    putMemoryTile(key, image);
                     RETRY_AFTER.remove(key);
                     clearSourceFailure(source);
                     if (repaintCallback != null) {
@@ -298,6 +301,41 @@ public final class OnlineTileCache {
         }
         LAST_SOURCE_FAILURE.remove(source.getId());
         LAST_SOURCE_FAILURE_AT.remove(source.getId());
+    }
+
+    private static void putMemoryTile(String key, BufferedImage image) {
+        putMemoryTileWithBudget(MEMORY_CACHE, key, image, MEMORY_CACHE_MAX_BYTES);
+    }
+
+    /**
+     * Enforce a bound on backing pixel storage, not just entry count.
+     * LinkedHashMap is access-ordered, so the first iterator entry is oldest.
+     * All traversal and mutation must share the synchronizedMap lock.
+     */
+    static void putMemoryTileWithBudget(Map<String, BufferedImage> cache, String key,
+                                        BufferedImage image, long maxBytes) {
+        synchronized (cache) {
+            cache.put(key, image);
+            long usedBytes = 0L;
+            for (BufferedImage tile : cache.values()) {
+                usedBytes += imageDataBytes(tile);
+            }
+            Iterator<Map.Entry<String, BufferedImage>> oldest = cache.entrySet().iterator();
+            while (usedBytes > maxBytes && oldest.hasNext()) {
+                Map.Entry<String, BufferedImage> entry = oldest.next();
+                usedBytes -= imageDataBytes(entry.getValue());
+                oldest.remove();
+            }
+        }
+    }
+
+    static long imageDataBytes(BufferedImage image) {
+        if (image == null) {
+            return 0L;
+        }
+        DataBuffer data = image.getRaster().getDataBuffer();
+        long bytesPerElement = Math.max(1L, (DataBuffer.getDataTypeSize(data.getDataType()) + 7L) / 8L);
+        return (long) data.getSize() * data.getNumBanks() * bytesPerElement;
     }
 
     static byte[] readLimitedTileBytes(InputStream input, long declaredLength) throws IOException {
@@ -542,7 +580,7 @@ public final class OnlineTileCache {
                                 BufferedImage image = readCachedTile(tileFile);
                                 if (image != null
                                         && !isUnavailablePlaceholder(source, image, tileFile.length())) {
-                                    MEMORY_CACHE.put(key, image);
+                                    putMemoryTile(key, image);
                                 }
                             }
                         } catch (Exception error) {
