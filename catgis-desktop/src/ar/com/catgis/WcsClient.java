@@ -65,7 +65,9 @@ public final class WcsClient {
         NodeList nodes = document.getElementsByTagName("*");
         for (int i = 0; i < nodes.getLength(); i++) {
             Node node = nodes.item(i);
-            if (!(node instanceof Element element) || !hasLocalTag(node, wantedTag)) {
+            boolean isOffering = hasLocalTag(node, wantedTag)
+                    || (version == WcsVersion.V1_0_0 && hasLocalTag(node, "CoverageOfferingBrief"));
+            if (!(node instanceof Element element) || !isOffering) {
                 continue;
             }
             String name = version == WcsVersion.V2_0_1
