@@ -60,6 +60,11 @@ public final class WcsClient {
 
     private static List<WcsCoverage> getCoveragesVersion(String serviceUrl, WcsVersion version) throws Exception {
         Document document = fetchCapabilitiesDocument(buildCapabilitiesUrl(serviceUrl, version));
+        Element root = document.getDocumentElement();
+        if (root == null || !(hasLocalTag(root, "Capabilities")
+                || hasLocalTag(root, "WCS_Capabilities"))) {
+            throw new IOException("WCS GetCapabilities returned an unexpected XML root.");
+        }
         String wantedTag = version == WcsVersion.V2_0_1 ? "CoverageSummary" : "CoverageOffering";
         List<WcsCoverage> coverages = new ArrayList<>();
         NodeList nodes = document.getElementsByTagName("*");
