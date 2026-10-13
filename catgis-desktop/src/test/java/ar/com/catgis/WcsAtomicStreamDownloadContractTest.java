@@ -9,7 +9,6 @@ import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;
 import org.geotools.gce.geotiff.GeoTiffWriter;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import ar.com.catgis.data.raster.RasterCoverageSupport;
 import java.awt.image.BandedSampleModel;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferFloat;
@@ -93,10 +92,10 @@ class WcsAtomicStreamDownloadContractTest {
                 "-70,-46,-69,-45", "EPSG:4326", 16, 16, destination.toFile());
 
         assertArrayEquals(payload, Files.readAllBytes(destination));
-        GridCoverage2D decoded = RasterCoverageSupport.readCoverage(destination.toFile());
-        assertEquals("EPSG:4326", RasterCoverageSupport.resolveCoverageCrsCode(decoded, null));
-        assertEquals(16, decoded.getRenderedImage().getWidth());
-        assertEquals(16, decoded.getRenderedImage().getHeight());
+        // GeoTools can keep the returned RenderedImage file-backed on Windows;
+        // validate the staged TIFF using the production metadata-only reader.
+        // It closes its ImageInputStream before JUnit removes the temp directory.
+        WcsClient.validateStagedTiff(destination, 16, 16);
         assertEquals(2, requests.get());
         assertNoStagingFile();
     }
