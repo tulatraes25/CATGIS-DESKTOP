@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WcsNamespaceCapabilitiesContractTest {
     private HttpServer server;
@@ -97,6 +96,18 @@ class WcsNamespaceCapabilitiesContractTest {
         openServer(exchange -> respond(exchange, 200,
                 "<wcs:Capabilities><wcs:CoverageSummary>broken"));
         assertThrows(Exception.class, () -> WcsClient.getCoverages(url()));
+    }
+
+    @Test
+    void htmlOrServiceExceptionXmlCannotSilentlyBecomeAnEmptyWcsCatalogue() throws Exception {
+        AtomicInteger attempts = new AtomicInteger();
+        openServer(exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 200, "<html><body>WCS proxy unavailable</body></html>");
+        });
+        assertThrows(Exception.class, () -> WcsClient.getCoverages(url()));
+        assertEquals(2, attempts.get(),
+                "Both versions must reject a 200 response that is not WCS capabilities.");
     }
 
     @Test
