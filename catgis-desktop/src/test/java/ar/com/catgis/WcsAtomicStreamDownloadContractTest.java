@@ -288,6 +288,41 @@ class WcsAtomicStreamDownloadContractTest {
     }
 
     @Test
+    void geoserverTifAliasMustNotBypassTiffSignatureValidation() throws Exception {
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            respond(exchange, 200, "application/octet-stream",
+                    new byte[]{9, 8, 7, 6, 5, 4, 3, 2});
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("alias-protected.tif");
+        Files.writeString(destination, "old raster", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", null, null, 16, 16, "tif", destination.toFile()));
+        assertEquals(2, requests.get(), "Both WCS versions must fail closed.");
+        assertEquals("old raster", Files.readString(destination, StandardCharsets.UTF_8));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void geoserverGeotiffAliasPublishesRealCoverage() throws Exception {
+        byte[] genuine = realGeoTiff(16, 16);
+        openServer();
+        server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", genuine));
+        server.start();
+
+        Path destination = tempDir.resolve("geoserver-format-geotiff.tif");
+        WcsClient.downloadCoverageToFile(origin, "dem", null, null,
+                16, 16, "geotiff", destination.toFile());
+        assertArrayEquals(genuine, Files.readAllBytes(destination));
+        WcsClient.validateStagedTiff(destination, 16, 16);
+        assertNoStagingFile();
+    }
+
+    @Test
     void randomBinaryAdvertisedAsTiffCannotOverwriteExistingCoverage() throws Exception {
         openServer();
         AtomicInteger requests = new AtomicInteger();
