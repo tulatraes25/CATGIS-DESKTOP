@@ -33,6 +33,7 @@ version = '1.0'
 def javaVersionProperty = (findProperty('catgisJavaVersion') ?: '').toString().trim()
 def targetJavaVersion = javaVersionProperty.isInteger() ? javaVersionProperty.toInteger() : 17
 def windowsHost = System.getProperty('os.name', '').toLowerCase().contains('windows')
+def linuxHost = System.getProperty('os.name', '').toLowerCase().contains('linux')
 
 repositories {
     mavenCentral()
@@ -379,6 +380,112 @@ win-menu-group=CATGIS
 
         List<BufferedImage> icoImages = [16, 24, 32, 48, 64, 128, 256].collect { createBrandIconImage(it) }
         writeIcoFile(icoFile, icoImages)
+    }
+}
+
+// Linux app-image uses the already certified Java application distribution,
+// not Windows-only WiX/Inno/OSGeo4W binaries. Linux hosted Actions runners
+// build the full Java runtime image but never upload huge binary artifacts.
+tasks.register('generateLinuxInstallerAssets') {
+    onlyIf { linuxHost }
+    def iconDirProvider = layout.buildDirectory.dir('installer/linux/resources')
+    outputs.dir(iconDirProvider)
+    doLast {
+        System.setProperty('java.awt.headless', 'true')
+        File resourcesDir = iconDirProvider.get().asFile
+        resourcesDir.mkdirs()
+        File iconFile = new File(resourcesDir, 'catgis-desktop.png')
+        if (!ImageIO.write(createBrandIconImage(256), 'png', iconFile)) {
+            throw new GradleException('No PNG writer available for CATGIS Linux icon.')
+        }
+    }
+}
+
+tasks.register('prepareLinuxAppImageInput', Sync) {
+    onlyIf { linuxHost }
+    dependsOn installDist
+    from(layout.buildDirectory.dir("install/${project.name}/lib"))
+    into(layout.buildDirectory.dir('installer/linux/input'))
+}
+
+tasks.register('packageLinuxAppImage') {
+    group = 'distribution'
+    description = 'Build Linux CATGIS app-image with embedded Java 17 runtime (not a signed installer).'
+    onlyIf { linuxHost }
+    dependsOn 'prepareLinuxAppImageInput', 'generateLinuxInstallerAssets'
+    def outputDirProvider = layout.buildDirectory.dir('installer/linux/app-image')
+    def inputDirProvider = layout.buildDirectory.dir('installer/linux/input')
+    def resourcesDirProvider = layout.buildDirectory.dir('installer/linux/resources')
+    inputs.dir(inputDirProvider)
+    inputs.dir(resourcesDirProvider)
+    outputs.dir(outputDirProvider)
+
+    doLast {
+        File outputDir = outputDirProvider.get().asFile
+        File inputDir = inputDirProvider.get().asFile
+        File resourcesDir = resourcesDirProvider.get().asFile
+        File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage')
+        File mainJar = new File(inputDir, "${project.name}-${version}.jar")
+        File iconFile = new File(resourcesDir, 'catgis-desktop.png')
+
+        if (!jpackageExe.isFile()) {
+            throw new GradleException("Linux jpackage was not found in ${jpackageExe.absolutePath}")
+        }
+        if (!mainJar.isFile() || !iconFile.isFile()) {
+            throw new GradleException('CATGIS Linux input main JAR or PNG icon is missing.')
+        }
+
+        delete outputDir
+        outputDir.mkdirs()
+        List<String> appImageCommand = [
+                jpackageExe.absolutePath,
+                '--type', 'app-image',
+                '--input', inputDir.absolutePath,
+                '--dest', outputDir.absolutePath,
+                '--name', installerDisplayName,
+                '--main-jar', mainJar.name,
+                '--main-class', 'ar.com.catgis.Main',
+                '--app-version', installerVersion,
+                '--vendor', installerVendor,
+                '--description', installerDescription,
+                '--icon', iconFile.absolutePath,
+                '--java-options', '-Dfile.encoding=UTF-8'
+        ]
+        runExternalCommand(appImageCommand, [:],
+                'Could not generate the CATGIS Linux app-image.')
+    }
+}
+
+tasks.register('verifyLinuxAppImage') {
+    group = 'verification'
+    description = 'Prove the Linux app-image contains a launcher, main JAR and runnable bundled JDK.'
+    onlyIf { linuxHost }
+    dependsOn 'packageLinuxAppImage'
+    doLast {
+        File imageDir = new File(layout.buildDirectory.dir('installer/linux/app-image')
+                .get().asFile, installerDisplayName)
+        File launcher = new File(imageDir, "bin/${installerDisplayName}")
+        File runtimeJava = new File(imageDir, 'lib/runtime/bin/java')
+        File mainJar = new File(imageDir, "lib/app/${project.name}-${version}.jar")
+        if (!launcher.isFile() || !launcher.canExecute()) {
+            throw new GradleException("Linux CATGIS launcher missing or not executable: ${launcher}")
+        }
+        if (!runtimeJava.isFile() || !runtimeJava.canExecute()) {
+            throw new GradleException("Bundled Linux Java runtime missing: ${runtimeJava}")
+        }
+        if (!mainJar.isFile()) {
+            throw new GradleException("Bundled CATGIS application JAR missing: ${mainJar}")
+        }
+        new java.util.jar.JarFile(mainJar).withCloseable { jar ->
+            if (jar.getJarEntry('ar/com/catgis/Main.class') == null) {
+                throw new GradleException('Bundled main JAR lacks ar.com.catgis.Main.')
+            }
+        }
+        runExternalCommand([runtimeJava.absolutePath, '-version'], [:],
+                'Linux app-image JDK cannot execute.')
+        logger.lifecycle("CATGIS Linux self-contained app-image verified: ${imageDir}")
+        logger.lifecycle("CATGIS Linux main JAR SHA-256: ${java.security.MessageDigest
+            .getInstance('SHA-256').digest(mainJar.bytes).encodeHex()}")
     }
 }
 
