@@ -21,9 +21,13 @@ Under-accounting lets multiple such images defeat the intended byte budget.
 
 ## Requirements
 
-- Account the physical array lengths for JDK byte/short/ushort/int/float/double
-  image DataBuffer banks; retain a conservative fallback for third-party
-  DataBuffer types (logical count plus positive offsets).
+- For standard BufferedImage types, use logical DataBuffer size and pixel
+  geometry without exposing backing arrays: DataBuffer.getBankData() can make
+  Java2D mark an image as untrackable and disable acceleration optimizations.
+- For TYPE_CUSTOM images only, account actual primitive bank array lengths
+  (byte/short/ushort/int/float/double); retain a conservative offset-aware
+  fallback for third-party DataBuffer types. This trades acceleration of
+  custom rasters for correct physical backing-byte accounting.
 - Never report less than logical sample storage or pixel-format geometry.
 - Preserve the existing 128 MiB cache budget, 512-entry LRU count ceiling,
   all provider fingerprints, HTTP limits, EDT worker and repaint boundaries.
@@ -52,6 +56,10 @@ Under-accounting lets multiple such images defeat the intended byte budget.
 
 - Six simultaneous worker decodes can allocate transient raster memory
   outside the retained-cache limit; application-wide heap benchmark is R1.
+- Standard BufferedImage constructors can theoretically wrap nonstandard
+  physical banks even when reporting a standard type; the standard fast path
+  assumes canonical JDK image allocation. The remaining application-wide heap
+  and acceleration risk needs an instrumented runtime profiling gate.
 - ImageIO plugin implementations might retain native or secondary allocations
   beyond standard DataBuffer arrays. Instrumented runtime profiling belongs
   to the later certified Windows stage, not a premature desktop release.
