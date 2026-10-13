@@ -13,6 +13,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /**
  * WCS (Web Coverage Service) client for downloading raster data.
@@ -55,67 +59,87 @@ public final class WcsClient {
     }
 
     private static List<WcsCoverage> getCoveragesVersion(String serviceUrl, WcsVersion version) throws Exception {
+        Document document = fetchCapabilitiesDocument(buildCapabilitiesUrl(serviceUrl, version));
+        String wantedTag = version == WcsVersion.V2_0_1 ? "CoverageSummary" : "CoverageOffering";
         List<WcsCoverage> coverages = new ArrayList<>();
-
-        String capabilitiesUrl = buildCapabilitiesUrl(serviceUrl, version);
-        String xml = fetchUrl(capabilitiesUrl);
-
-        if (xml == null || xml.isEmpty()) {
-            throw new Exception("No se pudo obtener capabilities del servidor WCS.");
+        NodeList nodes = document.getElementsByTagName("*");
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node node = nodes.item(i);
+            if (!(node instanceof Element element) || !hasLocalTag(node, wantedTag)) {
+                continue;
+            }
+            String name = version == WcsVersion.V2_0_1
+                    ? childText(element, "CoverageId", "Identifier", "Name")
+                    : childText(element, "Name", "Identifier");
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            String title = childText(element, "Title", "Label");
+            String description = childText(element, "Abstract", "Description");
+            List<String> formats = descendantTexts(element, "Format", "SupportedFormat");
+            List<Double> resolutions = new ArrayList<>();
+            String nativeResolution = childText(element, "resolution", "NativeResolution");
+            if (nativeResolution != null && !nativeResolution.isBlank()) {
+                try {
+                    resolutions.add(Double.parseDouble(nativeResolution));
+                } catch (NumberFormatException malformed) {
+                    CatgisLogger.debug("WCS: ignoring malformed native resolution.");
+                }
+            }
+            coverages.add(new WcsCoverage(name, title != null ? title : name,
+                    description != null ? description : "", "", "",
+                    formats, resolutions));
         }
-
-        // Parse coverage offerings (WCS 1.0.0) or coverage summaries (WCS 2.0.1)
-        String coverageTag = version == WcsVersion.V2_0_1 ? "CoverageSummary" : "CoverageOffering";
-        int idx = 0;
-        while (true) {
-            int start = xml.indexOf("<" + coverageTag, idx);
-            if (start < 0) start = xml.indexOf("<" + coverageTag.toLowerCase(), idx);
-            if (start < 0) break;
-
-            int end = xml.indexOf("</" + coverageTag + ">", start);
-            if (end < 0) end = xml.indexOf("</" + coverageTag.toLowerCase() + ">", start);
-            if (end < 0) break;
-
-            String block = xml.substring(start, end);
-            String name = extractXmlTag(block, version == WcsVersion.V2_0_1 ? "CoverageId" : "Name");
-            if (name == null) name = extractXmlTag(block, "name");
-            String title = extractXmlTag(block, "Title");
-            if (title == null) title = extractXmlTag(block, "Label");
-            String desc = extractXmlTag(block, "Abstract");
-            if (desc == null) desc = extractXmlTag(block, "Description");
-
-            // Parse supported formats
-            List<String> formats = new ArrayList<>();
-            int fIdx = 0;
-            while (true) {
-                int fStart = block.indexOf("<Format>", fIdx);
-                if (fStart < 0) fStart = block.indexOf("<format>", fIdx);
-                if (fStart < 0) break;
-                int fEnd = block.indexOf("</Format>", fStart);
-                if (fEnd < 0) fEnd = block.indexOf("</format>", fStart);
-                if (fEnd < 0) break;
-                formats.add(block.substring(fStart + 8, fEnd).trim());
-                fIdx = fEnd + 9;
-            }
-
-            // Parse native resolution (WCS 2.0.1)
-            List<Double> resolution = new ArrayList<>();
-            String resX = extractXmlTag(block, "resolution");
-            if (resX != null) {
-                try { resolution.add(Double.parseDouble(resX)); } catch (Exception ignored) { CatgisLogger.warn("WcsClient: operation failed", ignored); }
-            }
-
-            if (name != null && !name.isEmpty()) {
-                coverages.add(new WcsCoverage(name,
-                        title != null ? title : name,
-                        desc != null ? desc : "",
-                        "", "", formats, resolution));
-            }
-
-            idx = end + coverageTag.length() + 3;
-        }
-
         return coverages;
+    }
+
+    private static boolean hasLocalTag(Node node, String local) {
+        if (node == null) {
+            return false;
+        }
+        String name = node.getLocalName();
+        if (name == null) {
+            name = node.getNodeName();
+        }
+        int separator = name.lastIndexOf(':');
+        if (separator >= 0) {
+            name = name.substring(separator + 1);
+        }
+        return name.equalsIgnoreCase(local);
+    }
+
+    private static String childText(Element parent, String... localNames) {
+        for (String local : localNames) {
+            NodeList children = parent.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                Node child = children.item(i);
+                if (child instanceof Element && hasLocalTag(child, local)) {
+                    String value = child.getTextContent();
+                    if (value != null && !value.isBlank()) {
+                        return value.trim();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static List<String> descendantTexts(Element parent, String... localNames) {
+        List<String> result = new ArrayList<>();
+        NodeList descendants = parent.getElementsByTagName("*");
+        for (int i = 0; i < descendants.getLength(); i++) {
+            Node node = descendants.item(i);
+            for (String local : localNames) {
+                if (hasLocalTag(node, local)) {
+                    String value = node.getTextContent();
+                    if (value != null && !value.isBlank()) {
+                        result.add(value.trim());
+                    }
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     /**
@@ -332,26 +356,40 @@ public final class WcsClient {
 
     // --- HTTP helpers ---
 
-    private static String fetchUrl(String urlString) throws Exception {
-        URL url = new URL(urlString);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
-        conn.setConnectTimeout(10000);
-        conn.setReadTimeout(30000);
+    // Bound remote XML before parsing. A malicious server cannot fill the heap
+    // with an arbitrarily large GetCapabilities response.
+    private static final int MAX_CAPABILITIES_BYTES = 4 * 1024 * 1024;
 
-        int responseCode = conn.getResponseCode();
-        if (responseCode != 200) {
-            throw new Exception("HTTP " + responseCode + " from WCS server");
+    private static Document fetchCapabilitiesDocument(String urlString) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlString).openConnection();
+        try {
+            connection.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                throw new IOException("HTTP " + responseCode + " from WCS server");
+            }
+            long declaredLength = connection.getContentLengthLong();
+            if (declaredLength > MAX_CAPABILITIES_BYTES) {
+                throw new IOException("WCS GetCapabilities exceeds 4 MiB.");
+            }
+            byte[] document;
+            try (InputStream input = connection.getInputStream()) {
+                document = input.readNBytes(MAX_CAPABILITIES_BYTES + 1);
+            }
+            if (document.length == 0 || document.length > MAX_CAPABILITIES_BYTES) {
+                throw new IOException("WCS GetCapabilities is empty or exceeds 4 MiB.");
+            }
+            if (declaredLength >= 0L && declaredLength != document.length) {
+                throw new IOException("WCS GetCapabilities has incomplete Content-Length.");
+            }
+            try (InputStream input = new ByteArrayInputStream(document)) {
+                return OgcCapabilitiesXml.parse(input, false);
+            }
+        } finally {
+            connection.disconnect();
         }
-
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) sb.append(line).append("\n");
-        }
-        conn.disconnect();
-        return sb.toString();
     }
 
     private static byte[] fetchUrlBytes(String urlString) throws Exception {
@@ -374,17 +412,4 @@ public final class WcsClient {
         }
     }
 
-    private static String extractXmlTag(String xml, String tagName) {
-        for (String variant : new String[]{tagName, tagName.toLowerCase(), tagName.toUpperCase()}) {
-            String openTag = "<" + variant + ">";
-            String closeTag = "</" + variant + ">";
-            int start = xml.indexOf(openTag);
-            if (start < 0) continue;
-            start += openTag.length();
-            int end = xml.indexOf(closeTag, start);
-            if (end < 0) continue;
-            return xml.substring(start, end).trim();
-        }
-        return null;
-    }
 }
