@@ -122,6 +122,55 @@ class OnlineTileSourceIdentityContractTest {
                 "Legacy sanitization made both IDs 'same_name' and reused the disk tile.");
     }
 
+    @Test
+    void failuresOfAnOldProviderCannotAppearOnANewProviderWithSameId() throws Exception {
+        byte[] green = png(Color.GREEN);
+        AtomicInteger failedRequests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/broken", exchange -> {
+            failedRequests.incrementAndGet();
+            exchange.sendResponseHeaders(503, -1);
+            exchange.close();
+        });
+        server.createContext("/healthy", exchange -> respondPng(exchange, green));
+        server.start();
+
+        String id = "source-error-isolation-" + UUID.randomUUID();
+        String origin = "http://127.0.0.1:" + server.getAddress().getPort();
+        OnlineRasterSource broken = source(id,
+                origin + "/broken/{z}/{x}/{y}.png", 256, "EPSG:3857");
+        OnlineRasterSource healthy = source(id,
+                origin + "/healthy/{z}/{x}/{y}.png", 256, "EPSG:3857");
+        Path brokenFile = OnlineTileCache.resolveTileFile(broken, 3, 2, 1).toPath();
+        Path healthyFile = OnlineTileCache.resolveTileFile(healthy, 3, 2, 1).toPath();
+        try {
+            SwingUtilities.invokeAndWait(() ->
+                    assertNull(OnlineTileCache.getTile(broken, 3, 2, 1, null)));
+            String failure = "";
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (failure.isEmpty() && System.nanoTime() < deadline) {
+                failure = OnlineTileCache.getRecentSourceFailure(broken, 120000L);
+                if (failure.isEmpty()) {
+                    Thread.sleep(10);
+                }
+            }
+            assertTrue(failure.contains("HTTP 503"),
+                    "Old provider failure must be observable for its own configuration.");
+            assertEquals(1, failedRequests.get());
+            assertEquals("", OnlineTileCache.getRecentSourceFailure(healthy, 120000L),
+                    "Reconfigured provider must not inherit another URL's failure.");
+
+            assertEquals(Color.GREEN.getRGB(), awaitTile(healthy).getRGB(1, 1));
+            assertEquals("", OnlineTileCache.getRecentSourceFailure(healthy, 120000L));
+            assertEquals(failure, OnlineTileCache.getRecentSourceFailure(broken, 120000L),
+                    "Healthy provider must not erase old provider's diagnostics.");
+        } finally {
+            server.stop(0);
+            deleteOwnTile(brokenFile);
+            deleteOwnTile(healthyFile);
+        }
+    }
+
     private static OnlineRasterSource source(String id, String url, int size, String crs) {
         return new OnlineRasterSource(id, "Local identity test", "CI", OnlineServiceType.XYZ,
                 url, 0, 20, size, "", "", false, crs);
