@@ -176,12 +176,33 @@ tasks.named('jar') {
 tasks.named('test') {
     dependsOn 'verifyPortableNativeLibraryPath'
     useJUnitPlatform {
-        excludeTags 'external-postgis'
+        excludeTags 'external-postgis', 'native-gdal'
     }
     systemProperty 'java.awt.headless', 'true'
     finalizedBy jacocoTestReport
     testLogging {
         events 'failed', 'skipped'
+        exceptionFormat = 'full'
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+    }
+}
+
+// A separate real-GDAL gate keeps native C/JNI dependencies off normal
+// Windows/Linux/macOS headless CI while enforcing the actual GeoTIFF CLI
+// conversion contract on deliberately provisioned Linux and Mac hosts.
+tasks.register('nativeGdalIntegrationTest', Test) {
+    group = 'verification'
+    description = 'Runs the real GDAL CLI GeoTIFF/XYZ/warp round-trip on provisioned Unix hosts.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'native-gdal'
+    }
+    systemProperty 'java.awt.headless', 'true'
+    testLogging {
+        events 'passed', 'failed', 'skipped'
         exceptionFormat = 'full'
         showExceptions = true
         showCauses = true
