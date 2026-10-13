@@ -3,8 +3,8 @@
 DO NOT MERGE THIS FILE. This PR exists solely to trigger the repository's
 authenticated CATGIS Main Push Attestation workflow without weakening CI gates.
 
-Expected protected-main SHA: `828074b65b745f0205b4c16d07e32216cf199282`
-Origin: PR #51, candidate SHA `30b69f4c1dc775504ef50443bd211d86a0379224`.
+Expected protected-main SHA: `9408d52d49b430b4fe19d6d86a103cc2ecfa8fc7`
+Origin: PR #53, candidate SHA `580b92e9725361bf2f9331f97e86a7b99b7a83f3`.
 
 Require successful push-triggered CI and Certification for this exact main
 commit and all required Linux/Windows/PostGIS/architecture jobs, not prior PR
