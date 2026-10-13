@@ -58,9 +58,28 @@ class CatmapVisualTest {
 
         BufferedImage expected = GoldenImageAssert.loadGoldenImage(
                 "ar/com/catgis/catmap/golden/" + GOLDEN);
-        // Java2D text/antialiasing differs slightly between Windows and Linux runners.
-        // Keep the channel delta strict and allow only the observed cross-platform raster variance.
-        GoldenImageAssert.assertMatches(expected, actual, 1.10, 8);
+        // Independent macOS Intel and Apple Silicon runners BOTH measured a
+        // 1.16% deviation against this Windows/Linux golden while every other
+        // golden/GIS test passed (initial PR #63 run 38429988318). Mac's
+        // SansSerif/CoreText rasterization differs reproducibly from other OSes.
+        // Use the narrowest measured-platform allowance, not a global relaxed
+        // golden. Keep per-channel delta at 8 and dimensions pixel-exact.
+        GoldenImageAssert.assertMatches(expected, actual,
+                goldenToleranceFor(System.getProperty("os.name", "")), 8);
+    }
+
+    @Test
+    void goldenTolerancePolicyMustStayConservativeForEachDesktopOs() {
+        assertEquals(1.10, goldenToleranceFor("Windows 11"), 1.0e-9);
+        assertEquals(1.10, goldenToleranceFor("Linux"), 1.0e-9);
+        assertEquals(1.18, goldenToleranceFor("Mac OS X"), 1.0e-9);
+        assertEquals(1.18, goldenToleranceFor("Mac OS"), 1.0e-9);
+    }
+
+    private static double goldenToleranceFor(String osName) {
+        // The macOS deviation was identically 1.16% on two CPU architectures.
+        // Allow only a 0.02-point headroom; all other platforms retain 1.10%.
+        return osName.toLowerCase(java.util.Locale.ROOT).contains("mac") ? 1.18 : 1.10;
     }
 
     @Test
