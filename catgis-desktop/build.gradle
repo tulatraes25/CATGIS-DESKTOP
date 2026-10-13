@@ -547,6 +547,51 @@ tasks.register('packageWindowsAppImage') {
     }
 }
 
+// A certified application is more than passing JUnit: verify the actual
+// Windows jpackage app-image without requiring WiX or signing credentials.
+// Windows jlink may strip bin/java.exe; check runtime/release and JVM DLL,
+// not Linux's runtime/bin/java layout, and never launch Swing in CI.
+tasks.register('verifyWindowsAppImage') {
+    group = 'verification'
+    description = 'Validate Windows CATGIS/CATMAP launchers, main jar and bundled Java runtime.'
+    onlyIf { windowsHost }
+    dependsOn 'packageWindowsAppImage'
+    doLast {
+        File imageDir = new File(layout.buildDirectory.dir('installer/windows/app-image')
+                .get().asFile, installerDisplayName)
+        File catgisExe = new File(imageDir, "${installerDisplayName}.exe")
+        File catmapExe = new File(imageDir, 'catmap.exe')
+        File runtimeRelease = new File(imageDir, 'runtime/release')
+        File runtimeJvmDll = new File(imageDir, 'runtime/bin/server/jvm.dll')
+        File mainJar = new File(imageDir, "app/${project.name}-${version}.jar")
+
+        [catgisExe, catmapExe, runtimeRelease, runtimeJvmDll, mainJar].each { entry ->
+            if (!entry.isFile() || entry.length() == 0L) {
+                throw new GradleException("Windows CATGIS app-image missing file: ${entry}")
+            }
+        }
+
+        new java.util.jar.JarFile(mainJar).withCloseable { jar ->
+            for (String entryName : ['ar/com/catgis/Main.class',
+                                     'ar/com/catgis/catmap/Main.class']) {
+                if (jar.getJarEntry(entryName) == null) {
+                    throw new GradleException("Windows image main JAR lacks ${entryName}")
+                }
+            }
+        }
+        [catgisExe, catmapExe, runtimeJvmDll].each { binary ->
+            binary.withInputStream { input ->
+                if (input.read() != 'M'.charAt(0) || input.read() != 'Z'.charAt(0)) {
+                    throw new GradleException("Windows app-image contains non-PE binary: ${binary}")
+                }
+            }
+        }
+
+        logger.lifecycle("Windows CATGIS + CATMAP app-image verified: ${imageDir}")
+        logger.lifecycle("Windows main JAR byte size: ${mainJar.length()}")
+    }
+}
+
 tasks.register('packageWindowsJpackageExeInstaller') {
     onlyIf { windowsHost }
     dependsOn 'packageWindowsAppImage', 'verifyWindowsInstallerPrereqs'
