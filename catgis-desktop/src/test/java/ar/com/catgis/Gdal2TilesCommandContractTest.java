@@ -74,6 +74,37 @@ class Gdal2TilesCommandContractTest {
     }
 
     @Test
+    void modernGdalUsesExplicitNorthOriginAndFixedZoomBoundaries() {
+        File source = tempDir.resolve("source raster.tif").toFile();
+        File target = tempDir.resolve("XYZ output").toFile();
+        List<String> args = Gdal2TilesService.buildUnifiedCommand(
+                "/opt/homebrew/bin/gdal", source, target, 2, 4);
+        assertEquals(List.of("/opt/homebrew/bin/gdal", "raster", "tile",
+                        "--convention", "xyz", "--resampling", "bilinear",
+                        "--webviewer", "none", "--min-zoom", "2",
+                        "--max-zoom", "4", source.getAbsolutePath(),
+                        target.getAbsolutePath()), args);
+        assertEquals(1, args.stream().filter("xyz"::equals).count());
+        assertFalse(args.contains("-z"), "Modern GDAL does not accept legacy -z.");
+    }
+
+    @Test
+    void modernGdalAutomaticZoomOmitsBothExplicitBounds() {
+        File source = tempDir.resolve("source.tif").toFile();
+        File target = tempDir.resolve("tiles").toFile();
+        List<String> args = Gdal2TilesService.buildUnifiedCommand(
+                "/usr/bin/gdal", source, target, 0, -1);
+        assertTrue(args.contains("xyz"));
+        assertFalse(args.contains("--min-zoom"));
+        assertFalse(args.contains("--max-zoom"));
+        assertEquals(source.getAbsolutePath(), args.get(args.size() - 2));
+        assertEquals(target.getAbsolutePath(), args.get(args.size() - 1));
+        assertThrows(IllegalArgumentException.class,
+                () -> Gdal2TilesService.buildUnifiedCommand(
+                        "/usr/bin/gdal", source, target, 7, 3));
+    }
+
+    @Test
     void fixedZoomWithSameBoundsDoesNotTurnIntoAutoZoom() {
         File raster = tempDir.resolve("dem.tif").toFile();
         File tiles = tempDir.resolve("xyz").toFile();
