@@ -29,6 +29,10 @@ certified on three-platform pipelines (#66).
   to 256x256, nonempty data, and **north-oriented XYZ Y=0..1**
   (not TMS Y=2..3). Validate output file shapes and reject unexpected
   zoom levels. Never upload PNGs or GeoTIFF files to Actions artifacts.
+- For the legacy GDAL Python backend, require `--xyz` explicitly in
+  the real ProcessBuilder command and its pure command tests, because the
+  official classic gdal2tiles defaults to TMS Y orientation. Keep this option
+  mandatory for fixed and automatically chosen zoom levels.
 - This is explicitly a *discovery* gate: first verify whether
   ScriptEngine-selected Python actually imports `osgeo_utils.gdal2tiles`
   on every native runner; do not trust mere `python --version`.
