@@ -13,6 +13,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
+import java.util.Iterator;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -302,8 +306,72 @@ public final class WcsClient {
             if (start.startsWith("<") || start.startsWith("{") || start.startsWith("[")) {
                 throw new IOException("WCS returned an error document disguised as raster bytes.");
             }
+            // Validate requested GeoTIFF transport before replacing an existing
+            // raster. Keep metadata-only reads: full remote raster decode is
+            // unbounded and must not be performed here.
+            if (expectsTiff(format)) {
+                validateStagedTiff(staging, width, height);
+            }
         } finally {
             connection.disconnect();
+        }
+    }
+
+    private static boolean expectsTiff(String requestedFormat) {
+        if (requestedFormat == null || requestedFormat.isBlank()) {
+            return true;
+        }
+        String normalized = requestedFormat.trim().toLowerCase(Locale.ROOT);
+        return normalized.startsWith("image/tiff") || normalized.startsWith("image/geotiff")
+                || normalized.equals("geotiff");
+    }
+
+    static void validateStagedTiff(Path staging, int requestedWidth, int requestedHeight)
+            throws IOException {
+        byte[] signature;
+        try (InputStream input = Files.newInputStream(staging)) {
+            signature = input.readNBytes(4);
+        }
+        if (signature.length != 4) {
+            throw new IOException("WCS TIFF header is incomplete.");
+        }
+        boolean littleEndian = signature[0] == 'I' && signature[1] == 'I';
+        boolean bigEndian = signature[0] == 'M' && signature[1] == 'M';
+        boolean classic = (littleEndian && signature[2] == 42 && signature[3] == 0)
+                || (bigEndian && signature[2] == 0 && signature[3] == 42);
+        boolean bigTiff = (littleEndian && signature[2] == 43 && signature[3] == 0)
+                || (bigEndian && signature[2] == 0 && signature[3] == 43);
+        if (!classic && !bigTiff) {
+            throw new IOException("WCS response lacks a recognized TIFF/BigTIFF signature.");
+        }
+
+        try (ImageInputStream input = ImageIO.createImageInputStream(staging.toFile())) {
+            if (input == null) {
+                throw new IOException("WCS TIFF cannot be opened as an image stream.");
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
+            if (!readers.hasNext()) {
+                throw new IOException("No TIFF image reader supports the staged coverage.");
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                String detected = reader.getFormatName().toLowerCase(Locale.ROOT);
+                if (!detected.contains("tif")) {
+                    throw new IOException("Staged coverage is not recognized as TIFF.");
+                }
+                int actualWidth = reader.getWidth(0);
+                int actualHeight = reader.getHeight(0);
+                if (actualWidth <= 0 || actualHeight <= 0) {
+                    throw new IOException("WCS TIFF has invalid raster dimensions.");
+                }
+                if ((requestedWidth > 0 && actualWidth != requestedWidth)
+                        || (requestedHeight > 0 && actualHeight != requestedHeight)) {
+                    throw new IOException("WCS TIFF grid dimensions differ from requested width/height.");
+                }
+            } finally {
+                reader.dispose();
+            }
         }
     }
 
