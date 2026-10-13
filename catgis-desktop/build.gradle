@@ -581,7 +581,7 @@ tasks.register('verifyWindowsAppImage') {
         }
         [catgisExe, catmapExe, runtimeJvmDll].each { binary ->
             binary.withInputStream { input ->
-                if (input.read() != 'M'.charAt(0) || input.read() != 'Z'.charAt(0)) {
+                if (input.read() != 0x4d || input.read() != 0x5a) {
                     throw new GradleException("Windows app-image contains non-PE binary: ${binary}")
                 }
             }
