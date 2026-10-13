@@ -32,16 +32,20 @@ class OnlineTileByteBudgetIntegrityContractTest {
     void oversizedPhysicalBankCannotEscapeBudgetThroughUnderreportedLogicalSize() {
         byte[] bank = new byte[4096];
         // Deliberately expose only 16 logical elements of a larger physical bank.
-        DataBufferByte data = new DataBufferByte(bank, 16);
+        DataBufferByte data = new DataBufferByte(bank, 48);
+        // RGB band order deliberately differs from standard TYPE_3BYTE_BGR.
+        // This must exercise the TYPE_CUSTOM path without making every
+        // ordinary Java2D tile untrackable via getBankData().
         PixelInterleavedSampleModel model = new PixelInterleavedSampleModel(
-                DataBuffer.TYPE_BYTE, 4, 4, 1, 4, new int[]{0});
+                DataBuffer.TYPE_BYTE, 4, 4, 3, 12, new int[]{0, 1, 2});
         WritableRaster raster = Raster.createWritableRaster(model, data, new Point());
         ColorModel color = new ComponentColorModel(
-                ColorSpace.getInstance(ColorSpace.CS_GRAY),
-                new int[]{8}, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
+                ColorSpace.getInstance(ColorSpace.CS_sRGB),
+                new int[]{8, 8, 8}, false, false, Transparency.OPAQUE, DataBuffer.TYPE_BYTE);
         BufferedImage image = new BufferedImage(color, raster, false, null);
 
-        assertEquals(16, data.getSize());
+        assertEquals(BufferedImage.TYPE_CUSTOM, image.getType());
+        assertEquals(48, data.getSize());
         assertEquals(4096L, OnlineTileCache.imageDataBytes(image),
                 "The cache must account for the entire underlying Java byte array.");
 
