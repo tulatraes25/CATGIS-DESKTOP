@@ -449,6 +449,10 @@ tasks.register('packageLinuxAppImage') {
                 '--vendor', installerVendor,
                 '--description', installerDescription,
                 '--icon', iconFile.absolutePath,
+                // jpackage's implicit jlink defaults contain --strip-native-commands,
+                // which removes bin/java. Keep the bundled Java launcher for a
+                // headless executable runtime smoke test on real Linux runners.
+                '--jlink-options', '--strip-debug --no-man-pages --no-header-files',
                 '--java-options', '-Dfile.encoding=UTF-8'
         ]
         runExternalCommand(appImageCommand, [:],
