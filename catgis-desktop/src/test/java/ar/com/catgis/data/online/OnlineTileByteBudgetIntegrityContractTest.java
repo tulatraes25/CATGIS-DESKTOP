@@ -31,7 +31,7 @@ class OnlineTileByteBudgetIntegrityContractTest {
     @Test
     void oversizedPhysicalBankCannotEscapeBudgetThroughUnderreportedLogicalSize() {
         byte[] bank = new byte[4096];
-        // Deliberately expose only 16 logical elements of a larger physical bank.
+        // Deliberately expose only 48 logical RGB elements of a larger 4096-byte bank.
         DataBufferByte data = new DataBufferByte(bank, 48);
         // RGB band order deliberately differs from standard TYPE_3BYTE_BGR.
         // This must exercise the TYPE_CUSTOM path without making every
