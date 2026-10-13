@@ -24,6 +24,9 @@ independent resource-safety defect, not the provider-identity collision of #44.
   support; never persist or cache rejected/incomplete bytes.
 - Inspect image reader width/height metadata before image decoding and reject
   width/height above 2048 pixels or pixel count above 4,194,304.
+- Bound the **total** decoded-memory tile cache to 128 MiB of pixel backing
+  buffers, in addition to the existing 512-entry count ceiling. Evict the
+  least recently used images when crossing either limit.
 - Apply the same image metadata protections when reading an existing disk tile,
   including cached neighbor prefetch. Move neighbor disk existence/length checks
   into the existing worker executor rather than running them on Swing EDT.
@@ -51,7 +54,10 @@ independent resource-safety defect, not the provider-identity collision of #44.
 6. Error and failure paths preserve existing retry/backoff. Simulated
    prefetch-pending status for a tile must not prevent foreground getTile from
    fetching, caching and repainting it. Use only runtime fixtures and loopback HTTP.
-7. Exact SHA CATGIS CI/Certification SUCCESS on Linux and Windows, real PostGIS,
+7. Byte-budget regression proves that ordinary decoded LRU entries are evicted
+   by pixel backing bytes even when fewer than 512 entries exist, including
+   access-order preservation and images larger than an artificial test budget.
+8. Exact SHA CATGIS CI/Certification SUCCESS on Linux and Windows, real PostGIS,
    architecture and feature inventory gates. Merge and post-main CI are separate.
 
 ## Branch sequencing and known limitations
