@@ -124,7 +124,7 @@ public final class OnlineLayerRenderer {
         }
 
         if (renderedTiles <= 0) {
-            String failure = OnlineTileCache.getRecentSourceFailure(source.getId(), 120000L);
+            String failure = OnlineTileCache.getRecentSourceFailure(source, 120000L);
             if (failure != null && !failure.isBlank()) {
                 panel.onlineResolutionNoticeVisible = true;
                 panel.onlineResolutionNotice = "No se pudieron descargar teselas de " + source.getName() + ": " + failure;
