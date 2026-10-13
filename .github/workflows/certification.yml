@@ -130,6 +130,105 @@ jobs:
           echo "- main JAR sha256: $(sha256sum "$jar" | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
           echo '- UI runtime/GDAL JNI not yet certified; no binary artifacts uploaded.' >> "$GITHUB_STEP_SUMMARY"
 
+  macos-full-suite-appimage:
+    name: Certification macOS ${{ matrix.variant }} Full Suite + App Image
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: Intel
+            os: macos-15-intel
+            arch: x86_64
+          - variant: Apple Silicon
+            os: macos-15
+            arch: arm64
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native Java 17 for this Mac architecture
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Set up Gradle without GitHub cache storage
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - name: Confirm real Mac runner architecture
+        shell: bash
+        env:
+          REQUIRED_ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          actual="$(uname -m)"
+          echo "Host: $(sw_vers -productVersion); architecture: $actual"
+          test "$actual" = "$REQUIRED_ARCH"
+      - name: Resolve Mac build dependencies with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon resolveCiDependencies; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo 'Unable to resolve complete macOS runtime/test dependencies.' >&2
+              exit 1
+            fi
+            sleep $((attempt * 20))
+          done
+      - name: Full macOS headless suite and native .app packaging
+        shell: bash
+        run: ./gradlew --offline --no-daemon clean verifyMacAppImage test
+      - name: Certify full tests, architecture and package layout
+        shell: bash
+        env:
+          REQUIRED_ARCH: ${{ matrix.arch }}
+          MAC_VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree
+          files = list(Path('build/test-results/test').glob('TEST-*.xml'))
+          if not files:
+              raise SystemExit('No macOS JUnit XML test reports found')
+          counters = {k: 0 for k in ('tests', 'failures', 'errors', 'skipped')}
+          for path in files:
+              suite = ElementTree.parse(path).getroot()
+              for key in counters:
+                  counters[key] += int(suite.attrib.get(key, '0'))
+          print('macOS JUnit:', counters)
+          if counters['tests'] < 700 or counters['failures'] or counters['errors']:
+              raise SystemExit('macOS test-count or JUnit failures/errors gate violated')
+          if counters['skipped'] > 15:
+              raise SystemExit('macOS reviewed test-skip budget exceeded')
+          PY
+          app='build/installer/macos/app-image/CATGIS Desktop.app'
+          catgis="$app/Contents/MacOS/CATGIS Desktop"
+          catmap="$app/Contents/MacOS/catmap"
+          runtime="$app/Contents/runtime/Contents/Home/bin/java"
+          jar="$app/Contents/app/catgis-desktop-1.0.jar"
+          test -x "$catgis"
+          test -x "$catmap"
+          test -x "$runtime"
+          test -s "$jar"
+          /usr/bin/file -b "$catgis" | tee /tmp/catgis-macos-mach-o.txt
+          grep -q 'Mach-O' /tmp/catgis-macos-mach-o.txt
+          /usr/bin/lipo -archs "$catgis" | tr ' ' '\n' | grep -Fx "$REQUIRED_ARCH"
+          "$runtime" -version
+          {
+            echo "### CATGIS macOS $MAC_VARIANT package verified"
+            echo "- Host architecture: $(uname -m)"
+            echo "- Bundle size: $(du -sh "$app" | cut -f1)"
+            echo "- Main JAR SHA-256: $(shasum -a 256 "$jar" | cut -d' ' -f1)"
+            echo '- JDK17 bundled; CATGIS/CATMAP native launchers and Java tests passed'
+            echo '- Unsigned, not notarized; no .app/.dmg binaries uploaded'
+          } >> "$GITHUB_STEP_SUMMARY"
   linux-full-suite:
     needs: dependency-cache-linux
     name: Certification Linux Full Suite
