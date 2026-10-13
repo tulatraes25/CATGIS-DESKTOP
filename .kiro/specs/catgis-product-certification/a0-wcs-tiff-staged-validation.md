@@ -77,3 +77,16 @@ geospatial interop tests (issue #43). Do not claim scientific 100% from these ch
 - TIFF/BigTIFF magic + ImageIO width/height are structural gates only: no
   assertion of CRS, pixel-strip completeness, NoData, photometric correctness
   or full scientific validity. Continue issue #43 even after integration.
+
+## Additional causal controls (post51 replay)
+
+- Valid TIFF magic with corrupt image directory in WCS 2.0.1 must trigger
+  fallback to a genuine WCS 1.0.0 GeoTIFF. The first staged payload is larger
+  than the second to prove truncation, byte-identical final publication and
+  absence of leftover `.catgis-wcs-*.part` files.
+- `buildCoverageRequestUrl` normalizes nonpositive width/height to 512; TIFF
+  structural validation must use the *effective* grid dimensions too.
+  A 16×16 TIFF must not be published for a defaulted 512×512 request.
+- TIFF/BigTIFF metadata-only validation is **not** a complete scientific
+  proof. WCS 1.0/2.0 coordinate-axis-order, CRS/GeoKeys, NoData/bands and
+  pixel read completeness stay in issue #43 and the final architecture gate.
