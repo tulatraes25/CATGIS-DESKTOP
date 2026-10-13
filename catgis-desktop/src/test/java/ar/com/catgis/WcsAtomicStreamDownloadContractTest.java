@@ -388,8 +388,94 @@ class WcsAtomicStreamDownloadContractTest {
         assertNoStagingFile();
     }
 
+    @Test
+    void wrongGeoTiffEnvelopeMustNotReplaceValidRasterEvenWithCorrectPixelGrid() throws Exception {
+        byte[] otherPlace = realGeoTiff(16, 16,
+                -65.0, -64.0, -46.0, -45.0, "EPSG:4326");
+        openServer();
+        AtomicInteger attempts = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 200, "image/tiff", otherPlace);
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("protected-wrong-geo-envelope.tif");
+        Files.writeString(destination, "previous scientific coverage", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326", 16, 16, destination.toFile()));
+        assertEquals(2, attempts.get(), "Both WCS versions must reject an unrelated extent.");
+        assertEquals("previous scientific coverage",
+                Files.readString(destination, StandardCharsets.UTF_8));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void wrongEmbeddedGeoTiffCrsMustNotReplaceExistingRaster() throws Exception {
+        byte[] wrongCrs = realGeoTiff(16, 16,
+                -70.0, -69.0, -46.0, -45.0, "EPSG:3857");
+        openServer();
+        AtomicInteger attempts = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 200, "application/octet-stream", wrongCrs);
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("protected-wrong-crs.tif");
+        Files.writeString(destination, "prior valid file", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326", 16, 16, destination.toFile()));
+        assertEquals(2, attempts.get(), "CRS mismatch must reject both WCS versions.");
+        assertEquals("prior valid file", Files.readString(destination, StandardCharsets.UTF_8));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void matchingGeographicCoveragePublishesAndReleasesFileHandlesOnBothOperatingSystems()
+            throws Exception {
+        byte[] valid = realGeoTiff(16, 16);
+        openServer();
+        server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", valid));
+        server.start();
+
+        Path destination = tempDir.resolve("portable-georeference.tif");
+        WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326", 16, 16, destination.toFile());
+        assertArrayEquals(valid, Files.readAllBytes(destination));
+        WcsClient.validateStagedGeoMetadata(
+                destination, "-70,-46,-69,-45", "EPSG:4326", 16, 16);
+
+        // On Windows this rename/delete fails if a GeoTools/ImageIO reader
+        // has retained the file handle from the metadata-only validation.
+        Path moved = tempDir.resolve("portable-georeference-moved.tif");
+        Files.move(destination, moved);
+        assertArrayEquals(valid, Files.readAllBytes(moved));
+        Files.delete(moved);
+        assertNoStagingFile();
+    }
+
+    @Test
+    void invalidRequestedGeographicEnvelopeFailsBeforePublication() throws Exception {
+        Path fixture = tempDir.resolve("invalid-bbox-fixture.tif");
+        Files.write(fixture, realGeoTiff(16, 16));
+        assertThrows(IOException.class, () -> WcsClient.validateStagedGeoMetadata(
+                fixture, "NaN,-46,-69,-45", "EPSG:4326", 16, 16));
+        assertThrows(IOException.class, () -> WcsClient.validateStagedGeoMetadata(
+                fixture, "-69,-46,-70,-45", "EPSG:4326", 16, 16));
+        assertThrows(IOException.class, () -> WcsClient.validateStagedGeoMetadata(
+                fixture, "-70,-46,-69", "EPSG:4326", 16, 16));
+    }
+
     private byte[] realGeoTiff(int width, int height) throws Exception {
-        Path fixture = tempDir.resolve("fixture-" + width + "x" + height + ".tif");
+        return realGeoTiff(width, height, -70.0, -69.0, -46.0, -45.0, "EPSG:4326");
+    }
+
+    private byte[] realGeoTiff(int width, int height,
+                               double minX, double maxX, double minY, double maxY,
+                               String crsCode) throws Exception {
+        Path fixture = tempDir.resolve("fixture-" + width + "x" + height + "-"
+                + crsCode.replace(':', '-') + "-" + java.util.UUID.randomUUID() + ".tif");
         BandedSampleModel sampleModel =
                 new BandedSampleModel(DataBuffer.TYPE_FLOAT, width, height, 1);
         DataBufferFloat buffer = new DataBufferFloat(width * height);
@@ -401,8 +487,8 @@ class WcsAtomicStreamDownloadContractTest {
         }
         WritableRaster raster = Raster.createWritableRaster(sampleModel, buffer, null);
         ReferencedEnvelope envelope = new ReferencedEnvelope(
-                -70.0, -69.0, -46.0, -45.0,
-                CRSDefinitions.decode("EPSG:4326", true));
+                minX, maxX, minY, maxY,
+                CRSDefinitions.decode(crsCode, true));
         GridCoverage2D coverage = new GridCoverageFactory().create(
                 "wcs-contract-fixture", raster, envelope);
         GeoTiffWriter writer = new GeoTiffWriter(fixture.toFile());

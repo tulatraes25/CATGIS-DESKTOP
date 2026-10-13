@@ -17,6 +17,11 @@ import java.util.Iterator;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.gce.geotiff.GeoTiffReader;
+import org.geotools.geometry.GeneralBounds;
+import org.geotools.referencing.CRS;
+import org.geotools.util.factory.Hints;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -316,6 +321,10 @@ public final class WcsClient {
                 int effectiveWidth = width <= 0 ? 512 : width;
                 int effectiveHeight = height <= 0 ? 512 : height;
                 validateStagedTiff(staging, effectiveWidth, effectiveHeight);
+                // The GUI requests bbox and CRS explicitly. Pixel dimensions
+                // alone are insufficient: an unrelated place/projection may
+                // otherwise be published as a valid GIS raster.
+                validateStagedGeoMetadata(staging, bbox, crs, effectiveWidth, effectiveHeight);
             }
         } finally {
             connection.disconnect();
@@ -385,6 +394,88 @@ public final class WcsClient {
                 reader.dispose();
             }
         }
+    }
+
+    /**
+     * Validate embedded GeoTIFF CRS and envelope against the WCS request.
+     * GeoTools reads the metadata headers only; no coverage or pixel array is
+     * decoded. Always dispose the file-backed reader before atomic rename:
+     * open handles would prevent rename/replacement on Windows.
+     *
+     * Caller APIs that specify neither extent nor CRS keep the existing
+     * structural TIFF validation for backward compatibility.
+     */
+    static void validateStagedGeoMetadata(Path staging, String requestedBbox, String requestedCrs,
+                                          int requestedWidth, int requestedHeight) throws IOException {
+        boolean bboxGiven = requestedBbox != null && !requestedBbox.isBlank();
+        boolean crsGiven = requestedCrs != null && !requestedCrs.isBlank();
+        if (!bboxGiven && !crsGiven) {
+            return;
+        }
+        double[] bounds = bboxGiven ? parseRequestedBbox(requestedBbox) : null;
+        String effectiveCrs = crsGiven ? requestedCrs.trim() : "EPSG:4326";
+
+        GeoTiffReader reader = null;
+        try {
+            CoordinateReferenceSystem wanted = CRSDefinitions.decode(effectiveCrs, true);
+            reader = new GeoTiffReader(staging.toFile(),
+                    new Hints(Hints.FORCE_LONGITUDE_FIRST_AXIS_ORDER, Boolean.TRUE));
+            CoordinateReferenceSystem embedded = reader.getCoordinateReferenceSystem();
+            if (embedded == null || !CRS.equalsIgnoreMetadata(wanted, embedded)) {
+                throw new IOException("WCS GeoTIFF CRS differs from requested " + effectiveCrs + ".");
+            }
+
+            if (bounds != null) {
+                GeneralBounds actual = reader.getOriginalEnvelope();
+                if (actual == null || actual.getDimension() != 2) {
+                    throw new IOException("WCS GeoTIFF lacks a usable two-dimensional georeferenced envelope.");
+                }
+                double xTolerance = Math.max(1.0e-8,
+                        (bounds[2] - bounds[0]) / Math.max(1, requestedWidth) * 0.51);
+                double yTolerance = Math.max(1.0e-8,
+                        (bounds[3] - bounds[1]) / Math.max(1, requestedHeight) * 0.51);
+                if (!closeGeographicBound(actual.getMinimum(0), bounds[0], xTolerance)
+                        || !closeGeographicBound(actual.getMinimum(1), bounds[1], yTolerance)
+                        || !closeGeographicBound(actual.getMaximum(0), bounds[2], xTolerance)
+                        || !closeGeographicBound(actual.getMaximum(1), bounds[3], yTolerance)) {
+                    throw new IOException("WCS GeoTIFF geographic envelope differs from requested BBOX.");
+                }
+            }
+        } catch (IOException error) {
+            throw error;
+        } catch (Exception error) {
+            throw new IOException("Could not verify WCS GeoTIFF CRS/envelope metadata.", error);
+        } finally {
+            if (reader != null) {
+                reader.dispose();
+            }
+        }
+    }
+
+    private static boolean closeGeographicBound(double actual, double expected, double tolerance) {
+        return Double.isFinite(actual) && Math.abs(actual - expected) <= tolerance;
+    }
+
+    private static double[] parseRequestedBbox(String bbox) throws IOException {
+        String[] parts = bbox.split(",", -1);
+        if (parts.length != 4) {
+            throw new IOException("WCS BBOX must contain xmin,ymin,xmax,ymax.");
+        }
+        double[] out = new double[4];
+        for (int i = 0; i < parts.length; i++) {
+            try {
+                out[i] = Double.parseDouble(parts[i].trim());
+            } catch (NumberFormatException error) {
+                throw new IOException("WCS BBOX has a nonnumeric coordinate.", error);
+            }
+            if (!Double.isFinite(out[i])) {
+                throw new IOException("WCS BBOX has a non-finite coordinate.");
+            }
+        }
+        if (out[2] <= out[0] || out[3] <= out[1]) {
+            throw new IOException("WCS BBOX must have strictly positive width and height.");
+        }
+        return out;
     }
 
     /**
