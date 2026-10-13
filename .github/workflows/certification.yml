@@ -130,6 +130,98 @@ jobs:
           echo "- main JAR sha256: $(sha256sum "$jar" | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
           echo '- UI runtime/GDAL JNI not yet certified; no binary artifacts uploaded.' >> "$GITHUB_STEP_SUMMARY"
 
+  native-gdal-real-roundtrip:
+    name: Real Native GDAL ${{ matrix.variant }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: Linux
+            os: ubuntu-latest
+          - variant: macOS Intel
+            os: macos-15-intel
+          - variant: macOS Apple Silicon
+            os: macos-15
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    env:
+      CATGIS_NATIVE_GDAL_REQUIRED: '1'
+      PROJ_NETWORK: 'OFF'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Set up Gradle without uploaded/cache artifacts
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - name: Install real OS-native GDAL CLI without bundling it into git
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == 'Linux' ]]; then
+            sudo apt-get update -qq
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gdal-bin
+          else
+            if ! brew list --versions gdal >/dev/null 2>&1; then
+              HOMEBREW_NO_AUTO_UPDATE=1 brew install gdal
+            fi
+          fi
+          for tool in gdal_translate gdalwarp gdalinfo; do
+            command -v "$tool" >/dev/null
+          done
+          bin="$(dirname "$(command -v gdal_translate)")"
+          test "${bin:0:1}" = '/'
+          for tool in gdal_translate gdalwarp gdalinfo; do test -x "$bin/$tool"; done
+          echo "CATGIS_GDAL_BIN=$bin" >> "$GITHUB_ENV"
+          gdalinfo --version
+          echo "OS=$RUNNER_OS ARCH=$(uname -m) GDAL=$bin"
+      - name: Resolve Gradle Java test dependencies with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon resolveCiDependencies; then exit 0; fi
+            if [[ "$attempt" -eq 3 ]]; then exit 1; fi
+            sleep $((attempt * 20))
+          done
+      - name: Run real ASCII Grid to GeoTIFF to XYZ and reprojection
+        shell: bash
+        run: ./gradlew --offline --no-daemon nativeGdalIntegrationTest
+      - name: Verify native GDAL evidence — never skip silently
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree as E
+          results = list(Path('build/test-results/nativeGdalIntegrationTest').glob('TEST-*.xml'))
+          if not results:
+              raise SystemExit('Missing native GDAL JUnit XML (no silent skip)')
+          checks = {k: 0 for k in ('tests', 'failures', 'errors', 'skipped')}
+          for path in results:
+              suite = E.parse(path).getroot()
+              for key in checks:
+                  checks[key] += int(suite.attrib.get(key, '0'))
+          print('REAL_NATIVE_GDAL:', checks)
+          if checks != {'tests': 1, 'failures': 0, 'errors': 0, 'skipped': 0}:
+              raise SystemExit('Native GDAL did not execute exactly one successful real integration test')
+          PY
+          {
+            echo '### CATGIS native GDAL raster round-trip PASS'
+            echo "- OS: $RUNNER_OS, architecture: $(uname -m)"
+            echo "- GDAL bin: $CATGIS_GDAL_BIN"
+            echo "- Version: $(gdalinfo --version)"
+            echo '- Verified 6 real elevation cells, TIFF, EPSG:4326 and EPSG:3857 reprojection'
+            echo '- No GDAL executables/rasters/packages uploaded as GitHub artifacts'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   macos-full-suite-appimage:
     name: Certification macOS ${{ matrix.variant }} Full Suite + App Image
     runs-on: ${{ matrix.os }}
