@@ -56,10 +56,17 @@ Under-accounting lets multiple such images defeat the intended byte budget.
 
 - Six simultaneous worker decodes can allocate transient raster memory
   outside the retained-cache limit; application-wide heap benchmark is R1.
-- Standard BufferedImage constructors can theoretically wrap nonstandard
-  physical banks even when reporting a standard type; the standard fast path
-  assumes canonical JDK image allocation. The remaining application-wide heap
-  and acceleration risk needs an instrumented runtime profiling gate.
+- A prior CI regression explicitly demonstrated a standard-looking
+  `TYPE_BYTE_GRAY` image wrapping a much larger bank while reporting only
+  16 logical elements. The standard fast path deliberately does not expose
+  Java2D backing banks (to preserve rendering optimization), so that unusual
+  injected-image shape can still be undercounted. The new deterministic
+  physical-bank test uses `TYPE_CUSTOM` and covers that path only. The
+  production loader currently accepts ImageIO-decoded tiles, but a future
+  decoder plugin might introduce a noncanonical standard layout. Do not
+  declare a mathematically absolute heap cap or close A0.7 on this evidence.
+  A compact/safe raster-admission boundary or instrumented runtime profiling
+  must address the remaining physical-layout and acceleration risks.
 - ImageIO plugin implementations might retain native or secondary allocations
   beyond standard DataBuffer arrays. Instrumented runtime profiling belongs
   to the later certified Windows stage, not a premature desktop release.
