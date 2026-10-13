@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -94,22 +93,24 @@ class GdalNativeCliRoundTripIntegrationTest {
     }
 
     private static String run(List<String> arguments) throws Exception {
-        ProcessBuilder command = new ProcessBuilder(arguments);
-        command.redirectErrorStream(true);
-        command.environment().put("PROJ_NETWORK", "OFF");
-        Process process = command.start();
-        byte[] bytes;
-        try (InputStream output = process.getInputStream()) {
-            bytes = output.readAllBytes();
+        Path output = Files.createTempFile("catgis-gdal-cli-", ".log");
+        try {
+            ProcessBuilder command = new ProcessBuilder(arguments);
+            command.redirectErrorStream(true);
+            command.redirectOutput(output.toFile());
+            command.environment().put("PROJ_NETWORK", "OFF");
+            Process process = command.start();
+            boolean completed = process.waitFor(90, TimeUnit.SECONDS);
+            if (!completed) {
+                process.destroyForcibly();
+                throw new IOException("Native GDAL command did not complete within 90 seconds.");
+            }
+            String text = Files.readString(output, StandardCharsets.UTF_8);
+            assertEquals(0, process.exitValue(),
+                    "Native GDAL exited nonzero: " + arguments.get(0) + "\n" + text);
+            return text;
+        } finally {
+            Files.deleteIfExists(output);
         }
-        boolean completed = process.waitFor(90, TimeUnit.SECONDS);
-        if (!completed) {
-            process.destroyForcibly();
-            throw new IOException("Native GDAL command did not complete within 90 seconds.");
-        }
-        String text = new String(bytes, StandardCharsets.UTF_8);
-        assertEquals(0, process.exitValue(),
-                "Native GDAL exited nonzero: " + arguments.get(0) + "\n" + text);
-        return text;
     }
 }
