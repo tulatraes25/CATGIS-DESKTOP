@@ -1,9 +1,6 @@
 package ar.com.catgis;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -36,45 +33,48 @@ public final class Gdal2TilesService {
             String python = resolvePython();
             if (python == null) return false;
 
-            List<String> cmd = new ArrayList<>();
-            cmd.add(python);
-            cmd.add("-m");
-            cmd.add("gdal2tiles");
-            cmd.add("-z");
-            cmd.add(zoomMin + "-" + (zoomMax > 0 ? zoomMax : ""));
-            if (zoomMax <= 0) {
-                cmd.set(cmd.size() - 1, "--processes=4");
-                // Remove the -z flag and use auto zoom detection
-                cmd.remove(cmd.size() - 1);
-                cmd.add("--resampling=bilinear");
-            } else {
-                cmd.set(cmd.size() - 1, zoomMin + "-" + zoomMax);
-            }
-            cmd.add(inputFile.getAbsolutePath());
-            cmd.add(outputDir.getAbsolutePath());
-
+            List<String> cmd = buildCommand(python, inputFile, outputDir,
+                    zoomMin, zoomMax);
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
             Process p = pb.start();
-
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append('\n');
-                }
-            }
-
-            boolean finished = p.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (!finished) {
-                p.destroyForcibly();
-                return false;
-            }
-            return p.exitValue() == 0 && outputDir.exists();
+            // A bounded concurrent drain is essential: reading stdout to EOF
+            // BEFORE waitFor(timeout) makes a stalled child bypass the timeout.
+            ExternalToolService.ToolResult result = ExternalToolService.collectProcess(
+                    p, TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS));
+            return result.success() && outputDir.isDirectory();
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Build arguments without shell interpolation or orphan -z tokens.
+     * The implicit (zoomMax <= 0) mode lets GDAL determine BOTH zoom bounds;
+     * a fixed zoom range always supplies exactly one -z value.
+     */
+    static List<String> buildCommand(String python, File inputFile, File outputDir,
+                                     int zoomMin, int zoomMax) {
+        if (python == null || python.isBlank() || inputFile == null || outputDir == null) {
+            throw new IllegalArgumentException("Python, input raster and tile directory required.");
+        }
+        if (zoomMin < 0 || zoomMax > 0 && zoomMax < zoomMin) {
+            throw new IllegalArgumentException("Invalid GDAL tile zoom range.");
+        }
+        List<String> cmd = new ArrayList<>();
+        cmd.add(python);
+        cmd.add("-m");
+        cmd.add("gdal2tiles");
+        if (zoomMax > 0) {
+            cmd.add("-z");
+            cmd.add(zoomMin + "-" + zoomMax);
+        } else {
+            cmd.add("--processes=4");
+            cmd.add("--resampling=bilinear");
+        }
+        cmd.add(inputFile.getAbsolutePath());
+        cmd.add(outputDir.getAbsolutePath());
+        return List.copyOf(cmd);
     }
 
     /**
