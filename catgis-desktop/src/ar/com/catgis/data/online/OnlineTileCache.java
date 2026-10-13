@@ -13,6 +13,10 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -392,14 +396,42 @@ public final class OnlineTileCache {
         } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
     }
 
-    private static String buildKey(OnlineRasterSource source, int z, int x, int y) {
-        return source.getId() + "_" + z + "_" + x + "_" + y;
+    /**
+     * Stable versioned namespace for the immutable source configuration.
+     * Source IDs alone are unsafe: users can change a provider URL while keeping
+     * an ID, and old tiles must never masquerade as the new geographic imagery.
+     * Hashing also prevents raw API tokens or path segments entering disk names.
+     * Legacy ID-only disk entries are intentionally NOT reused.
+     */
+    static String cacheNamespace(OnlineRasterSource source) {
+        StringBuilder identity = new StringBuilder(256);
+        appendIdentityPart(identity, source.getId());
+        appendIdentityPart(identity, source.getServiceType().name());
+        appendIdentityPart(identity, source.getUrlTemplate());
+        appendIdentityPart(identity, Integer.toString(source.getTileSize()));
+        appendIdentityPart(identity, source.getSourceCRS());
+        appendIdentityPart(identity, Boolean.toString(source.isRequiresApiKey()));
+        try {
+            byte[] sha256 = MessageDigest.getInstance("SHA-256")
+                    .digest(identity.toString().getBytes(StandardCharsets.UTF_8));
+            return "v2-" + HexFormat.of().formatHex(sha256, 0, 16);
+        } catch (NoSuchAlgorithmException error) {
+            throw new IllegalStateException("SHA-256 is required for safe tile cache identity", error);
+        }
     }
 
-    private static File resolveTileFile(OnlineRasterSource source, int z, int x, int y) {
-        String folderName = source.getId().replaceAll("[^a-zA-Z0-9._-]", "_");
+    private static void appendIdentityPart(StringBuilder identity, String value) {
+        identity.append(value.length()).append(':').append(value);
+    }
+
+    static String buildKey(OnlineRasterSource source, int z, int x, int y) {
+        return cacheNamespace(source) + "_" + z + "_" + x + "_" + y;
+    }
+
+    static File resolveTileFile(OnlineRasterSource source, int z, int x, int y) {
         String extension = guessFormat(source);
-        return new File(CACHE_DIR, folderName + File.separator + z + File.separator + x + File.separator + y + "." + extension);
+        return new File(CACHE_DIR, cacheNamespace(source) + File.separator
+                + z + File.separator + x + File.separator + y + "." + extension);
     }
 
     /**
