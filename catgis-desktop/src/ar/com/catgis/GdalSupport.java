@@ -1,7 +1,6 @@
 package ar.com.catgis;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
