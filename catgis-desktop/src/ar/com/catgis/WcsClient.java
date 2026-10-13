@@ -268,10 +268,7 @@ public final class WcsClient {
             }
             String start = new String(prefix, StandardCharsets.UTF_8)
                     .replace(String.valueOf((char) 0xFEFF), "").stripLeading().toLowerCase(Locale.ROOT);
-            if (start.startsWith("<?xml") || start.startsWith("<exception")
-                    || start.startsWith("<ows:exception") || start.startsWith("{")
-                    || start.startsWith("[") || start.startsWith("<html")
-                    || start.startsWith("<!doctype html")) {
+            if (start.startsWith("<") || start.startsWith("{") || start.startsWith("[")) {
                 throw new IOException("WCS returned an error document disguised as raster bytes.");
             }
         } finally {
