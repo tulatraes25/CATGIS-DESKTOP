@@ -27,6 +27,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import base64
           import json
           import os
           import re
@@ -66,6 +67,30 @@ jobs:
                   "Visible Command Inventory", "Source Feature Surface Inventory",
               },
           }
+
+          # Read the protected main SHA's OWN workflow, not the PR's updated
+          # workflow, so a first platform-introduction PR remains attested
+          # against the prior main. After merge, the new platform jobs become
+          # mandatory and cannot be skipped in successful main push evidence.
+          meta = request_json(
+              "/contents/.github/workflows/certification.yml?ref=" + sha)
+          if meta.get("encoding") != "base64" or not meta.get("content"):
+              raise SystemExit("Cannot inspect exact-main certification.yml")
+          cert_source = base64.b64decode(meta["content"]).decode("utf-8")
+          optional_platform_jobs = [
+              ("linux-appimage-package:",
+               {"Linux App Image Package Contract"}),
+              ("windows-appimage-package:",
+               {"Windows App Image Package Contract"}),
+              ("macos-full-suite-appimage:",
+               {"Certification macOS Intel Full Suite + App Image",
+                "Certification macOS Apple Silicon Full Suite + App Image"}),
+          ]
+          for workflow_job_id, gate_job_names in optional_platform_jobs:
+              if re.search(r"(?m)^  " + re.escape(workflow_job_id) +
+                           r"\s*$", cert_source):
+                  required["certification.yml"].update(gate_job_names)
+                  print("ATTEST REQUIRED protected-main job:", sorted(gate_job_names))
 
           report = [f"## CATGIS main push attestation — exact SHA \u0060{sha}\u0060",
                     "", "| Workflow | Run ID | Attempt | Conclusion |",
