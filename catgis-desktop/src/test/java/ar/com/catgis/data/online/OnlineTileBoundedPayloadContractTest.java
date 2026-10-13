@@ -13,6 +13,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Set;
 import java.util.Map;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
@@ -192,6 +194,55 @@ class OnlineTileBoundedPayloadContractTest {
             assertNotNull(memory.get(cacheKey), "Background prefetch must warm the expected tile.");
             assertEquals(tile.getRGB(7, 9), memory.get(cacheKey).getRGB(7, 9));
         } finally {
+            deleteOwnCacheDirectories(cached);
+        }
+    }
+
+    @Test
+    void prefetchPendingMustNeverBlockForegroundTileRepaint() throws Exception {
+        byte[] png = png(sample(Color.GREEN));
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/tiles", exchange -> {
+            requests.incrementAndGet();
+            exchange.getResponseHeaders().set("Content-Type", "image/png");
+            exchange.sendResponseHeaders(200, png.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(png);
+            }
+        });
+        server.start();
+        String id = "prefetch-foreground-" + UUID.randomUUID();
+        OnlineRasterSource source = new OnlineRasterSource(
+                id, "Foreground while prefetch pending", "CI", OnlineServiceType.XYZ,
+                "http://127.0.0.1:" + server.getAddress().getPort() + "/tiles/{z}/{x}/{y}.png",
+                0, 20, 256, "", "", false, "EPSG:3857");
+        Path cached = cachePath(source);
+
+        Field field = OnlineTileCache.class.getDeclaredField("PREFETCH_PENDING");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Set<String> prefetch = (Set<String>) field.get(null);
+        Method keyBuilder = OnlineTileCache.class.getDeclaredMethod(
+                "buildKey", OnlineRasterSource.class, int.class, int.class, int.class);
+        keyBuilder.setAccessible(true);
+        String key = (String) keyBuilder.invoke(null, source, 3, 2, 1);
+        assertTrue(prefetch.add(key));
+        try {
+            CountDownLatch repaint = new CountDownLatch(1);
+            SwingUtilities.invokeAndWait(() ->
+                    assertNull(OnlineTileCache.getTile(source, 3, 2, 1, repaint::countDown)));
+            assertTrue(repaint.await(10, TimeUnit.SECONDS),
+                    "Foreground tile must repaint even if prefetch owns the same key.");
+            AtomicReference<BufferedImage> displayed = new AtomicReference<>();
+            SwingUtilities.invokeAndWait(() ->
+                    displayed.set(OnlineTileCache.getTile(source, 3, 2, 1, null)));
+            assertNotNull(displayed.get());
+            assertEquals(Color.GREEN.getRGB(), displayed.get().getRGB(1, 1));
+            assertEquals(1, requests.get());
+        } finally {
+            prefetch.remove(key);
+            server.stop(0);
             deleteOwnCacheDirectories(cached);
         }
     }
