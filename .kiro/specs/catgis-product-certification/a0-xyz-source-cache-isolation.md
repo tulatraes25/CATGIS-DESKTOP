@@ -16,8 +16,9 @@ This is a GIS **data-integrity** problem, not merely a cosmetic cache bug.
 
 ## Requirements
 
-1. Memory cache, disk cache, pending request keys and network retry state must
-   share a stable namespace derived from the *effective source configuration*:
+1. Memory cache, disk cache, pending request keys, network retry state and
+   user-visible HTTP error diagnostics must share a stable namespace derived
+   from the *effective source configuration*:
    ID, service type, URL template, tile size, CRS and API-key requirement.
 2. Distinct provider URLs with the same ID must never share images, failure
    cooldown or pending work. Same configuration across application restarts must
@@ -43,6 +44,9 @@ This is a GIS **data-integrity** problem, not merely a cosmetic cache bug.
   paths; malicious source IDs and embedded URL tokens never appear in paths.
 - Existing offline/backoff/EDT tests must be updated to the namespaced identity
   rather than silently passing through a legacy source-ID fixture.
+- A failed provider followed by a healthy provider using the same ID must not
+  leak the first provider's HTTP warning into the new map, nor clear the
+  first provider's failure record.
 - Exact candidate head must receive CATGIS CI and CATGIS Certification SUCCESS
   (Linux, Windows, real PostGIS and architecture inventories).
 - A protected-main merge requires exact SHA lease and a fresh post-main
