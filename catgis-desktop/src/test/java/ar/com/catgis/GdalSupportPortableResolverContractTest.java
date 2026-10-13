@@ -31,6 +31,12 @@ class GdalSupportPortableResolverContractTest {
                 GdalSupport.nativeExecutableName("gdalinfo.exe", "Mac OS X"));
         assertEquals("gdalwarp",
                 GdalSupport.nativeExecutableName("gdalwarp.exe", "Darwin"));
+        assertEquals("gdal",
+                GdalSupport.nativeExecutableName("gdal.exe", "Linux"));
+        assertEquals("gdal",
+                GdalSupport.nativeExecutableName("gdal", "Mac OS X"));
+        assertEquals("gdal.exe",
+                GdalSupport.nativeExecutableName("gdal", "Windows 11"));
     }
 
     @Test
