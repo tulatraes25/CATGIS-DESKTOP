@@ -5,18 +5,23 @@ import ar.com.catgis.data.online.OnlineRasterSource;
 
 import ar.com.catgis.OnlineMapUtils;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +37,10 @@ public final class OnlineTileCache {
     private static final String ACCEPT_LANGUAGE = "es-AR,es;q=0.9,en;q=0.7";
     private static final long RETRY_DELAY_MS = 30000L;
     private static final int MAX_FAILURE_MESSAGE_LENGTH = 180;
+    // A remote XYZ tile must never be allowed to allocate an unbounded heap.
+    static final int MAX_TILE_BYTES = 8 * 1024 * 1024;
+    static final int MAX_TILE_DIMENSION = 2048;
+    static final long MAX_TILE_PIXELS = 2048L * 2048L;
     // Use AppData for persistent cache (survives reboots)
     private static final File CACHE_DIR;
     private static final int MEMORY_CACHE_MAX = 512;
@@ -116,7 +125,7 @@ public final class OnlineTileCache {
                                         String key, File tileFile, Runnable repaintCallback) {
         if (tileFile.isFile()) {
             try {
-                BufferedImage image = ImageIO.read(tileFile);
+                BufferedImage image = readCachedTile(tileFile);
                 if (image != null) {
                     if (isUnavailablePlaceholder(source, image, tileFile.length())) {
                         markPlaceholderUnavailable(key, tileFile);
@@ -176,16 +185,17 @@ public final class OnlineTileCache {
                         continue;
                     }
 
+                    long declaredLength = connection.getContentLengthLong();
                     byte[] payload;
                     try (InputStream input = connection.getInputStream()) {
-                        payload = readAllBytes(input);
+                        payload = readLimitedTileBytes(input, declaredLength);
                     }
                     if (payload.length == 0) {
                         failureReason = "Respuesta vacia en " + source.getName();
                         continue;
                     }
 
-                    BufferedImage image = ImageIO.read(new ByteArrayInputStream(payload));
+                    BufferedImage image = decodeTileBytes(payload);
                     if (image == null) {
                         failureReason = "Formato no soportado (" + safeContentType(connection.getContentType()) + ")";
                         continue;
@@ -288,14 +298,68 @@ public final class OnlineTileCache {
         LAST_SOURCE_FAILURE_AT.remove(source.getId());
     }
 
-    private static byte[] readAllBytes(InputStream input) throws Exception {
+    static byte[] readLimitedTileBytes(InputStream input, long declaredLength) throws IOException {
+        if (declaredLength > MAX_TILE_BYTES) {
+            throw new IOException("XYZ tile exceeds maximum encoded size of " + MAX_TILE_BYTES + " bytes.");
+        }
         ByteArrayOutputStream output = new ByteArrayOutputStream(16 * 1024);
         byte[] buffer = new byte[8192];
+        long total = 0L;
         int read;
-        while ((read = input.read(buffer)) >= 0) {
+        while ((read = input.read(buffer)) != -1) {
+            if (read == 0) {
+                continue;
+            }
+            total += read;
+            if (total > MAX_TILE_BYTES) {
+                throw new IOException("XYZ tile exceeds maximum encoded size of " + MAX_TILE_BYTES + " bytes.");
+            }
             output.write(buffer, 0, read);
         }
+        if (declaredLength >= 0 && declaredLength != total) {
+            throw new IOException("XYZ tile body length does not match Content-Length.");
+        }
         return output.toByteArray();
+    }
+
+    static BufferedImage decodeTileBytes(byte[] payload) throws IOException {
+        try (ImageInputStream stream =
+                new MemoryCacheImageInputStream(new ByteArrayInputStream(payload))) {
+            return decodeCheckedTile(stream);
+        }
+    }
+
+    static BufferedImage readCachedTile(File tileFile) throws IOException {
+        if (tileFile.length() > MAX_TILE_BYTES) {
+            throw new IOException("Cached XYZ tile exceeds maximum encoded size.");
+        }
+        try (ImageInputStream stream = ImageIO.createImageInputStream(tileFile)) {
+            if (stream == null) {
+                return null;
+            }
+            return decodeCheckedTile(stream);
+        }
+    }
+
+    private static BufferedImage decodeCheckedTile(ImageInputStream stream) throws IOException {
+        Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
+        if (!readers.hasNext()) {
+            return null;
+        }
+        ImageReader reader = readers.next();
+        try {
+            reader.setInput(stream, true, true);
+            int width = reader.getWidth(0);
+            int height = reader.getHeight(0);
+            if (width <= 0 || height <= 0
+                    || width > MAX_TILE_DIMENSION || height > MAX_TILE_DIMENSION
+                    || (long) width * height > MAX_TILE_PIXELS) {
+                throw new IOException("XYZ tile image dimensions exceed bounded decode policy.");
+            }
+            return reader.read(0);
+        } finally {
+            reader.dispose();
+        }
     }
 
     private static String safeContentType(String contentType) {
