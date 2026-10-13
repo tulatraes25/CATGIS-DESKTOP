@@ -46,6 +46,10 @@ image/tiff and writes to .tif, so this affects the normal user path.
   image/tiff cannot replace an existing destination.
 - A real TIFF with dimensions differing from a requested 16x16 grid is
   rejected before publication; no temp files remain after both attempts.
+- Validation streams and readers must be closed deterministically on
+  Windows; generated GeoTIFF test readers must not retain handles on JUnit
+  temporary output. The fallback test validates with the metadata-only
+  production helper, not a lazy file-backed GeoTools coverage.
 - All existing XML/JSON disguised-body, Content-Length, rollback and cleanup
   tests remain green. Linux and Windows must both pass on exact candidate
   head, including PostGIS/architecture CI and PR-base push attestation.
