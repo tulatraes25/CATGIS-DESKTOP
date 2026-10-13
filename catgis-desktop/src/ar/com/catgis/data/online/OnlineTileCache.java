@@ -356,6 +356,20 @@ public final class OnlineTileCache {
         DataBuffer data = image.getRaster().getDataBuffer();
         long bytesPerElement = Math.max(1L, (DataBuffer.getDataTypeSize(data.getDataType()) + 7L) / 8L);
         long logical = (long) data.getSize() * data.getNumBanks() * bytesPerElement;
+        long bitsPerPixel = Math.max(1L, image.getColorModel().getPixelSize());
+        long pixelBytes = (long) image.getWidth() * image.getHeight() * ((bitsPerPixel + 7L) / 8L);
+
+        // Exposing primitive arrays through getBankData() marks a Java2D
+        // DataBuffer UNTRACKABLE, which can disable cached/video-memory
+        // rendering optimizations. Standard JDK image types use their
+        // canonical layout and can be conservatively budgeted without it.
+        if (image.getType() != BufferedImage.TYPE_CUSTOM) {
+            return Math.max(logical, pixelBytes);
+        }
+
+        // Custom rasters may wrap oversized physical arrays while reporting
+        // a tiny logical sample count. Only this uncommon case needs access
+        // to the backing banks, trading acceleration for accurate accounting.
         long physical = 0L;
         if (data instanceof DataBufferByte banks) {
             for (byte[] bank : banks.getBankData()) {
@@ -388,8 +402,6 @@ public final class OnlineTileCache {
                 physical += (data.getSize() + Math.max(0L, (long) offset)) * bytesPerElement;
             }
         }
-        long bitsPerPixel = Math.max(1L, image.getColorModel().getPixelSize());
-        long pixelBytes = (long) image.getWidth() * image.getHeight() * ((bitsPerPixel + 7L) / 8L);
         return Math.max(pixelBytes, Math.max(logical, physical));
     }
 
