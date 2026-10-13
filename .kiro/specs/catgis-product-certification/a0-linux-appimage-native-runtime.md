@@ -21,8 +21,11 @@ installation, so it is not a self-contained desktop release.
    toolchain. No APT/YUM packaging, no publishing or signing in this tranche.
 2. Bundle the JDK with the app-image. Provide the standard CATGIS launcher,
    main-class `ar.com.catgis.Main`, existing app version, vendor and a
-   generated PNG icon with no new binary fixture. Keep Windows packaging tasks
-   and all current Windows launcher options unchanged.
+   generated PNG icon with no new binary fixture. Override jpackage's default
+   jlink `--strip-native-commands` so the **embedded** `bin/java` remains
+   independently executable by the Linux smoke contract. Retain
+   `--strip-debug --no-man-pages --no-header-files` to bound runtime size.
+   Keep Windows packaging tasks and their launcher options unchanged.
 3. Add `verifyLinuxAppImage` checking launcher executable, bundled
    `lib/runtime/bin/java`, main app JAR and `Main.class`. Smoke-test the
    bundled runtime with `java -version` only; never launch Swing in CI.
@@ -39,6 +42,18 @@ installation, so it is not a self-contained desktop release.
 7. Use exact-head Linux+Windows CI/Certification, PostGIS, architecture and
    the independent new Linux package job. Require successful exact-main
    push-run attestation after merge, including evidence for this new job.
+
+## CI review: actual failure and root cause
+
+The first Linux App Image Package Contract assembled its app-image
+(`packageLinuxAppImage` PASS) but `verifyLinuxAppImage` FAILed because
+the expected `lib/runtime/bin/java` was absent. This follows the JDK17
+`jpackage` default jlink flags, which include `--strip-native-commands`.
+The corrected jpackage invocation explicitly retains the Java executable so
+`java -version` can test the bundled runtime. The failed run does **not**
+prove the original app-image was invalid; the initial acceptance contract
+was stricter than jpackage defaults. Only the new exact-head CI outcome can
+certify this corrected configuration.
 
 ## Acceptance
 
