@@ -234,6 +234,60 @@ class WcsAtomicStreamDownloadContractTest {
     }
 
     @Test
+    void malformedV2TiffMustFallBackToGenuineV1CoverageWithoutStaleBytes() throws Exception {
+        openServer();
+        byte[] genuine = realGeoTiff(16, 16);
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            String query = exchange.getRequestURI().getRawQuery();
+            if (query != null && query.contains("VERSION=2.0.1")) {
+                // Valid TIFF magic, but no usable image directory; also longer
+                // than fallback payload to prove the same staging file truncates.
+                byte[] corrupt = new byte[genuine.length + 4096];
+                corrupt[0] = 'I';
+                corrupt[1] = 'I';
+                corrupt[2] = 42;
+                respond(exchange, 200, "image/tiff", corrupt);
+            } else {
+                respond(exchange, 200, "image/tiff", genuine);
+            }
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("v1-after-invalid-v2.tif");
+        Files.writeString(destination, "old coverage", StandardCharsets.UTF_8);
+        WcsClient.downloadCoverageToFile(origin, "dem", "-70,-46,-69,-45",
+                "EPSG:4326", 16, 16, destination.toFile());
+        assertEquals(2, requests.get());
+        assertArrayEquals(genuine, Files.readAllBytes(destination));
+        WcsClient.validateStagedTiff(destination, 16, 16);
+        assertNoStagingFile();
+    }
+
+    @Test
+    void defaultedZeroGridCannotSilentlyAcceptWrongSizedGeoTiff() throws Exception {
+        byte[] mismatched = realGeoTiff(16, 16);
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            // URL requests 512x512 after default normalization; an unsolicited
+            // 16x16 TIFF must not bypass validation because caller supplied 0.
+            respond(exchange, 200, "image/tiff", mismatched);
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("default-grid-protected.tif");
+        Files.writeString(destination, "previous raster", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", null, null, 0, 0, destination.toFile()));
+        assertEquals(2, requests.get());
+        assertEquals("previous raster", Files.readString(destination, StandardCharsets.UTF_8));
+        assertNoStagingFile();
+    }
+
+    @Test
     void randomBinaryAdvertisedAsTiffCannotOverwriteExistingCoverage() throws Exception {
         openServer();
         AtomicInteger requests = new AtomicInteger();
