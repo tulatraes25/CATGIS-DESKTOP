@@ -11,6 +11,12 @@ import javax.imageio.stream.MemoryCacheImageInputStream;
 import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferShort;
+import java.awt.image.DataBufferUShort;
+import java.awt.image.DataBufferInt;
+import java.awt.image.DataBufferFloat;
+import java.awt.image.DataBufferDouble;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -336,13 +342,55 @@ public final class OnlineTileCache {
         }
     }
 
+    /**
+     * Estimate decoded heap retention from the *actual bank array capacities*.
+     * DataBuffer.getSize() is a logical element count: a reader may wrap a larger
+     * preallocated backing bank, so using logical size alone undercounts memory.
+     * Conservatively retain the maximum of physical arrays, logical storage and
+     * pixel-format geometry. Raster allocation is never performed under cache lock.
+     */
     static long imageDataBytes(BufferedImage image) {
         if (image == null) {
             return 0L;
         }
         DataBuffer data = image.getRaster().getDataBuffer();
         long bytesPerElement = Math.max(1L, (DataBuffer.getDataTypeSize(data.getDataType()) + 7L) / 8L);
-        return (long) data.getSize() * data.getNumBanks() * bytesPerElement;
+        long logical = (long) data.getSize() * data.getNumBanks() * bytesPerElement;
+        long physical = 0L;
+        if (data instanceof DataBufferByte banks) {
+            for (byte[] bank : banks.getBankData()) {
+                physical += bank.length;
+            }
+        } else if (data instanceof DataBufferShort banks) {
+            for (short[] bank : banks.getBankData()) {
+                physical += 2L * bank.length;
+            }
+        } else if (data instanceof DataBufferUShort banks) {
+            for (short[] bank : banks.getBankData()) {
+                physical += 2L * bank.length;
+            }
+        } else if (data instanceof DataBufferInt banks) {
+            for (int[] bank : banks.getBankData()) {
+                physical += 4L * bank.length;
+            }
+        } else if (data instanceof DataBufferFloat banks) {
+            for (float[] bank : banks.getBankData()) {
+                physical += 4L * bank.length;
+            }
+        } else if (data instanceof DataBufferDouble banks) {
+            for (double[] bank : banks.getBankData()) {
+                physical += 8L * bank.length;
+            }
+        } else {
+            // Unknown DataBuffer implementations: offsets may increase backing
+            // capacity even though getSize reports a smaller logical region.
+            for (int offset : data.getOffsets()) {
+                physical += (data.getSize() + Math.max(0L, (long) offset)) * bytesPerElement;
+            }
+        }
+        long bitsPerPixel = Math.max(1L, image.getColorModel().getPixelSize());
+        long pixelBytes = (long) image.getWidth() * image.getHeight() * ((bitsPerPixel + 7L) / 8L);
+        return Math.max(pixelBytes, Math.max(logical, physical));
     }
 
     static byte[] readLimitedTileBytes(InputStream input, long declaredLength) throws IOException {
