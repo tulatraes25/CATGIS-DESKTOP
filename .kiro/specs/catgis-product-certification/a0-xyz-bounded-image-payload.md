@@ -24,7 +24,9 @@ independent resource-safety defect, not the provider-identity collision of #44.
   support; never persist or cache rejected/incomplete bytes.
 - Inspect image reader width/height metadata before image decoding and reject
   width/height above 2048 pixels or pixel count above 4,194,304.
-- Apply the same image metadata protections when reading an existing disk tile.
+- Apply the same image metadata protections when reading an existing disk tile,
+  including cached neighbor prefetch. Move neighbor disk existence/length checks
+  into the existing worker executor rather than running them on Swing EDT.
 - Keep network, filesystem probing, image decoding and repaint off Swing EDT;
   preserve pending deduplication, source-failure reporting and retry cooldown.
 - No new dependencies, huge committed fixtures, remote services or GUI session.
@@ -42,7 +44,8 @@ independent resource-safety defect, not the provider-identity collision of #44.
 4. PNG with misleadingly small compressed bytes but dimensions above 2048 is
    rejected before full raster decode, with no cache pollution.
 5. Existing disk tile with excessive dimensions or on-disk length is never
-   decoded into a large Java image.
+   decoded into a large Java image; adjacent-tile prefetch must use the same
+   bounded reader and prove pixel-exact memory warmup from a worker.
 6. Error and failure paths preserve existing retry/backoff; tests must be
    deterministic using only locally generated data and loopback HTTP.
 7. Exact SHA CATGIS CI/Certification SUCCESS on Linux and Windows, real PostGIS,
