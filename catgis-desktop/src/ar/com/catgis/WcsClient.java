@@ -310,7 +310,12 @@ public final class WcsClient {
             // raster. Keep metadata-only reads: full remote raster decode is
             // unbounded and must not be performed here.
             if (expectsTiff(format)) {
-                validateStagedTiff(staging, width, height);
+                // Request URL defaults nonpositive dimensions to 512.
+                // Validate the same effective grid, never the raw caller input:
+                // otherwise zero/negative dimensions bypass the TIFF size gate.
+                int effectiveWidth = width <= 0 ? 512 : width;
+                int effectiveHeight = height <= 0 ? 512 : height;
+                validateStagedTiff(staging, effectiveWidth, effectiveHeight);
             }
         } finally {
             connection.disconnect();
