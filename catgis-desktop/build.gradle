@@ -34,6 +34,7 @@ def javaVersionProperty = (findProperty('catgisJavaVersion') ?: '').toString().t
 def targetJavaVersion = javaVersionProperty.isInteger() ? javaVersionProperty.toInteger() : 17
 def windowsHost = System.getProperty('os.name', '').toLowerCase().contains('windows')
 def linuxHost = System.getProperty('os.name', '').toLowerCase().contains('linux')
+def macHost = System.getProperty('os.name', '').toLowerCase(java.util.Locale.ROOT).contains('mac')
 
 repositories {
     mavenCentral()
@@ -489,6 +490,147 @@ tasks.register('verifyLinuxAppImage') {
                 'Linux app-image JDK cannot execute.')
         logger.lifecycle("CATGIS Linux self-contained app-image verified: ${imageDir}")
         logger.lifecycle("CATGIS Linux main JAR byte size: ${mainJar.length()}")
+    }
+}
+
+// macOS app-image: a genuine .app bundle on each supported Mac architecture.
+// No Apple credentials, notarization, DMG signing or GUI session are required
+// for these deterministic packaging and embedded-runtime checks.
+tasks.register('generateMacInstallerAssets') {
+    onlyIf { macHost }
+    def resourcesProvider = layout.buildDirectory.dir('installer/macos/resources')
+    outputs.dir(resourcesProvider)
+    doLast {
+        System.setProperty('java.awt.headless', 'true')
+        File resources = resourcesProvider.get().asFile
+        File iconSet = new File(resources, 'catgis.iconset')
+        iconSet.mkdirs()
+        Map<String, Integer> sizes = [
+                'icon_16x16.png': 16, 'icon_16x16@2x.png': 32,
+                'icon_32x32.png': 32, 'icon_32x32@2x.png': 64,
+                'icon_128x128.png': 128, 'icon_128x128@2x.png': 256,
+                'icon_256x256.png': 256, 'icon_256x256@2x.png': 512,
+                'icon_512x512.png': 512, 'icon_512x512@2x.png': 1024
+        ]
+        sizes.each { name, size ->
+            if (!ImageIO.write(createBrandIconImage(size), 'png',
+                    new File(iconSet, name))) {
+                throw new GradleException("macOS icon PNG generation failed: ${name}")
+            }
+        }
+        File iconFile = new File(resources, 'catgis-desktop.icns')
+        runExternalCommand(['/usr/bin/iconutil', '-c', 'icns', '-o',
+                            iconFile.absolutePath, iconSet.absolutePath], [:],
+                'Could not convert CATGIS iconset to native macOS ICNS.')
+        if (!iconFile.isFile() || iconFile.length() < 64L) {
+            throw new GradleException('macOS ICNS icon is missing or empty.')
+        }
+        File catmap = new File(resources, 'catmap-launcher.properties')
+        catmap.setText(
+                "main-jar=${project.name}-${version}.jar\n" +
+                'main-class=ar.com.catgis.catmap.Main\n',
+                'UTF-8')
+    }
+}
+
+tasks.register('prepareMacAppImageInput', Sync) {
+    onlyIf { macHost }
+    dependsOn installDist
+    from(layout.buildDirectory.dir("install/${project.name}/lib"))
+    into(layout.buildDirectory.dir('installer/macos/input'))
+}
+
+tasks.register('packageMacAppImage') {
+    group = 'distribution'
+    description = 'Build the CATGIS Desktop.app for the running Mac architecture.'
+    onlyIf { macHost }
+    dependsOn 'prepareMacAppImageInput', 'generateMacInstallerAssets'
+    def outputProvider = layout.buildDirectory.dir('installer/macos/app-image')
+    def inputProvider = layout.buildDirectory.dir('installer/macos/input')
+    def resourcesProvider = layout.buildDirectory.dir('installer/macos/resources')
+    inputs.dir(inputProvider)
+    inputs.dir(resourcesProvider)
+    outputs.dir(outputProvider)
+
+    doLast {
+        File output = outputProvider.get().asFile
+        File input = inputProvider.get().asFile
+        File resources = resourcesProvider.get().asFile
+        File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage')
+        File jar = new File(input, "${project.name}-${version}.jar")
+        File icon = new File(resources, 'catgis-desktop.icns')
+        File catmap = new File(resources, 'catmap-launcher.properties')
+        if (!jpackageExe.isFile() || !jar.isFile() || !icon.isFile()
+                || !catmap.isFile()) {
+            throw new GradleException('macOS jpackage/JAR/ICNS/CATMAP input missing.')
+        }
+        delete output
+        output.mkdirs()
+        List<String> command = [
+                jpackageExe.absolutePath,
+                '--type', 'app-image',
+                '--input', input.absolutePath,
+                '--dest', output.absolutePath,
+                '--name', installerDisplayName,
+                '--main-jar', jar.name,
+                '--main-class', 'ar.com.catgis.Main',
+                '--app-version', installerVersion,
+                '--vendor', installerVendor,
+                '--description', installerDescription,
+                '--icon', icon.absolutePath,
+                '--add-launcher', "catmap=${catmap.absolutePath}",
+                // jpackage implicitly strips native commands unless overridden:
+                // retain runtime/bin/java for a standalone, no-GUI smoke test.
+                '--jlink-options', '--strip-debug --no-man-pages --no-header-files',
+                '--java-options', '-Dfile.encoding=UTF-8',
+                '--java-options', '-Dapple.laf.useScreenMenuBar=true'
+        ]
+        runExternalCommand(command, [:], 'Could not generate CATGIS macOS .app bundle.')
+    }
+}
+
+tasks.register('verifyMacAppImage') {
+    group = 'verification'
+    description = 'Verify CATGIS/CATMAP Mach-O launchers, app metadata and embedded macOS Java.'
+    onlyIf { macHost }
+    dependsOn 'packageMacAppImage'
+
+    doLast {
+        File root = new File(layout.buildDirectory.dir('installer/macos/app-image')
+                .get().asFile, "${installerDisplayName}.app")
+        File contents = new File(root, 'Contents')
+        File info = new File(contents, 'Info.plist')
+        File appLauncher = new File(contents, "MacOS/${installerDisplayName}")
+        File catmapLauncher = new File(contents, 'MacOS/catmap')
+        File runtimeJava = new File(contents, 'runtime/Contents/Home/bin/java')
+        File runtimeRelease = new File(contents, 'runtime/Contents/Home/release')
+        File jar = new File(contents, "app/${project.name}-${version}.jar")
+        File icon = new File(contents, 'Resources/catgis-desktop.icns')
+
+        [info, runtimeRelease, jar, icon].each { resource ->
+            if (!resource.isFile() || resource.length() == 0L) {
+                throw new GradleException("macOS app bundle file missing: ${resource}")
+            }
+        }
+        [appLauncher, catmapLauncher, runtimeJava].each { launcher ->
+            if (!launcher.isFile() || !launcher.canExecute()) {
+                throw new GradleException("macOS app bundle executable missing: ${launcher}")
+            }
+        }
+        new java.util.jar.JarFile(jar).withCloseable { archive ->
+            ['ar/com/catgis/Main.class', 'ar/com/catgis/catmap/Main.class'].each { entry ->
+                if (archive.getJarEntry(entry) == null) {
+                    throw new GradleException("Mac CATGIS jar lacks entry: ${entry}")
+                }
+            }
+        }
+        runExternalCommand(['/usr/libexec/PlistBuddy', '-c',
+                            'Print :CFBundleExecutable', info.absolutePath], [:],
+                'Missing macOS CFBundleExecutable.')
+        runExternalCommand([runtimeJava.absolutePath, '-version'], [:],
+                'Bundled Java 17 runtime could not execute on macOS.')
+        logger.lifecycle("CATGIS macOS native .app verified: ${root}")
+        logger.lifecycle("CATGIS macOS main JAR bytes: ${jar.length()}")
     }
 }
 
