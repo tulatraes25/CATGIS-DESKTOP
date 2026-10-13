@@ -85,6 +85,9 @@ jobs:
               ("macos-full-suite-appimage:",
                {"Certification macOS Intel Full Suite + App Image",
                 "Certification macOS Apple Silicon Full Suite + App Image"}),
+              ("native-gdal-real-roundtrip:",
+               {"Real Native GDAL Linux", "Real Native GDAL macOS Intel",
+                "Real Native GDAL macOS Apple Silicon"}),
           ]
           for workflow_job_id, gate_job_names in optional_platform_jobs:
               if re.search(r"(?m)^  " + re.escape(workflow_job_id) +
