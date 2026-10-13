@@ -89,6 +89,47 @@ jobs:
             Start-Sleep -Seconds ($attempt * 20)
           }
 
+  linux-appimage-package:
+    needs: dependency-cache-linux
+    name: Linux App Image Package Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: catgis-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Restore bounded Gradle dependency cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/modules-2
+          key: catgis-gradle-deps-v1-${{ runner.os }}-${{ hashFiles('catgis-desktop/build.gradle', 'catgis-desktop/settings.gradle*', 'catgis-desktop/gradle/wrapper/gradle-wrapper.properties') }}
+          fail-on-cache-miss: true
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - name: Build and verify Linux app-image with bundled JDK
+        run: ./gradlew --offline --no-daemon verifyLinuxAppImage
+      - name: Record package metadata only (no binary upload)
+        shell: bash
+        run: |
+          set -euo pipefail
+          app='build/installer/linux/app-image/CATGIS Desktop'
+          test -x "$app/bin/CATGIS Desktop"
+          test -x "$app/lib/runtime/bin/java"
+          jar="$(find "$app/lib/app" -maxdepth 1 -name 'catgis-desktop-*.jar' -type f | head -n 1)"
+          test -n "$jar"
+          echo '### CATGIS Linux runtime-bundled package' >> "$GITHUB_STEP_SUMMARY"
+          echo "- app image size: $(du -sh "$app" | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- main JAR sha256: $(sha256sum "$jar" | cut -d' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
+          echo '- UI runtime/GDAL JNI not yet certified; no binary artifacts uploaded.' >> "$GITHUB_STEP_SUMMARY"
+
   linux-full-suite:
     needs: dependency-cache-linux
     name: Certification Linux Full Suite
