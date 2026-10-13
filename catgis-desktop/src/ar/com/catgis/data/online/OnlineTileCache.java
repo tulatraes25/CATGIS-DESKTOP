@@ -5,18 +5,28 @@ import ar.com.catgis.data.online.OnlineRasterSource;
 
 import ar.com.catgis.OnlineMapUtils;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBuffer;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HexFormat;
+import java.security.NoSuchAlgorithmException;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,9 +42,15 @@ public final class OnlineTileCache {
     private static final String ACCEPT_LANGUAGE = "es-AR,es;q=0.9,en;q=0.7";
     private static final long RETRY_DELAY_MS = 30000L;
     private static final int MAX_FAILURE_MESSAGE_LENGTH = 180;
+    // A remote XYZ tile must never be allowed to allocate an unbounded heap.
+    static final int MAX_TILE_BYTES = 8 * 1024 * 1024;
+    static final int MAX_TILE_DIMENSION = 2048;
+    static final long MAX_TILE_PIXELS = 2048L * 2048L;
     // Use AppData for persistent cache (survives reboots)
     private static final File CACHE_DIR;
     private static final int MEMORY_CACHE_MAX = 512;
+    // Count-only eviction permits 512 large (2048px) images to consume gigabytes.
+    static final long MEMORY_CACHE_MAX_BYTES = 128L * 1024L * 1024L;
     private static final int DISK_CACHE_MAX_MB = 200;
     static {
         String appData = System.getenv("APPDATA");
@@ -71,6 +87,8 @@ public final class OnlineTileCache {
             }
     );
     private static final Set<String> PENDING = ConcurrentHashMap.newKeySet();
+    // Prefetch must not suppress foreground getTile requests or their repaint callback.
+    private static final Set<String> PREFETCH_PENDING = ConcurrentHashMap.newKeySet();
     private static final Map<String, Long> RETRY_AFTER = new ConcurrentHashMap<>();
     private static final Map<String, String> LAST_SOURCE_FAILURE = new ConcurrentHashMap<>();
     private static final Map<String, Long> LAST_SOURCE_FAILURE_AT = new ConcurrentHashMap<>();
@@ -116,13 +134,13 @@ public final class OnlineTileCache {
                                         String key, File tileFile, Runnable repaintCallback) {
         if (tileFile.isFile()) {
             try {
-                BufferedImage image = ImageIO.read(tileFile);
+                BufferedImage image = readCachedTile(tileFile);
                 if (image != null) {
                     if (isUnavailablePlaceholder(source, image, tileFile.length())) {
                         markPlaceholderUnavailable(key, tileFile);
                         return;
                     }
-                    MEMORY_CACHE.put(key, image);
+                    putMemoryTile(key, image);
                     RETRY_AFTER.remove(key);
                     clearSourceFailure(source);
                     if (repaintCallback != null) {
@@ -176,16 +194,17 @@ public final class OnlineTileCache {
                         continue;
                     }
 
+                    long declaredLength = connection.getContentLengthLong();
                     byte[] payload;
                     try (InputStream input = connection.getInputStream()) {
-                        payload = readAllBytes(input);
+                        payload = readLimitedTileBytes(input, declaredLength);
                     }
                     if (payload.length == 0) {
                         failureReason = "Respuesta vacia en " + source.getName();
                         continue;
                     }
 
-                    BufferedImage image = ImageIO.read(new ByteArrayInputStream(payload));
+                    BufferedImage image = decodeTileBytes(payload);
                     if (image == null) {
                         failureReason = "Formato no soportado (" + safeContentType(connection.getContentType()) + ")";
                         continue;
@@ -202,7 +221,7 @@ public final class OnlineTileCache {
 
                     String format = guessFormat(source);
                     ImageIO.write(image, format, tileFile);
-                    MEMORY_CACHE.put(key, image);
+                    putMemoryTile(key, image);
                     RETRY_AFTER.remove(key);
                     clearSourceFailure(source);
                     if (repaintCallback != null) {
@@ -257,45 +276,137 @@ public final class OnlineTileCache {
         return new ArrayList<>(urls);
     }
 
-    public static String getRecentSourceFailure(String sourceId, long maxAgeMillis) {
-        if (sourceId == null || sourceId.isBlank()) {
+    public static String getRecentSourceFailure(OnlineRasterSource source, long maxAgeMillis) {
+        if (source == null) {
             return "";
         }
-        Long at = LAST_SOURCE_FAILURE_AT.get(sourceId);
+        String identity = cacheNamespace(source);
+        Long at = LAST_SOURCE_FAILURE_AT.get(identity);
         if (at == null || at <= 0L) {
             return "";
         }
         if (maxAgeMillis > 0 && (System.currentTimeMillis() - at) > maxAgeMillis) {
             return "";
         }
-        String failure = LAST_SOURCE_FAILURE.get(sourceId);
+        String failure = LAST_SOURCE_FAILURE.get(identity);
         return failure != null ? failure : "";
     }
 
     private static void registerSourceFailure(OnlineRasterSource source, String reason) {
-        if (source == null || source.getId() == null || source.getId().isBlank()) {
+        if (source == null) {
             return;
         }
-        LAST_SOURCE_FAILURE.put(source.getId(), truncate(reason));
-        LAST_SOURCE_FAILURE_AT.put(source.getId(), System.currentTimeMillis());
+        String identity = cacheNamespace(source);
+        LAST_SOURCE_FAILURE.put(identity, truncate(reason));
+        LAST_SOURCE_FAILURE_AT.put(identity, System.currentTimeMillis());
     }
 
     private static void clearSourceFailure(OnlineRasterSource source) {
-        if (source == null || source.getId() == null || source.getId().isBlank()) {
+        if (source == null) {
             return;
         }
-        LAST_SOURCE_FAILURE.remove(source.getId());
-        LAST_SOURCE_FAILURE_AT.remove(source.getId());
+        String identity = cacheNamespace(source);
+        LAST_SOURCE_FAILURE.remove(identity);
+        LAST_SOURCE_FAILURE_AT.remove(identity);
     }
 
-    private static byte[] readAllBytes(InputStream input) throws Exception {
+    private static void putMemoryTile(String key, BufferedImage image) {
+        putMemoryTileWithBudget(MEMORY_CACHE, key, image, MEMORY_CACHE_MAX_BYTES);
+    }
+
+    /**
+     * Enforce a bound on backing pixel storage, not just entry count.
+     * LinkedHashMap is access-ordered, so the first iterator entry is oldest.
+     * All traversal and mutation must share the synchronizedMap lock.
+     */
+    static void putMemoryTileWithBudget(Map<String, BufferedImage> cache, String key,
+                                        BufferedImage image, long maxBytes) {
+        synchronized (cache) {
+            cache.put(key, image);
+            long usedBytes = 0L;
+            for (BufferedImage tile : cache.values()) {
+                usedBytes += imageDataBytes(tile);
+            }
+            Iterator<Map.Entry<String, BufferedImage>> oldest = cache.entrySet().iterator();
+            while (usedBytes > maxBytes && oldest.hasNext()) {
+                Map.Entry<String, BufferedImage> entry = oldest.next();
+                usedBytes -= imageDataBytes(entry.getValue());
+                oldest.remove();
+            }
+        }
+    }
+
+    static long imageDataBytes(BufferedImage image) {
+        if (image == null) {
+            return 0L;
+        }
+        DataBuffer data = image.getRaster().getDataBuffer();
+        long bytesPerElement = Math.max(1L, (DataBuffer.getDataTypeSize(data.getDataType()) + 7L) / 8L);
+        return (long) data.getSize() * data.getNumBanks() * bytesPerElement;
+    }
+
+    static byte[] readLimitedTileBytes(InputStream input, long declaredLength) throws IOException {
+        if (declaredLength > MAX_TILE_BYTES) {
+            throw new IOException("XYZ tile exceeds maximum encoded size of " + MAX_TILE_BYTES + " bytes.");
+        }
         ByteArrayOutputStream output = new ByteArrayOutputStream(16 * 1024);
         byte[] buffer = new byte[8192];
+        long total = 0L;
         int read;
-        while ((read = input.read(buffer)) >= 0) {
+        while ((read = input.read(buffer)) != -1) {
+            if (read == 0) {
+                continue;
+            }
+            total += read;
+            if (total > MAX_TILE_BYTES) {
+                throw new IOException("XYZ tile exceeds maximum encoded size of " + MAX_TILE_BYTES + " bytes.");
+            }
             output.write(buffer, 0, read);
         }
+        if (declaredLength >= 0 && declaredLength != total) {
+            throw new IOException("XYZ tile body length does not match Content-Length.");
+        }
         return output.toByteArray();
+    }
+
+    static BufferedImage decodeTileBytes(byte[] payload) throws IOException {
+        try (ImageInputStream stream =
+                new MemoryCacheImageInputStream(new ByteArrayInputStream(payload))) {
+            return decodeCheckedTile(stream);
+        }
+    }
+
+    static BufferedImage readCachedTile(File tileFile) throws IOException {
+        if (tileFile.length() > MAX_TILE_BYTES) {
+            throw new IOException("Cached XYZ tile exceeds maximum encoded size.");
+        }
+        try (ImageInputStream stream = ImageIO.createImageInputStream(tileFile)) {
+            if (stream == null) {
+                return null;
+            }
+            return decodeCheckedTile(stream);
+        }
+    }
+
+    private static BufferedImage decodeCheckedTile(ImageInputStream stream) throws IOException {
+        Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
+        if (!readers.hasNext()) {
+            return null;
+        }
+        ImageReader reader = readers.next();
+        try {
+            reader.setInput(stream, true, true);
+            int width = reader.getWidth(0);
+            int height = reader.getHeight(0);
+            if (width <= 0 || height <= 0
+                    || width > MAX_TILE_DIMENSION || height > MAX_TILE_DIMENSION
+                    || (long) width * height > MAX_TILE_PIXELS) {
+                throw new IOException("XYZ tile image dimensions exceed bounded decode policy.");
+            }
+            return reader.read(0);
+        } finally {
+            reader.dispose();
+        }
     }
 
     private static String safeContentType(String contentType) {
@@ -392,14 +503,42 @@ public final class OnlineTileCache {
         } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
     }
 
-    private static String buildKey(OnlineRasterSource source, int z, int x, int y) {
-        return source.getId() + "_" + z + "_" + x + "_" + y;
+    /**
+     * Stable versioned namespace for the immutable source configuration.
+     * Source IDs alone are unsafe: users can change a provider URL while keeping
+     * an ID, and old tiles must never masquerade as the new geographic imagery.
+     * Hashing also prevents raw API tokens or path segments entering disk names.
+     * Legacy ID-only disk entries are intentionally NOT reused.
+     */
+    static String cacheNamespace(OnlineRasterSource source) {
+        StringBuilder identity = new StringBuilder(256);
+        appendIdentityPart(identity, source.getId());
+        appendIdentityPart(identity, source.getServiceType().name());
+        appendIdentityPart(identity, source.getUrlTemplate());
+        appendIdentityPart(identity, Integer.toString(source.getTileSize()));
+        appendIdentityPart(identity, source.getSourceCRS());
+        appendIdentityPart(identity, Boolean.toString(source.isRequiresApiKey()));
+        try {
+            byte[] sha256 = MessageDigest.getInstance("SHA-256")
+                    .digest(identity.toString().getBytes(StandardCharsets.UTF_8));
+            return "v2-" + HexFormat.of().formatHex(sha256, 0, 16);
+        } catch (NoSuchAlgorithmException error) {
+            throw new IllegalStateException("SHA-256 is required for safe tile cache identity", error);
+        }
     }
 
-    private static File resolveTileFile(OnlineRasterSource source, int z, int x, int y) {
-        String folderName = source.getId().replaceAll("[^a-zA-Z0-9._-]", "_");
+    private static void appendIdentityPart(StringBuilder identity, String value) {
+        identity.append(value.length()).append(':').append(value);
+    }
+
+    static String buildKey(OnlineRasterSource source, int z, int x, int y) {
+        return cacheNamespace(source) + "_" + z + "_" + x + "_" + y;
+    }
+
+    static File resolveTileFile(OnlineRasterSource source, int z, int x, int y) {
         String extension = guessFormat(source);
-        return new File(CACHE_DIR, folderName + File.separator + z + File.separator + x + File.separator + y + "." + extension);
+        return new File(CACHE_DIR, cacheNamespace(source) + File.separator
+                + z + File.separator + x + File.separator + y + "." + extension);
     }
 
     /**
@@ -453,6 +592,9 @@ public final class OnlineTileCache {
      * Loads tiles 1 ring outward from the visible area at current zoom.
      */
     public static void prefetchNeighbors(OnlineRasterSource source, int z, int x, int y) {
+        if (source == null) {
+            return;
+        }
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;
@@ -460,16 +602,30 @@ public final class OnlineTileCache {
                 int ny = y + dy;
                 if (nx < 0 || ny < 0) continue;
                 String key = buildKey(source, z, nx, ny);
-                if (MEMORY_CACHE.containsKey(key)) continue;
-                if (PENDING.contains(key)) continue;
+                if (MEMORY_CACHE.containsKey(key) || PENDING.contains(key)
+                        || !PREFETCH_PENDING.add(key)) {
+                    continue;
+                }
                 File tileFile = resolveTileFile(source, z, nx, ny);
-                if (tileFile.isFile() && tileFile.length() > 100) {
+                try {
                     EXECUTOR.submit(() -> {
                         try {
-                            BufferedImage img = ImageIO.read(tileFile);
-                            if (img != null) MEMORY_CACHE.put(key, img);
-                        } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
+                            // No disk metadata or ImageIO decode on the map's EDT.
+                            if (tileFile.isFile() && tileFile.length() > 100) {
+                                BufferedImage image = readCachedTile(tileFile);
+                                if (image != null
+                                        && !isUnavailablePlaceholder(source, image, tileFile.length())) {
+                                    putMemoryTile(key, image);
+                                }
+                            }
+                        } catch (Exception error) {
+                            CatgisLogger.warn("OnlineTileCache: neighboring tile prefetch failed", error);
+                        } finally {
+                            PREFETCH_PENDING.remove(key);
+                        }
                     });
+                } catch (RejectedExecutionException shutdown) {
+                    PREFETCH_PENDING.remove(key);
                 }
             }
         }
