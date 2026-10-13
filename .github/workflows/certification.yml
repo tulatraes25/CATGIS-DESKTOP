@@ -183,7 +183,7 @@ jobs:
           done
       - name: Full macOS headless suite and native .app packaging
         shell: bash
-        run: ./gradlew --offline --no-daemon clean test verifyMacAppImage
+        run: ./gradlew --offline --no-daemon clean verifyMacAppImage test
       - name: Certify full tests, architecture and package layout
         shell: bash
         env:
