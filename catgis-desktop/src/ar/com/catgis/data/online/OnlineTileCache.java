@@ -517,6 +517,9 @@ public final class OnlineTileCache {
      * Loads tiles 1 ring outward from the visible area at current zoom.
      */
     public static void prefetchNeighbors(OnlineRasterSource source, int z, int x, int y) {
+        if (source == null) {
+            return;
+        }
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;
@@ -524,16 +527,29 @@ public final class OnlineTileCache {
                 int ny = y + dy;
                 if (nx < 0 || ny < 0) continue;
                 String key = buildKey(source, z, nx, ny);
-                if (MEMORY_CACHE.containsKey(key)) continue;
-                if (PENDING.contains(key)) continue;
+                if (MEMORY_CACHE.containsKey(key) || !PENDING.add(key)) {
+                    continue;
+                }
                 File tileFile = resolveTileFile(source, z, nx, ny);
-                if (tileFile.isFile() && tileFile.length() > 100) {
+                try {
                     EXECUTOR.submit(() -> {
                         try {
-                            BufferedImage img = ImageIO.read(tileFile);
-                            if (img != null) MEMORY_CACHE.put(key, img);
-                        } catch (Exception ignored) { CatgisLogger.warn("OnlineTileCache: operation failed", ignored); }
+                            // No disk metadata or ImageIO decode on the map's EDT.
+                            if (tileFile.isFile() && tileFile.length() > 100) {
+                                BufferedImage image = readCachedTile(tileFile);
+                                if (image != null
+                                        && !isUnavailablePlaceholder(source, image, tileFile.length())) {
+                                    MEMORY_CACHE.put(key, image);
+                                }
+                            }
+                        } catch (Exception error) {
+                            CatgisLogger.warn("OnlineTileCache: neighboring tile prefetch failed", error);
+                        } finally {
+                            PENDING.remove(key);
+                        }
                     });
+                } catch (RejectedExecutionException shutdown) {
+                    PENDING.remove(key);
                 }
             }
         }
