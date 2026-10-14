@@ -50,3 +50,12 @@ POSIX/Windows lock behavior; do not promise universal filesystem guarantees
 or 100% safety. Windows native OSGeo4W/JNI and interactive GUI remain OPEN.
 
 No local user computer or geodata is modified.
+
+## Case-equivalence control
+
+On case-insensitive Windows and common macOS filesystems, `Tiles` and
+`tiles` may be the same target. The lease identity folds casing for
+Windows/macOS (conservative over-lock on optional case-sensitive APFS)
+before hashing the canonical target. On case-sensitive Linux the names
+remain distinct. Deterministic tests for all three resolver policies
+guard against two CATGIS JVMs bypassing the lease via pathname casing.

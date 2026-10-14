@@ -8,12 +8,12 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Locale;
 
 /**
  * Interprocess lease for one canonical XYZ output pathname. The sibling lock
@@ -37,15 +37,29 @@ final class GdalTileTargetLock implements AutoCloseable {
     }
 
     static Path lockPath(Path canonicalTarget) throws IOException {
+        return lockPath(canonicalTarget, System.getProperty("os.name", ""));
+    }
+
+    // Test seam: Windows and default macOS are case-insensitive. A hash based
+    // on a caller's casing could otherwise lock DIFFERENT files for one target.
+    static Path lockPath(Path canonicalTarget, String osName) throws IOException {
         if (canonicalTarget == null || !canonicalTarget.isAbsolute()
                 || canonicalTarget.getFileName() == null
                 || canonicalTarget.getParent() == null) {
             throw new IOException("Canonical absolute XYZ target is required.");
         }
+        String identity = canonicalTarget.toString();
+        String platform = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
+        if (platform.startsWith("windows") || platform.contains("mac")
+                || platform.contains("darwin")) {
+            // On case-sensitive macOS volumes this deliberately over-locks
+            // distinct case variants: safe conservatism over a collision race.
+            identity = identity.toLowerCase(Locale.ROOT);
+        }
         byte[] digest;
         try {
             digest = MessageDigest.getInstance("SHA-256").digest(
-                    canonicalTarget.toString().getBytes(StandardCharsets.UTF_8));
+                    identity.getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException missingSha256) {
             throw new IOException("Required lock identity algorithm unavailable.", missingSha256);
         }

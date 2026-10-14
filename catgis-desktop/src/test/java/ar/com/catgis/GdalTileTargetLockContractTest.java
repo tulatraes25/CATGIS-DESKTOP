@@ -52,6 +52,19 @@ class GdalTileTargetLockContractTest {
     }
 
     @Test
+    void caseInsensitivePlatformsShareOneLeaseForDifferentPathCasing() throws Exception {
+        Path upper = sandbox.resolve("XYZ Tiles");
+        Path lower = sandbox.resolve("xyz tiles");
+        assertEquals(GdalTileTargetLock.lockPath(upper, "Windows 11"),
+                GdalTileTargetLock.lockPath(lower, "Windows 11"));
+        assertEquals(GdalTileTargetLock.lockPath(upper, "Mac OS X"),
+                GdalTileTargetLock.lockPath(lower, "Mac OS X"));
+        assertFalse(GdalTileTargetLock.lockPath(upper, "Linux").equals(
+                GdalTileTargetLock.lockPath(lower, "Linux")),
+                "Distinct case-sensitive Linux targets need no shared lease.");
+    }
+
+    @Test
     void corruptedOrUntrustedLockFileFailsWithoutOverwritingIt() throws Exception {
         Path target = target();
         Path control = GdalTileTargetLock.lockPath(target);
