@@ -421,7 +421,11 @@ public final class WcsClient {
             boolean hasStrips = stripOffsets != null || stripBytes != null;
             boolean hasTiles = tileOffsets != null || tileBytes != null;
             if (hasStrips == hasTiles) {
-                throw new IOException("WCS TIFF must declare one strip or tile storage layout.");
+                int[] discoveredTags = java.util.Arrays.stream(directory.getTIFFFields())
+                        .mapToInt(TIFFField::getTagNumber).limit(48).toArray();
+                throw new IOException("WCS TIFF unexpected storage metadata: hasStrips="
+                        + hasStrips + ", hasTiles=" + hasTiles
+                        + ", tags=" + java.util.Arrays.toString(discoveredTags));
             }
             if (hasStrips) {
                 verifyTiffRanges(stripOffsets, stripBytes, fileLength);
