@@ -56,6 +56,7 @@ final class GdalTileOutputTransaction {
         Path workspace = null;
         Path targetKey = null;
         boolean locked = false;
+        boolean preserveBackup = false;
         try {
             Path inputReal = input.toPath().toRealPath();
             if (!Files.isRegularFile(inputReal, LinkOption.NOFOLLOW_LINKS)) {
@@ -110,6 +111,7 @@ final class GdalTileOutputTransaction {
                     try {
                         mover.move(backup, targetKey);
                     } catch (IOException restoreFailure) {
+                        preserveBackup = true;
                         publishFailure.addSuppressed(restoreFailure);
                     }
                     throw publishFailure;
@@ -127,7 +129,7 @@ final class GdalTileOutputTransaction {
         } finally {
             if (workspace != null) {
                 Path backup = workspace.resolve("previous");
-                if (Files.exists(backup, LinkOption.NOFOLLOW_LINKS)) {
+                if (preserveBackup && Files.exists(backup, LinkOption.NOFOLLOW_LINKS)) {
                     // Failed rollback: retain the sole surviving old dataset.
                     CatgisLogger.warn("GDAL XYZ old tiles preserved for recovery at " + backup,
                             new IOException("Atomic rollback could not complete"));
