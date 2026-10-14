@@ -59,7 +59,8 @@ class Gdal2TilesRealXyzIntegrationTest {
                 "The selected Python/GDAL tile backend must be truly installed.");
         assertTrue(Gdal2TilesService.generateTiles(
                         geotiff.toFile(), output.toFile(), 2, 2),
-                "Real GDAL must complete 2/2 tile generation, not just build argv.");
+                () -> "Real GDAL tile publish failed: "
+                        + GdalTileOutputTransaction.lastFailureReason());
         assertTrue(Files.isDirectory(output));
 
         List<Path> pngs = new ArrayList<>();
