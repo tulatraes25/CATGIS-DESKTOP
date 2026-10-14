@@ -27,8 +27,13 @@ class MoveTool implements MapTool {
     @Override public void mouseReleased(MouseEvent e, MapPanel panel) {
         if (dragging) {
             dragging = false;
-            panel.viewController.rememberView(panel.dragStartViewMinX, panel.dragStartViewMinY,
-                    panel.viewController.getZoomFactor());
+            if (Double.compare(panel.dragStartViewMinX, panel.viewController.getViewMinX()) != 0
+                    || Double.compare(panel.dragStartViewMinY,
+                            panel.viewController.getViewMinY()) != 0) {
+                panel.viewController.rememberView(panel.dragStartViewMinX,
+                        panel.dragStartViewMinY, panel.viewController.getZoomFactor());
+                panel.viewController.rememberCurrentView();
+            }
         }
     }
 

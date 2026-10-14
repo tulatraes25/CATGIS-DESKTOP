@@ -61,6 +61,7 @@ public class MapViewController {
         double cx = viewMinX + panelWidth / (2.0 * zoomFactor);
         double cy = viewMinY + panelHeight / (2.0 * zoomFactor);
         applyZoom(1.2, cx, cy);
+        rememberCurrentView();
     }
 
     public void zoomOut() {
@@ -68,6 +69,7 @@ public class MapViewController {
         double cx = viewMinX + panelWidth / (2.0 * zoomFactor);
         double cy = viewMinY + panelHeight / (2.0 * zoomFactor);
         applyZoom(1.0 / 1.2, cx, cy);
+        rememberCurrentView();
     }
 
     public void applyZoom(double factor, double anchorWorldX, double anchorWorldY) {
@@ -212,7 +214,17 @@ public class MapViewController {
     }
 
     private void rememberViewState(double minX, double minY, double zoom) {
-        if (navigatingViewHistory) return;
+        if (navigatingViewHistory || !Double.isFinite(minX)
+                || !Double.isFinite(minY) || !Double.isFinite(zoom)
+                || zoom <= 0d) {
+            return;
+        }
+        // Do not insert ghost history entries when a view is unchanged.
+        // In particular, zoomIn/zoomOut have two callers in legacy code.
+        if (viewHistoryIndex >= 0 && viewHistoryIndex < viewHistory.size()
+                && viewHistory.get(viewHistoryIndex).isSameAs(minX, minY, zoom)) {
+            return;
+        }
         // Trim forward history
         while (viewHistory.size() - 1 > viewHistoryIndex) {
             viewHistory.remove(viewHistory.size() - 1);
