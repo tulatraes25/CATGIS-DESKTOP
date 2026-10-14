@@ -7,8 +7,8 @@ import java.util.concurrent.TimeUnit;
 import javax.swing.SwingUtilities;
 
 /**
- * Tile map generation using gdal2tiles.py.
- * Requires GDAL (OSGeo4W) with Python bindings.
+ * Portable north-oriented XYZ tile creation with safe transactional publication.
+ * Uses installed modern GDAL or official legacy GDAL Python bindings.
  */
 public final class Gdal2TilesService {
 
@@ -17,22 +17,18 @@ public final class Gdal2TilesService {
     private Gdal2TilesService() {}
 
     /**
-     * Generate XYZ/TMS tiles from a raster using gdal2tiles.
+     * Generate north-oriented XYZ tiles without exposing partial results.
      *
      * @param inputFile  georeferenced raster (GeoTIFF, etc.)
-     * @param outputDir  output directory for tiles
+     * @param outputDir  new or CATGIS-owned output directory (existing user data is never replaced)
      * @param zoomMin    minimum zoom level
      * @param zoomMax    maximum zoom level (use -1 for auto)
      * @return true on success
      */
     public static boolean generateTiles(File inputFile, File outputDir,
                                          int zoomMin, int zoomMax) {
-        if (inputFile == null || outputDir == null) return false;
-        if (!inputFile.exists()) return false;
-
-        // Never launch a potentially ten-minute external geoprocess from the
-        // Swing event dispatch thread: the caller must use a worker.
-        if (SwingUtilities.isEventDispatchThread()) {
+        if (inputFile == null || outputDir == null || !inputFile.isFile()
+                || SwingUtilities.isEventDispatchThread()) {
             return false;
         }
         try {
@@ -40,21 +36,26 @@ public final class Gdal2TilesService {
             if (backend == null) {
                 return false;
             }
-            List<String> command = backend.unified()
-                    ? buildUnifiedCommand(backend.executable(), inputFile,
-                            outputDir, zoomMin, zoomMax)
-                    : buildCommand(backend.executable(), inputFile,
-                            outputDir, zoomMin, zoomMax);
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-            // Concurrent bounded stdout draining means a stuck command can
-            // never bypass the 600s process timeout.
-            ExternalToolService.ToolResult result = ExternalToolService.collectProcess(
-                    process, TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS));
-            return result.success() && outputDir.isDirectory();
-        } catch (Exception e) {
-            CatgisLogger.warn("GDAL raster tiling failed", e);
+            // GDAL receives a private staging path; only validated XYZ output
+            // is published to the user-visible target via atomic rename.
+            return GdalTileOutputTransaction.execute(
+                    inputFile, outputDir, zoomMin, zoomMax, staging -> {
+                        File stagedOutput = staging.toFile();
+                        List<String> command = backend.unified()
+                                ? buildUnifiedCommand(backend.executable(), inputFile,
+                                        stagedOutput, zoomMin, zoomMax)
+                                : buildCommand(backend.executable(), inputFile,
+                                        stagedOutput, zoomMin, zoomMax);
+                        ProcessBuilder builder = new ProcessBuilder(command);
+                        builder.redirectErrorStream(true);
+                        Process process = builder.start();
+                        ExternalToolService.ToolResult result =
+                                ExternalToolService.collectProcess(process,
+                                        TimeUnit.SECONDS.toMillis(TIMEOUT_SECONDS));
+                        return result.success();
+                    });
+        } catch (Exception error) {
+            CatgisLogger.warn("GDAL XYZ staging setup failed", error);
             return false;
         }
     }
