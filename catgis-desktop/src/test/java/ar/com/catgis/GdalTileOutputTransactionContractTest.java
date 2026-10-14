@@ -237,6 +237,34 @@ class GdalTileOutputTransactionContractTest {
     }
 
     @Test
+    void failedRollbackPreservesRecoveryBackupInsteadOfDeletingUserData() throws Exception {
+        Path src = source();
+        Path target = temporary.resolve("tiles");
+        assertTrue(GdalTileOutputTransaction.execute(src.toFile(), target.toFile(),
+                2, 2, staged -> writeTile(staged, Color.RED)));
+        byte[] old = Files.readAllBytes(target.resolve("2/1/0.png"));
+
+        assertFalse(GdalTileOutputTransaction.execute(src.toFile(), target.toFile(),
+                2, 2, staged -> writeTile(staged, Color.BLUE), (from, to) -> {
+                    String sourceName = from.getFileName().toString();
+                    if (sourceName.equals("tiles") || sourceName.equals("previous")) {
+                        throw new IOException("Simulated publication plus recovery failure");
+                    }
+                    Files.move(from, to, StandardCopyOption.ATOMIC_MOVE);
+                }));
+
+        assertFalse(Files.exists(target),
+                "An extreme failure can temporarily remove the final pathname.");
+        try (Stream<Path> roots = Files.list(temporary)) {
+            Path retained = roots.filter(p -> p.getFileName().toString()
+                    .startsWith(".catgis-xyz-stage-")).findFirst().orElseThrow();
+            assertArrayEquals(old, Files.readAllBytes(
+                    retained.resolve("previous/2/1/0.png")),
+                    "Never delete the only remaining previous tiles after failed recovery.");
+        }
+    }
+
+    @Test
     void neverBlockSwingEventDispatchThreadOrWriteToAncestorOfInput() throws Exception {
         Path src = source();
         Path target = temporary.resolve("tiles");
