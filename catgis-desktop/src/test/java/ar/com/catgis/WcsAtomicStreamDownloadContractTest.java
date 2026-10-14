@@ -467,6 +467,31 @@ class WcsAtomicStreamDownloadContractTest {
                 fixture, "-70,-46,-69", "EPSG:4326", 16, 16));
     }
 
+    @Test
+    void pixelReadableGeoTiffIsAcceptedByBoundedValidation() throws Exception {
+        byte[] complete = realGeoTiff(16, 16);
+        Path file = tempDir.resolve("sample-readable.tif");
+        Files.write(file, complete);
+        WcsClient.validateStagedTiff(file, 16, 16);
+        assertArrayEquals(complete, Files.readAllBytes(file));
+    }
+
+    @Test
+    void shortenedPixelPayloadCannotReplaceExistingCoverage() throws Exception {
+        byte[] complete = realGeoTiff(32, 32);
+        // Severely truncated but retains the TIFF magic.
+        byte[] incomplete = java.util.Arrays.copyOf(complete, Math.max(8, complete.length / 2));
+        openServer();
+        server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", incomplete));
+        server.start();
+        Path target = tempDir.resolve("protected-shortened-pixels.tif");
+        Files.writeString(target, "KEEP_PREVIOUS_COVERAGE", StandardCharsets.UTF_8);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326", 32, 32, target.toFile()));
+        assertEquals("KEEP_PREVIOUS_COVERAGE", Files.readString(target));
+        assertNoStagingFile();
+    }
+
     private byte[] realGeoTiff(int width, int height) throws Exception {
         return realGeoTiff(width, height, -70.0, -69.0, -46.0, -45.0, "EPSG:4326");
     }
