@@ -1,6 +1,7 @@
 package ar.com.catgis;
 
 import java.io.*;
+import java.awt.Rectangle;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -16,6 +17,9 @@ import java.util.Locale;
 import java.util.Iterator;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageReadParam;
+import javax.imageio.plugins.tiff.TIFFDirectory;
+import javax.imageio.plugins.tiff.TIFFField;
 import javax.imageio.stream.ImageInputStream;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.gce.geotiff.GeoTiffReader;
@@ -390,8 +394,93 @@ public final class WcsClient {
                         || (requestedHeight > 0 && actualHeight != requestedHeight)) {
                     throw new IOException("WCS TIFF grid dimensions differ from requested width/height.");
                 }
+                // Header, CRS and dimensions are not evidence of readable pixels.
+                // Reject strip/tile pointers past EOF before bounded sample reads.
+                validateTiffDataRanges(reader, Files.size(staging));
+                validateTiffPixelSamples(reader, actualWidth, actualHeight);
             } finally {
                 reader.dispose();
+            }
+        }
+    }
+
+    /**
+     * All primary-image TIFF strip or tile payload offsets and byte counts
+     * must refer to bytes actually present in the staged response.
+     * TIFFDirectory accesses IFD metadata, not the whole raster pixel array.
+     */
+    private static void validateTiffDataRanges(ImageReader reader, long fileLength)
+            throws IOException {
+        try {
+            TIFFDirectory directory = TIFFDirectory.createFromMetadata(
+                    reader.getImageMetadata(0));
+            TIFFField stripOffsets = directory.getTIFFField(273);
+            TIFFField stripBytes = directory.getTIFFField(279);
+            TIFFField tileOffsets = directory.getTIFFField(324);
+            TIFFField tileBytes = directory.getTIFFField(325);
+            boolean hasStrips = stripOffsets != null || stripBytes != null;
+            boolean hasTiles = tileOffsets != null || tileBytes != null;
+            if (hasStrips == hasTiles) {
+                throw new IOException("WCS TIFF must declare one strip or tile storage layout.");
+            }
+            if (hasStrips) {
+                verifyTiffRanges(stripOffsets, stripBytes, fileLength);
+            } else {
+                verifyTiffRanges(tileOffsets, tileBytes, fileLength);
+            }
+        } catch (IllegalArgumentException | IndexOutOfBoundsException invalid) {
+            throw new IOException("WCS TIFF contains malformed image data offsets.", invalid);
+        }
+    }
+
+    private static void verifyTiffRanges(TIFFField offsets, TIFFField byteCounts,
+                                          long fileLength) throws IOException {
+        if (offsets == null || byteCounts == null
+                || offsets.getCount() == 0
+                || offsets.getCount() != byteCounts.getCount()
+                || offsets.getCount() > 2_000_000) {
+            throw new IOException("WCS TIFF strip/tile storage metadata is inconsistent.");
+        }
+        for (int i = 0; i < offsets.getCount(); i++) {
+            long from = offsets.getAsLong(i);
+            long size = byteCounts.getAsLong(i);
+            // Avoid addition overflow. Zero-byte sparse TIFF tiles are
+            // deliberately unsupported until their NoData meaning is certified.
+            if (from < 8L || size <= 0L || from > fileLength
+                    || size > fileLength - from) {
+                throw new IOException("WCS TIFF strip/tile data lies outside raster file.");
+            }
+        }
+    }
+
+    /**
+     * Small decoded sample regions catch unreadable strips that valid TIFF
+     * metadata alone cannot identify. Real TIFF codecs may decompress an
+     * entire backing strip internally, so this is not a fixed heap ceiling
+     * or full-pixel checksum for arbitrarily large scientific coverages.
+     */
+    private static void validateTiffPixelSamples(ImageReader reader, int width, int height)
+            throws IOException {
+        int[][] points = {{0, 0}, {width / 2, height / 2},
+                {width - 1, height - 1}};
+        for (int[] point : points) {
+            ImageReadParam param = reader.getDefaultReadParam();
+            param.setSourceRegion(new Rectangle(point[0], point[1], 1, 1));
+            try {
+                java.awt.image.BufferedImage sample = reader.read(0, param);
+                if (sample == null || sample.getWidth() != 1 || sample.getHeight() != 1
+                        || sample.getRaster() == null
+                        || sample.getRaster().getNumBands() < 1
+                        || sample.getRaster().getNumBands() > 256) {
+                    throw new IOException("WCS TIFF sample pixel could not be read.");
+                }
+                // Ensure decoded band storage is truly accessible. NaN values
+                // may be legitimate NoData, so do not require finite samples.
+                for (int band = 0; band < sample.getRaster().getNumBands(); band++) {
+                    sample.getRaster().getSampleDouble(0, 0, band);
+                }
+            } catch (RuntimeException unreadable) {
+                throw new IOException("WCS TIFF has unreadable sampled pixel data.", unreadable);
             }
         }
     }
