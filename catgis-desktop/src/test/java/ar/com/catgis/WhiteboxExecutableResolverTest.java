@@ -133,9 +133,14 @@ class WhiteboxExecutableResolverTest {
         List<Path> win = WhiteboxExecutableResolver.candidateDirectories(
                 "Windows 11", local, temporary.toString(), null);
         assertEquals(local, linux.get(0));
-        assertTrue(linux.contains(Path.of("/usr/bin")));
-        assertTrue(mac.contains(Path.of("/opt/homebrew/bin")));
-        assertTrue(mac.contains(Path.of("/opt/local/bin")));
+        // Unix paths are native absolute only on POSIX JVMs.
+        // Windows validates its own Program Files policy below; macOS and
+        // Linux runners independently validate these absolute NIO paths.
+        if (!System.getProperty("os.name", "").toLowerCase().contains("windows")) {
+            assertTrue(linux.contains(Path.of("/usr/bin")));
+            assertTrue(mac.contains(Path.of("/opt/homebrew/bin")));
+            assertTrue(mac.contains(Path.of("/opt/local/bin")));
+        }
         assertTrue(win.contains(temporary.resolve("WhiteboxTools")));
         assertFalse(linux.contains(temporary.resolve("untrusted PATH entry")));
     }
