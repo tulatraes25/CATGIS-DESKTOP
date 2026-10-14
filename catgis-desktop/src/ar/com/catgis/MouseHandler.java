@@ -21,6 +21,7 @@ class MouseHandler extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
         long startedAt = System.nanoTime();
+        map.endPanSceneSession(); // abandon any interrupted previous gesture
         deferredNavigationCoordinates = false;
         if (SwingUtilities.isMiddleMouseButton(e)) {
             map.beginTemporaryMiddlePan(e);
@@ -139,6 +140,7 @@ class MouseHandler extends MouseAdapter {
         long startedAt = System.nanoTime();
         if (map.temporaryMiddlePanActive && SwingUtilities.isMiddleMouseButton(e)) {
             map.finishTemporaryMiddlePan();
+            map.endPanSceneSession();
             finishDeferredCoordinates(e);
             logIfSlow("mouseReleased", startedAt, e);
             return;
@@ -214,6 +216,7 @@ class MouseHandler extends MouseAdapter {
         }
 
         map.activeTool.mouseReleased(e, map);
+        map.endPanSceneSession();
         finishDeferredCoordinates(e);
 
         map.dragging = false;
@@ -229,6 +232,7 @@ class MouseHandler extends MouseAdapter {
         // conversion or snap preview recalculation at every drag event.
         // Keep every editing, selection, CAD and measurement branch below.
         if (map.temporaryMiddlePanActive) {
+            map.beginPanSceneSession();
             map.dragViewTemporarily(e);
             deferredNavigationCoordinates = true;
             logIfSlow("mouseDragged", startedAt, e);
@@ -243,7 +247,8 @@ class MouseHandler extends MouseAdapter {
                 map.viewMinX -= dx / zf;
                 map.viewMinY += dy / zf;
                 map.syncViewToController();
-                map.repaint();
+                map.beginPanSceneSession();
+                map.requestPanSceneRepaint();
                 deferredNavigationCoordinates = true;
             }
             lastPanX = e.getX();
