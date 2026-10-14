@@ -1,6 +1,8 @@
 package ar.com.catgis;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import javax.swing.SwingUtilities;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -12,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -254,10 +257,41 @@ final class GdalTileOutputTransaction {
             failure("GDAL generated no XYZ PNG tile files.");
             return false;
         }
-        BufferedImage image = ImageIO.read(firstPng.get().toFile());
-        if (image == null || image.getWidth() != 256 || image.getHeight() != 256) {
-            failure("GDAL tile is not a readable 256x256 PNG: " + firstPng.get());
+        // ImageIO.read(File) allocates pixel storage BEFORE callers can inspect
+        // dimensions. Preflight metadata to prevent malicious compressed images
+        // from creating an unbounded heap allocation during publication.
+        Path sample = firstPng.get();
+        if (Files.size(sample) > 8L * 1024 * 1024) {
+            failure("GDAL sample PNG exceeds the 8 MiB encoded input budget.");
             return false;
+        }
+        try (ImageInputStream encoded = ImageIO.createImageInputStream(sample.toFile())) {
+            if (encoded == null) {
+                failure("GDAL PNG cannot be opened as an image stream.");
+                return false;
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(encoded);
+            if (!readers.hasNext()) {
+                failure("GDAL tile has no supported PNG decoder.");
+                return false;
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(encoded, true, true);
+                if (!"png".equalsIgnoreCase(reader.getFormatName())
+                        || reader.getWidth(0) != 256 || reader.getHeight(0) != 256) {
+                    failure("GDAL tile format or metadata dimensions invalid: " + sample);
+                    return false;
+                }
+                BufferedImage decoded = reader.read(0);
+                if (decoded == null || decoded.getWidth() != 256
+                        || decoded.getHeight() != 256) {
+                    failure("GDAL 256x256 PNG cannot be decoded: " + sample);
+                    return false;
+                }
+            } finally {
+                reader.dispose();
+            }
         }
         return true;
     }

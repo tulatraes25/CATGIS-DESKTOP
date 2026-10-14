@@ -280,6 +280,23 @@ class GdalTileOutputTransactionContractTest {
     }
 
     @Test
+    void oversizedPngDimensionsAreRejectedBeforePixelDecode() throws Exception {
+        Path src = source();
+        Path target = temporary.resolve("image bomb guard");
+        assertFalse(GdalTileOutputTransaction.execute(src.toFile(), target.toFile(),
+                2, 2, stage -> {
+                    Path zoom = stage.resolve("2/1");
+                    Files.createDirectories(zoom);
+                    BufferedImage nonTile = new BufferedImage(
+                            1024, 1024, BufferedImage.TYPE_INT_ARGB);
+                    ImageIO.write(nonTile, "png", zoom.resolve("0.png").toFile());
+                    return true;
+                }));
+        assertFalse(Files.exists(target));
+        assertNoStagingLeft();
+    }
+
+    @Test
     void knownGdalMapMlMetadataIsAllowedButUnknownRootFilesStayBlocked() throws Exception {
         Path src = source();
         Path published = temporary.resolve("XYZ MapML output");

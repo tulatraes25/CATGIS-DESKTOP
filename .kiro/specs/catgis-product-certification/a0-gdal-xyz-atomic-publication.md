@@ -88,3 +88,14 @@ Certification before approving the PR.
 
 These limitations must stay visible in issue #70/A0.7 rather than turning
 `PASS` of deterministic tests into a claim of total product readiness.
+
+## Image decoder resource-safety ratchet
+
+Audit confirmed `ImageIO.read(File)` eagerly decodes potentially huge
+compressed pixel buffers **before** checking 256px XYZ dimensions. The output
+transaction now preflights one sample PNG with an 8 MiB encoded payload cap
+and metadata-only `ImageReader.getWidth/getHeight` (must equal 256×256 and
+format PNG) before calling `read(0)`. A deterministic 1024px compressed
+PNG must fail closed with no destination or orphaned staging. Per-file
+structural checks remain bounded; exhaustive sample values and power-loss
+durability are separate unresolved gates.
