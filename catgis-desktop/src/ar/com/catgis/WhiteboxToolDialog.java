@@ -97,7 +97,7 @@ public class WhiteboxToolDialog extends JDialog {
             runButton.setEnabled(available);
             availabilityLabel.setText(available
                     ? "WhiteboxTools detectado. Podes ejecutar las herramientas."
-                    : "WhiteboxTools no detectado. Instalalo y agregalo al PATH.");
+                    : "WhiteboxTools no detectado. Instalalo o configura CATGIS_WHITEBOX_BIN.");
         });
     }
 
