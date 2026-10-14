@@ -578,6 +578,96 @@ class WcsAtomicStreamDownloadContractTest {
         throw new AssertionError("GeoTiffWriter fixture must include strip/tile offsets.");
     }
 
+    @Test
+    void chunkedCoverageWithoutContentLengthCannotExhaustWcsDownloadBudget() throws Exception {
+        byte[] payload = realGeoTiff(16, 16);
+        long maxBytes = payload.length - 1L;
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            exchange.getResponseHeaders().set("Content-Type", "image/tiff");
+            exchange.sendResponseHeaders(200, 0L); // chunked: no reliable Content-Length
+            try (var output = exchange.getResponseBody()) {
+                output.write(payload);
+            } catch (IOException clientRejectedOverBudget) {
+                // The downloader may close early, as it should.
+            }
+        });
+        server.start();
+        Path destination = tempDir.resolve("existing raster with spaces.tif");
+        byte[] old = "PRESERVE_BEFORE_CHUNKED_RESPONSE".getBytes(StandardCharsets.UTF_8);
+        Files.write(destination, old);
+
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326",
+                16, 16, null, destination.toFile(), maxBytes));
+
+        assertEquals(2, requests.get(), "Both WCS protocol attempts must honor the same limit.");
+        assertArrayEquals(old, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void declaredLargeContentLengthRejectedWithoutReplacingOldCoverage() throws Exception {
+        byte[] payload = realGeoTiff(16, 16);
+        openServer();
+        server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", payload));
+        server.start();
+        Path destination = tempDir.resolve("declared-budget.tif");
+        // Old coverage must have different bytes, or replacement could pass unnoticed.
+        byte[] old = realGeoTiff(8, 8);
+        Files.write(destination, old);
+
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326",
+                16, 16, null, destination.toFile(), payload.length - 1L));
+        assertArrayEquals(old, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void completeGeoTiffAtExactWcsBudgetIsPublished() throws Exception {
+        byte[] payload = realGeoTiff(16, 16);
+        openServer();
+        server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", payload));
+        server.start();
+        Path destination = tempDir.resolve("exact-wcs-byte-budget.tif");
+        Files.writeString(destination, "OLD", StandardCharsets.UTF_8);
+
+        WcsClient.downloadCoverageToFile(origin, "dem",
+                "-70,-46,-69,-45", "EPSG:4326", 16, 16, null,
+                destination.toFile(), payload.length);
+
+        assertArrayEquals(payload, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void failedVersionCannotResetAggregateBudgetForValidFallback() throws Exception {
+        byte[] valid = realGeoTiff(16, 16);
+        byte[] invalid = "NOT_TIFF_DATA".getBytes(StandardCharsets.UTF_8);
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            String query = exchange.getRequestURI().getRawQuery();
+            respond(exchange, 200, "image/tiff",
+                    query != null && query.contains("VERSION=2.0.1") ? invalid : valid);
+        });
+        server.start();
+        Path destination = tempDir.resolve("aggregate-versions.tif");
+        byte[] original = "PRESERVE_AGGREGATE".getBytes(StandardCharsets.UTF_8);
+        Files.write(destination, original);
+
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326",
+                16, 16, null, destination.toFile(), valid.length + invalid.length - 1L));
+        assertEquals(2, requests.get());
+        assertArrayEquals(original, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
     private byte[] realGeoTiff(int width, int height) throws Exception {
         return realGeoTiff(width, height, -70.0, -69.0, -46.0, -45.0, "EPSG:4326");
     }
