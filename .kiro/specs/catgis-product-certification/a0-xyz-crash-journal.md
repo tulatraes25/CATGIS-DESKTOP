@@ -51,3 +51,13 @@ process-crash recovery (not full power-loss durability) can be claimed.
 Stale unjournaled staging from a crash during GDAL generation remains
 untouched, never deleted without ownership evidence. No native Windows
 OSGeo4W/JNI GUI is certified. Issue #73 and A0.7 stay OPEN for these.
+
+## Transaction identity hardening
+
+The journal and the **actual private workspace stamp** now both carry a
+fresh 128-bit UUIDv4 transaction ID, validated in a fixed ASCII grammar.
+A different or copied workspace marker for the same destination must be
+rejected without deleting any raster. The random ID distinguishes accidental
+crossed journal/staging state, but is not an authorization credential against
+an attacker who can modify both files. The file lock and filesystem ownership
+remain separate controls. Added a mismatched-transaction negative test.

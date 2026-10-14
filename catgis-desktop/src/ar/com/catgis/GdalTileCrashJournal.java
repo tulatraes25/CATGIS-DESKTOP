@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -26,6 +27,11 @@ final class GdalTileCrashJournal {
     private static final Pattern WORKSPACE_NAME =
             Pattern.compile("\\.catgis-xyz-stage-[A-Za-z0-9_-]{6,80}");
     private static final int MAX_JOURNAL_BYTES = 512;
+    private static final Pattern TRANSACTION_ID =
+            Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
+                    + "[0-9a-f]{4}-[0-9a-f]{12}");
+
+    private record Record(Path workspace, String transactionId) {}
 
     private GdalTileCrashJournal() {}
 
@@ -42,12 +48,14 @@ final class GdalTileCrashJournal {
         return GdalTileTargetLock.lockPath(target).getFileName().toString();
     }
 
-    private static String expectedOwner(Path target) throws IOException {
-        return OWNER_VERSION + "\n" + identity(target) + "\n";
+    private static String expectedOwner(Path target, String transactionId)
+            throws IOException {
+        return OWNER_VERSION + "\n" + identity(target) + "\n"
+                + transactionId + "\n";
     }
 
-    private static void assertWorkspace(Path target, Path workspace)
-            throws IOException {
+    private static void assertWorkspace(Path target, Path workspace,
+                                        String transactionId) throws IOException {
         if (workspace == null || !workspace.isAbsolute()
                 || !workspace.getParent().equals(target.getParent())
                 || !WORKSPACE_NAME.matcher(workspace.getFileName().toString()).matches()
@@ -59,7 +67,8 @@ final class GdalTileCrashJournal {
         if (!Files.isRegularFile(owner, LinkOption.NOFOLLOW_LINKS)
                 || Files.isSymbolicLink(owner)
                 || Files.size(owner) > 200L
-                || !expectedOwner(target).equals(Files.readString(owner))) {
+                || !expectedOwner(target, transactionId)
+                        .equals(Files.readString(owner))) {
             throw new IOException("Untrusted XYZ workspace ownership marker.");
         }
     }
@@ -88,11 +97,12 @@ final class GdalTileCrashJournal {
                 || Files.isSymbolicLink(workspace)) {
             throw new IOException("Invalid private XYZ output workspace.");
         }
+        String transactionId = UUID.randomUUID().toString();
         Path owner = workspace.resolve(OWNER_NAME);
-        forceText(owner, expectedOwner(target));
-        assertWorkspace(target, workspace);
+        forceText(owner, expectedOwner(target, transactionId));
+        assertWorkspace(target, workspace, transactionId);
         String contents = VERSION + "\n" + workspace.getFileName() + "\n"
-                + identity(target) + "\n";
+                + identity(target) + "\n" + transactionId + "\n";
         if (contents.getBytes(StandardCharsets.UTF_8).length > MAX_JOURNAL_BYTES) {
             throw new IOException("XYZ recovery journal exceeds size limit.");
         }
@@ -116,7 +126,7 @@ final class GdalTileCrashJournal {
         }
     }
 
-    private static Path readWorkspace(Path target, Path journal)
+    private static Record readWorkspace(Path target, Path journal)
             throws IOException {
         if (!Files.isRegularFile(journal, LinkOption.NOFOLLOW_LINKS)
                 || Files.isSymbolicLink(journal)
@@ -124,16 +134,17 @@ final class GdalTileCrashJournal {
             throw new IOException("Untrusted or oversized XYZ recovery journal.");
         }
         List<String> lines = Files.readAllLines(journal, StandardCharsets.UTF_8);
-        if (lines.size() != 3 || !VERSION.equals(lines.get(0))
+        if (lines.size() != 4 || !VERSION.equals(lines.get(0))
                 || !identity(target).equals(lines.get(2))
-                || !WORKSPACE_NAME.matcher(lines.get(1)).matches()) {
+                || !WORKSPACE_NAME.matcher(lines.get(1)).matches()
+                || !TRANSACTION_ID.matcher(lines.get(3)).matches()) {
             throw new IOException("XYZ recovery journal version or identity mismatch.");
         }
         Path workspace = target.getParent().resolve(lines.get(1));
         if (!workspace.getParent().equals(target.getParent())) {
             throw new IOException("XYZ recovery directory escapes the parent.");
         }
-        return workspace;
+        return new Record(workspace, lines.get(3));
     }
 
     /** Run under the persistent target kernel lease, never from Swing EDT. */
@@ -142,10 +153,11 @@ final class GdalTileCrashJournal {
         if (!Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
             return true;
         }
-        Path workspace = readWorkspace(target, journal);
+        Record record = readWorkspace(target, journal);
+        Path workspace = record.workspace();
         boolean workspaceExists = Files.exists(workspace, LinkOption.NOFOLLOW_LINKS);
         if (workspaceExists) {
-            assertWorkspace(target, workspace);
+            assertWorkspace(target, workspace, record.transactionId());
         }
         Path backup = workspace.resolve("previous");
         Path staged = workspace.resolve("tiles");
@@ -189,7 +201,7 @@ final class GdalTileCrashJournal {
         if (!Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
-        Path recordedWorkspace = readWorkspace(target, journal);
+        Path recordedWorkspace = readWorkspace(target, journal).workspace();
         if (!recordedWorkspace.equals(workspace)
                 || Files.exists(workspace, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException("XYZ recovery workspace not yet safely cleaned.");

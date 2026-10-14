@@ -159,6 +159,25 @@ class GdalTileCrashJournalContractTest {
     }
 
     @Test
+    void matchingWorkspaceNameWithWrongTransactionNonceMustNotBeDeleted()
+            throws Exception {
+        Path target = target();
+        writeOwnedTile(target, Color.RED);
+        Path stage = preparedStage(target);
+        Path marker = stage.resolve(".catgis-xyz-workspace-owner");
+        String original = Files.readString(marker);
+        String forged = original.substring(0, original.lastIndexOf('\n',
+                original.length() - 2) + 1)
+                + "00000000-0000-0000-0000-000000000000\n";
+        assertFalse(forged.equals(original));
+        Files.writeString(marker, forged);
+        assertThrows(IOException.class, () -> GdalTileCrashJournal.recover(target));
+        assertEquals(Color.RED.getRGB(), colorOf(target));
+        assertTrue(Files.exists(stage.resolve("tiles/2/1/0.png")));
+        assertTrue(Files.exists(GdalTileCrashJournal.journalPath(target)));
+    }
+
+    @Test
     void journalSymlinkCannotRedirectRecoveryOutsideWorkspaceWhenSupported()
             throws Exception {
         Path target = target();
