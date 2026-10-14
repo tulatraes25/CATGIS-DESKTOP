@@ -229,6 +229,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
+                syncControllerPanelSize();
                 refreshStatusBarScale();
             }
         });
@@ -1019,13 +1020,13 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     public void zoomIn() {
-        viewController.rememberCurrentView();
+        syncControllerPanelSize();
         viewController.zoomIn();
         syncViewFromController();
     }
 
     public void zoomOut() {
-        viewController.rememberCurrentView();
+        syncControllerPanelSize();
         viewController.zoomOut();
         syncViewFromController();
     }
@@ -1432,7 +1433,16 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         viewController.setViewMinX(viewMinX);
         viewController.setViewMinY(viewMinY);
         viewController.setZoomFactor(zoomFactor);
-        viewController.setPanelSize(getWidth(), getHeight());
+        syncControllerPanelSize();
+    }
+
+    // A resize listener is delivered asynchronously by Swing. Navigation
+    // also calls this immediately so a zoom in the same EDT turn uses actual
+    // displayed dimensions rather than MapViewController's 800x600 default.
+    private void syncControllerPanelSize() {
+        if (getWidth() > 0 && getHeight() > 0) {
+            viewController.setPanelSize(getWidth(), getHeight());
+        }
     }
 
     void shiftViewByPixels(int dx, int dy) { editingOps.shiftViewByPixels(dx, dy); }
@@ -1746,6 +1756,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     public void zoomToAllLayers() { editingOps.zoomToAllLayers(); }
 
     void fitToEnvelope(Envelope env) {
+        syncControllerPanelSize();
         viewController.fitToEnvelope(env);
         syncViewFromController();
         repaint();
@@ -1808,16 +1819,19 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     }
 
     void handleZoom(MouseWheelEvent e) {
+        syncControllerPanelSize();
         viewController.handleZoom(e.getWheelRotation(), e.getX(), e.getY());
         syncViewFromController();
     }
 
     public void handleZoom(double wheelRotation, int screenX, int screenY) {
+        syncControllerPanelSize();
         viewController.handleZoom(wheelRotation, screenX, screenY);
         syncViewFromController();
     }
 
     void applyZoom(double factor, int anchorX, int anchorY) {
+        syncControllerPanelSize();
         viewController.applyZoom(factor,
                 viewController.screenToWorldX(anchorX),
                 viewController.screenToWorldY(anchorY));
