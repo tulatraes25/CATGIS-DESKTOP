@@ -60,3 +60,14 @@ are fail-closed on Swing EDT and already run in the existing SwingWorker.
 The dialog command builder resolves reviewed tool IDs and accepted
 parameter names from the actual registry, never from caller-forged ToolInfo.
 Added two deterministic tests (invalid/forged registry data and EDT refusal).
+
+## Windows CI correction (causal evidence)
+
+Initial Windows job `115796927777` failed one *test-only* assertion at
+`WhiteboxExecutableResolverTest.java:136`. It tried to treat the Unix path
+`/usr/bin` as an absolute Windows NIO Path during simulated Linux policy.
+Windows correctly reports that path as drive-relative; this was not a failure
+of native Windows executable discovery. Revision gates the POSIX-native path
+assertions to actual Linux/macOS runners, which execute these assertions
+independently, while retaining Windows Program Files and executable-contract
+assertions on Windows. Do not suppress native Unix test failures.
