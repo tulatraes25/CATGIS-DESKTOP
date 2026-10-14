@@ -21,6 +21,9 @@ import java.io.ByteArrayOutputStream;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -465,6 +468,114 @@ class WcsAtomicStreamDownloadContractTest {
                 fixture, "-69,-46,-70,-45", "EPSG:4326", 16, 16));
         assertThrows(IOException.class, () -> WcsClient.validateStagedGeoMetadata(
                 fixture, "-70,-46,-69", "EPSG:4326", 16, 16));
+    }
+
+    @Test
+    void tiffWithValidDimensionsButPixelOffsetsOutsideFileCannotReplaceOldCoverage()
+            throws Exception {
+        byte[] broken = moveFirstPixelBlockPastEnd(realGeoTiff(16, 16));
+        Path intactMetadata = tempDir.resolve("pixel-offset-corrupt.tif");
+        Files.write(intactMetadata, broken);
+        // The dimensions remain fully parseable even when strip data is not.
+        try (var stream = ImageIO.createImageInputStream(intactMetadata.toFile())) {
+            var readers = ImageIO.getImageReaders(stream);
+            assertTrue(readers.hasNext());
+            var reader = readers.next();
+            try {
+                reader.setInput(stream);
+                assertEquals(16, reader.getWidth(0));
+                assertEquals(16, reader.getHeight(0));
+            } finally {
+                reader.dispose();
+            }
+        }
+
+        openServer();
+        AtomicInteger attempts = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            attempts.incrementAndGet();
+            respond(exchange, 200, "image/tiff", broken);
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("must-preserve-existing-raster.tif");
+        byte[] previous = realGeoTiff(16, 16);
+        Files.write(destination, previous);
+        assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45",
+                "EPSG:4326", 16, 16, destination.toFile()));
+        assertArrayEquals(previous, Files.readAllBytes(destination));
+        assertEquals(2, attempts.get(), "WCS 2.0 and 1.0 both reject corrupt storage.");
+        assertNoStagingFile();
+    }
+
+    @Test
+    void invalidPixelLayoutInWcs20FallsBackToReadableWcs10WithoutStaleBytes()
+            throws Exception {
+        byte[] valid = realGeoTiff(16, 16);
+        byte[] corrupt = moveFirstPixelBlockPastEnd(valid);
+        openServer();
+        AtomicInteger attempts = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            attempts.incrementAndGet();
+            String query = exchange.getRequestURI().getRawQuery();
+            respond(exchange, 200, "image/tiff",
+                    query != null && query.contains("VERSION=2.0.1")
+                            ? corrupt : valid);
+        });
+        server.start();
+
+        Path destination = tempDir.resolve("fallback-with-valid-pixels.tif");
+        Files.writeString(destination, "PREVIOUS");
+        WcsClient.downloadCoverageToFile(origin, "dem", "-70,-46,-69,-45",
+                "EPSG:4326", 16, 16, destination.toFile());
+        assertArrayEquals(valid, Files.readAllBytes(destination));
+        assertEquals(2, attempts.get());
+        WcsClient.validateStagedTiff(destination, 16, 16);
+        assertNoStagingFile();
+    }
+
+    /**
+     * Mutate one primary TIFF IFD StripOffsets/TileOffsets value while leaving
+     * magic, image dimensions, GeoKeys, BBOX and other metadata unchanged.
+     * The test fixture is a genuinely generated little/big-endian classic TIFF.
+     */
+    private static byte[] moveFirstPixelBlockPastEnd(byte[] original) {
+        byte[] broken = Arrays.copyOf(original, original.length);
+        ByteOrder order = broken[0] == 'I' ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN;
+        ByteBuffer buf = ByteBuffer.wrap(broken).order(order);
+        assertEquals(42, Short.toUnsignedInt(buf.getShort(2)),
+                "Test requires a classic GeoTIFF fixture with IFD storage.");
+        long ifd = Integer.toUnsignedLong(buf.getInt(4));
+        assertTrue(ifd + 2L < broken.length);
+        int count = Short.toUnsignedInt(buf.getShort((int) ifd));
+        for (int i = 0; i < count; i++) {
+            int entry = (int) ifd + 2 + i * 12;
+            assertTrue(entry + 12 <= broken.length);
+            int tag = Short.toUnsignedInt(buf.getShort(entry));
+            if (tag != 273 && tag != 324) {
+                continue;
+            }
+            int type = Short.toUnsignedInt(buf.getShort(entry + 2));
+            long values = Integer.toUnsignedLong(buf.getInt(entry + 4));
+            assertTrue(values > 0);
+            int valueAt = entry + 8;
+            if (values > 1) {
+                long pointer = Integer.toUnsignedLong(buf.getInt(valueAt));
+                assertTrue(pointer <= broken.length - 4L);
+                valueAt = (int) pointer;
+            }
+            if (type == 4) {
+                buf.putInt(valueAt, broken.length + 1024);
+                return broken;
+            }
+            if (type == 3 && broken.length < 65535) {
+                buf.putShort(valueAt, (short) 65535);
+                return broken;
+            }
+            throw new AssertionError("Unsupported fixture strip offset type " + type);
+        }
+        throw new AssertionError("GeoTiffWriter fixture must include strip/tile offsets.");
     }
 
     private byte[] realGeoTiff(int width, int height) throws Exception {
