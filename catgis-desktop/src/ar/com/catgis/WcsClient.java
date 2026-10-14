@@ -209,6 +209,27 @@ public final class WcsClient {
                 : buildGetCoverageUrl10(serviceUrl, coverageName, bbox, crs, width, height, fmt);
     }
 
+    // Independent encoded-byte budget; decoder heap/resource caps are separate.
+    private static final String WCS_BYTE_LIMIT_PROPERTY = "catgis.wcs.maxDownloadBytes";
+    private static final long DEFAULT_WCS_BYTE_LIMIT = 512L * 1024L * 1024L;
+    private static final long MAX_WCS_BYTE_LIMIT = 16L * 1024L * 1024L * 1024L;
+
+    private static long configuredWcsByteLimit() throws IOException {
+        String configured = System.getProperty(WCS_BYTE_LIMIT_PROPERTY);
+        if (configured == null || configured.isBlank()) {
+            return DEFAULT_WCS_BYTE_LIMIT;
+        }
+        try {
+            long bytes = Long.parseLong(configured.trim());
+            if (bytes >= 1024L * 1024L && bytes <= MAX_WCS_BYTE_LIMIT) {
+                return bytes;
+            }
+        } catch (NumberFormatException invalid) {
+            throw new IOException("WCS byte limit must be a whole number of bytes.", invalid);
+        }
+        throw new IOException("WCS byte limit must be between 1 MiB and 16 GiB.");
+    }
+
     /**
      * Download a coverage and save to file, without buffering the raster in RAM.
      */
@@ -228,6 +249,17 @@ public final class WcsClient {
                                                String bbox, String crs,
                                                int width, int height,
                                                String format, File outputFile) throws Exception {
+        downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
+                width, height, format, outputFile, configuredWcsByteLimit());
+    }
+
+    /** Test seam: one wire-byte budget shared across both WCS protocol attempts. */
+    static void downloadCoverageToFile(String serviceUrl, String coverageName,
+                                       String bbox, String crs, int width, int height,
+                                       String format, File outputFile, long maxReceivedBytes) throws Exception {
+        if (maxReceivedBytes <= 0L || maxReceivedBytes > MAX_WCS_BYTE_LIMIT) {
+            throw new IOException("WCS download byte budget is outside the supported range.");
+        }
         if (outputFile == null) {
             throw new IllegalArgumentException("WCS output file is required.");
         }
@@ -237,15 +269,17 @@ public final class WcsClient {
             throw new IOException("WCS output directory does not exist.");
         }
 
+        // A failed WCS v2 attempt cannot reset the byte allowance for v1.
+        long[] remainingBytes = {maxReceivedBytes};
         Path staging = Files.createTempFile(parent, ".catgis-wcs-", ".part");
         try {
             try {
                 streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                        width, height, format, WcsVersion.V2_0_1, staging);
+                        width, height, format, WcsVersion.V2_0_1, staging, remainingBytes);
             } catch (Exception v2Failure) {
                 try {
                     streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                            width, height, format, WcsVersion.V1_0_0, staging);
+                            width, height, format, WcsVersion.V1_0_0, staging, remainingBytes);
                 } catch (Exception v1Failure) {
                     v1Failure.addSuppressed(v2Failure);
                     throw v1Failure;
@@ -266,7 +300,7 @@ public final class WcsClient {
     private static void streamCoverageVersion(String serviceUrl, String coverageName,
                                               String bbox, String crs,
                                               int width, int height, String format,
-                                              WcsVersion version, Path staging) throws Exception {
+                                              WcsVersion version, Path staging, long[] remainingBytes) throws Exception {
         URL url = new URL(buildCoverageRequestUrl(
                 serviceUrl, coverageName, bbox, crs, width, height, format, version));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -287,6 +321,10 @@ public final class WcsClient {
                 throw new IOException("WCS returned an error document, not a raster.");
             }
 
+            long expected = connection.getContentLengthLong();
+            if (expected > remainingBytes[0]) {
+                throw new IOException("WCS response exceeds the remaining download byte budget.");
+            }
             long received = 0L;
             try (InputStream input = connection.getInputStream();
                  OutputStream output = Files.newOutputStream(staging,
@@ -294,11 +332,14 @@ public final class WcsClient {
                 byte[] buffer = new byte[65536];
                 int count;
                 while ((count = input.read(buffer)) != -1) {
+                    if (count > remainingBytes[0]) {
+                        throw new IOException("WCS response exceeds the configured download byte budget.");
+                    }
+                    remainingBytes[0] -= count;
                     output.write(buffer, 0, count);
                     received += count;
                 }
             }
-            long expected = connection.getContentLengthLong();
             if (received == 0L || (expected >= 0L && received != expected)) {
                 throw new IOException("WCS raster response is empty or truncated.");
             }
