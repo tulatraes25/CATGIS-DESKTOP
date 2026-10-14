@@ -16,6 +16,9 @@ import java.util.Locale;
 import java.util.Iterator;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.ImageReadParam;
+import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
 import javax.imageio.stream.ImageInputStream;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.gce.geotiff.GeoTiffReader;
@@ -389,6 +392,31 @@ public final class WcsClient {
                 if ((requestedWidth > 0 && actualWidth != requestedWidth)
                         || (requestedHeight > 0 && actualHeight != requestedHeight)) {
                     throw new IOException("WCS TIFF grid dimensions differ from requested width/height.");
+                }
+                // Metadata-only checks can accept a TIFF whose strip/tile
+                // offsets exist but whose encoded pixel data are truncated.
+                // Decode five bounded 1x1 source regions without allocating
+                // an entire raster (a decoder may read one compressed tile).
+                int[][] pixels = {
+                    {0, 0},
+                    {actualWidth - 1, 0},
+                    {0, actualHeight - 1},
+                    {actualWidth - 1, actualHeight - 1},
+                    {actualWidth / 2, actualHeight / 2}
+                };
+                for (int[] pixel : pixels) {
+                    ImageReadParam read = reader.getDefaultReadParam();
+                    read.setSourceRegion(new Rectangle(pixel[0], pixel[1], 1, 1));
+                    final BufferedImage image;
+                    try {
+                        image = reader.read(0, read);
+                    } catch (RuntimeException corrupt) {
+                        throw new IOException("WCS TIFF pixel sample cannot be decoded.", corrupt);
+                    }
+                    if (image == null || image.getWidth() != 1 || image.getHeight() != 1
+                            || image.getRaster().getNumBands() < 1) {
+                        throw new IOException("WCS TIFF has invalid decoded pixel sample.");
+                    }
                 }
             } finally {
                 reader.dispose();
