@@ -26,16 +26,17 @@ public final class ExternalToolService {
      * Check if a tool is available on the system.
      */
     public static boolean isToolAvailable(String toolName) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder("where", toolName);
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            boolean found = p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0;
-            p.destroyForcibly();
-            return found;
-        } catch (Exception e) {
+        if (toolName == null || toolName.isBlank()) {
             return false;
         }
+        String name = toolName.trim().toLowerCase(java.util.Locale.ROOT);
+        if ("whitebox_tools".equals(name) || "wbt".equals(name)
+                || "whitebox_tools.exe".equals(name) || "wbt.exe".equals(name)) {
+            return findWhiteboxTools() != null;
+        }
+        // Availability checks are intentionally limited to reviewed optional
+        // GIS commands and trusted install directories, never an arbitrary PATH.
+        return WhiteboxExecutableResolver.isOtherApprovedToolPresent(name);
     }
 
     /**
@@ -141,9 +142,19 @@ public final class ExternalToolService {
      * Execute a WhiteboxTools command.
      */
     public static ToolResult executeWhitebox(String toolName, String... args) {
+        if (toolName == null || !toolName.matches("[A-Za-z][A-Za-z0-9_]{0,79}")) {
+            return new ToolResult(false, "",
+                    "Identificador WhiteboxTools invalido; operacion cancelada.", -1);
+        }
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            return new ToolResult(false, "",
+                    "La herramienta debe ejecutarse fuera del hilo de interfaz.", -1);
+        }
         String wbtPath = findWhiteboxTools();
         if (wbtPath == null) {
-            return new ToolResult(false, "", "WhiteboxTools not found. Download from https://www.whiteboxgeo.com/download-whiteboxtools/", -1);
+            return new ToolResult(false, "",
+                    "WhiteboxTools no disponible. Instala la herramienta o configura "
+                            + "CATGIS_WHITEBOX_BIN con una ruta absoluta.", -1);
         }
 
         List<String> command = new ArrayList<>();
@@ -162,48 +173,7 @@ public final class ExternalToolService {
      * that would be resolved via PATH at execution time.
      */
     static String findWhiteboxTools() {
-        // 1. Check TOOLS_DIR for absolute paths
-        String[] localCandidates = {
-            TOOLS_DIR.resolve("whitebox_tools.exe").toString(),
-            TOOLS_DIR.resolve("whitebox_tools").toString(),
-            TOOLS_DIR.resolve("wbt.exe").toString()
-        };
-        for (String candidate : localCandidates) {
-            if (new File(candidate).exists()) {
-                return candidate;
-            }
-        }
-
-        // 2. Resolve via 'where', returning absolute path only if file exists
-        for (String exeName : new String[]{"whitebox_tools", "wbt"}) {
-            String resolved = resolveOnPath(exeName);
-            if (resolved != null) {
-                return resolved;
-            }
-        }
-
-        return null;
-    }
-
-    private static String resolveOnPath(String exeName) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder("where", exeName);
-            pb.redirectErrorStream(true);
-            Process p = pb.start();
-            if (p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0) {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                    String path = reader.readLine();
-                    if (path != null && !path.isBlank()) {
-                        File file = new File(path.trim());
-                        if (file.exists()) {
-                            return file.getAbsolutePath();
-                        }
-                    }
-                }
-            }
-            p.destroyForcibly();
-        } catch (Exception ignored) { CatgisLogger.warn("ExternalToolService: operation failed", ignored); }
-        return null;
+        return WhiteboxExecutableResolver.resolve();
     }
 
     /**
