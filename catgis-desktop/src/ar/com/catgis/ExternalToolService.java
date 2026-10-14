@@ -26,6 +26,9 @@ public final class ExternalToolService {
      * Check if a tool is available on the system.
      */
     public static boolean isToolAvailable(String toolName) {
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            return false;
+        }
         if (toolName == null || toolName.isBlank()) {
             return false;
         }
@@ -173,7 +176,10 @@ public final class ExternalToolService {
      * that would be resolved via PATH at execution time.
      */
     static String findWhiteboxTools() {
-        return WhiteboxExecutableResolver.resolve();
+        // Filesystem probes are I/O; callers use ToolAvailabilityProbe to
+        // keep them off the Swing event dispatch thread.
+        return javax.swing.SwingUtilities.isEventDispatchThread()
+                ? null : WhiteboxExecutableResolver.resolve();
     }
 
     /**

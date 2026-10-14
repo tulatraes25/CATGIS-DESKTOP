@@ -55,6 +55,24 @@ class WhiteboxToolExecutionSupportTest {
                         " ", tool("Slope"), Map.of("input", "a.tif", "output", "b.tif")));
     }
 
+    @Test
+    void refusesUnregisteredOrForgedToolDefinitions() {
+        WhiteboxToolRegistry.ToolInfo unknown = new WhiteboxToolRegistry.ToolInfo(
+                "ArbitraryCommand", "Unknown", "Fake", "unreviewed", java.util.List.of());
+        assertThrows(IllegalArgumentException.class,
+                () -> WhiteboxToolExecutionSupport.buildCommand(
+                        "/usr/bin/whitebox_tools", unknown, Map.of()));
+
+        WhiteboxToolRegistry.ToolInfo forged = new WhiteboxToolRegistry.ToolInfo(
+                "Slope", "Fake slope", "Fake", "forged", java.util.List.of(
+                        new WhiteboxToolRegistry.ParamInfo("evil", "Untrusted",
+                                "TEXT", false, "")));
+        assertThrows(IllegalArgumentException.class,
+                () -> WhiteboxToolExecutionSupport.buildCommand(
+                        "/usr/bin/whitebox_tools", forged, Map.of("evil", "yes")),
+                "Only parameters from the canonical tool registry may be used.");
+    }
+
     private static WhiteboxToolRegistry.ToolInfo tool(String id) {
         return WhiteboxToolRegistry.getTools().stream()
                 .filter(info -> id.equals(info.id()))

@@ -12,7 +12,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WhiteboxExecutableResolverTest {
@@ -147,6 +146,20 @@ class WhiteboxExecutableResolverTest {
                 "evil;curl https://invalid.example"));
         assertFalse(WhiteboxExecutableResolver.isOtherApprovedToolPresent("../../../evil"));
         assertFalse(ExternalToolService.isToolAvailable("unknown_tool_12345"));
+    }
+
+    @Test
+    void availabilityProbeNeverBlocksOrAccessesDiskFromSwingEdt() throws Exception {
+        java.util.concurrent.atomic.AtomicReference<String> found =
+                new java.util.concurrent.atomic.AtomicReference<>("incomplete");
+        java.util.concurrent.atomic.AtomicBoolean available =
+                new java.util.concurrent.atomic.AtomicBoolean(true);
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            found.set(ExternalToolService.findWhiteboxTools());
+            available.set(ExternalToolService.isToolAvailable("whitebox_tools"));
+        });
+        assertNull(found.get());
+        assertFalse(available.get());
     }
 
     @Test

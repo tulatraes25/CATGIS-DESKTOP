@@ -50,3 +50,13 @@ valid executable and could resolve an unrelated PATH executable.
 - No changes to local Windows C:\catgis or private geospatial datasets.
 - Preserve A0.7 OPEN for native Whitebox, Windows OSGeo4W/JNI/GUI and other
   unclosed architecture requirements.
+
+## Review round — GUI/registry hardening
+
+The application UI no longer tells users to add WhiteboxTools to an
+untrusted wildcard PATH; it suggests installation or the explicit
+`CATGIS_WHITEBOX_BIN` absolute override. Discovery and availability probes
+are fail-closed on Swing EDT and already run in the existing SwingWorker.
+The dialog command builder resolves reviewed tool IDs and accepted
+parameter names from the actual registry, never from caller-forged ToolInfo.
+Added two deterministic tests (invalid/forged registry data and EDT refusal).

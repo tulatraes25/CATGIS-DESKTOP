@@ -23,12 +23,18 @@ final class WhiteboxToolExecutionSupport {
             throw new IllegalArgumentException("Selecciona una herramienta valida.");
         }
 
+        // A caller-supplied ToolInfo must not introduce unreviewed
+        // arbitrary command IDs or parameter names into the argv.
+        WhiteboxToolRegistry.ToolInfo reviewed = WhiteboxToolRegistry.getTools()
+                .stream().filter(candidate -> candidate.id().equals(tool.id()))
+                .findFirst().orElseThrow(() -> new IllegalArgumentException(
+                        "La herramienta no pertenece al catalogo permitido."));
         List<String> command = new ArrayList<>();
         command.add(executable);
-        command.add("--run=" + tool.id());
+        command.add("--run=" + reviewed.id());
 
         Map<String, String> values = inputValues != null ? inputValues : Map.of();
-        for (WhiteboxToolRegistry.ParamInfo param : tool.params()) {
+        for (WhiteboxToolRegistry.ParamInfo param : reviewed.params()) {
             String rawValue = values.get(param.name());
             String value = rawValue != null ? rawValue.trim() : "";
             if (param.required() && value.isEmpty()) {
