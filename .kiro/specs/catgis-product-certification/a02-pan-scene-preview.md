@@ -58,3 +58,14 @@ Exact-head CI and 15/15 Certification plus authenticated prior-main push
 attestation required before ready/expected-head normal merge. Must then
 verify exact post-main push CI/Certification and attestation. No local
 OpenCode or Windows file changes.
+
+## Architecture gate correction
+
+First candidate `de9bc1ab6591ac129154610d1eeb79f4f718c339` failed the **unchanged** hotspot guardrail:
+MapPanel.java contained 3558 lines, beyond 3500 permitted in
+`ArchitectureCertificationTest`. Rather than raise the ceiling, the
+review extracted the entire per-layer paint dispatch into
+`MapPanelWorldLayerPainter` and the pan session/invalidation/export
+policy into `MapPanSceneController`. MapPanel remains a thin compositor
+between heavyweight layers, live annotations and the bounded frame.
+The original guardrail must pass on the new exact commit.

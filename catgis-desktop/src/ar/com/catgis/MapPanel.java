@@ -149,9 +149,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     boolean temporaryMiddlePanActive = false;
     private boolean temporaryMiddlePanMoved = false;
     boolean layoutRenderMode = false;
-    private boolean exportPainting;
-    private boolean panSceneRepaintRequest;
-    private final MapPanScenePreview panScenePreview = new MapPanScenePreview();
+    private final MapPanSceneController panController = new MapPanSceneController(this);
     int lastMouseX;
     int lastMouseY;
 
@@ -257,56 +255,22 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         keyboardShortcutHandler.configureKeyboardShortcuts();
     }
 
-    /** Begin only for actual pan gestures; editing and selection never enter. */
-    void beginPanSceneSession() {
-        if (!panScenePreview.isActive()) {
-            panScenePreview.begin();
-        }
-    }
+    void beginPanSceneSession() { panController.begin(); }
 
-    void requestPanSceneRepaint() {
-        panSceneRepaintRequest = true;
-        try {
-            repaint();
-        } finally {
-            panSceneRepaintRequest = false;
-        }
-    }
+    void requestPanSceneRepaint() { panController.requestPanRepaint(); }
 
-    void endPanSceneSession() {
-        if (!panScenePreview.isActive()) {
-            return;
-        }
-        MapPanScenePreview.Metrics m = panScenePreview.end();
-        if (m.captures() != 0 || m.reuses() != 0 || m.fallbacks() != 0) {
-            CatgisLogger.info("[P0-PAN] captures=" + m.captures()
-                    + " previewPaints=" + m.reuses()
-                    + " fallbackPaints=" + m.fallbacks()
-                    + " invalidations=" + m.invalidations()
-                    + " captureMs=" + m.captureNanos() / 1_000_000L);
-        }
-        repaint(); // full definitive scene, including newly exposed map edges
-    }
+    void endPanSceneSession() { panController.end(); }
 
-    // Repaint requests for layer/style/CRS changes invalidate a drag snapshot.
-    // JComponent may call this from its superclass constructor; null-safe.
     @Override
     public void repaint(long tm, int x, int y, int width, int height) {
-        if (!panSceneRepaintRequest && panScenePreview != null) {
-            panScenePreview.invalidate();
+        if (panController != null) {
+            panController.beforeRepaint();
         }
         super.repaint(tm, x, y, width, height);
     }
 
     protected boolean isPanPreviewSceneEligible() {
-        return (!shapefileLayers.isEmpty() || !rasterLayers.isEmpty()
-                    || !onlineTileLayers.isEmpty() || !onlineWmsLayers.isEmpty())
-                && !featureEditMode && !draggingPin && !movingSelectedFeatures
-                && !selectionBoxActive && !isDrawingActive()
-                && !isMeasurementActive() && !topographicProfileTool.isActive()
-                && !cadEngine.cadPlacementDragActive
-                && !cadEngine.pointCaptureActive
-                && selectionFlashGeometry == null;
+        return panController.isWorldSceneEligible();
     }
 
     void rememberCurrentView() {
@@ -1545,7 +1509,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         double oldViewMinY = viewMinY;
         double oldZoomFactor = zoomFactor;
         boolean oldLayoutRenderMode = layoutRenderMode;
-        boolean oldExportPainting = exportPainting;
+        boolean oldExportPainting = panController.isExporting();
         int oldWidth = getWidth();
         int oldHeight = getHeight();
         java.awt.Dimension oldPreferredSize = getPreferredSize();
@@ -1553,8 +1517,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         BufferedImage image = new BufferedImage(renderWidth, renderHeight, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = image.createGraphics();
         try {
-            exportPainting = true;
-            panScenePreview.invalidate();
+            panController.setExporting(true);
             setSize(renderWidth, renderHeight);
             setPreferredSize(new java.awt.Dimension(renderWidth, renderHeight));
             viewMinX = renderViewMinX;
@@ -1580,8 +1543,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             zoomFactor = oldZoomFactor;
             syncViewToController();
             layoutRenderMode = oldLayoutRenderMode;
-            exportPainting = oldExportPainting;
-            panScenePreview.invalidate();
+            panController.setExporting(oldExportPainting);
             layerManager.clearTemporaryRenderOrderOverride();
             setSize(oldWidth, oldHeight);
             setPreferredSize(oldPreferredSize);
@@ -2065,12 +2027,12 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         Graphics2D g2 = (Graphics2D) g.create();
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        if (panScenePreview.isActive() && !layoutRenderMode
-                && !exportPainting && isPanPreviewSceneEligible()) {
-            panScenePreview.paintOrCapture(g2, getWidth(), getHeight(),
+        if (panController.scene().isActive() && !layoutRenderMode
+                && !panController.isExporting() && isPanPreviewSceneEligible()) {
+            panController.scene().paintOrCapture(g2, getWidth(), getHeight(),
                     viewMinX, viewMinY, zoomFactor, this::paintWorldScene);
         } else {
-            panScenePreview.invalidate();
+            panController.scene().invalidate();
             paintWorldScene(g2);
         }
         paintScreenOverlays(g2);
@@ -2100,43 +2062,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
             g2.drawString(openedFileText, 20, 30);
         }
 
-        for (Layer layer : layerManager.getRenderOrderLayers()) {
-            if (layer == null || !layerManager.isLayerEffectivelyVisible(layer)) {
-                continue;
-            }
-            long layerStartedAt = System.nanoTime();
-            String renderKind = "vector";
-
-            OnlineRasterSource onlineSource = onlineTileLayers.get(layer);
-            if (layer instanceof OnlineTileLayer && onlineSource != null) {
-                renderKind = "online-tile";
-                drawOnlineTileLayer(g2, (OnlineTileLayer) layer, onlineSource);
-                logSlowLayerPaint(layer, renderKind, layerStartedAt);
-                continue;
-            }
-
-            OnlineWmsLayer wmsLayer = onlineWmsLayers.get(layer);
-            if (wmsLayer != null) {
-                renderKind = "online-wms";
-                drawOnlineWmsLayer(g2, wmsLayer);
-                logSlowLayerPaint(layer, renderKind, layerStartedAt);
-                continue;
-            }
-
-            LocalRasterData rasterData = rasterLayers.get(layer);
-            if (rasterData != null) {
-                renderKind = "raster";
-                drawRasterLayer(g2, layer, rasterData);
-                logSlowLayerPaint(layer, renderKind, layerStartedAt);
-                continue;
-            }
-
-            ShapefileData shapeData = shapefileLayers.get(layer);
-            if (shapeData != null) {
-                drawLayer(g2, layer, shapeData);
-                logSlowLayerPaint(layer, renderKind, layerStartedAt);
-            }
-        }
+        MapPanelWorldLayerPainter.paint(this, g2);
 
         // Batch label rendering with collision detection
         drawAllLabels(g2);
@@ -2184,7 +2110,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         }
     }
 
-    private void logSlowLayerPaint(Layer layer, String kind, long startedAt) {
+    void logSlowLayerPaint(Layer layer, String kind, long startedAt) {
         long elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L;
         if (elapsedMs < 75L) {
             return;
@@ -2272,11 +2198,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         selectionManager2.startSelectionFlash(layer, feature);
     }
 
-    private void drawRasterLayer(Graphics2D g2, Layer layer, LocalRasterData data) {
+    void drawRasterLayer(Graphics2D g2, Layer layer, LocalRasterData data) {
         mapRenderer.drawRasterLayer(g2, layer, data);
     }
 
-    private void drawOnlineTileLayer(Graphics2D g2, OnlineTileLayer layer, OnlineRasterSource source) {
+    void drawOnlineTileLayer(Graphics2D g2, OnlineTileLayer layer, OnlineRasterSource source) {
         OnlineLayerRenderer.drawOnlineTileLayer(this, g2, layer, source);
     }
 
@@ -2284,7 +2210,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         return OnlineLayerRenderer.resolveFallbackOnlineTile(this, source, zoom, x, y);
     }
 
-    private void drawOnlineWmsLayer(Graphics2D g2, OnlineWmsLayer layer) {
+    void drawOnlineWmsLayer(Graphics2D g2, OnlineWmsLayer layer) {
         OnlineLayerRenderer.drawOnlineWmsLayer(this, g2, layer);
     }
 
@@ -2549,7 +2475,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         mapRenderer.drawSnapPreview(g2);
     }
 
-    private void drawLayer(Graphics2D g2, Layer layer, ShapefileData data) {
+    void drawLayer(Graphics2D g2, Layer layer, ShapefileData data) {
         mapRenderer.drawLayer(g2, layer, data);
     }
 
