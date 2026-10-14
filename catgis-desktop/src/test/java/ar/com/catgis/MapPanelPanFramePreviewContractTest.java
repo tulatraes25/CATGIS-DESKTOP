@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.event.MouseEvent;
+import java.awt.event.InputEvent;
 import java.awt.image.BufferedImage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,6 +17,7 @@ class MapPanelPanFramePreviewContractTest {
     private static final class Fixture extends MapPanel {
         int fullScenePaints;
         int liveOverlayPaints;
+        Color worldColor = Color.RED;
         boolean allowPreview = true;
 
         @Override protected boolean isPanPreviewSceneEligible() {
@@ -23,7 +26,7 @@ class MapPanelPanFramePreviewContractTest {
 
         @Override protected void paintWorldScene(Graphics2D g2) {
             fullScenePaints++;
-            g2.setColor(Color.RED);
+            g2.setColor(worldColor);
             int x = (int) Math.round((60d - viewMinX) * zoomFactor);
             int y = (int) Math.round(getHeight() - (40d - viewMinY) * zoomFactor);
             g2.fillRect(x, y, 5, 5);
@@ -86,9 +89,12 @@ class MapPanelPanFramePreviewContractTest {
             render(panel);
             render(panel);
             assertEquals(1, panel.fullScenePaints);
+            panel.worldColor = Color.GREEN;
             panel.repaint(); // style, layer or CRS change outside navigation
-            render(panel);
+            BufferedImage newStyle = render(panel);
             assertEquals(2, panel.fullScenePaints);
+            assertEquals(Color.GREEN.getRGB(), newStyle.getRGB(60, 50),
+                    "External style repaint cannot show stale red snapshot.");
             panel.endPanSceneSession();
         });
     }
@@ -132,6 +138,63 @@ class MapPanelPanFramePreviewContractTest {
                     "Export must invalidate the prior interactive preview.");
             panel.endPanSceneSession();
         });
+    }
+
+    @Test
+    void actualMouseHandlerPanUsesPreviewThenRepaintsOnRelease() throws Exception {
+        ReleaseTestSupport.runOnEdt(() -> {
+            Fixture panel = new Fixture();
+            panel.setSize(120, 90);
+            MouseHandler input = new MouseHandler(panel);
+            input.mousePressed(mouse(panel, MouseEvent.MOUSE_PRESSED,
+                    25, 35, MouseEvent.BUTTON1, InputEvent.BUTTON1_DOWN_MASK));
+            input.mouseDragged(mouse(panel, MouseEvent.MOUSE_DRAGGED,
+                    37, 35, MouseEvent.NOBUTTON, InputEvent.BUTTON1_DOWN_MASK));
+            BufferedImage first = render(panel);
+            assertEquals(Color.RED.getRGB(), first.getRGB(72, 50));
+            assertEquals(1, panel.fullScenePaints);
+
+            input.mouseDragged(mouse(panel, MouseEvent.MOUSE_DRAGGED,
+                    43, 35, MouseEvent.NOBUTTON, InputEvent.BUTTON1_DOWN_MASK));
+            BufferedImage reused = render(panel);
+            assertEquals(Color.RED.getRGB(), reused.getRGB(78, 50));
+            assertEquals(Color.BLUE.getRGB(), reused.getRGB(5, 5));
+            assertEquals(1, panel.fullScenePaints);
+            input.mouseReleased(mouse(panel, MouseEvent.MOUSE_RELEASED,
+                    43, 35, MouseEvent.BUTTON1, 0));
+            render(panel);
+            assertEquals(2, panel.fullScenePaints);
+            assertTrue(panel.canZoomPrevious());
+        });
+    }
+
+    @Test
+    void actualMiddleButtonPanUsesPreviewAndEndsCleanly() throws Exception {
+        ReleaseTestSupport.runOnEdt(() -> {
+            Fixture panel = new Fixture();
+            panel.setSize(120, 90);
+            MouseHandler input = new MouseHandler(panel);
+            input.mousePressed(mouse(panel, MouseEvent.MOUSE_PRESSED,
+                    25, 35, MouseEvent.BUTTON2, InputEvent.BUTTON2_DOWN_MASK));
+            input.mouseDragged(mouse(panel, MouseEvent.MOUSE_DRAGGED,
+                    37, 35, MouseEvent.NOBUTTON, InputEvent.BUTTON2_DOWN_MASK));
+            render(panel);
+            assertEquals(1, panel.fullScenePaints);
+            input.mouseDragged(mouse(panel, MouseEvent.MOUSE_DRAGGED,
+                    43, 35, MouseEvent.NOBUTTON, InputEvent.BUTTON2_DOWN_MASK));
+            render(panel);
+            assertEquals(1, panel.fullScenePaints);
+            input.mouseReleased(mouse(panel, MouseEvent.MOUSE_RELEASED,
+                    43, 35, MouseEvent.BUTTON2, 0));
+            render(panel);
+            assertEquals(2, panel.fullScenePaints);
+            assertTrue(panel.canZoomPrevious());
+        });
+    }
+
+    private static MouseEvent mouse(Fixture p, int event, int x, int y,
+                                    int button, int mods) {
+        return new MouseEvent(p, event, 123L, mods, x, y, 1, false, button);
     }
 
     @Test
