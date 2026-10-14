@@ -280,6 +280,32 @@ class GdalTileOutputTransactionContractTest {
     }
 
     @Test
+    void knownGdalMapMlMetadataIsAllowedButUnknownRootFilesStayBlocked() throws Exception {
+        Path src = source();
+        Path published = temporary.resolve("XYZ MapML output");
+        assertTrue(GdalTileOutputTransaction.execute(src.toFile(), published.toFile(),
+                2, 2, staged -> {
+                    writeTile(staged, Color.RED);
+                    Files.writeString(staged.resolve("mapml.mapml"), "<mapml/>");
+                    return true;
+                }));
+        assertTrue(Files.isRegularFile(published.resolve("mapml.mapml")));
+        // Existing CATGIS-owned output with this legitimate GDAL metadata
+        // must be eligible for later replacement without deleting user data.
+        assertTrue(GdalTileOutputTransaction.execute(src.toFile(), published.toFile(),
+                2, 2, staged -> writeTile(staged, Color.BLUE)));
+        Path suspicious = temporary.resolve("unknown-metadata");
+        assertFalse(GdalTileOutputTransaction.execute(src.toFile(), suspicious.toFile(),
+                2, 2, staged -> {
+                    writeTile(staged, Color.RED);
+                    Files.writeString(staged.resolve("unknown-file.js"), "unexpected");
+                    return true;
+                }));
+        assertFalse(Files.exists(suspicious));
+        assertNoStagingLeft();
+    }
+
+    @Test
     void neverBlockSwingEventDispatchThreadOrWriteToAncestorOfInput() throws Exception {
         Path src = source();
         Path target = temporary.resolve("tiles");

@@ -214,7 +214,7 @@ final class GdalTileOutputTransaction {
                         if (!rootFile.equals(OWNER_FILE)
                                 && !Set.of("tilemapresource.xml", "openlayers.html",
                                         "leaflet.html", "googlemaps.html", "index.html",
-                                        "metadata.json", "tilejson.json").contains(rootFile)) {
+                                        "metadata.json", "tilejson.json", "mapml.mapml").contains(rootFile)) {
                             throw new IOException("Unexpected XYZ root file: " + rootFile);
                         }
                         if (Files.size(file) > 4L * 1024 * 1024) {

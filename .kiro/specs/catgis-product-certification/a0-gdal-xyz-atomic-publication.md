@@ -57,6 +57,19 @@ nonzero exit. The original target must remain byte-exact; no `.catgis-xyz-
 stage-*` remnants. Use injected atomic-move failures for deterministic
 rollback evidence independent of the runner's filesystem policy.
 
+## Verified real GDAL 3.8 interoperability correction
+
+Native-GDAL Linux job `115613541835` on the prior PR #72 candidate
+`6ebd36aef493ee80a65e4c8c03d0c7ebbfe4cbd9` failed closed with
+`Unexpected XYZ root file: mapml.mapml`. Official GDAL gdal2tiles may
+emit this specific MapML metadata alongside known HTML/XML viewers.
+Permit **only** the exact basename `mapml.mapml` at the root under the
+same existing 4 MiB metadata cap. Do not loosen the directory traversal,
+zoom, PNG, symlink or ownership rules. The new deterministic regression
+also proves that `unknown-file.js` still rejects publication.
+Re-run exact candidate real Linux/macOS GDAL plus all Windows/Linux/Mac
+Certification before approving the PR.
+
 ## Explicit unresolved release limitations
 
 - **Crash window during replacement**: portable Java 17 does not provide an
