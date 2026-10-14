@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
 final class GdalTileOutputTransaction {
 
     static final String OWNER_FILE = ".catgis-xyz-owner";
-    private static final String OWNER_VALUE = "CATGIS_XYZ_TILES_V1\n";
+    static final String OWNER_VALUE = "CATGIS_XYZ_TILES_V1\n";
     private static final Set<Path> ACTIVE_TARGETS = ConcurrentHashMap.newKeySet();
     private static final int MAX_ENTRIES = 2_000_000;
     private static final ThreadLocal<String> LAST_FAILURE = new ThreadLocal<>();
@@ -72,6 +72,7 @@ final class GdalTileOutputTransaction {
         Path targetKey = null;
         boolean locked = false;
         boolean preserveBackup = false;
+        boolean journalPrepared = false;
         GdalTileTargetLock diskLock = null;
         try {
             Path inputReal = input.toPath().toRealPath();
@@ -109,6 +110,14 @@ final class GdalTileOutputTransaction {
                 failure("Another CATGIS process is generating tiles for this destination.");
                 return false;
             }
+            // A previous JVM may have exited after moving old tiles into backup.
+            // Under the same kernel lease, restore a known-safe old output or
+            // refuse ambiguous journal state before beginning new generation.
+            if (!GdalTileCrashJournal.recover(targetKey)) {
+                failure("Prior XYZ transaction needs manual recovery: "
+                        + GdalTileCrashJournal.journalPath(targetKey));
+                return false;
+            }
             if (Files.exists(targetKey, LinkOption.NOFOLLOW_LINKS)
                     && !isOwnedCompleteDirectory(targetKey)) {
                 failure("XYZ output changed while acquiring the cross-process lock.");
@@ -134,6 +143,10 @@ final class GdalTileOutputTransaction {
                 return false;
             }
 
+            // Force the intent journal to disk before the first visible move.
+            // A failed prepare never renames the original destination.
+            GdalTileCrashJournal.prepare(targetKey, workspace);
+            journalPrepared = true;
             Path backup = workspace.resolve("previous");
             if (Files.exists(targetKey, LinkOption.NOFOLLOW_LINKS)) {
                 mover.move(targetKey, backup);
@@ -176,6 +189,17 @@ final class GdalTileOutputTransaction {
                     }
                 }
             }
+            if (journalPrepared && !preserveBackup && workspace != null) {
+                try {
+                    // Never discard a recovery journal if cleanup failed.
+                    if (!Files.exists(workspace, LinkOption.NOFOLLOW_LINKS)) {
+                        GdalTileCrashJournal.clear(targetKey, workspace);
+                    }
+                } catch (IOException journalError) {
+                    CatgisLogger.warn("GDAL XYZ journal retained for next recovery",
+                            journalError);
+                }
+            }
             if (diskLock != null) {
                 try {
                     diskLock.close();
@@ -189,7 +213,7 @@ final class GdalTileOutputTransaction {
         }
     }
 
-    private static boolean isOwnedCompleteDirectory(Path target) throws IOException {
+    static boolean isOwnedCompleteDirectory(Path target) throws IOException {
         Path marker = target.resolve(OWNER_FILE);
         if (!Files.isRegularFile(marker, LinkOption.NOFOLLOW_LINKS)
                 || Files.isSymbolicLink(marker)
@@ -343,7 +367,7 @@ final class GdalTileOutputTransaction {
         return true;
     }
 
-    private static void deleteTreeNoFollow(Path root) throws IOException {
+    static void deleteTreeNoFollow(Path root) throws IOException {
         if (!Files.exists(root, LinkOption.NOFOLLOW_LINKS)) {
             return;
         }
