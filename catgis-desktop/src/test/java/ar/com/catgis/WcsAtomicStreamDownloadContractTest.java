@@ -615,7 +615,8 @@ class WcsAtomicStreamDownloadContractTest {
         server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", payload));
         server.start();
         Path destination = tempDir.resolve("declared-budget.tif");
-        byte[] old = realGeoTiff(16, 16);
+        // Old coverage must have different bytes, or replacement could pass unnoticed.
+        byte[] old = realGeoTiff(8, 8);
         Files.write(destination, old);
 
         assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
