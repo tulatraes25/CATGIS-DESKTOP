@@ -72,6 +72,7 @@ final class GdalTileOutputTransaction {
         Path targetKey = null;
         boolean locked = false;
         boolean preserveBackup = false;
+        GdalTileTargetLock diskLock = null;
         try {
             Path inputReal = input.toPath().toRealPath();
             if (!Files.isRegularFile(inputReal, LinkOption.NOFOLLOW_LINKS)) {
@@ -101,6 +102,18 @@ final class GdalTileOutputTransaction {
                 return false;
             }
             locked = true;
+            // The JVM lock is insufficient: another CATGIS instance can write
+            // the same target. A persistent sibling lease serializes processes.
+            diskLock = GdalTileTargetLock.tryAcquire(targetKey);
+            if (diskLock == null) {
+                failure("Another CATGIS process is generating tiles for this destination.");
+                return false;
+            }
+            if (Files.exists(targetKey, LinkOption.NOFOLLOW_LINKS)
+                    && !isOwnedCompleteDirectory(targetKey)) {
+                failure("XYZ output changed while acquiring the cross-process lock.");
+                return false;
+            }
 
             // GDAL receives a nonexistent output path under an owned sibling,
             // preserving compatibility with modern tools requiring a new path.
@@ -161,6 +174,13 @@ final class GdalTileOutputTransaction {
                     } catch (IOException cleanupError) {
                         CatgisLogger.warn("GDAL XYZ staging cleanup failed", cleanupError);
                     }
+                }
+            }
+            if (diskLock != null) {
+                try {
+                    diskLock.close();
+                } catch (IOException unlockError) {
+                    CatgisLogger.warn("GDAL XYZ target lease close failed", unlockError);
                 }
             }
             if (locked) {
