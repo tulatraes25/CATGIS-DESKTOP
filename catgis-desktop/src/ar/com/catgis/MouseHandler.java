@@ -12,6 +12,7 @@ class MouseHandler extends MouseAdapter {
 
     private final MapPanel map;
     private int lastPanX, lastPanY;
+    private boolean deferredNavigationCoordinates;
 
     MouseHandler(MapPanel map) {
         this.map = map;
@@ -20,6 +21,7 @@ class MouseHandler extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
         long startedAt = System.nanoTime();
+        deferredNavigationCoordinates = false;
         if (SwingUtilities.isMiddleMouseButton(e)) {
             map.beginTemporaryMiddlePan(e);
             logIfSlow("mousePressed", startedAt, e);
@@ -137,6 +139,7 @@ class MouseHandler extends MouseAdapter {
         long startedAt = System.nanoTime();
         if (map.temporaryMiddlePanActive && SwingUtilities.isMiddleMouseButton(e)) {
             map.finishTemporaryMiddlePan();
+            finishDeferredCoordinates(e);
             logIfSlow("mouseReleased", startedAt, e);
             return;
         }
@@ -211,6 +214,7 @@ class MouseHandler extends MouseAdapter {
         }
 
         map.activeTool.mouseReleased(e, map);
+        finishDeferredCoordinates(e);
 
         map.dragging = false;
 
@@ -221,15 +225,35 @@ class MouseHandler extends MouseAdapter {
     @Override
     public void mouseDragged(MouseEvent e) {
         long startedAt = System.nanoTime();
-        map.updateStatusCoordinates(e.getX(), e.getY());
-
-        map.updateHoverAndSnap(e.getX(), e.getY());
-
+        // Pure navigation does not need expensive geospatial status/CRS
+        // conversion or snap preview recalculation at every drag event.
+        // Keep every editing, selection, CAD and measurement branch below.
         if (map.temporaryMiddlePanActive) {
             map.dragViewTemporarily(e);
+            deferredNavigationCoordinates = true;
             logIfSlow("mouseDragged", startedAt, e);
             return;
         }
+
+        if (isPureMovePan()) {
+            int dx = e.getX() - lastPanX;
+            int dy = e.getY() - lastPanY;
+            if (dx != 0 || dy != 0) {
+                double zf = map.viewController.getZoomFactor();
+                map.viewMinX -= dx / zf;
+                map.viewMinY += dy / zf;
+                map.syncViewToController();
+                map.repaint();
+                deferredNavigationCoordinates = true;
+            }
+            lastPanX = e.getX();
+            lastPanY = e.getY();
+            logIfSlow("mouseDragged", startedAt, e);
+            return;
+        }
+
+        map.updateStatusCoordinates(e.getX(), e.getY());
+        map.updateHoverAndSnap(e.getX(), e.getY());
 
         if (map.topographicProfileTool.isActive()) {
             map.repaint();
@@ -295,6 +319,31 @@ class MouseHandler extends MouseAdapter {
         lastPanX = e.getX();
         lastPanY = e.getY();
         logIfSlow("mouseDragged", startedAt, e);
+    }
+
+    private boolean isPureMovePan() {
+        return map.dragging
+                && map.activeTool instanceof MoveTool
+                && ("MOVE".equalsIgnoreCase(map.currentTool)
+                    || "PAN".equalsIgnoreCase(map.currentTool))
+                && !map.featureEditMode
+                && !map.selectionBoxActive
+                && !map.draggingPin
+                && !map.movingSelectedFeatures
+                && map.activeEditVertexIndex < 0
+                && !map.isDrawingActive()
+                && !map.isMeasurementActive()
+                && !map.topographicProfileTool.isActive()
+                && !map.cadEngine.cadPlacementDragActive
+                && !map.cadEngine.pointCaptureActive;
+    }
+
+    private void finishDeferredCoordinates(MouseEvent e) {
+        if (deferredNavigationCoordinates) {
+            deferredNavigationCoordinates = false;
+            map.updateStatusCoordinates(e.getX(), e.getY());
+            map.updateHoverAndSnap(e.getX(), e.getY());
+        }
     }
 
     private void logIfSlow(String phase, long startedAt, MouseEvent e) {
