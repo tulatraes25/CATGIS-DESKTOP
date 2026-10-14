@@ -26,6 +26,16 @@ final class GdalTileOutputTransaction {
     private static final String OWNER_VALUE = "CATGIS_XYZ_TILES_V1\n";
     private static final Set<Path> ACTIVE_TARGETS = ConcurrentHashMap.newKeySet();
     private static final int MAX_ENTRIES = 2_000_000;
+    private static final ThreadLocal<String> LAST_FAILURE = new ThreadLocal<>();
+
+    static String lastFailureReason() {
+        return LAST_FAILURE.get() == null ? "No transactional failure recorded"
+                : LAST_FAILURE.get();
+    }
+
+    private static void failure(String message) {
+        LAST_FAILURE.set(message.length() <= 400 ? message : message.substring(0, 400));
+    }
 
     @FunctionalInterface
     interface TileProducer {
@@ -48,9 +58,11 @@ final class GdalTileOutputTransaction {
     // Deterministic test seam: inject failure in either of the atomic renames.
     static boolean execute(File input, File output, int zoomMin, int zoomMax,
                            TileProducer producer, AtomicMover mover) {
+        LAST_FAILURE.remove();
         if (SwingUtilities.isEventDispatchThread() || input == null || output == null
                 || producer == null || mover == null || zoomMin < 0
                 || (zoomMax > 0 && zoomMax < zoomMin)) {
+            failure("Invalid input/output, zoom or Swing EDT invocation.");
             return false;
         }
         Path workspace = null;
@@ -91,7 +103,11 @@ final class GdalTileOutputTransaction {
             // preserving compatibility with modern tools requiring a new path.
             workspace = Files.createTempDirectory(physicalParent, ".catgis-xyz-stage-");
             Path stagedTiles = workspace.resolve("tiles");
-            if (!producer.generate(stagedTiles) || !isValidTiles(stagedTiles, zoomMin, zoomMax)) {
+            if (!producer.generate(stagedTiles)) {
+                failure("GDAL tile command failed or timed out before complete staging.");
+                return false;
+            }
+            if (!isValidTiles(stagedTiles, zoomMin, zoomMax)) {
                 return false;
             }
             Files.writeString(stagedTiles.resolve(OWNER_FILE), OWNER_VALUE);
@@ -119,8 +135,11 @@ final class GdalTileOutputTransaction {
             } else {
                 mover.move(stagedTiles, targetKey);
             }
+            LAST_FAILURE.remove();
             return true;
         } catch (Exception error) {
+            failure("GDAL tile transaction: " + error.getClass().getSimpleName()
+                    + ": " + error.getMessage());
             if (error instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -161,6 +180,7 @@ final class GdalTileOutputTransaction {
     static boolean isValidTiles(Path directory, int minZoom, int maxZoom) throws IOException {
         if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)
                 || Files.isSymbolicLink(directory)) {
+            failure("GDAL output path missing, non-directory or symlink: " + directory);
             return false;
         }
         AtomicReference<Path> firstPng = new AtomicReference<>();
@@ -227,13 +247,19 @@ final class GdalTileOutputTransaction {
                 }
             });
         } catch (IOException invalid) {
+            failure("GDAL tile tree invalid: " + invalid.getMessage());
             return false;
         }
         if (firstPng.get() == null) {
+            failure("GDAL generated no XYZ PNG tile files.");
             return false;
         }
         BufferedImage image = ImageIO.read(firstPng.get().toFile());
-        return image != null && image.getWidth() == 256 && image.getHeight() == 256;
+        if (image == null || image.getWidth() != 256 || image.getHeight() != 256) {
+            failure("GDAL tile is not a readable 256x256 PNG: " + firstPng.get());
+            return false;
+        }
+        return true;
     }
 
     private static int parseIndex(String raw) throws IOException {
