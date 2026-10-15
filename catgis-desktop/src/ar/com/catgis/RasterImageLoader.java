@@ -11,6 +11,7 @@ import java.awt.image.RenderedImage;
 import java.awt.image.Raster;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,7 @@ import java.security.MessageDigest;
 import java.util.Locale;
 
 import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
 
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -221,17 +223,31 @@ public class RasterImageLoader {
         }
 
         AbstractGridCoverage2DReader reader = null;
+        // TIFF file streams must be under CATGIS ownership. GeoTools 34.x
+        // can retain Windows file locks after reader.dispose() when given a
+        // File directly; a separately owned stream is closed unconditionally.
+        FileInputStream tiffFileStream = null;
+        ImageInputStream tiffImageStream = null;
+        GridCoverage2D coverage = null;
+        GridCoverage2D sourceAwareCoverage = null;
+        GridCoverage2D displayCoverage = null;
         try {
-            reader = (AbstractGridCoverage2DReader) format.getReader(file);
-            if (reader == null && isTiff(file.getName().toLowerCase(Locale.ROOT))) {
-                reader = new GeoTiffReader(file);
+            if (isTiff(file.getName().toLowerCase(Locale.ROOT))) {
+                tiffFileStream = new FileInputStream(file);
+                tiffImageStream = ImageIO.createImageInputStream(tiffFileStream);
+                if (tiffImageStream == null) {
+                    throw new IOException("Unable to open GeoTIFF image input stream.");
+                }
+                reader = new GeoTiffReader(tiffImageStream);
+            } else {
+                reader = (AbstractGridCoverage2DReader) format.getReader(file);
             }
             if (reader == null) {
                 throw new IOException("GeoTools encontro formato pero no pudo crear reader para: " + file.getName()
                         + " [" + format.getClass().getName() + "]");
             }
 
-            GridCoverage2D coverage = (GridCoverage2D) reader.read((org.geotools.api.parameter.GeneralParameterValue[]) null);
+            coverage = (GridCoverage2D) reader.read((org.geotools.api.parameter.GeneralParameterValue[]) null);
             if (coverage == null || coverage.getRenderedImage() == null) {
                 throw new IOException("GeoTools creo reader pero no devolvio cobertura valida para: " + file.getName());
             }
@@ -243,8 +259,8 @@ public class RasterImageLoader {
             String requestedSourceCRS = CRSDefinitions.normalizeCode(forcedSourceCRS);
             String effectiveSourceCRS = pickUsableSourceCRS(requestedSourceCRS, extractedSourceCRS);
             String targetCRS = CRSDefinitions.normalizeCode(projectCRS);
-            GridCoverage2D sourceAwareCoverage = assignSourceCRSIfNeeded(coverage, originalEnvelope, effectiveSourceCRS);
-            GridCoverage2D displayCoverage = reprojectCoverageIfNeeded(sourceAwareCoverage, effectiveSourceCRS, targetCRS);
+            sourceAwareCoverage = assignSourceCRSIfNeeded(coverage, originalEnvelope, effectiveSourceCRS);
+            displayCoverage = reprojectCoverageIfNeeded(sourceAwareCoverage, effectiveSourceCRS, targetCRS);
 
             BufferedImage raw = renderedToBuffered(displayCoverage);
             int bandCount = displayCoverage.getRenderedImage() != null && displayCoverage.getRenderedImage().getSampleModel() != null
@@ -258,11 +274,53 @@ public class RasterImageLoader {
 
             return new LocalRasterData(displayImage, env, bandCount, true, effectiveSourceCRS, mode, displayCRS);
         } finally {
+            // Everything returned to the map is an independent BufferedImage
+            // display copy. Explicitly dispose of the GeoTools/JAI source
+            // coverage graph before the reader, otherwise Windows can retain
+            // the input GeoTIFF file handle after the raster has loaded.
+            // Dispose derived nodes first, and avoid duplicate coverage
+            // instances when no reprojection was needed.
+            disposeCoverage(displayCoverage);
+            if (sourceAwareCoverage != displayCoverage) {
+                disposeCoverage(sourceAwareCoverage);
+            }
+            if (coverage != sourceAwareCoverage && coverage != displayCoverage) {
+                disposeCoverage(coverage);
+            }
             try {
                 if (reader != null) {
                     reader.dispose();
                 }
-            } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
+            } catch (RuntimeException failed) {
+                CatgisLogger.warn("RasterImageLoader: reader cleanup failed", failed);
+            }
+            // GeoTools does not own these streams: close both independently
+            // even if GeoTiffReader.dispose() threw or closed one already.
+            try {
+                if (tiffImageStream != null) {
+                    tiffImageStream.close();
+                }
+            } catch (IOException failed) {
+                CatgisLogger.warn("RasterImageLoader: TIFF ImageInputStream cleanup failed", failed);
+            }
+            try {
+                if (tiffFileStream != null) {
+                    tiffFileStream.close();
+                }
+            } catch (IOException failed) {
+                CatgisLogger.warn("RasterImageLoader: TIFF FileInputStream cleanup failed", failed);
+            }
+        }
+    }
+
+    private static void disposeCoverage(GridCoverage2D coverage) {
+        if (coverage == null) {
+            return;
+        }
+        try {
+            coverage.dispose(true);
+        } catch (RuntimeException failed) {
+            CatgisLogger.warn("RasterImageLoader: GeoTools coverage cleanup failed", failed);
         }
     }
 

@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
+import java.util.concurrent.CancellationException;
 import java.util.List;
 
 /**
@@ -18,6 +19,9 @@ public class WcsDialog extends JDialog {
     private final JTextField widthField;
     private final JTextField heightField;
     private final JLabel statusLabel;
+    private final JButton downloadButton;
+    private final JButton cancelButton;
+    private SwingWorker<?, ?> activeWcsWorker;
     private List<WcsClient.WcsCoverage> coverages;
 
     public WcsDialog() {
@@ -88,13 +92,23 @@ public class WcsDialog extends JDialog {
 
         // Footer
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton downloadButton = new JButton("Descargar");
+        statusLabel = new JLabel("Conecta a un servidor WCS para comenzar.");
+        downloadButton = new JButton("Descargar");
         downloadButton.addActionListener(e -> downloadCoverage());
+        cancelButton = new JButton("Cancelar descarga");
+        cancelButton.setEnabled(false);
+        cancelButton.addActionListener(e -> {
+            if (activeWcsWorker != null) {
+                cancelButton.setEnabled(false);
+                activeWcsWorker.cancel(true);
+                statusLabel.setText("Cancelando descarga WCS...");
+            }
+        });
         JButton closeButton = new JButton("Cerrar");
         closeButton.addActionListener(e -> dispose());
         footer.add(downloadButton);
+        footer.add(cancelButton);
         footer.add(closeButton);
-        statusLabel = new JLabel("Conecta a un servidor WCS para comenzar.");
         footer.add(statusLabel);
         add(footer, BorderLayout.SOUTH);
     }
@@ -140,7 +154,21 @@ public class WcsDialog extends JDialog {
         }.execute();
     }
 
+    // JUnit can exercise chooser semantics without constructing a JDialog.
+    static boolean wantsRasterImport(int choice) {
+        return choice == 0 || choice == 1;
+    }
+
+    private void finishWcsWork() {
+        activeWcsWorker = null;
+        downloadButton.setEnabled(true);
+        cancelButton.setEnabled(false);
+    }
+
     private void downloadCoverage() {
+        if (activeWcsWorker != null) {
+            return; // One WCS operation per dialog, including raster decoding.
+        }
         int idx = coverageList.getSelectedIndex();
         if (idx < 0 || coverages == null || idx >= coverages.size()) {
             NotificationManager.warn(this, null, "Selecciona una cobertura.");
@@ -151,11 +179,12 @@ public class WcsDialog extends JDialog {
         String url = serviceUrlField.getText().trim();
         String bbox = bboxField.getText().trim();
         String crs = crsField.getText().trim();
-        int width, height;
+        int width;
+        int height;
         try {
             width = Integer.parseInt(widthField.getText().trim());
             height = Integer.parseInt(heightField.getText().trim());
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException invalid) {
             NotificationManager.warn(this, null, "Dimensiones invalidas.");
             return;
         }
@@ -163,13 +192,17 @@ public class WcsDialog extends JDialog {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Guardar cobertura como GeoTIFF");
         chooser.setSelectedFile(new File(coverage.name().replaceAll("[^a-zA-Z0-9_]", "_") + ".tif"));
-        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
 
+        File outputFile = chooser.getSelectedFile();
+        downloadButton.setEnabled(false);
+        cancelButton.setEnabled(true);
         statusLabel.setText("Descargando " + coverage.name() + "...");
         statusLabel.setForeground(Color.BLUE);
 
-        File outputFile = chooser.getSelectedFile();
-        new SwingWorker<Void, Void>() {
+        SwingWorker<Void, Void> download = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
                 WcsClient.downloadCoverageToFile(url, coverage.name(), bbox, crs, width, height, outputFile);
@@ -178,66 +211,158 @@ public class WcsDialog extends JDialog {
 
             @Override
             protected void done() {
+                if (isCancelled()) {
+                    statusLabel.setText("Descarga cancelada, archivo anterior preservado.");
+                    statusLabel.setForeground(Color.GRAY);
+                    finishWcsWork();
+                    return;
+                }
                 try {
                     get();
+                    if (!isDisplayable()) {
+                        finishWcsWork();
+                        return;
+                    }
                     statusLabel.setText("Descargado: " + outputFile.getName());
                     statusLabel.setForeground(new Color(0, 128, 0));
-
-                    // Load as raster layer
-                    boolean loaded = loadAsRasterLayer(outputFile, coverage.name());
-
-                    NotificationManager.info(WcsDialog.this,
-                            "Descarga completada",
-                            "Cobertura descargada" + (loaded ? " y agregada como capa" : "") + ".\n\n"
-                                    + "Archivo: " + outputFile.getAbsolutePath()
-                                    + "\nTamanio: " + (outputFile.length() / 1024) + " KB");
-                } catch (Exception e) {
-                    statusLabel.setText("Error: " + e.getMessage());
+                    // Keep the file saved. Resolve import mode on EDT, then
+                    // offload GeoTIFF decode in a *different* background worker.
+                    beginRasterImport(outputFile, coverage.name());
+                } catch (CancellationException cancelled) {
+                    statusLabel.setText("Descarga cancelada.");
+                    finishWcsWork();
+                } catch (Exception failed) {
+                    statusLabel.setText("Error: " + failed.getMessage());
                     statusLabel.setForeground(Color.RED);
+                    finishWcsWork();
                     NotificationManager.error(WcsDialog.this,
-                            "Error",
-                            "Error al descargar:\n" + e.getMessage());
+                            "Error", "Error al descargar:\n" + failed.getMessage());
                 }
             }
-        }.execute();
+        };
+        activeWcsWorker = download;
+        download.execute();
     }
 
-    private boolean loadAsRasterLayer(File file, String coverageName) {
-        try {
-            if (AppContext.project() == null) return false;
-            String projectCRS = AppContext.project().getProjectCRS();
-
-            // Ask user for resolution
-            String[] options = {"Preview (2048px, rapido)", "Full (8192px, lento)"};
-            int choice = JOptionPane.showOptionDialog(this,
-                    "Que resolucion queres para la capa cargada?",
-                    "Resolucion", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-                    null, options, options[0]);
-
-            ar.com.catgis.data.raster.LocalRasterData rasterData;
-            if (choice == 1) {
-                rasterData = ar.com.catgis.RasterImageLoader.loadReal(file, projectCRS, null);
-            } else {
-                rasterData = ar.com.catgis.RasterImageLoader.loadPreview(file, projectCRS, null);
-            }
-
-            RasterLayer layer = new RasterLayer(coverageName, file.getAbsolutePath());
-            layer.setVisible(true);
-            layer.setSourceName(coverageName);
-            layer.setFeatureCount(1);
-            layer.setSourceCRS(ar.com.catgis.data.raster.RasterCoverageSupport
-                    .resolveOperationalRasterCrs(rasterData, projectCRS));
-            layer.setRasterMode(rasterData.getRasterMode());
-
-            AppContext.project().addLayer(layer);
-            CatgisDesktopApp.markProjectDirty();
-            AppContext.addLayer(layer);
-            AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
-            AppContext.mapPanel().zoomToLayer(layer);
-            return true;
-        } catch (Exception e) {
-            CatgisLogger.warn("Failed to load WCS coverage as layer", e);
-            return false;
+    private void beginRasterImport(File file, String coverageName) {
+        // A valid downloaded TIFF must remain on disk even if the user
+        // declines the optional project import.
+        ar.com.catgis.core.model.Project project = AppContext.project();
+        if (project == null) {
+            statusLabel.setText("GeoTIFF guardado; no hay proyecto activo.");
+            finishWcsWork();
+            return;
         }
+        String projectCRS = project.getProjectCRS();
+        String[] choices = {"Preview (2048px, rapido)", "Full (8192px, lento)"};
+        int choice = JOptionPane.showOptionDialog(this,
+                "Que resolucion queres para la capa cargada?",
+                "Resolucion", JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                null, choices, choices[0]);
+        if (!wantsRasterImport(choice)) {
+            statusLabel.setText("GeoTIFF guardado sin agregar una capa.");
+            finishWcsWork();
+            return;
+        }
+
+        cancelButton.setEnabled(false); // Native raster decode may not be interruptible.
+        statusLabel.setText("Procesando raster fuera de la interfaz...");
+        WcsRasterAsyncLoad<ar.com.catgis.data.raster.LocalRasterData> rasterWorker =
+                new WcsRasterAsyncLoad<>(
+                        () -> choice == 1
+                                ? RasterImageLoader.loadReal(file, projectCRS, null)
+                                : RasterImageLoader.loadPreview(file, projectCRS, null),
+                        data -> {
+                            try {
+                                if (!isDisplayable() || AppContext.project() != project) {
+                                    data.dispose();
+                                    statusLabel.setText("GeoTIFF guardado; el proyecto cambio.");
+                                    return;
+                                }
+                                registerRasterLayer(project, file, coverageName, projectCRS, data);
+                                statusLabel.setText("Raster agregado: " + file.getName());
+                                statusLabel.setForeground(new Color(0, 128, 0));
+                                NotificationManager.info(WcsDialog.this, "Descarga completada",
+                                        "GeoTIFF guardado y agregado como capa:\n"
+                                                + file.getAbsolutePath());
+                            } catch (RuntimeException failed) {
+                                data.dispose();
+                                CatgisLogger.warn("Failed to register downloaded WCS raster", failed);
+                                statusLabel.setText("GeoTIFF guardado; error al agregar la capa.");
+                                statusLabel.setForeground(Color.RED);
+                                NotificationManager.error(WcsDialog.this, "Error de capa",
+                                        "El archivo se guardo, pero la capa no pudo agregarse:\n"
+                                                + failed.getMessage());
+                            } finally {
+                                finishWcsWork();
+                            }
+                        },
+                        failed -> {
+                            CatgisLogger.warn("Failed to decode downloaded WCS raster", failed);
+                            statusLabel.setText("GeoTIFF guardado; no se pudo leer la capa.");
+                            statusLabel.setForeground(Color.RED);
+                            finishWcsWork();
+                            if (isDisplayable()) {
+                                NotificationManager.error(WcsDialog.this, "Error de raster",
+                                        "El archivo esta guardado, pero no pudo cargarse:\n"
+                                                + failed.getMessage());
+                            }
+                        },
+                        () -> {
+                            statusLabel.setText("Carga cancelada, GeoTIFF preservado.");
+                            finishWcsWork();
+                        },
+                        data -> {
+                            if (data != null) {
+                                data.dispose();
+                            }
+                        });
+        activeWcsWorker = rasterWorker;
+        rasterWorker.execute();
+    }
+
+    /**
+     * EDT-only commit: map and project registration use an explicit
+     * compensating rollback if anything fails. The heavyweight GeoTIFF
+     * decode is already finished when this method is called.
+     */
+    private static void registerRasterLayer(ar.com.catgis.core.model.Project project,
+                                            File file, String coverageName, String projectCRS,
+                                            ar.com.catgis.data.raster.LocalRasterData rasterData) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            throw new IllegalStateException("WCS layer publication must run on Swing EDT.");
+        }
+        MapPanel map = AppContext.mapPanel();
+        if (map == null || project != AppContext.project()) {
+            throw new IllegalStateException("No active WCS map/project for layer registration.");
+        }
+        RasterLayer layer = new RasterLayer(coverageName, file.getAbsolutePath());
+        layer.setVisible(true);
+        layer.setSourceName(coverageName);
+        layer.setFeatureCount(1);
+        layer.setSourceCRS(ar.com.catgis.data.raster.RasterCoverageSupport
+                .resolveOperationalRasterCrs(rasterData, projectCRS));
+        layer.setRasterMode(rasterData.getRasterMode());
+        try {
+            map.addOrUpdateRasterLayer(layer, rasterData);
+            project.addLayer(layer);
+            AppContext.addLayer(layer);
+            map.zoomToLayer(layer);
+            CatgisDesktopApp.markProjectDirty();
+        } catch (RuntimeException failure) {
+            map.removeLayer(layer);
+            project.removeLayer(layer);
+            AppContext.refreshLayerList();
+            throw failure;
+        }
+    }
+
+    @Override
+    public void dispose() {
+        SwingWorker<?, ?> active = activeWcsWorker;
+        if (active != null) {
+            active.cancel(true);
+        }
+        super.dispose();
     }
 }
