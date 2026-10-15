@@ -25,23 +25,30 @@ fallback after a thread interruption unless cancellation was checked first.
 2. Bound connect and HTTP read timeout to remaining total budget. Check
    deadline and interruption before network, after response headers, before
    and after each streamed chunk, after decoding, and before final rename.
-3. A single daemon watchdog periodically checks elapsed monotonic time
+3. The deadline helper does **not** import or mention HttpURLConnection,
+   to preserve the certified ArchitectureCertificationTest direct-HTTP
+   no-growth allowlist. WcsClient retains the only HTTP transport type and
+   passes a `Runnable` disconnect action into the watchdog. This was
+   corrected after the original candidate failed CI at 983 tests / 1
+   architecture failure / 15 accepted optional skips. **Do not** expand the
+   architecture allowlist for a timeout helper.
+4. A single daemon watchdog periodically checks elapsed monotonic time
    and worker interruption and calls `HttpURLConnection.disconnect()`
    to abort an active blocking read/response-code call. It is cancelled
    and the HTTP connection disconnected on every return/failure.
-4. Treat overall deadline expiry and worker interruption as terminal
+5. Treat overall deadline expiry and worker interruption as terminal
    `InterruptedIOException`: **never** retry WCS v1 after v2 cancellation
    or deadline. Ordinary recoverable HTTP v2 errors continue to use
    existing fallback. Keep shared byte budget and staging cleanup.
-5. Preserve previous raster byte-for-byte on error; no orphaned
+6. Preserve previous raster byte-for-byte on error; no orphaned
    `.catgis-wcs-*.part`, permanent interprocess lease still held
    until operation cleanup; successful GeoTIFF transfer remains supported.
-6. Test real loopback HTTP fixtures with chunked slow trickle across
+7. Test real loopback HTTP fixtures with chunked slow trickle across
    read timeouts and 350ms total deadline; cancelled-before-request
    worker; interrupted in-flight blocked read with bounded join and no
    fallback; successful raster plus fallback covered by existing tests.
    Validate Windows/Linux/macOS Intel + ARM and native GDAL/PostGIS CI.
-7. Do not merge until candidate exact-HEAD CI and 15-job Certification,
+8. Do not merge until candidate exact-HEAD CI and 15-job Certification,
    authenticated `main` event=push CI/Certification for the parent,
    expected-HEAD normal merge, and fresh post-main CI/Certification
    plus authenticated attestation all succeed.
