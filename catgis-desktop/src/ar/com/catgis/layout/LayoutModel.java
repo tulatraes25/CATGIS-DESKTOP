@@ -13,8 +13,21 @@ public class LayoutModel {
     // --- Undo / Redo ---
 
     private static final int MAX_UNDO = 100;
-    private final List<String> undoStack = new ArrayList<>();
-    private final List<String> redoStack = new ArrayList<>();
+    // History belongs to an individual page. A switch cannot allow undo
+    // to alter a different page's elements.
+    private final List<List<String>> pageUndoStacks = new ArrayList<>();
+    private final List<List<String>> pageRedoStacks = new ArrayList<>();
+
+    private List<String> undoStack() { return pageUndoStacks.get(currentPage); }
+    private List<String> redoStack() { return pageRedoStacks.get(currentPage); }
+
+    private List<LayoutElement> activeElements() { return pages.get(currentPage); }
+
+    private void requireActivePageElement(LayoutElement element) {
+        if (element == null || !activeElements().contains(element)) {
+            throw new IllegalArgumentException("CATMAP element does not belong to the active page.");
+        }
+    }
 
     /**
      * Save a snapshot BEFORE making a change. Call this manually before
@@ -22,43 +35,47 @@ public class LayoutModel {
      * addElement / removeElement call it automatically.
      */
     public void saveSnapshot() {
-        undoStack.add(serializeElements());
-        if (undoStack.size() > MAX_UNDO) undoStack.remove(0);
-        redoStack.clear();
+        List<String> undo = undoStack();
+        undo.add(serializeElements());
+        if (undo.size() > MAX_UNDO) undo.remove(0);
+        redoStack().clear();
     }
 
-    public boolean canUndo() { return !undoStack.isEmpty(); }
-    public boolean canRedo() { return !redoStack.isEmpty(); }
+    public boolean canUndo() { return !undoStack().isEmpty(); }
+    public boolean canRedo() { return !redoStack().isEmpty(); }
 
     public void undo() {
-        if (undoStack.isEmpty()) return;
-        redoStack.add(serializeElements());
-        String snapshot = undoStack.remove(undoStack.size() - 1);
+        List<String> undo = undoStack();
+        if (undo.isEmpty()) return;
+        redoStack().add(serializeElements());
+        String snapshot = undo.remove(undo.size() - 1);
         restoreFromSnapshot(snapshot);
     }
 
     public void redo() {
-        if (redoStack.isEmpty()) return;
-        undoStack.add(serializeElements());
-        String snapshot = redoStack.remove(redoStack.size() - 1);
+        List<String> redo = redoStack();
+        if (redo.isEmpty()) return;
+        undoStack().add(serializeElements());
+        String snapshot = redo.remove(redo.size() - 1);
         restoreFromSnapshot(snapshot);
     }
 
     private String serializeElements() {
         StringBuilder sb = new StringBuilder();
-        for (LayoutElement e : elements) {
+        for (LayoutElement e : activeElements()) {
             sb.append(ar.com.catgis.catmap.CatmapSerializer.serializeElementRaw(e)).append("\n");
         }
         return sb.toString();
     }
 
     private void restoreFromSnapshot(String data) {
-        elements.clear();
+        List<LayoutElement> active = activeElements();
+        active.clear();
         for (String line : data.split("\n")) {
             String t = line.trim();
             if (t.isEmpty()) continue;
             LayoutElement e = ar.com.catgis.catmap.CatmapSerializer.parseElementRaw(t);
-            if (e != null) elements.add(e);
+            if (e != null) active.add(e);
         }
     }
 
@@ -67,20 +84,20 @@ public class LayoutModel {
     public void addElement(LayoutElement e) {
         if (e == null) return;
         saveSnapshot();
-        elements.add(e);
+        activeElements().add(e);
     }
 
     public void removeElement(String id) {
         saveSnapshot();
-        elements.removeIf(e -> e.getId().equals(id));
+        activeElements().removeIf(e -> e.getId().equals(id));
     }
 
     public List<LayoutElement> getElements() {
-        return new ArrayList<>(elements);
+        return new ArrayList<>(activeElements());
     }
 
     public List<LayoutElement> getVisibleElementsSortedByZ() {
-        return elements.stream()
+        return activeElements().stream()
                 .filter(LayoutElement::isVisible)
                 .sorted(Comparator.comparingInt(LayoutElement::getZOrder))
                 .collect(Collectors.toList());
@@ -114,19 +131,22 @@ public class LayoutModel {
     }
 
     public void moveToFront(LayoutElement e) {
+        requireActivePageElement(e);
         normalizeZOrder();
-        e.setZOrder(elements.stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1);
+        e.setZOrder(activeElements().stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1);
     }
 
     public void moveToBack(LayoutElement e) {
+        requireActivePageElement(e);
         normalizeZOrder();
         e.setZOrder(0);
-        for (LayoutElement other : elements) if (other != e && other.getZOrder() > 0) other.setZOrder(other.getZOrder() + 1);
+        for (LayoutElement other : activeElements()) if (other != e && other.getZOrder() > 0) other.setZOrder(other.getZOrder() + 1);
     }
 
     public void moveUp(LayoutElement e) {
+        requireActivePageElement(e);
         int current = e.getZOrder();
-        for (LayoutElement other : elements) {
+        for (LayoutElement other : activeElements()) {
             if (other != e && other.getZOrder() == current + 1) {
                 other.setZOrder(current);
                 e.setZOrder(current + 1);
@@ -137,9 +157,10 @@ public class LayoutModel {
     }
 
     public void moveDown(LayoutElement e) {
+        requireActivePageElement(e);
         int current = e.getZOrder();
         if (current <= 0) return;
-        for (LayoutElement other : elements) {
+        for (LayoutElement other : activeElements()) {
             if (other != e && other.getZOrder() == current - 1) {
                 other.setZOrder(current);
                 e.setZOrder(current - 1);
@@ -151,22 +172,22 @@ public class LayoutModel {
 
     private void normalizeZOrder() {
         List<LayoutElement> sorted = getVisibleElementsSortedByZ();
-        sorted.addAll(elements.stream().filter(el -> !el.isVisible()).collect(java.util.stream.Collectors.toList()));
+        sorted.addAll(activeElements().stream().filter(el -> !el.isVisible()).collect(java.util.stream.Collectors.toList()));
         for (int i = 0; i < sorted.size(); i++) sorted.get(i).setZOrder(i);
     }
 
     public void clearSelection() {
-        for (LayoutElement e : elements) e.setSelected(false);
+        for (LayoutElement e : activeElements()) e.setSelected(false);
     }
 
     public LayoutElement getSelected() {
-        return elements.stream().filter(LayoutElement::isSelected).findFirst().orElse(null);
+        return activeElements().stream().filter(LayoutElement::isSelected).findFirst().orElse(null);
     }
 
-    public int size() { return elements.size(); }
+    public int size() { return activeElements().size(); }
 
     public int nextZ() {
-        return elements.stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1;
+        return activeElements().stream().mapToInt(LayoutElement::getZOrder).max().orElse(0) + 1;
     }
 
     // --- Grouping ---
@@ -178,6 +199,9 @@ public class LayoutModel {
      */
     public String groupElements(List<LayoutElement> els) {
         if (els == null || els.size() < 2) return null;
+        for (LayoutElement element : els) {
+            requireActivePageElement(element);
+        }
         saveSnapshot();
         String gid = "group-" + java.util.UUID.randomUUID().toString().substring(0, 8);
         for (LayoutElement e : els) {
@@ -190,7 +214,7 @@ public class LayoutModel {
     public void ungroupElements(String gid) {
         if (gid == null) return;
         saveSnapshot();
-        for (LayoutElement e : elements) {
+        for (LayoutElement e : activeElements()) {
             if (gid.equals(e.getGroupId())) {
                 e.setGroupId(null);
             }
@@ -200,14 +224,14 @@ public class LayoutModel {
     /** Get all elements that belong to a group. */
     public List<LayoutElement> getGroupMembers(String gid) {
         if (gid == null) return java.util.Collections.emptyList();
-        return elements.stream()
+        return activeElements().stream()
                 .filter(e -> gid.equals(e.getGroupId()))
                 .collect(Collectors.toList());
     }
 
     /** Get all elements that belong to ANY group. */
     public List<LayoutElement> getGroupedElements() {
-        return elements.stream()
+        return activeElements().stream()
                 .filter(e -> e.getGroupId() != null)
                 .collect(Collectors.toList());
     }
@@ -221,7 +245,7 @@ public class LayoutModel {
     /** Move all members of a group by delta (dx, dy) in mm. */
     public void translateGroup(String gid, double dx, double dy) {
         if (gid == null) return;
-        for (LayoutElement e : elements) {
+        for (LayoutElement e : activeElements()) {
             if (gid.equals(e.getGroupId())) {
                 Rectangle2D.Double b = e.getBoundsMm();
                 e.setBoundsMm(b.x + dx, b.y + dy, b.width, b.height);
@@ -234,6 +258,8 @@ public class LayoutModel {
     private final List<java.util.List<LayoutElement>> pages = new java.util.ArrayList<>();
     {
         pages.add(elements); // page 0 uses the main elements list
+        pageUndoStacks.add(new ArrayList<>());
+        pageRedoStacks.add(new ArrayList<>());
     }
 
     public int getCurrentPage() { return currentPage; }
@@ -241,7 +267,12 @@ public class LayoutModel {
     public int getPageCount() { return pages.size(); }
 
     public void addPage() {
+        if (pages.size() >= 200) {
+            throw new IllegalStateException("CATMAP supports a maximum of 200 pages.");
+        }
         pages.add(new java.util.ArrayList<>());
+        pageUndoStacks.add(new ArrayList<>());
+        pageRedoStacks.add(new ArrayList<>());
         currentPage = pages.size() - 1;
     }
 
