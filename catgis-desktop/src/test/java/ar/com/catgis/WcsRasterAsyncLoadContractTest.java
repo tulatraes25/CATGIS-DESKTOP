@@ -11,6 +11,7 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferFloat;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
@@ -216,5 +217,10 @@ class WcsRasterAsyncLoadContractTest {
             assertTrue(committedOnEdt.get());
             assertEquals(null, error.get());
         }
+        // Actual lifecycle acceptance, not merely a temporary folder cleanup
+        // that might happen to work on POSIX while Windows retains an open
+        // GeoTools/JAI reader handle. Do not retry/GC away a leaked handle.
+        Files.delete(file);
+        assertFalse(Files.exists(file), "GeoTIFF must be unlocked after Preview + Full decoding.");
     }
 }
