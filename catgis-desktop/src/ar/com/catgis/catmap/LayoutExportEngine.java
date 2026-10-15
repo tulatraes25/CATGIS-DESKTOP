@@ -242,11 +242,13 @@ public final class LayoutExportEngine {
         float tx = x + padding;
         float ty = y + h - padding - fontSize * 0.2f; // approximate ascent
 
-        // Handle multi-line text
-        String[] lines = text.split("\n");
+        // Preserve logical blank lines and accept LF, CRLF and CR input.
+        String[] lines = text.split("\\R", -1);
         float lineHeight = fontSize * 1.2f;
         for (String line : lines) {
-            cs.newLineAtOffset(tx, ty);
+            // Td/newLineAtOffset is relative. Each label line here has an
+            // absolute page position; Tm prevents cumulative X/Y drift.
+            cs.setTextMatrix(org.apache.pdfbox.util.Matrix.getTranslateInstance(tx, ty));
             cs.showText(line);
             ty -= lineHeight;
         }
