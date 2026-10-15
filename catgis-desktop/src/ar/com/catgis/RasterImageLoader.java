@@ -221,6 +221,9 @@ public class RasterImageLoader {
         }
 
         AbstractGridCoverage2DReader reader = null;
+        GridCoverage2D coverage = null;
+        GridCoverage2D sourceAwareCoverage = null;
+        GridCoverage2D displayCoverage = null;
         try {
             reader = (AbstractGridCoverage2DReader) format.getReader(file);
             if (reader == null && isTiff(file.getName().toLowerCase(Locale.ROOT))) {
@@ -231,7 +234,7 @@ public class RasterImageLoader {
                         + " [" + format.getClass().getName() + "]");
             }
 
-            GridCoverage2D coverage = (GridCoverage2D) reader.read((org.geotools.api.parameter.GeneralParameterValue[]) null);
+            coverage = (GridCoverage2D) reader.read((org.geotools.api.parameter.GeneralParameterValue[]) null);
             if (coverage == null || coverage.getRenderedImage() == null) {
                 throw new IOException("GeoTools creo reader pero no devolvio cobertura valida para: " + file.getName());
             }
@@ -243,8 +246,8 @@ public class RasterImageLoader {
             String requestedSourceCRS = CRSDefinitions.normalizeCode(forcedSourceCRS);
             String effectiveSourceCRS = pickUsableSourceCRS(requestedSourceCRS, extractedSourceCRS);
             String targetCRS = CRSDefinitions.normalizeCode(projectCRS);
-            GridCoverage2D sourceAwareCoverage = assignSourceCRSIfNeeded(coverage, originalEnvelope, effectiveSourceCRS);
-            GridCoverage2D displayCoverage = reprojectCoverageIfNeeded(sourceAwareCoverage, effectiveSourceCRS, targetCRS);
+            sourceAwareCoverage = assignSourceCRSIfNeeded(coverage, originalEnvelope, effectiveSourceCRS);
+            displayCoverage = reprojectCoverageIfNeeded(sourceAwareCoverage, effectiveSourceCRS, targetCRS);
 
             BufferedImage raw = renderedToBuffered(displayCoverage);
             int bandCount = displayCoverage.getRenderedImage() != null && displayCoverage.getRenderedImage().getSampleModel() != null
@@ -258,11 +261,37 @@ public class RasterImageLoader {
 
             return new LocalRasterData(displayImage, env, bandCount, true, effectiveSourceCRS, mode, displayCRS);
         } finally {
+            // Everything returned to the map is an independent BufferedImage
+            // display copy. Explicitly dispose of the GeoTools/JAI source
+            // coverage graph before the reader, otherwise Windows can retain
+            // the input GeoTIFF file handle after the raster has loaded.
+            // Dispose derived nodes first, and avoid duplicate coverage
+            // instances when no reprojection was needed.
+            disposeCoverage(displayCoverage);
+            if (sourceAwareCoverage != displayCoverage) {
+                disposeCoverage(sourceAwareCoverage);
+            }
+            if (coverage != sourceAwareCoverage && coverage != displayCoverage) {
+                disposeCoverage(coverage);
+            }
             try {
                 if (reader != null) {
                     reader.dispose();
                 }
-            } catch (Exception ignored) { CatgisLogger.warn("RasterImageLoader: operation failed", ignored); }
+            } catch (RuntimeException failed) {
+                CatgisLogger.warn("RasterImageLoader: reader cleanup failed", failed);
+            }
+        }
+    }
+
+    private static void disposeCoverage(GridCoverage2D coverage) {
+        if (coverage == null) {
+            return;
+        }
+        try {
+            coverage.dispose(true);
+        } catch (RuntimeException failed) {
+            CatgisLogger.warn("RasterImageLoader: GeoTools coverage cleanup failed", failed);
         }
     }
 
