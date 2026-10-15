@@ -1,13 +1,13 @@
 package ar.com.catgis;
 
-import ar.com.catgis.core.geometry.SpatialIndex;
+import ar.com.catgis.core.geometry.PolygonCoverageAudit;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.referencing.CRS;
 import org.locationtech.jts.geom.*;
-import org.locationtech.jts.index.strtree.STRtree;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Basic topology validation rules for CATGIS.
@@ -17,17 +17,19 @@ public final class TopologyValidator {
 
     private TopologyValidator() {}
 
-    /**
-     * Result of a topology validation.
-     */
-    public record TopologyResult(
-            boolean valid,
-            List<TopologyIssue> issues
-    ) {}
+    public enum EvaluationStatus { VALID, INVALID, NOT_EVALUATED }
 
-    /**
-     * A topology issue found during validation.
-     */
+    /** Result of a rule evaluation, not certification of every topology rule. */
+    public record TopologyResult(boolean valid, List<TopologyIssue> issues) {
+        public EvaluationStatus status() {
+            if (issues.stream().anyMatch(issue -> "NOT_EVALUATED".equals(issue.rule()))) {
+                return EvaluationStatus.NOT_EVALUATED;
+            }
+            return valid ? EvaluationStatus.VALID : EvaluationStatus.INVALID;
+        }
+    }
+
+    /** A coverage gap has featureIndex=-1: it is not owned by one source feature. */
     public record TopologyIssue(
             String rule,
             String message,
@@ -36,97 +38,112 @@ public final class TopologyValidator {
     ) {}
 
     /**
-     * Validate that polygons have no gaps between them.
+     * Enclosed uncovered regions only. The tolerance is an AREA in squared
+     * input-coordinate units, not a distance or an implicit square-metre value.
+     * Exterior space requires an explicit study area via validateCoverageWithin.
      */
-    public static TopologyResult validateNoGaps(List<org.geotools.api.feature.simple.SimpleFeature> features, double tolerance) {
-        List<TopologyIssue> issues = new ArrayList<>();
-        List<Geometry> polygons = new ArrayList<>();
-        List<Integer> featureIndices = new ArrayList<>();
-
-        for (int i = 0; i < features.size(); i++) {
-            Geometry geom = (Geometry) features.get(i).getDefaultGeometry();
-            if (geom instanceof Polygon) { polygons.add(geom); featureIndices.add(i); }
-            else if (geom instanceof MultiPolygon mp) {
-                for (int j = 0; j < mp.getNumGeometries(); j++) {
-                    if (mp.getGeometryN(j) instanceof Polygon) { polygons.add(mp.getGeometryN(j)); featureIndices.add(i); }
-                }
-            }
+    public static TopologyResult validateNoGaps(List<SimpleFeature> features, double tolerance) {
+        try {
+            validateAreaTolerance(tolerance);
+            Geometry gaps = PolygonCoverageAudit.enclosedGaps(polygonInputs(features));
+            return gapResult(gaps, tolerance, "NO_GAPS");
+        } catch (RuntimeException failure) {
+            return notEvaluated("NO_GAPS", failure);
         }
-        if (polygons.size() < 2) return new TopologyResult(true, issues);
-
-        STRtree tree = new STRtree(10);
-        for (int i = 0; i < polygons.size(); i++) tree.insert(polygons.get(i).getEnvelopeInternal(), i);
-        try { tree.build(); } catch (Exception e) { CatgisLogger.warn("STRtree build failed in validateNoGaps", e); }
-
-        Set<String> checked = new LinkedHashSet<>();
-        for (int i = 0; i < polygons.size(); i++) {
-            Geometry p1 = polygons.get(i);
-            for (Object obj : tree.query(p1.getEnvelopeInternal())) {
-                int j = (Integer) obj;
-                if (i >= j) continue;
-                String key = i < j ? i + "_" + j : j + "_" + i;
-                if (checked.contains(key)) continue;
-                checked.add(key);
-                try {
-                    Geometry p2 = polygons.get(j);
-                    if (!p1.getEnvelopeInternal().intersects(p2.getEnvelopeInternal())) continue;
-                    Geometry union = p1.union(p2);
-                    // Gap detection: area within combined envelope not covered by either polygon
-                    Envelope combinedEnv = new Envelope(p1.getEnvelopeInternal());
-                    combinedEnv.expandToInclude(p2.getEnvelopeInternal());
-                    Geometry gap = new org.locationtech.jts.geom.GeometryFactory().toGeometry(combinedEnv).difference(union);
-                    if (gap != null && !gap.isEmpty() && gap.getArea() > tolerance) {
-                        issues.add(new TopologyIssue("NO_GAPS", "Gap found between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), gap));
-                    }
-                } catch (Exception e) { CatgisLogger.warn("Topology check failed for pair " + i + "," + j, e); }
-            }
-        }
-        return new TopologyResult(issues.isEmpty(), issues);
     }
 
-    /**
-     * Validate that polygons have no overlaps.
-     */
-    public static TopologyResult validateNoOverlaps(List<org.geotools.api.feature.simple.SimpleFeature> features) {
+    /** Backend contract for completeness inside an explicit study-area feature. */
+    public static TopologyResult validateCoverageWithin(List<SimpleFeature> features,
+                                                        SimpleFeature studyArea, double tolerance) {
+        try {
+            validateAreaTolerance(tolerance);
+            List<SimpleFeature> combined = new ArrayList<>(features);
+            combined.add(studyArea);
+            // Include the boundary in schema CRS checking; never invent or reproject it.
+            List<Geometry> all = polygonInputs(combined);
+            Geometry gaps = PolygonCoverageAudit.uncoveredWithin(
+                    all.subList(0, all.size() - 1), all.get(all.size() - 1));
+            return gapResult(gaps, tolerance, "COVERAGE_WITHIN_STUDY_AREA");
+        } catch (RuntimeException failure) {
+            return notEvaluated("COVERAGE_WITHIN_STUDY_AREA", failure);
+        }
+    }
+
+    /** Validate area overlaps; empty/invalid inputs cannot produce a clean report. */
+    public static TopologyResult validateNoOverlaps(List<SimpleFeature> features) {
+        try {
+            List<SimpleFeature> source = List.copyOf(features);
+            List<PolygonCoverageAudit.Overlap> overlaps = PolygonCoverageAudit.overlaps(polygonInputs(source));
+            List<TopologyIssue> issues = new ArrayList<>();
+            for (PolygonCoverageAudit.Overlap overlap : overlaps) {
+                issues.add(new TopologyIssue("NO_OVERLAPS",
+                        "Solapamiento entre " + source.get(overlap.firstIndex()).getID()
+                                + " y " + source.get(overlap.secondIndex()).getID(),
+                        overlap.firstIndex(), overlap.geometry()));
+            }
+            return new TopologyResult(issues.isEmpty(), List.copyOf(issues));
+        } catch (RuntimeException failure) {
+            return notEvaluated("NO_OVERLAPS", failure);
+        }
+    }
+
+    private static List<Geometry> polygonInputs(List<SimpleFeature> features) {
+        List<SimpleFeature> source = List.copyOf(features);
+        List<Geometry> geometries = new ArrayList<>(source.size());
+        CoordinateReferenceSystem expected = null;
+        boolean first = true;
+        for (SimpleFeature feature : source) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new java.util.concurrent.CancellationException("Auditoria cancelada.");
+            }
+            CoordinateReferenceSystem current = feature.getFeatureType().getCoordinateReferenceSystem();
+            if (!first && ((expected == null) != (current == null)
+                    || (expected != null && !CRS.equalsIgnoreMetadata(expected, current)))) {
+                throw new IllegalArgumentException("CRS de capa incompatibles; revise " + feature.getID());
+            }
+            Object value = feature.getDefaultGeometry();
+            if (!(value instanceof Geometry geometry)) {
+                throw new IllegalArgumentException("Sin geometria evaluable: " + feature.getID());
+            }
+            geometries.add(geometry);
+            expected = first ? current : expected;
+            first = false;
+        }
+        return geometries;
+    }
+
+    private static void validateAreaTolerance(double tolerance) {
+        if (!Double.isFinite(tolerance) || tolerance < 0) {
+            throw new IllegalArgumentException("La tolerancia de area debe ser finita y no negativa.");
+        }
+    }
+
+    private static TopologyResult gapResult(Geometry missing, double tolerance, String rule) {
         List<TopologyIssue> issues = new ArrayList<>();
-        List<Geometry> polygons = new ArrayList<>();
-        List<Integer> featureIndices = new ArrayList<>();
-
-        for (int i = 0; i < features.size(); i++) {
-            Geometry geom = (Geometry) features.get(i).getDefaultGeometry();
-            if (geom instanceof Polygon) { polygons.add(geom); featureIndices.add(i); }
-            else if (geom instanceof MultiPolygon mp) {
-                for (int j = 0; j < mp.getNumGeometries(); j++) {
-                    if (mp.getGeometryN(j) instanceof Polygon) { polygons.add(mp.getGeometryN(j)); featureIndices.add(i); }
-                }
+        for (int i = 0; i < missing.getNumGeometries(); i++) {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new java.util.concurrent.CancellationException("Auditoria cancelada.");
+            }
+            Geometry gap = missing.getGeometryN(i);
+            if (!gap.isEmpty() && gap.getArea() > tolerance) {
+                issues.add(new TopologyIssue(rule,
+                        "Area sin cobertura: " + gap.getArea() + " unidades de coordenadas al cuadrado.",
+                        -1, gap.copy()));
             }
         }
-        if (polygons.size() < 2) return new TopologyResult(true, issues);
+        return new TopologyResult(issues.isEmpty(), List.copyOf(issues));
+    }
 
-        STRtree tree = new STRtree(10);
-        for (int i = 0; i < polygons.size(); i++) tree.insert(polygons.get(i).getEnvelopeInternal(), i);
-        try { tree.build(); } catch (Exception e) { CatgisLogger.warn("STRtree build failed in validateNoGaps", e); }
-
-        Set<String> checked = new LinkedHashSet<>();
-        for (int i = 0; i < polygons.size(); i++) {
-            Geometry p1 = polygons.get(i);
-            for (Object obj : tree.query(p1.getEnvelopeInternal())) {
-                int j = (Integer) obj;
-                if (i >= j) continue;
-                String key = i < j ? i + "_" + j : j + "_" + i;
-                if (checked.contains(key)) continue;
-                checked.add(key);
-                try {
-                    Geometry p2 = polygons.get(j);
-                    if (!p1.getEnvelopeInternal().intersects(p2.getEnvelopeInternal())) continue;
-                    Geometry intersection = p1.intersection(p2);
-                    if (intersection != null && !intersection.isEmpty() && intersection.getArea() > 0) {
-                        issues.add(new TopologyIssue("NO_OVERLAPS", "Overlap between polygons " + featureIndices.get(i) + " and " + featureIndices.get(j), featureIndices.get(i), intersection));
-                    }
-                } catch (Exception e) { CatgisLogger.warn("Topology check failed for pair " + i + "," + j, e); }
-            }
+    private static TopologyResult notEvaluated(String rule, RuntimeException failure) {
+        String detail = failure.getMessage();
+        if (detail == null || detail.isBlank()) {
+            detail = failure.getClass().getSimpleName();
         }
-        return new TopologyResult(issues.isEmpty(), issues);
+        if (detail.length() > 512) {
+            detail = detail.substring(0, 512);
+        }
+        return new TopologyResult(false, List.of(new TopologyIssue(
+                "NOT_EVALUATED", rule + " no evaluado: " + detail, -1, null)));
     }
 
     /**
