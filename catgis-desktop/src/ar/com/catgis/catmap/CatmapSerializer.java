@@ -20,42 +20,114 @@ public final class CatmapSerializer {
 
     private CatmapSerializer() {}
 
+    @FunctionalInterface
+    interface AtomicLayoutPublisher {
+        void publish(java.nio.file.Path staging, java.nio.file.Path target) throws IOException;
+    }
+
+    private static void publishAtomically(java.nio.file.Path staging,
+                                          java.nio.file.Path target) throws IOException {
+        java.nio.file.Files.move(staging, target,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static void validateLayoutTarget(java.nio.file.Path path) throws IOException {
+        if (java.nio.file.Files.isSymbolicLink(path)
+                || (java.nio.file.Files.exists(path, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+                    && !java.nio.file.Files.isRegularFile(path, java.nio.file.LinkOption.NOFOLLOW_LINKS))) {
+            throw new IOException("CATMAP no puede sobrescribir un enlace simbolico o un destino no regular: "
+                    + path.getFileName());
+        }
+    }
+
     /**
-     * Save layout to .catmap file atomically.
-     * Writes to a temporary file first, then renames to the target
-     * to prevent corruption on crash during write.
+     * Fail-closed atomic layout persistence. Never rename away the previous
+     * target before the new layout is completely written and staged. The
+     * existing backup is replaced atomically with a copy of the last valid
+     * target and the new target is only published with ATOMIC_MOVE.
      */
     public static void save(LayoutModel model, File file) throws IOException {
-        File tmp = new File(file.getParentFile(), file.getName() + ".tmp");
-        try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tmp), StandardCharsets.UTF_8))) {
-            w.write("# CATMAP Layout v1");
-            w.newLine();
+        save(model, file, CatmapSerializer::publishAtomically);
+    }
 
-            // Page settings
-            w.write("PAGE_SIZE=A4");
-            w.newLine();
-            w.write("PAGE_ORIENTATION=LANDSCAPE");
-            w.newLine();
+    /**
+     * Test seam for unsupported atomic moves and injected publication failure.
+     * This also verifies that owned .part files are removed without touching
+     * a previous good .catmap or blindly deleting a previous backup.
+     */
+    static void save(LayoutModel model, File file, AtomicLayoutPublisher publisher) throws IOException {
+        java.util.Objects.requireNonNull(model, "CATMAP layout model");
+        java.util.Objects.requireNonNull(file, "CATMAP layout destination");
+        java.util.Objects.requireNonNull(publisher, "CATMAP atomic publisher");
 
-            // Elements
-            for (LayoutElement el : model.getElements()) {
-                w.write(serializeElement(el));
+        java.nio.file.Path requested = file.toPath().toAbsolutePath().normalize();
+        java.nio.file.Path parent = requested.getParent();
+        if (parent == null || !java.nio.file.Files.isDirectory(parent)) {
+            throw new IOException("No existe el directorio donde guardar CATMAP.");
+        }
+        parent = parent.toRealPath();
+        java.nio.file.Path target = parent.resolve(requested.getFileName());
+        java.nio.file.Path backup = parent.resolve(requested.getFileName().toString() + ".bak");
+        validateLayoutTarget(target);
+        validateLayoutTarget(backup);
+
+        java.nio.file.Path staged = java.nio.file.Files.createTempFile(parent,
+                "." + target.getFileName() + "-", ".part");
+        java.nio.file.Path stagedBackup = null;
+        try {
+            try (BufferedWriter w = java.nio.file.Files.newBufferedWriter(staged, StandardCharsets.UTF_8,
+                    java.nio.file.StandardOpenOption.TRUNCATE_EXISTING,
+                    java.nio.file.StandardOpenOption.WRITE)) {
+                w.write("# CATMAP Layout v1");
+                w.newLine();
+                w.write("PAGE_SIZE=A4");
+                w.newLine();
+                w.write("PAGE_ORIENTATION=LANDSCAPE");
+                w.newLine();
+                for (LayoutElement el : model.getElements()) {
+                    w.write(serializeElement(el));
+                    w.newLine();
+                }
+                w.write("# End of layout");
                 w.newLine();
             }
-
-            w.write("# End of layout");
-            w.newLine();
-        }
-        // Atomic rename: replace target only after successful write
-        if (file.exists()) {
-            File backup = new File(file.getParentFile(), file.getName() + ".bak");
-            if (backup.exists()) backup.delete();
-            if (!file.renameTo(backup)) {
-                CatgisLogger.warn("CatmapSerializer: no se pudo crear backup de " + file.getName(), null);
+            // Flush staged bytes before publication. Directory fsync and
+            // real power-cut recovery are separate cross-platform gates.
+            try (java.nio.channels.FileChannel channel = java.nio.channels.FileChannel.open(
+                    staged, java.nio.file.StandardOpenOption.WRITE)) {
+                channel.force(true);
             }
-        }
-        if (!tmp.renameTo(file)) {
-            throw new IOException("No se pudo guardar el layout: " + file.getAbsolutePath());
+
+            validateLayoutTarget(target);
+            validateLayoutTarget(backup);
+            if (java.nio.file.Files.exists(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                stagedBackup = java.nio.file.Files.createTempFile(parent,
+                        "." + target.getFileName() + "-backup-", ".part");
+                java.nio.file.Files.copy(target, stagedBackup,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.LinkOption.NOFOLLOW_LINKS);
+                try (java.nio.channels.FileChannel channel = java.nio.channels.FileChannel.open(
+                        stagedBackup, java.nio.file.StandardOpenOption.WRITE)) {
+                    channel.force(true);
+                }
+                validateLayoutTarget(backup);
+                publisher.publish(stagedBackup, backup);
+                stagedBackup = null;
+            }
+            validateLayoutTarget(target);
+            publisher.publish(staged, target);
+            staged = null;
+        } catch (java.nio.file.AtomicMoveNotSupportedException unsupported) {
+            throw new IOException("El sistema de archivos no permite guardar CATMAP de forma atomica; "
+                    + "el diseno anterior se conservo.", unsupported);
+        } finally {
+            if (staged != null) {
+                java.nio.file.Files.deleteIfExists(staged);
+            }
+            if (stagedBackup != null) {
+                java.nio.file.Files.deleteIfExists(stagedBackup);
+            }
         }
     }
 
