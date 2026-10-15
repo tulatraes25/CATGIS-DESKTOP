@@ -215,7 +215,7 @@ public final class WcsClient {
     private static final long DEFAULT_WCS_BYTE_LIMIT = 512L * 1024L * 1024L;
     private static final long MAX_WCS_BYTE_LIMIT = 16L * 1024L * 1024L * 1024L;
 
-    private static long configuredWcsByteLimit() throws IOException {
+    static long configuredWcsByteLimit() throws IOException {
         String configured = System.getProperty(WCS_BYTE_LIMIT_PROPERTY);
         if (configured == null || configured.isBlank()) {
             return DEFAULT_WCS_BYTE_LIMIT;
