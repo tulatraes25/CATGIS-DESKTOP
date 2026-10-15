@@ -108,6 +108,7 @@ DIALOG_OR_WINDOW	ui/dialogs/WfsTransactionDialog.java
 DIALOG_OR_WINDOW	WcsDialog.java
 DIALOG_OR_WINDOW	WelcomePageDialog.java
 DIALOG_OR_WINDOW	WhiteboxToolDialog.java
+EXPORT_SURFACE	catmap/CatmapAtomicExport.java
 EXPORT_SURFACE	catmap/LayoutExportEngine.java
 EXPORT_SURFACE	catmap/PdfExportOptions.java
 EXPORT_SURFACE	catmap/SvgExportEngine.java
