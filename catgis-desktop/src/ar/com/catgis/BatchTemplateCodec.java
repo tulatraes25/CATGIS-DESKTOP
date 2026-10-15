@@ -36,8 +36,7 @@ final class BatchTemplateCodec {
         String description = textOrEmpty(template.description());
         String operation = textOrEmpty(template.operation());
         String extension = textOrEmpty(template.extensionFilter());
-        Map<String, String> settings = new LinkedHashMap<>(template.settings());
-        checkSettingsCount(settings.size());
+        Map<String, String> settings = snapshot(template.settings());
         long contentChars = (long) name.length() + description.length() + operation.length() + extension.length();
 
         ObjectNode root = JSON.createObjectNode();
@@ -66,7 +65,7 @@ final class BatchTemplateCodec {
     }
 
     static BatchProcessor.BatchTemplate decode(String json) {
-        if (json == null || json.isBlank() || json.length() > MAX_JSON_CHARS) {
+        if (json == null || json.length() > MAX_JSON_CHARS || json.isBlank()) {
             throw invalid("El JSON de la plantilla falta o excede 256 Ki caracteres.");
         }
         JsonNode root;
@@ -105,6 +104,19 @@ final class BatchTemplateCodec {
         // mutability instead of silently changing its caller contract here.
         return new BatchProcessor.BatchTemplate(name, description, operation, extension,
                 subdirs != null && subdirs.booleanValue(), settings);
+    }
+
+    private static Map<String, String> snapshot(Map<String, String> source) {
+        // Bound allocation before copying, and enforce the count again while
+        // iterating: a weakly consistent/custom map may report a stale size.
+        checkSettingsCount(source.size());
+        Map<String, String> copy = new LinkedHashMap<>();
+        int visited = 0;
+        for (Map.Entry<String, String> entry : source.entrySet()) {
+            checkSettingsCount(++visited);
+            copy.put(entry.getKey(), entry.getValue());
+        }
+        return copy;
     }
 
     private static String requiredText(JsonNode value) {

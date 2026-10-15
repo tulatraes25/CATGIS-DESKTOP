@@ -39,7 +39,7 @@ JSON keys, including escaped spellings, and trailing root values are errors.
 
 ## Compatibility and deliberate rejection
 
-- Read every ordinary old six-field template emitted by the previous writer,
+- Read ordinary old six-field templates within the documented bounds,
   preserving values rather than exact pretty-print whitespace.
 - name and operation must be present JSON strings; empty strings remain legal
   for codec compatibility, not proof of a valid executable operation.
@@ -54,16 +54,23 @@ JSON keys, including escaped spellings, and trailing root values are errors.
 - Reject malformed/truncated/non-object JSON, wrong field types and unknown
   root fields rather than silently invent/discard recipe parameters.
 - Keep the existing record's mutable-map contract in this tranche. Encoding
-  takes a map snapshot and decoding owns a fresh map; no guarantee is made
-  for a caller mutating a non-thread-safe map during the snapshot itself.
+  takes a bounded map snapshot and decoding owns a fresh map; no atomic
+  consistency guarantee is made for a caller concurrently mutating that map.
 
-## Bounds and error behavior
+## Bounds and pre-merge review
 
 At most 256 Ki UTF-16 characters in input/output JSON, 16 Ki characters per text
 value, 1024 per setting key, 256 settings, nesting depth 8 and number token
 length 32. The writer checks text totals and escaped serialized size. The
-reader checks input length before parsing. These are declared resource limits,
-not a measured universal heap/time guarantee.
+reader checks input length before scanning whitespace or parsing. These are
+declared resource limits, not a measured universal heap/time guarantee.
+
+Review of initial candidate cc4ee75c27e4e5d49da5cad1d015b0cf19ad1a6e found that
+its parameter count was checked AFTER a full map copy. The corrected candidate
+checks before copying and also counts visited entries, so a stale/custom size
+cannot make the snapshot grow unbounded. Two additional tests reject an
+oversized map before any iterator access and bound iteration with a stale size.
+No earlier green result may certify the changed head; all gates must rerun.
 
 fromJson keeps its unchecked signature, raising IllegalArgumentException with
 an actionable message and the original Jackson cause where applicable. Invalid
@@ -71,21 +78,22 @@ input never produces a partial BatchTemplate. The existing loadAllTemplates
 catch/log behavior is unchanged and skips a rejected file rather than using an
 invented recipe; user-facing per-template diagnostics are separate work.
 
-## Fifteen new ordinary JUnit contracts
+## Seventeen new ordinary JUnit contracts
 
-BatchTemplateCodecContractTest covers exact Windows/UNC/escape-looking paths;
-braces/quotes/Unicode keys and values; whitespace/order/text-independent
-booleans; independently written Unicode escapes; all JSON control characters;
-an unchanged legacy fixture; optional defaults; malformed/missing fields;
-duplicate keys/trailing roots; wrong types/unknown fields; accepted and rejected
-resource boundaries; oversized escaped output/null-key refusal; map ownership;
-a genuine UTF-8 file roundtrip with repeated unchanged-byte checks; and concurrent
-independent recipes. No old method, expectation, skip budget or workflow changes.
+The initial 15 BatchTemplateCodecContractTest methods cover exact Windows/UNC
+and escape-looking paths; braces/quotes/Unicode keys and values; whitespace,
+order and text-independent booleans; external Unicode escapes; all JSON control
+characters; a legacy fixture; optional defaults; malformed/missing fields;
+duplicate keys/trailing roots; wrong types/unknown fields; accepted/rejected
+resource boundaries; escaped output/null-key refusal; map ownership; real UTF-8
+file roundtrip with unchanged-byte checks; concurrent independent recipes.
+Two BatchTemplateAllocationContractTest methods enforce pre-allocation and
+iteration limits. No old test/expectation/skip budget or workflow changed.
 The old BatchProcessorTest (including template save/load) remains intact.
 
 The original four defects are reproduced, but the NEW tests are not declared
-PASS until the exact candidate's GitHub suite executes. No local dependency
-substitutes or mock Jackson decoder are used to fabricate execution evidence.
+PASS until the exact candidate's GitHub suite executes. No mock Jackson decoder
+or local substitute is used to fabricate execution evidence.
 
 ## Mandatory certification and residuals
 
