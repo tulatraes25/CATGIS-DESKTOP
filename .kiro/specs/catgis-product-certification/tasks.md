@@ -3,6 +3,8 @@
 Status: ACTIVE
 Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
 
+> Continuity update (2026-10-15): the phase entries below preserve historical evidence. Read [CURRENT_EXECUTION.md](CURRENT_EXECUTION.md) and live GitHub before choosing the next task; historical pending/next-action text is not current release authority.
+
 ## Phase G0 — Runtime freeze / GitHub-only certification
 
 - [x] **G0.1 — Adopt GitHub-first transfer authority**
@@ -188,4 +190,8 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 
 ## Current next action
 
-Resolve F2 STAC pagination PR #36 test failure and certify A0.3 Tranche C WMS disk cache on GitHub against `22961526117bf2e090450cd837042241f23af64b`. Continue audit of remaining EDT/network/disk boundaries and A0.2/A0.4/A0.5, then A0.6/A0.7 before GUI/OpenCode.
+The former instruction to resume PR #36 against `22961526117bf2e090450cd837042241f23af64b` was a historical snapshot, not the current execution target. Use [CURRENT_EXECUTION.md](CURRENT_EXECUTION.md), the exact live main, open PRs/issues and their fresh CI evidence.
+
+Current product authority is issue #109: professional capability, scientific correctness, modular architecture and first-class UX together. Complete and certify the active polygon-coverage tranche #113/PR #116, then prioritize real GeoParquet support #112 and the topology worker/status integration required for responsive, honest user workflows. Preserve the tested batch-planning tranche #114/PR #115; do not recreate it as a new capability or confuse it with full batch transactions.
+
+A0.2/A0.3/A0.4/A0.5 remain blocking work to reconcile from current code and evidence. A0.7 must close before user-PC/GUI/OpenCode validation; GUI evidence must not be made a circular prerequisite for doing the deterministic architecture work. No historical checkbox, successful package build, synthetic PR merge or documentation-only PR certifies the whole product.
