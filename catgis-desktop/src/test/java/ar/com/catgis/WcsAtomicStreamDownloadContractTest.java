@@ -749,7 +749,11 @@ class WcsAtomicStreamDownloadContractTest {
         Path destination = tempDir.resolve("protected WCS output.tif");
         Files.write(destination, existing);
 
-        try (WcsTargetLock lease = WcsTargetLock.tryAcquire(destination)) {
+        // Use a noncanonical spelling to prove the lock and public WCS
+        // download derive one identity even when parent aliases differ.
+        Path aliasedDestination = destination.getParent().resolve(".")
+                .resolve(destination.getFileName());
+        try (WcsTargetLock lease = WcsTargetLock.tryAcquire(aliasedDestination)) {
             assertTrue(lease != null, "The separate writer must hold the real kernel lease.");
             IOException blocked = assertThrows(IOException.class, () ->
                     WcsClient.downloadCoverageToFile(origin, "dem",
