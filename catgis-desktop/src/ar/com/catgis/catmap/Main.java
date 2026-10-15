@@ -459,9 +459,12 @@ public class Main {
 
         g.gridx = 0; g.gridy = 3;
         form.add(new JLabel("Formato:"), g);
-        JComboBox<String> formatCombo = new JComboBox<>(new String[]{"PNG", "PDF"});
+        // Only PNG is wired to AtlasEngine.generateAndSave. Do not offer PDF
+        // for atlas export until a real multi-page PDF path is implemented.
+        JLabel formatLabel = new JLabel("PNG (atlas)");
+        formatLabel.setToolTipText("La exportacion PDF de atlas aun no esta disponible.");
         g.gridx = 1;
-        form.add(formatCombo, g);
+        form.add(formatLabel, g);
 
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton cancelBtn = new JButton("Cancelar");
