@@ -179,6 +179,20 @@ public class WcsDialog extends JDialog {
         String url = serviceUrlField.getText().trim();
         String bbox = bboxField.getText().trim();
         String crs = crsField.getText().trim();
+        try {
+            WcsSpatialPreflight.validate(bbox, crs);
+        } catch (java.io.IOException invalidSpatial) {
+            statusLabel.setText(invalidSpatial.getMessage());
+            statusLabel.setForeground(Color.RED);
+            NotificationManager.warn(this, null, invalidSpatial.getMessage());
+            if (invalidSpatial.getMessage().contains("BBOX")
+                    || invalidSpatial.getMessage().contains("EPSG:4326")) {
+                bboxField.requestFocusInWindow();
+            } else {
+                crsField.requestFocusInWindow();
+            }
+            return;
+        }
         WcsDimensionsPreflight.Checked requested;
         try {
             requested = WcsDimensionsPreflight.validate(
