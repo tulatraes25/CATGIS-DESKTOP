@@ -20,6 +20,7 @@ import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.ByteBuffer;
@@ -29,6 +30,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -772,6 +776,136 @@ class WcsAtomicStreamDownloadContractTest {
         assertNoStagingFile();
         assertTrue(Files.isRegularFile(WcsTargetLock.lockPath(destination)),
                 "Permanent lease marker prevents stale inode/unlink races.");
+    }
+
+    @Test
+    void slowChunkedResponseExpiresOneSharedDeadlineWithoutFallback() throws Exception {
+        byte[] old = realGeoTiff(8, 8);
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            exchange.getResponseHeaders().set("Content-Type", "image/tiff");
+            exchange.sendResponseHeaders(200, 0L); // Chunked response, no length.
+            try (var output = exchange.getResponseBody()) {
+                for (int i = 0; i < 24; i++) {
+                    output.write(i == 0 ? 'I' : 'X');
+                    output.flush();
+                    try {
+                        Thread.sleep(70L); // Each read is fast, but total duration is not.
+                    } catch (InterruptedException cancelled) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            } catch (IOException disconnected) {
+                // Deadline watchdog intentionally closes the HTTP socket.
+            }
+        });
+        server.start();
+        Path destination = tempDir.resolve("prior coverage with spaces.tif");
+        Files.write(destination, old);
+
+        long began = System.nanoTime();
+        InterruptedIOException timeout = assertThrows(InterruptedIOException.class, () ->
+                WcsClient.downloadCoverageToFile(origin, "dem",
+                        "-70,-46,-69,-45", "EPSG:4326",
+                        16, 16, null, destination.toFile(), 65536L, 350L));
+        assertTrue(timeout.getMessage().contains("time budget"));
+        assertTrue(System.nanoTime() - began < TimeUnit.SECONDS.toNanos(7L));
+        assertEquals(1, requests.get(), "Deadline abort must never retry WCS 1.0.");
+        assertArrayEquals(old, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void preInterruptedWorkerAbortsBeforeNetworkOrStaging() throws Exception {
+        byte[] old = realGeoTiff(8, 8);
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            respond(exchange, 503, "text/plain", new byte[0]);
+        });
+        server.start();
+        Path destination = tempDir.resolve("pre-cancelled WCS.tif");
+        Files.write(destination, old);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        Thread worker = new Thread(() -> {
+            Thread.currentThread().interrupt();
+            try {
+                WcsClient.downloadCoverageToFile(origin, "dem",
+                        "-70,-46,-69,-45", "EPSG:4326",
+                        16, 16, null, destination.toFile(), 65536L, 3000L);
+            } catch (Throwable stopped) {
+                failure.set(stopped);
+            } finally {
+                Thread.interrupted(); // Preserve the JUnit caller's interrupt status.
+            }
+        }, "catgis-wcs-pre-cancel-test");
+        worker.start();
+        worker.join(5000L);
+        assertTrue(!worker.isAlive(), "Cancelled WCS must not leave a worker behind.");
+        assertTrue(failure.get() instanceof InterruptedIOException,
+                "A cancelled worker must raise InterruptedIOException.");
+        assertEquals(0, requests.get());
+        assertArrayEquals(old, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void interruptDuringBlockingHttpReadStopsWithoutFallback() throws Exception {
+        byte[] old = realGeoTiff(8, 8);
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        CountDownLatch headersSent = new CountDownLatch(1);
+        CountDownLatch releaseServer = new CountDownLatch(1);
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            exchange.getResponseHeaders().set("Content-Type", "image/tiff");
+            exchange.sendResponseHeaders(200, 0L);
+            headersSent.countDown();
+            try (var output = exchange.getResponseBody()) {
+                releaseServer.await(8L, TimeUnit.SECONDS);
+                output.write(42);
+            } catch (IOException disconnected) {
+                // Interrupted WCS worker closes the socket.
+            } catch (InterruptedException ended) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        server.start();
+        Path destination = tempDir.resolve("interrupted coverage.tif");
+        Files.write(destination, old);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        Thread worker = new Thread(() -> {
+            try {
+                WcsClient.downloadCoverageToFile(origin, "dem",
+                        "-70,-46,-69,-45", "EPSG:4326",
+                        16, 16, null, destination.toFile(), 65536L, 3000L);
+            } catch (Throwable stopped) {
+                failure.set(stopped);
+            }
+        }, "catgis-wcs-inflight-cancel-test");
+        worker.start();
+        try {
+            assertTrue(headersSent.await(5L, TimeUnit.SECONDS),
+                    "The test must interrupt a real in-flight HTTP request.");
+            worker.interrupt();
+            worker.join(6500L);
+            assertTrue(!worker.isAlive(), "Interrupt must bound blocked HTTP reads.");
+            assertTrue(failure.get() instanceof InterruptedIOException,
+                    "Interrupt must be terminal, never fall back to WCS 1.0.");
+            assertEquals(1, requests.get());
+            assertArrayEquals(old, Files.readAllBytes(destination));
+            assertNoStagingFile();
+        } finally {
+            releaseServer.countDown();
+            if (worker.isAlive()) {
+                worker.interrupt();
+            }
+        }
     }
 
     private byte[] realGeoTiff(int width, int height) throws Exception {
