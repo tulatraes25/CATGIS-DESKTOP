@@ -2,7 +2,6 @@ package ar.com.catgis;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.HttpURLConnection;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -83,16 +82,16 @@ final class WcsTransferDeadline {
      * individual read timeout. The flag survives IO exceptions and prevents
      * an unintended fallback to WCS 1.0 after deadline/cancellation.
      */
-    Guard watch(HttpURLConnection connection) throws InterruptedIOException {
+    Guard watch(Runnable disconnect) throws InterruptedIOException {
         checkActive();
         Thread owner = Thread.currentThread();
         ScheduledFuture<?> job = WATCHDOG.scheduleAtFixedRate(() -> {
             if (owner.isInterrupted()) {
                 cancelled.set(true);
-                connection.disconnect();
+                disconnect.run();
             } else if (System.nanoTime() - startedNanos >= budgetNanos) {
                 timedOut.set(true);
-                connection.disconnect();
+                disconnect.run();
             }
         }, WATCHDOG_POLL_MILLIS, WATCHDOG_POLL_MILLIS, TimeUnit.MILLISECONDS);
         return () -> job.cancel(false);
