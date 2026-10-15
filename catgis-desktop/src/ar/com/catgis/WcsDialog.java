@@ -179,15 +179,47 @@ public class WcsDialog extends JDialog {
         String url = serviceUrlField.getText().trim();
         String bbox = bboxField.getText().trim();
         String crs = crsField.getText().trim();
-        int width;
-        int height;
+        WcsDimensionsPreflight.Checked requested;
         try {
-            width = Integer.parseInt(widthField.getText().trim());
-            height = Integer.parseInt(heightField.getText().trim());
-        } catch (NumberFormatException invalid) {
-            NotificationManager.warn(this, null, "Dimensiones invalidas.");
+            requested = WcsDimensionsPreflight.validate(
+                    widthField.getText(), heightField.getText());
+        } catch (IllegalArgumentException invalid) {
+            // Fail before the file chooser or any HTTP work. Never request
+            // a silent 512x512 substitute for invalid user-entered dimensions.
+            statusLabel.setText(invalid.getMessage());
+            statusLabel.setForeground(Color.RED);
+            NotificationManager.warn(this, null, invalid.getMessage());
+            if (invalid.getMessage().contains("alto")) {
+                heightField.requestFocusInWindow();
+            } else {
+                widthField.requestFocusInWindow();
+            }
             return;
         }
+
+        long maxDownloadBytes;
+        try {
+            maxDownloadBytes = WcsClient.configuredWcsByteLimit();
+        } catch (java.io.IOException invalidBudget) {
+            statusLabel.setText("Presupuesto WCS mal configurado.");
+            statusLabel.setForeground(Color.RED);
+            NotificationManager.error(this, "Configuracion WCS",
+                    invalidBudget.getMessage());
+            return;
+        }
+        if (WcsDimensionsPreflight.requiresConfirmation(requested, maxDownloadBytes)) {
+            int decision = JOptionPane.showConfirmDialog(this,
+                    WcsDimensionsPreflight.warning(requested, maxDownloadBytes),
+                    "WCS - Confirmar descarga extensa",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (decision != JOptionPane.YES_OPTION) {
+                statusLabel.setText("Descarga WCS cancelada antes de crear archivos.");
+                statusLabel.setForeground(Color.GRAY);
+                return;
+            }
+        }
+        int width = requested.width();
+        int height = requested.height();
 
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Guardar cobertura como GeoTIFF");
