@@ -27,6 +27,7 @@ public class Main {
 
     private static LayoutModel layoutModel;
     private static LayoutPreviewPanel previewPanel;
+    private static JScrollPane previewScrollPane;
     private static JLabel statusLabel;
     private static JFrame mainFrame;
     private static String clipboardData; // for copy/paste
@@ -164,8 +165,14 @@ public class Main {
         // --- Edición ---
         JMenu menuEdicion = new JMenu("Edición");
         menuEdicion.setMnemonic(KeyEvent.VK_E);
-        addMenuItem(menuEdicion, "Deshacer", KeyEvent.VK_Z, e -> { layoutModel.undo(); previewPanel.invalidateRender(); previewPanel.repaint(); });
-        addMenuItem(menuEdicion, "Rehacer", KeyEvent.VK_Y, e -> { layoutModel.redo(); previewPanel.invalidateRender(); previewPanel.repaint(); });
+        addMenuItem(menuEdicion, "Deshacer", KeyEvent.VK_Z, e -> {
+            layoutModel.undo();
+            previewPanel.clearPageSelection();
+        });
+        addMenuItem(menuEdicion, "Rehacer", KeyEvent.VK_Y, e -> {
+            layoutModel.redo();
+            previewPanel.clearPageSelection();
+        });
         menuEdicion.addSeparator();
         addMenuItem(menuEdicion, "Copiar", KeyEvent.VK_C, e -> copySelected());
         addMenuItem(menuEdicion, "Pegar", KeyEvent.VK_V, e -> pasteClipboard());
@@ -176,6 +183,14 @@ public class Main {
         addMenuItem(menuEdicion, "Bloquear elemento", 0, e -> lockSelected());
         addMenuItem(menuEdicion, "Desbloquear elemento", 0, e -> unlockSelected());
         menuBar.add(menuEdicion);
+
+        // --- Páginas ---
+        JMenu menuPaginas = new JMenu("Páginas");
+        addMenuItem(menuPaginas, "Agregar página", 0, e -> addLayoutPage());
+        menuPaginas.addSeparator();
+        addMenuItem(menuPaginas, "Página anterior", 0, e -> navigateLayoutPage(-1));
+        addMenuItem(menuPaginas, "Página siguiente", 0, e -> navigateLayoutPage(1));
+        menuBar.add(menuPaginas);
 
         // --- Vista ---
         JMenu menuVista = new JMenu("Vista");
@@ -694,9 +709,9 @@ public class Main {
         leftPanel.add(new JScrollPane(elementList), BorderLayout.CENTER);
 
         // Center: preview
-        JScrollPane previewScroll = new JScrollPane(previewPanel);
-        previewScroll.getHorizontalScrollBar().setUnitIncrement(16);
-        previewScroll.getVerticalScrollBar().setUnitIncrement(16);
+        previewScrollPane = new JScrollPane(previewPanel);
+        previewScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+        previewScrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
         // Right panel: contextual properties
         JPanel rightPanel = new JPanel(new BorderLayout());
@@ -735,7 +750,7 @@ public class Main {
         bottomPanel.add(new JScrollPane(layerList), BorderLayout.CENTER);
 
         // Split panes
-        JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, previewScroll);
+        JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, previewScrollPane);
         leftSplit.setDividerLocation(200);
         JSplitPane rightSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, rightPanel);
         rightSplit.setDividerLocation(900);
@@ -1091,12 +1106,54 @@ public class Main {
 
     // --- Actions ---
 
+    private static void installPreviewForActiveModel() {
+        LayoutPreviewPanel newPreview = new LayoutPreviewPanel(layoutModel,
+                new LayoutRenderContext(LayoutRenderContext.Mode.PREVIEW, 96, 297, 210));
+        newPreview.setSelectionCallback(Main::updatePropertiesPanel);
+        previewPanel = newPreview;
+        if (previewScrollPane != null) {
+            // Replace only the viewport. Do not cast a Frame content child to
+            // JSplitPane: createMainPanel installs a JPanel in BorderLayout.CENTER.
+            previewScrollPane.setViewportView(newPreview);
+            previewScrollPane.revalidate();
+            previewScrollPane.repaint();
+        }
+        if (propsPanel != null) {
+            updatePropertiesPanel(null);
+        }
+    }
+
+    private static void showActivePage() {
+        previewPanel.clearPageSelection();
+        statusLabel.setText("CATMAP - Página " + (layoutModel.getCurrentPage() + 1)
+                + " de " + layoutModel.getPageCount());
+    }
+
+    private static void addLayoutPage() {
+        if (layoutModel.getPageCount() >= 200) {
+            NotificationManager.warn(mainFrame, "Páginas",
+                    "El límite de páginas de CATMAP es 200.");
+            return;
+        }
+        layoutModel.addPage();
+        showActivePage();
+    }
+
+    private static void navigateLayoutPage(int direction) {
+        int next = layoutModel.getCurrentPage() + direction;
+        if (next < 0 || next >= layoutModel.getPageCount()) {
+            statusLabel.setText("CATMAP - No hay más páginas en esa dirección.");
+            return;
+        }
+        layoutModel.setCurrentPage(next);
+        showActivePage();
+    }
+
     private static void newLayout() {
         layoutModel = new LayoutModel();
         currentFile = null;
         addDefaultElements(layoutModel);
-        previewPanel.invalidateRender();
-        previewPanel.repaint();
+        installPreviewForActiveModel();
         mainFrame.setTitle("CATMAP - Nuevo layout");
         layoutAtlas = null;
         statusLabel.setText("Nuevo layout creado");
@@ -1604,16 +1661,10 @@ public class Main {
             layoutModel = CatmapSerializer.load(file);
             currentFile = file;
             mainFrame.setTitle("CATMAP - " + file.getName());
-            previewPanel = new LayoutPreviewPanel(layoutModel, new LayoutRenderContext(
-                    LayoutRenderContext.Mode.PREVIEW, 96, 297, 210));
-            previewPanel.setSelectionCallback(element -> updatePropertiesPanel(element));
-            // Rebuild preview panel in the center
-            Component center = ((JSplitPane) mainFrame.getContentPane().getComponent(0)).getLeftComponent();
-            if (center instanceof JSplitPane leftSplit) {
-                leftSplit.setRightComponent(new JScrollPane(previewPanel));
-            }
-            previewPanel.repaint();
-            statusLabel.setText("Layout cargado: " + file.getName());
+            installPreviewForActiveModel();
+            statusLabel.setText("Layout cargado: " + file.getName()
+                    + " | Página " + (layoutModel.getCurrentPage() + 1)
+                    + " de " + layoutModel.getPageCount());
         } catch (Exception ex) {
             NotificationManager.error(mainFrame,
                     "Error",
