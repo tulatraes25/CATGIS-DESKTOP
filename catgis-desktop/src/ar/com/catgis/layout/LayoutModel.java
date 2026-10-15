@@ -249,4 +249,15 @@ public class LayoutModel {
         if (currentPage == 0) return elements;
         return pages.get(currentPage);
     }
+
+    /**
+     * Snapshot an arbitrary page without switching the active editor page.
+     * CATMAP persistence must not mutate the active page merely to save it.
+     */
+    public List<LayoutElement> getPageElements(int page) {
+        if (page < 0 || page >= pages.size()) {
+            throw new IndexOutOfBoundsException("CATMAP page index out of range: " + page);
+        }
+        return new ArrayList<>(pages.get(page));
+    }
 }
