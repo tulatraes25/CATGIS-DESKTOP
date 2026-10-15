@@ -92,6 +92,7 @@ public class WcsDialog extends JDialog {
 
         // Footer
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        statusLabel = new JLabel("Conecta a un servidor WCS para comenzar.");
         downloadButton = new JButton("Descargar");
         downloadButton.addActionListener(e -> downloadCoverage());
         cancelButton = new JButton("Cancelar descarga");
@@ -108,7 +109,6 @@ public class WcsDialog extends JDialog {
         footer.add(downloadButton);
         footer.add(cancelButton);
         footer.add(closeButton);
-        statusLabel = new JLabel("Conecta a un servidor WCS para comenzar.");
         footer.add(statusLabel);
         add(footer, BorderLayout.SOUTH);
     }
