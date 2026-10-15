@@ -86,4 +86,22 @@ consistency, not a new GIS feature.
   Merge normal with expected_head_sha; then independently check
   new main event=push CI/Certification and attestation.
 
+## Exact-head failure and correction
+
+Initial PR #103 HEAD `30a36830ff8997f0f7daf4d1932a63e66cbe3822`
+failed the Source Feature Surface Inventory job in Certification
+`38720114262` (job `116372410579`). The Java CI also reported the
+same strict `SupplementalVisibleCommandInventoryCertificationTest`.
+The source was correct but the registered UI command inventory had not
+yet recorded the new `Agregar página`, `Página anterior` and
+`Página siguiente` actions. All three actions are real and wired to
+nonempty callbacks; they cannot simply be hidden from certification.
+
+Updated `docs/quality/SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv` and
+its exact-count regression contract in the same PR, from 201/191/147
+occurrences/rows/unique labels to 204/194/150. No test was skipped,
+suppressed or relaxed; a fresh SHA CI and Certification is mandatory.
+The old run may be cancelled as superseded by source updates; never
+claim its failures were infrastructure flakes.
+
 Until then: `CATMAP_PAGE_EDITOR=NOT_CERTIFIED`.
