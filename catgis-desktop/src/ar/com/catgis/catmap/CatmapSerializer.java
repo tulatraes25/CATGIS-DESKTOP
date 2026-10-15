@@ -595,11 +595,20 @@ public final class CatmapSerializer {
                     String data = part.substring(11);
                     if (!data.isEmpty()) {
                         try {
+                            if (data.length() > ((MAX_EMBEDDED_PNG_BYTES + 2L) / 3L) * 4L) {
+                                throw new IOException("CATMAP base64 image exceeds configured budget.");
+                            }
                             byte[] bytes = Base64.getDecoder().decode(data);
+                            validateEncodedPng(bytes);
                             BufferedImage bi = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
-                            if (bi != null) img.setImage(bi);
-                        } catch (Exception ignored) {
-                            CatgisLogger.warn("CatmapSerializer: no se pudo decodificar IMAGE_DATA", null);
+                            if (bi == null) {
+                                throw new IOException("CATMAP PNG decoder returned no image.");
+                            }
+                            img.setImage(bi);
+                        } catch (Exception failed) {
+                            // Legacy v1 remains tolerant. The v2 page loader
+                            // rejects nonempty but undecodable IMAGE_DATA.
+                            CatgisLogger.warn("CatmapSerializer: no se pudo decodificar IMAGE_DATA", failed);
                         }
                     }
                 }
