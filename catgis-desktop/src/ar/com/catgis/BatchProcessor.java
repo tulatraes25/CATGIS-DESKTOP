@@ -192,11 +192,21 @@ public final class BatchProcessor {
         List<String> errors = new ArrayList<>();
         int success = 0;
         int failed = 0;
-        int total = job.inputFiles().size();
+        // Snapshot and validate the WHOLE plan before invoking a callback.
+        // A late invalid target must not be discovered after earlier writes.
+        List<File> inputs = List.copyOf(job.inputFiles());
+        int total = inputs.size();
+        List<BatchOutputPlan.Entry> plan;
+        try {
+            plan = BatchOutputPlan.build(inputs, job.outputDir());
+        } catch (IOException | SecurityException unsafePlan) {
+            return new BatchResult(0, total,
+                    List.of("Lote rechazado antes de ejecutar: " + unsafePlan.getMessage()));
+        }
 
         for (int i = 0; i < total; i++) {
-            File input = job.inputFiles().get(i);
-            File output = new File(job.outputDir(), input.getName());
+            File input = plan.get(i).input();
+            File output = plan.get(i).output();
 
             try {
                 operation.accept(input, output);
