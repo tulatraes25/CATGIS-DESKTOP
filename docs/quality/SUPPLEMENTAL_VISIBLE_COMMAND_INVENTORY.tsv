@@ -1,8 +1,8 @@
 # CATGIS supplemental visible command inventory
 # Baseline branch: quality/f1-visible-placeholder-reconciliation
-# Occurrences: 201
-# Unique source/kind/label rows: 191
-# Unique labels: 147
+# Occurrences: 204
+# Unique source/kind/label rows: 194
+# Unique labels: 150
 # source	kind	label	count
 CatgisDesktopApp.java	JBUTTON	Cancelar	1
 CatgisDesktopApp.java	JBUTTON	CATSERVER	1
@@ -12,6 +12,7 @@ CatgisDesktopApp.java	JBUTTON	Iniciar edicion	1
 catmap/Main.java	ADDMENUITEM	Abrir layout...	1
 catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	1
 catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	1
+catmap/Main.java	ADDMENUITEM	Agregar página	1
 catmap/Main.java	ADDMENUITEM	Actualizar desde CATGIS	1
 catmap/Main.java	ADDMENUITEM	Ajustar mapa al extent de capas visibles	1
 catmap/Main.java	ADDMENUITEM	Atajos de teclado	1
@@ -44,6 +45,8 @@ catmap/Main.java	ADDMENUITEM	Mapa principal	1
 catmap/Main.java	ADDMENUITEM	Norte	1
 catmap/Main.java	ADDMENUITEM	Nuevo layout	1
 catmap/Main.java	ADDMENUITEM	Pegar	1
+catmap/Main.java	ADDMENUITEM	Página anterior	1
+catmap/Main.java	ADDMENUITEM	Página siguiente	1
 catmap/Main.java	ADDMENUITEM	Rectángulo	1
 catmap/Main.java	ADDMENUITEM	Refrescar mapa	1
 catmap/Main.java	ADDMENUITEM	Rehacer	1
