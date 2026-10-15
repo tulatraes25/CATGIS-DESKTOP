@@ -336,6 +336,10 @@ public final class WcsClient {
             throw new IllegalArgumentException("WCS output file is required.");
         }
         deadline.checkActive();
+        WcsSpatialPreflight.validate(bbox, crs);
+        if (width <= 0 || height <= 0) {
+            throw new IOException("WCS grid dimensions must be positive.");
+        }
         Path requestedDestination = outputFile.toPath().toAbsolutePath().normalize();
         Path requestedParent = requestedDestination.getParent();
         if (requestedParent == null || !Files.isDirectory(requestedParent)) {
@@ -637,7 +641,7 @@ public final class WcsClient {
         return Double.isFinite(actual) && Math.abs(actual - expected) <= tolerance;
     }
 
-    private static double[] parseRequestedBbox(String bbox) throws IOException {
+    static double[] parseRequestedBbox(String bbox) throws IOException {
         String[] parts = bbox.split(",", -1);
         if (parts.length != 4) {
             throw new IOException("WCS BBOX must contain xmin,ymin,xmax,ymax.");
