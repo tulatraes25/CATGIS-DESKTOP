@@ -148,3 +148,33 @@ temp-directory cleanup, disable the test, or hide file locks with GC.
 Remaining risks: the synthetic GeoTiffWriter fixture does not certify
 all third-party TIFF codecs, ultra-large native datasets or physical
 Windows GIS GUI; verify separately under A0.7.
+
+
+## Second Windows failure — file-oriented GeoTiffReader remains locked
+
+The first resource-graph disposal change did **not** solve Windows:
+candidate `a85a57cdf93bc8afbb524471b97e2dade04229ef` passed
+all 4 CI jobs, but Windows Certification `38666579920` job
+`116199903423` failed the **same** `Files.delete(input)`
+test (988 total / 1 failed / 15 expected skips) with explicit
+`FileSystemException: file is being used by another process`.
+
+This falsifies the assumption that coverage.dispose(true) and
+reader.dispose() are enough for the GeoTools TIFF plugin. Independent
+GeoTools public mailing-list reproduction from December 2025 reports
+the same on Windows with GeoTools 33.0/34.1, even after both disposal
+calls; a stream leak in GeoTiffReader was raised. Rather than
+relaxing file deletion assertions, the source was changed so CATGIS
+**owns** a FileInputStream and ImageInputStream for TIFF, constructs
+GeoTiffReader from the owned ImageInputStream rather than a File,
+then closes both streams deterministically in finally after coverage
+and reader cleanup. Non-TIFF raster format reading retains the prior
+format-independent GeoTools route. This approach is a new hypothesis
+and **must be proven** to preserve actual geokeys, CRS, pixels,
+NoData, large raster behavior and Windows immediate deletion. The
+existing tiny real TIFF Preview/Full test will reject loss of CRS.
+No fallback to leaky File reader merely to obtain a green check.
+
+New exact SHA CI/Certification is required; success is unclaimed until
+the Windows job and all other required jobs pass. Investigate any
+GeoTiffReader(ImageInputStream) incompatibility at its cause.
