@@ -35,6 +35,36 @@ class WcsTargetLockContractTest {
     }
 
     @Test
+    void aliasedParentSpellingsShareTheSameKernelLease() throws Exception {
+        Path actual = sandbox.resolve("canonical WCS coverage.tif");
+        Path withDot = sandbox.resolve(".").resolve("canonical WCS coverage.tif");
+        assertEquals(WcsTargetLock.lockPath(actual), WcsTargetLock.lockPath(withDot),
+                "The lock identity must canonicalize a parent's path spelling.");
+        try (WcsTargetLock first = WcsTargetLock.tryAcquire(withDot)) {
+            assertNotNull(first);
+            assertNull(WcsTargetLock.tryAcquire(actual),
+                    "A differently spelled parent must not acquire a second inode.");
+        }
+
+        Path realFolder = Files.createDirectory(sandbox.resolve("real WCS folder"));
+        Path linkFolder = sandbox.resolve("WCS folder alias");
+        try {
+            Files.createSymbolicLink(linkFolder, realFolder.getFileName());
+        } catch (IOException | UnsupportedOperationException | SecurityException unavailable) {
+            return; // Windows symlink privileges vary; the dot regression is mandatory.
+        }
+        Path directTarget = realFolder.resolve("raster.tif");
+        Path aliasedTarget = linkFolder.resolve("raster.tif");
+        assertEquals(WcsTargetLock.lockPath(directTarget),
+                WcsTargetLock.lockPath(aliasedTarget),
+                "A symlinked parent must not produce a different lease inode.");
+        try (WcsTargetLock held = WcsTargetLock.tryAcquire(directTarget)) {
+            assertNotNull(held);
+            assertNull(WcsTargetLock.tryAcquire(aliasedTarget));
+        }
+    }
+
+    @Test
     void sameTargetIsExclusiveAndLeaseSurvivesNormalReopen() throws Exception {
         Path target = target();
         Path control = WcsTargetLock.lockPath(target);
