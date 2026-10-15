@@ -393,7 +393,7 @@ public final class WcsClient {
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         WcsTransferDeadline.Guard watchdog = null;
         try {
-            watchdog = deadline.watch(connection);
+            watchdog = deadline.watch(connection::disconnect);
             connection.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
             connection.setRequestProperty("Accept", "image/tiff,application/octet-stream,*/*");
             connection.setConnectTimeout(deadline.socketTimeoutMillis(10000));
