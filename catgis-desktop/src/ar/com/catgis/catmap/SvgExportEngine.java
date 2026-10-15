@@ -113,6 +113,33 @@ public final class SvgExportEngine {
                             .equals(root.getAttribute("viewBox"))) {
                 throw new IOException("CATMAP SVG tiene dimensiones o raiz inesperadas.");
             }
+            // A generated raster wrapper has exactly one background rectangle
+            // and one embedded image. Scripts, foreign tags and external
+            // drawable content are not part of this contract.
+            NodeList children = root.getChildNodes();
+            int backgroundCount = 0;
+            int imageCount = 0;
+            int elementCount = 0;
+            for (int i = 0; i < children.getLength(); i++) {
+                org.w3c.dom.Node child = children.item(i);
+                if (child.getNodeType() != org.w3c.dom.Node.ELEMENT_NODE) {
+                    continue;
+                }
+                elementCount++;
+                if (!SVG_NAMESPACE.equals(child.getNamespaceURI())) {
+                    throw new IOException("CATMAP SVG incluye elementos XML externos.");
+                }
+                if ("rect".equals(child.getLocalName())) {
+                    backgroundCount++;
+                } else if ("image".equals(child.getLocalName())) {
+                    imageCount++;
+                } else {
+                    throw new IOException("CATMAP SVG incluye elementos no admitidos.");
+                }
+            }
+            if (elementCount != 2 || backgroundCount != 1 || imageCount != 1) {
+                throw new IOException("CATMAP SVG tiene estructura inesperada.");
+            }
             NodeList images = document.getElementsByTagNameNS(SVG_NAMESPACE, "image");
             if (images.getLength() != 1) {
                 throw new IOException("CATMAP SVG debe incluir exactamente un raster PNG.");
