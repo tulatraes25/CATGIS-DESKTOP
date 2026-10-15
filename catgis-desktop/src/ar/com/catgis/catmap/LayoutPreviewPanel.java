@@ -23,6 +23,7 @@ public class LayoutPreviewPanel extends JPanel {
     private int dragStartX, dragStartY;
     private double dragStartElemX, dragStartElemY;
     private boolean isDragging = false;
+    private boolean dragHistoryCaptured = false;
 
     // Callback for selection changes
     private java.util.function.Consumer<LayoutElement> selectionCallback;
@@ -46,6 +47,7 @@ public class LayoutPreviewPanel extends JPanel {
                     dragStartElemX = hit.getBoundsMm().x;
                     dragStartElemY = hit.getBoundsMm().y;
                     isDragging = true;
+                    dragHistoryCaptured = false;
                     if (selectionCallback != null) selectionCallback.accept(hit);
                 } else {
                     selectedElement = null;
@@ -57,6 +59,7 @@ public class LayoutPreviewPanel extends JPanel {
             @Override
             public void mouseReleased(MouseEvent e) {
                 isDragging = false;
+                dragHistoryCaptured = false;
             }
         });
 
@@ -64,6 +67,10 @@ public class LayoutPreviewPanel extends JPanel {
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (isDragging && selectedElement != null) {
+                    if (!dragHistoryCaptured) {
+                        model.saveSnapshot();
+                        dragHistoryCaptured = true;
+                    }
                     double dxMm = (e.getX() - dragStartX) / (renderContext.getDpi() / 25.4 * zoom);
                     double dyMm = (e.getY() - dragStartY) / (renderContext.getDpi() / 25.4 * zoom);
                     selectedElement.setBoundsMm(
@@ -82,6 +89,23 @@ public class LayoutPreviewPanel extends JPanel {
             double factor = e.getWheelRotation() < 0 ? 1.1 : 1.0 / 1.1;
             setZoom(zoom * factor);
         });
+    }
+
+    /**
+     * Reset transient hit-test and drag state when navigating between pages,
+     * replacing a model or undoing edits. Never keep editing an element
+     * from a previously active page after a navigation event.
+     */
+    public void clearPageSelection() {
+        selectedElement = null;
+        isDragging = false;
+        dragHistoryCaptured = false;
+        model.clearSelection();
+        if (selectionCallback != null) {
+            selectionCallback.accept(null);
+        }
+        invalidateRender();
+        repaint();
     }
 
     private LayoutElement findElementAt(int px, int py) {
