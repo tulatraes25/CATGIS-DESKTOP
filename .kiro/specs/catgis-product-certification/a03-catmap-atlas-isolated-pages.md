@@ -46,6 +46,10 @@ staging or a guard against silent overwrites.
    streamed genuine decodable PNG with names/spaces; existing output
    unchanged; atomic publication failure injection leaves no .part;
    traversal name fails without creating directories.
+7. CATMAP Standalone's atlas dialog previously offered `PNG` and `PDF`
+   but unconditionally called `AtlasEngine.generateAndSave(...)` producing
+   PNG. Remove the deceptive PDF atlas choice, showing truthful PNG-only
+   output until actual PDF batch export is implemented and certified.
 
 ## Out of scope / residuals
 
@@ -59,7 +63,7 @@ staging or a guard against silent overwrites.
   race; no per-directory cross-process lock or physical crash test.
   Batch is per-page atomic, **not all pages as one transaction**;
   completed earlier pages remain if a later page fails.
-- Actual CATMAP Standalone GUI usability, atlas workflow wiring,
+- Actual CATMAP Standalone GUI usability and native atlas workflow execution,
   signed .app launch, print/PDF export and scientific map extent
   accuracy beyond the tiny tests are not physically verified.
   Read-through raster/vector data and NoData require end-to-end runs.
