@@ -251,7 +251,8 @@ public final class WcsClient {
                                                int width, int height,
                                                String format, File outputFile) throws Exception {
         downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
-                width, height, format, outputFile, configuredWcsByteLimit());
+                width, height, format, outputFile, configuredWcsByteLimit(),
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured());
     }
 
     @FunctionalInterface
@@ -298,7 +299,18 @@ public final class WcsClient {
                                        String bbox, String crs, int width, int height,
                                        String format, File outputFile, long maxReceivedBytes) throws Exception {
         downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
-                width, height, format, outputFile, maxReceivedBytes, WcsClient::moveCoverageAtomically);
+                width, height, format, outputFile, maxReceivedBytes,
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured());
+    }
+
+    /** Test seam: small total deadline without mutating global system properties. */
+    static void downloadCoverageToFile(String serviceUrl, String coverageName,
+                                       String bbox, String crs, int width, int height,
+                                       String format, File outputFile, long maxReceivedBytes,
+                                       long maxMillis) throws Exception {
+        downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
+                width, height, format, outputFile, maxReceivedBytes,
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.forTesting(maxMillis));
     }
 
     /** Test seam to simulate a filesystem refusing atomic replacement. */
@@ -306,12 +318,24 @@ public final class WcsClient {
                                        String bbox, String crs, int width, int height,
                                        String format, File outputFile, long maxReceivedBytes,
                                        AtomicCoverageMove mover) throws Exception {
+        downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
+                width, height, format, outputFile, maxReceivedBytes,
+                mover, WcsTransferDeadline.configured());
+    }
+
+    /** One absolute deadline shared by WCS 2.x, 1.x, validation and publish. */
+    private static void downloadCoverageToFile(String serviceUrl, String coverageName,
+                                               String bbox, String crs, int width, int height,
+                                               String format, File outputFile, long maxReceivedBytes,
+                                               AtomicCoverageMove mover,
+                                               WcsTransferDeadline deadline) throws Exception {
         if (maxReceivedBytes <= 0L || maxReceivedBytes > MAX_WCS_BYTE_LIMIT) {
             throw new IOException("WCS download byte budget is outside the supported range.");
         }
         if (outputFile == null) {
             throw new IllegalArgumentException("WCS output file is required.");
         }
+        deadline.checkActive();
         Path requestedDestination = outputFile.toPath().toAbsolutePath().normalize();
         Path requestedParent = requestedDestination.getParent();
         if (requestedParent == null || !Files.isDirectory(requestedParent)) {
@@ -326,6 +350,7 @@ public final class WcsClient {
                 throw new IOException("Another CATGIS WCS download is already publishing this destination.");
             }
             validateWcsOutputTarget(destination);
+            deadline.checkActive();
 
             // A failed WCS v2 attempt cannot reset the byte allowance for v1.
             long[] remainingBytes = {maxReceivedBytes};
@@ -333,17 +358,23 @@ public final class WcsClient {
             try {
                 try {
                     streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                            width, height, format, WcsVersion.V2_0_1, staging, remainingBytes);
+                            width, height, format, WcsVersion.V2_0_1, staging,
+                            remainingBytes, deadline);
                 } catch (Exception v2Failure) {
+                    // A time deadline or user interrupt must never trigger v1 fallback.
+                    deadline.checkActive();
                     try {
                         streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                                width, height, format, WcsVersion.V1_0_0, staging, remainingBytes);
+                                width, height, format, WcsVersion.V1_0_0, staging,
+                                remainingBytes, deadline);
                     } catch (Exception v1Failure) {
+                        deadline.checkActive();
                         v1Failure.addSuppressed(v2Failure);
                         throw v1Failure;
                     }
                 }
 
+                deadline.checkActive();
                 publishStagedCoverage(staging, destination, mover);
             } finally {
                 Files.deleteIfExists(staging);
@@ -354,17 +385,22 @@ public final class WcsClient {
     private static void streamCoverageVersion(String serviceUrl, String coverageName,
                                               String bbox, String crs,
                                               int width, int height, String format,
-                                              WcsVersion version, Path staging, long[] remainingBytes) throws Exception {
+                                              WcsVersion version, Path staging, long[] remainingBytes,
+                                              WcsTransferDeadline deadline) throws Exception {
+        deadline.checkActive();
         URL url = new URL(buildCoverageRequestUrl(
                 serviceUrl, coverageName, bbox, crs, width, height, format, version));
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        WcsTransferDeadline.Guard watchdog = null;
         try {
+            watchdog = deadline.watch(connection::disconnect);
             connection.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
             connection.setRequestProperty("Accept", "image/tiff,application/octet-stream,*/*");
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(60000);
+            connection.setConnectTimeout(deadline.socketTimeoutMillis(10000));
+            connection.setReadTimeout(deadline.socketTimeoutMillis(60000));
 
             int status = connection.getResponseCode();
+            deadline.checkActive();
             if (status != 200) {
                 throw new IOException("HTTP " + status + " from WCS server.");
             }
@@ -385,7 +421,14 @@ public final class WcsClient {
                          StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
                 byte[] buffer = new byte[65536];
                 int count;
-                while ((count = input.read(buffer)) != -1) {
+                while (true) {
+                    deadline.checkActive();
+                    connection.setReadTimeout(deadline.socketTimeoutMillis(60000));
+                    count = input.read(buffer);
+                    deadline.checkActive();
+                    if (count == -1) {
+                        break;
+                    }
                     if (count > remainingBytes[0]) {
                         throw new IOException("WCS response exceeds the configured download byte budget.");
                     }
@@ -394,6 +437,7 @@ public final class WcsClient {
                     received += count;
                 }
             }
+            deadline.checkActive();
             if (received == 0L || (expected >= 0L && received != expected)) {
                 throw new IOException("WCS raster response is empty or truncated.");
             }
@@ -423,7 +467,11 @@ public final class WcsClient {
                 // otherwise be published as a valid GIS raster.
                 validateStagedGeoMetadata(staging, bbox, crs, effectiveWidth, effectiveHeight);
             }
+            deadline.checkActive();
         } finally {
+            if (watchdog != null) {
+                watchdog.close();
+            }
             connection.disconnect();
         }
     }
