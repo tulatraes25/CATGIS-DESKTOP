@@ -104,4 +104,25 @@ suppressed or relaxed; a fresh SHA CI and Certification is mandatory.
 The old run may be cancelled as superseded by source updates; never
 claim its failures were infrastructure flakes.
 
+## Second independent semantic-certification gate
+
+After registering the three visible commands, the second exact-head
+source candidate failed `Visible Command Inventory` in Certification
+`38720495125` job `116374021036`. The original semantic test
+`SupplementalCommandSemanticCertificationTest` still expected 191
+supplemental commands and 74 ACTION rows; adding valid UI commands
+requires explicit semantic traceability, not just a count update.
+
+The branch now adds one honest `ACTION` semantic mapping each for
+CATMAP page-add, previous and next, matching RUNTIME_PENDING entries
+with SUPPLEMENTAL_COMMAND provenance in
+`SEMANTIC_FEATURE_MATRIX.tsv`. Semantic contract counts are now
+194 rows, 77 ACTIONs, 68 distinct ACTION feature IDs. Existing
+ALIAS_EXISTING, CONTROL, DISPLAY_ONLY, DISABLED_UNSUPPORTED and the
+three deliberately disabled CATMAP sync commands are unchanged.
+
+No source command disabled, no test ignored, no A0.7 runtime status
+promoted. A new exact SHA CI + all mandatory Certification gates must
+start and pass before any merge. Prior SHA failures remain recorded.
+
 Until then: `CATMAP_PAGE_EDITOR=NOT_CERTIFIED`.
