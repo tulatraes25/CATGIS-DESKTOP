@@ -73,8 +73,18 @@ public final class LayoutExportEngine {
      * Export layout to PNG image.
      */
     public static void exportPng(LayoutModel model, File file, int dpi) throws Exception {
+        exportPng(model, file, dpi, CatmapAtomicExport::atomicMove);
+    }
+
+    static void exportPng(LayoutModel model, File file, int dpi,
+                          CatmapAtomicExport.AtomicMover mover) throws Exception {
         BufferedImage image = renderLayout(model, dpi);
-        ImageIO.write(image, "png", file);
+        CatmapAtomicExport.publish(file, staged -> {
+            if (!ImageIO.write(image, "png", staged.toFile())) {
+                throw new java.io.IOException("CATMAP no dispone de codificador PNG.");
+            }
+        }, staged -> CatmapAtomicExport.verifyImage(staged, "png",
+                image.getWidth(), image.getHeight()), mover);
     }
 
     /**
@@ -89,7 +99,12 @@ public final class LayoutExportEngine {
         g.fillRect(0, 0, rgb.getWidth(), rgb.getHeight());
         g.drawImage(image, 0, 0, null);
         g.dispose();
-        ImageIO.write(rgb, "jpg", file);
+        CatmapAtomicExport.publish(file, staged -> {
+            if (!ImageIO.write(rgb, "jpg", staged.toFile())) {
+                throw new java.io.IOException("CATMAP no dispone de codificador JPG.");
+            }
+        }, staged -> CatmapAtomicExport.verifyImage(staged, "jpg",
+                rgb.getWidth(), rgb.getHeight()));
     }
 
     /**
@@ -103,6 +118,17 @@ public final class LayoutExportEngine {
      * Export layout to PDF with metadata.
      */
     public static void exportPdf(LayoutModel model, File file, PdfExportOptions opts) throws Exception {
+        if (opts == null) {
+            throw new IllegalArgumentException("CATMAP requiere opciones PDF validas.");
+        }
+        double widthMm = opts.pageWidthMm > 0 ? opts.pageWidthMm : 297;
+        double heightMm = opts.pageHeightMm > 0 ? opts.pageHeightMm : 210;
+        CatmapAtomicExport.publish(file, staged -> writePdf(model, staged.toFile(), opts),
+                staged -> CatmapAtomicExport.verifyPdf(staged, widthMm, heightMm));
+    }
+
+    private static void writePdf(LayoutModel model, File file, PdfExportOptions opts)
+            throws Exception {
         int dpi = opts.dpi > 0 ? opts.dpi : 300;
         double pageW = opts.pageWidthMm > 0 ? opts.pageWidthMm : 297;
         double pageH = opts.pageHeightMm > 0 ? opts.pageHeightMm : 210;
@@ -431,8 +457,9 @@ public final class LayoutExportEngine {
         double pageWidthMm = 297;
         double pageHeightMm = 210;
 
-        int widthPx = (int) ((pageWidthMm / 25.4) * dpi);
-        int heightPx = (int) ((pageHeightMm / 25.4) * dpi);
+        int[] dimensions = CatmapAtomicExport.rasterSize(dpi, pageWidthMm, pageHeightMm);
+        int widthPx = dimensions[0];
+        int heightPx = dimensions[1];
 
         LayoutRenderContext ctx = new LayoutRenderContext(
                 LayoutRenderContext.Mode.EXPORT_IMAGE, dpi, pageWidthMm, pageHeightMm);
