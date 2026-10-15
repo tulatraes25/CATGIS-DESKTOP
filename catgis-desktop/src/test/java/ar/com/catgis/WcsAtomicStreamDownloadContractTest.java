@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -665,6 +666,72 @@ class WcsAtomicStreamDownloadContractTest {
                 16, 16, null, destination.toFile(), valid.length + invalid.length - 1L));
         assertEquals(2, requests.get());
         assertArrayEquals(original, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void unsupportedAtomicReplacementPreservesPreviousCoverageAndCleansStaging() throws Exception {
+        byte[] complete = realGeoTiff(16, 16);
+        byte[] old = realGeoTiff(8, 8);
+        openServer();
+        server.createContext("/wcs", exchange -> respond(exchange, 200, "image/tiff", complete));
+        server.start();
+
+        Path destination = tempDir.resolve("previous important raster.tif");
+        Files.write(destination, old);
+        AtomicInteger attemptedMoves = new AtomicInteger();
+
+        IOException error = assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                origin, "dem", "-70,-46,-69,-45", "EPSG:4326", 16, 16,
+                null, destination.toFile(), complete.length, (staging, target) -> {
+                    attemptedMoves.incrementAndGet();
+                    throw new AtomicMoveNotSupportedException(
+                            staging.toString(), target.toString(), "simulated unsupported filesystem");
+                }));
+
+        assertTrue(error.getMessage().contains("atomic replacement"));
+        assertEquals(1, attemptedMoves.get());
+        assertArrayEquals(old, Files.readAllBytes(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void directoryDestinationIsRejectedBeforeNetworkOrStaging() throws Exception {
+        Path destination = Files.createDirectory(tempDir.resolve("not-a-raster.tif"));
+        IOException error = assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                "http://127.0.0.1:1/wcs", "dem", "-70,-46,-69,-45",
+                "EPSG:4326", 16, 16, destination.toFile()));
+        assertTrue(error.getMessage().contains("not a regular file"));
+        assertTrue(Files.isDirectory(destination));
+        assertNoStagingFile();
+    }
+
+    @Test
+    void symbolicLinkDestinationCannotOverwriteItsReferencedRaster() throws Exception {
+        Path victim = tempDir.resolve("preserve-link-target.tif");
+        byte[] old = realGeoTiff(8, 8);
+        Files.write(victim, old);
+        Path link = tempDir.resolve("linked-output.tif");
+        boolean symlinkSupported = true;
+        try {
+            Files.createSymbolicLink(link, victim.getFileName());
+        } catch (IOException | UnsupportedOperationException | SecurityException unavailable) {
+            // On hardened Windows runners that cannot create symlinks, still
+            // exercise fail-closed rejection of a nonregular output target.
+            symlinkSupported = false;
+            Files.createDirectory(link);
+        }
+
+        IOException error = assertThrows(IOException.class, () -> WcsClient.downloadCoverageToFile(
+                "http://127.0.0.1:1/wcs", "dem", "-70,-46,-69,-45",
+                "EPSG:4326", 16, 16, link.toFile()));
+        assertTrue(error.getMessage().contains("not a regular file"));
+        assertArrayEquals(old, Files.readAllBytes(victim));
+        if (symlinkSupported) {
+            assertTrue(Files.isSymbolicLink(link));
+        } else {
+            assertTrue(Files.isDirectory(link));
+        }
         assertNoStagingFile();
     }
 

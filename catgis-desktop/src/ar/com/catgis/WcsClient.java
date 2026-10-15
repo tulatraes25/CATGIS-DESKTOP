@@ -6,6 +6,7 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
@@ -253,10 +254,58 @@ public final class WcsClient {
                 width, height, format, outputFile, configuredWcsByteLimit());
     }
 
+    @FunctionalInterface
+    interface AtomicCoverageMove {
+        void move(Path staging, Path destination) throws IOException;
+    }
+
+    /**
+     * Reject unsafe targets both before downloading and immediately before
+     * publication. Replacing a symlink or a directory is never a valid WCS
+     * coverage update; ancestor reparse-point races remain a separate gate.
+     */
+    private static void validateWcsOutputTarget(Path destination) throws IOException {
+        if (Files.isSymbolicLink(destination)
+                || (Files.exists(destination, LinkOption.NOFOLLOW_LINKS)
+                    && !Files.isRegularFile(destination, LinkOption.NOFOLLOW_LINKS))) {
+            throw new IOException("WCS output target is a symbolic link or is not a regular file.");
+        }
+    }
+
+    /**
+     * Atomic rename is the *only* publication mode. Never silently fall back
+     * to a non-atomic replace that may destroy the previous good coverage.
+     * The surrounding download operation deletes its private staging file.
+     */
+    static void publishStagedCoverage(Path staging, Path destination,
+                                      AtomicCoverageMove mover) throws IOException {
+        validateWcsOutputTarget(destination);
+        try {
+            mover.move(staging, destination);
+        } catch (AtomicMoveNotSupportedException unsupported) {
+            throw new IOException("WCS destination filesystem does not support safe atomic replacement; "
+                    + "the previous coverage was preserved.", unsupported);
+        }
+    }
+
+    private static void moveCoverageAtomically(Path staging, Path destination) throws IOException {
+        Files.move(staging, destination, StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING);
+    }
+
     /** Test seam: one wire-byte budget shared across both WCS protocol attempts. */
     static void downloadCoverageToFile(String serviceUrl, String coverageName,
                                        String bbox, String crs, int width, int height,
                                        String format, File outputFile, long maxReceivedBytes) throws Exception {
+        downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
+                width, height, format, outputFile, maxReceivedBytes, WcsClient::moveCoverageAtomically);
+    }
+
+    /** Test seam to simulate a filesystem refusing atomic replacement. */
+    static void downloadCoverageToFile(String serviceUrl, String coverageName,
+                                       String bbox, String crs, int width, int height,
+                                       String format, File outputFile, long maxReceivedBytes,
+                                       AtomicCoverageMove mover) throws Exception {
         if (maxReceivedBytes <= 0L || maxReceivedBytes > MAX_WCS_BYTE_LIMIT) {
             throw new IOException("WCS download byte budget is outside the supported range.");
         }
@@ -268,6 +317,7 @@ public final class WcsClient {
         if (parent == null || !Files.isDirectory(parent)) {
             throw new IOException("WCS output directory does not exist.");
         }
+        validateWcsOutputTarget(destination);
 
         // A failed WCS v2 attempt cannot reset the byte allowance for v1.
         long[] remainingBytes = {maxReceivedBytes};
@@ -286,12 +336,7 @@ public final class WcsClient {
                 }
             }
 
-            try {
-                Files.move(staging, destination, StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING);
-            } catch (AtomicMoveNotSupportedException unsupported) {
-                Files.move(staging, destination, StandardCopyOption.REPLACE_EXISTING);
-            }
+            publishStagedCoverage(staging, destination, mover);
         } finally {
             Files.deleteIfExists(staging);
         }
