@@ -88,8 +88,14 @@ on all four OS targets pass.
 
 ## Explicit residuals before claim of full #91 closure
 
-- Native real tiny GeoTIFF Preview/Full CRS+pixel+NoData integration
-  specifically through the WcsDialog import coordinator is not yet proved.
+- A new headless test now generates a **real tiny GeoTIFF** with CRS,
+  geographic envelope, nonempty pixel grid and a filename containing
+  spaces, then loads Preview and Full using real RasterImageLoader from
+  the background worker. Its run is **NOT_VERIFIED** until exact-head
+  CI; NoData semantics specifically remain untested in this test.
+- The WcsDialog import transaction still needs direct injected
+  failure/rollback verification, separate from the generic callback
+  failure test.
 - A cancel button for the *native raster decode* is not enabled by
   this tranche, because it may ignore interruption; user can close and
   the result will not be registered. Robust worker shutdown and
@@ -104,3 +110,11 @@ Run exact HEAD CI and Certification for the new source revision;
 reconcile main post-PR92 event=push evidence, authenticate predecessor,
 then normal expected-SHA merge + post-main CI/Certification/attestation.
 Until then TRANCHE_A=NOT_CERTIFIED and issue #91/A0.3/A0.7 OPEN.
+
+## First CI root-cause correction
+
+Original source candidate at 2e870e87... failed Java compilation: the
+constructor's Cancel-button ActionListener captured final statusLabel
+before the latter was definitely assigned. The label is now initialized
+before installing that listener (source commit 9e56efad...). No quality
+gates have been relaxed; a new exact HEAD is subject to fresh CI.
