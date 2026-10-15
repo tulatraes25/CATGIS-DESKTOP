@@ -177,6 +177,9 @@ public final class WcsClient {
                                            String bbox, String crs,
                                            int width, int height,
                                            String format) throws Exception {
+        // Invalid explicit coordinates are not a protocol failure and must
+        // never contact either server version. Preserve omitted API defaults.
+        WcsSpatialPreflight.validateApi(bbox, crs);
         // Try WCS 2.0.1 first
         try {
             return downloadCoverageVersion(serviceUrl, coverageName, bbox, crs,
@@ -199,8 +202,8 @@ public final class WcsClient {
                                                   String bbox, String crs,
                                                   int width, int height,
                                                   String format, WcsVersion version) {
-        if (bbox == null || bbox.isBlank()) bbox = "-180,-90,180,90";
-        if (crs == null || crs.isBlank()) crs = "EPSG:4326";
+        bbox = WcsSpatialPreflight.effectiveBbox(bbox);
+        crs = WcsSpatialPreflight.effectiveCrs(crs);
         if (width <= 0) width = 512;
         if (height <= 0) height = 512;
 
@@ -336,10 +339,9 @@ public final class WcsClient {
             throw new IllegalArgumentException("WCS output file is required.");
         }
         deadline.checkActive();
-        WcsSpatialPreflight.validate(bbox, crs);
-        if (width <= 0 || height <= 0) {
-            throw new IOException("WCS grid dimensions must be positive.");
-        }
+        WcsSpatialPreflight.validateApi(bbox, crs);
+        // The API historically defaults nonpositive dimensions to 512; the
+        // interactive form rejects them before invoking this compatibility API.
         Path requestedDestination = outputFile.toPath().toAbsolutePath().normalize();
         Path requestedParent = requestedDestination.getParent();
         if (requestedParent == null || !Files.isDirectory(requestedParent)) {
@@ -597,8 +599,8 @@ public final class WcsClient {
         if (!bboxGiven && !crsGiven) {
             return;
         }
-        double[] bounds = bboxGiven ? parseRequestedBbox(requestedBbox) : null;
-        String effectiveCrs = crsGiven ? requestedCrs.trim() : "EPSG:4326";
+        double[] bounds = bboxGiven ? WcsSpatialPreflight.parseBounds(requestedBbox) : null;
+        String effectiveCrs = WcsSpatialPreflight.effectiveCrs(requestedCrs);
 
         GeoTiffReader reader = null;
         try {
@@ -641,28 +643,6 @@ public final class WcsClient {
         return Double.isFinite(actual) && Math.abs(actual - expected) <= tolerance;
     }
 
-    static double[] parseRequestedBbox(String bbox) throws IOException {
-        String[] parts = bbox.split(",", -1);
-        if (parts.length != 4) {
-            throw new IOException("WCS BBOX must contain xmin,ymin,xmax,ymax.");
-        }
-        double[] out = new double[4];
-        for (int i = 0; i < parts.length; i++) {
-            try {
-                out[i] = Double.parseDouble(parts[i].trim());
-            } catch (NumberFormatException error) {
-                throw new IOException("WCS BBOX has a nonnumeric coordinate.", error);
-            }
-            if (!Double.isFinite(out[i])) {
-                throw new IOException("WCS BBOX has a non-finite coordinate.");
-            }
-        }
-        if (out[2] <= out[0] || out[3] <= out[1]) {
-            throw new IOException("WCS BBOX must have strictly positive width and height.");
-        }
-        return out;
-    }
-
     /**
      * Find the best matching format from a list of server-supported formats.
      */
@@ -701,12 +681,15 @@ public final class WcsClient {
                                                  String bbox, String crs,
                                                  int width, int height, String format) {
         String sep = serviceUrl.contains("?") ? "&" : "?";
-        // WCS 2.0.1 uses subset and scaleSize
+        // WCS 2.0.1 uses subset and scaleSize. DescribeCoverage axis-label
+        // negotiation remains issue #108; URL escaping is independent of it.
         String[] parts = bbox.split(",");
         String subset = "";
         if (parts.length == 4) {
-            subset = "&SUBSET=x(" + parts[0] + "," + parts[2] + ")"
-                    + "&SUBSET=y(" + parts[1] + "," + parts[3] + ")";
+            subset = "&SUBSET=" + URLEncoder.encode(
+                    "x(" + parts[0].trim() + "," + parts[2].trim() + ")", StandardCharsets.UTF_8)
+                    + "&SUBSET=" + URLEncoder.encode(
+                    "y(" + parts[1].trim() + "," + parts[3].trim() + ")", StandardCharsets.UTF_8);
         }
         return serviceUrl + sep
                 + "SERVICE=WCS&VERSION=2.0.1&REQUEST=GetCoverage"

@@ -1,4 +1,4 @@
-# CATGIS product direction and WCS spatial preflight — SPEC/Kiro
+# CATGIS product direction and WCS spatial preflight - SPEC/Kiro
 
 BASE: 6dad84ec927fab6d432fc37f0bd077fa42b00fad
 STATUS: CANDIDATE / NOT_CERTIFIED
@@ -6,32 +6,37 @@ A0.7: OPEN
 
 ## Product principle
 
-CATGIS should make the first successful professional map faster and safer, rather than expose every GIS capability simultaneously. Comparable patterns: QGIS Processing Toolbox and layouts, ArcGIS Pro Tasks, and guided desktop editing. Do not copy code or third-party UX assets.
+Make the first successful professional map faster and safer, rather than expose every GIS capability simultaneously. Simple and Advanced presentation must use the same deterministic GIS engine and project format. Do not copy third-party code or UX assets.
 
 ## Architecture and user-experience backlog (post A0.7)
 
-1. Progressive modes: **Simple** tasks and **Advanced** access over the SAME deterministic GIS services and project format; no second editor or duplicate execution engine.
-2. A first-run workflow: create project, choose a verified CRS, import sample real vectors/rasters, set style, verify, save, print CATMAP.
-3. Safe operation preview: input/output CRS and transformations, area/distance units, NoData, estimates of bytes, runtime and disk footprint; display provenance and reversible output.
-4. Unified background GIS Job API: cancellable, bounded, atomic publish, progress events, resource budgets, no Swing EDT I/O, clear recoverable errors.
-5. Consistent layout/export UX: templates, print preview, authoritative legend/scale bars, DPI and real PDF/SVG capabilities rather than extension marketing.
-6. Contextual search for actions and commands with discoverable keyboard navigation; search results point to certified workflows and unavailable dependencies are explicit.
-7. Reliable native workflows on Windows, Linux, Intel/ARM macOS before polished visual changes; instrument time-to-first-map, error recovery, render FPS and output reproducibility.
+1. Progressive Simple tasks and Advanced access over the SAME services and project format, not a second editor or duplicated execution engine.
+2. First-run workflow: create project, choose a verified CRS, import real vectors/rasters, style, verify, save, print CATMAP.
+3. Safe operation preview: input/output CRS and transforms, units, NoData, bounded byte/disk estimates; provenance and recoverable output. Time estimates require measured evidence.
+4. Unified background GIS Job API: cancellation, bounded resources, atomic publish, progress, no Swing EDT I/O and actionable errors.
+5. Consistent layout/export: templates, print preview, authoritative legend/scale, DPI and truthful PDF/SVG capabilities.
+6. Contextual action search with keyboard navigation and explicit unavailable dependencies.
+7. Native Windows/Linux/Intel/ARM Mac workflows before cosmetic changes; measure time-to-first-map, recovery and output reproducibility.
 
-## Gate A0.3: WCS spatial preflight
+## Source-confirmed regression and root cause
 
-### Root cause
-The form previously validated dimensions but accepted malformed extent/CRS until file selection and network activity. WCS 2.x currently builds SUBSET=x/y and SCALE SIZE=x/y without proof that a server exposes those axis labels. Do not assume EPSG:4326 longitude-first is universally the service native axis order.
+Initial PR #107 head 3a5b7ad04ab63e9950d6059d19bfc2da7fe88182 failed CATGIS CI 38753546480 and Certification 38753546285. It applied a strict interactive-form validator to the public streaming API, breaking documented omitted-BBOX/CRS compatibility. It also rejected the API's existing nonpositive-dimension defaults. This was a source regression, not permission to weaken existing tests or mark them skipped.
 
-### Requirements
-- Validate finite ordered x/y min/max and EPSG:4326 lon/lat ranges in both UI and disk-download API before creating staging or contacting network.
-- Reject blank or malformed CRS; preserve project and prior export bytes.
-- Allow projected CRS coordinate ranges that are not limited to +/-180/90.
-- Deterministic headless success and negative tests.
-- Do NOT silently swap axis order, invent WCS 2 axis names or assert general DescribeCoverage compatibility.
-- Defer true WCS 2.x CoverageDescription axis labels, native/output CRS, subsets and supported format contract to a separate issue and real mocked-service test.
+## Revised contract and minimal architecture
 
-### Verification
-Candidate JUnit class: WcsSpatialPreflightContractTest.
-Required: exact HEAD CI 4/4, Certification 15/15, authenticated main predecessor push and expected-head normal merge, then fresh event=push CI/Certification and independent post-main attestation.
-Physical GIS scientific/GUI and DescribeCoverage remain NOT_VERIFIED. No local workstation changes.
+- Interactive form: require explicit finite ordered BBOX and syntactically valid CRS; reject missing coordinates and nonpositive user-entered dimensions before chooser or network.
+- Compatibility API (file AND byte array): null/blank BBOX/CRS retain the existing world/EPSG:4326 request defaults; nonpositive API dimensions retain 512. Explicit malformed spatial inputs fail before network or destination lease/staging.
+- Preserve the distinction between omitted and explicit geographic expectations. Omitted-both API calls retain existing structural/pixel TIFF validation; they do NOT become scientifically georeferenced just because defaults were used in the request. Explicit inputs still require delivered GeoTIFF CRS/envelope checks.
+- Use one independent pure BBOX parser, shared by preflight and delivered metadata validation. No helper-to-client dependency, Swing, HTTP or CRS database lookup in this validator.
+- Reject NaN, infinity, reversed/zero extents, overflowed derived width/height, oversized coordinate input and Java-only hexadecimal/suffixed literals. Permit ordinary decimal/scientific notation and projected coordinate ranges.
+- Escape WCS 2 SUBSET values so plus signs and whitespace are not reinterpreted by HTTP query decoding. This does NOT fix coverage-specific axis negotiation.
+- Never silently swap axes or claim syntax validation proves that a CRS exists. WCS 2 DescribeCoverage, native/output CRS and axis labels remain issue #108. Product roadmap remains #109.
+
+## Acceptance and evidence
+
+Original WcsAtomicStreamDownloadContractTest, WcsSpatialPreflightContractTest and WcsDimensionsPreflightContractTest remain unchanged.
+New WcsSpatialApiCompatibilityContractTest exercises real loopback HTTP and real generated TIFF pixels: zero requests/no files on invalid input in both APIs, omitted defaults with 2.x/1.x fallback, exact dimensions, old-file preservation, corrupt TIFF refusal, explicit georeference rejection, escaping and released Windows file handles. No external service or binary fixtures in git.
+
+Required: exact-head CI 4/4 and Certification 15/15, authenticated predecessor-main push, expected-head normal merge, fresh post-main push CI/Certification and independent attestation. No disabled/skipped tests added. Local pure-parser smoke on JVM 21 with --release 17 is supplementary only, not the Java 17/full-suite certification.
+
+Physical GUI/native full workflows and A0.7 remain NOT_VERIFIED/OPEN. User workstation untouched.
