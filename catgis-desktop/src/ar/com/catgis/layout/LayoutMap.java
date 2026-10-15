@@ -468,6 +468,46 @@ public class LayoutMap implements LayoutElement {
         return visibleLayers;
     }
 
+    /**
+     * Independent map frame for an atlas page. Copies all operational grid
+     * and frame settings, but intentionally keeps *no* mutable renderer,
+     * viewport or cache reference shared with the user's open project.
+     * The preview image reference is read-only in both render paths.
+     */
+    public LayoutMap copyForAtlas() {
+        Rectangle2D.Double b = boundsMm;
+        LayoutMap copy = new LayoutMap(id, b.x, b.y, b.width, b.height);
+        copy.name = name;
+        copy.zOrder = zOrder;
+        copy.visible = visible;
+        copy.locked = locked;
+        copy.selected = selected;
+        copy.previewImage = previewImage;
+        copy.showGrid = showGrid;
+        copy.gridCols = gridCols;
+        copy.gridRows = gridRows;
+        copy.gridColor = gridColor;
+        copy.gridLineWidth = gridLineWidth;
+        copy.showGridLabels = showGridLabels;
+        copy.gridByDistance = gridByDistance;
+        copy.gridIntervalX = gridIntervalX;
+        copy.gridIntervalY = gridIntervalY;
+        copy.gridUnit = gridUnit;
+        copy.gridOffsetX = gridOffsetX;
+        copy.gridOffsetY = gridOffsetY;
+        copy.targetScaleDenominator = targetScaleDenominator;
+        copy.frameColor = frameColor;
+        copy.frameWidth = frameWidth;
+        copy.frameCornerRadius = frameCornerRadius;
+        copy.ownExtent = ownExtent;
+        copy.ownViewMinX = ownViewMinX;
+        copy.ownViewMinY = ownViewMinY;
+        copy.ownZoomFactor = ownZoomFactor;
+        copy.showIndicator = showIndicator;
+        copy.assignedLayerKeys.addAll(assignedLayerKeys);
+        return copy;
+    }
+
     public void setShowGrid(boolean g) { this.showGrid = g; }
     public boolean isShowGrid() { return showGrid; }
     public int getGridCols() { return gridCols; }
