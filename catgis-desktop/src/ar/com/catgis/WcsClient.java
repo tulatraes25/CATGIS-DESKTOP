@@ -329,7 +329,7 @@ public final class WcsClient {
 
             // A failed WCS v2 attempt cannot reset the byte allowance for v1.
             long[] remainingBytes = {maxReceivedBytes};
-            Path staging = Files.createTempFile(parent, ".catgis-wcs-", ".part");
+            Path staging = Files.createTempFile(destination.getParent(), ".catgis-wcs-", ".part");
             try {
                 try {
                     streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
