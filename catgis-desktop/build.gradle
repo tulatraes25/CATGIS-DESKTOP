@@ -65,6 +65,11 @@ dependencies {
     implementation 'org.apache.poi:poi:5.4.1'
     implementation 'org.apache.poi:poi-ooxml:5.4.1'
 
+    // Real bounded GeoParquet metadata, without Hadoop/Arrow native runtime.
+    implementation 'org.apache.parquet:parquet-format-structures:1.17.1'
+    implementation platform('com.fasterxml.jackson:jackson-bom:2.21.7')
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
     // H3 hexagonal indexing
     implementation 'com.uber:h3:4.1.1'
 
@@ -176,7 +181,7 @@ tasks.named('jar') {
 tasks.named('test') {
     dependsOn 'verifyPortableNativeLibraryPath'
     useJUnitPlatform {
-        excludeTags 'external-postgis', 'native-gdal'
+        excludeTags 'external-postgis', 'native-gdal', 'geoparquet-interop'
     }
     systemProperty 'java.awt.headless', 'true'
     finalizedBy jacocoTestReport
@@ -186,6 +191,21 @@ tasks.named('test') {
         showExceptions = true
         showCauses = true
         showStackTraces = true
+    }
+}
+
+// Additional mandatory CI gate uses genuine independently generated PyArrow files.
+// It adds no Python/native requirement to the installed Java metadata inspector.
+tasks.register('geoparquetInteropTest', Test) {
+    group = 'verification'
+    description = 'Validate actual GeoParquet metadata against independent PyArrow fixtures.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform { includeTags 'geoparquet-interop' }
+    systemProperty 'java.awt.headless', 'true'
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        exceptionFormat = 'full'
     }
 }
 

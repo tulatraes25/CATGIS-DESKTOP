@@ -95,6 +95,15 @@ jobs:
                   required["certification.yml"].update(gate_job_names)
                   print("ATTEST REQUIRED protected-main job:", sorted(gate_job_names))
 
+          # An additional independent-format workflow becomes mandatory only
+          # after its introduction in the protected main, never retroactively.
+          workflow_files = request_json("/contents/.github/workflows?ref=" + sha)
+          if not isinstance(workflow_files, list):
+              raise SystemExit("Cannot inspect exact-main workflow inventory")
+          if any(row.get("name") == "geoparquet-metadata.yml" for row in workflow_files):
+              required["geoparquet-metadata.yml"] = {"GeoParquet Independent Metadata Interop"}
+              print("ATTEST REQUIRED protected-main GeoParquet independent interoperability")
+
           report = [f"## CATGIS main push attestation — exact SHA \u0060{sha}\u0060",
                     "", "| Workflow | Run ID | Attempt | Conclusion |",
                     "|---|---:|---:|---|"]
