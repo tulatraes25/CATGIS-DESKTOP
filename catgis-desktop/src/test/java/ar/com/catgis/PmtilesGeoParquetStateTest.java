@@ -63,7 +63,9 @@ class PmtilesGeoParquetStateTest {
         File parquetFile = tempDir.resolve("test.parquet").toFile();
         byte[] header = new byte[]{'P', 'A', 'R', '1'};
         Files.write(parquetFile.toPath(), header);
-        assertTrue(GeoParquetReader.isGeoParquet(parquetFile));
+        // The former true assertion falsely certified a four-byte non-file.
+        assertFalse(GeoParquetReader.isGeoParquet(parquetFile));
+        assertThrows(IOException.class, () -> GeoParquetReader.readMetadata(parquetFile));
     }
 
     @Test
@@ -75,13 +77,12 @@ class PmtilesGeoParquetStateTest {
 
     @Test
     void geoparquetGetSummaryReturnsString() throws Exception {
-        File parquetFile = tempDir.resolve("test.parquet").toFile();
-        // Write PAR1 magic + enough data to pass size check
-        byte[] data = new byte[1024];
-        data[0] = 'P'; data[1] = 'A'; data[2] = 'R'; data[3] = '1';
-        Files.write(parquetFile.toPath(), data);
+        File parquetFile = GeoParquetTestFixtures.empty(tempDir.resolve("test.parquet")).toFile();
         String summary = GeoParquetReader.getSummary(parquetFile);
         assertNotNull(summary);
         assertTrue(summary.contains("GeoParquet"));
+        assertTrue(summary.contains("Filas declaradas: 0"));
+        assertTrue(summary.contains("No se cargo una capa"));
+        assertFalse(summary.contains("EPSG:4326"));
     }
 }

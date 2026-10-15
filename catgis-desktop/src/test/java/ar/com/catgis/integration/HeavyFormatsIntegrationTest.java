@@ -75,10 +75,15 @@ class HeavyFormatsIntegrationTest {
         ByteBuffer.wrap(bytes, bytes.length - 8, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(16);
         Files.write(parquet.toPath(), bytes);
 
-        assertTrue(GeoParquetReader.isGeoParquet(parquet));
+        // Preserve the old adversarial container, but stop treating zero-filled
+        // fake metadata as valid GeoParquet or evidence for EPSG:4326.
+        assertFalse(GeoParquetReader.isGeoParquet(parquet));
+        assertThrows(java.io.IOException.class, () -> GeoParquetReader.getSummary(parquet));
+        ar.com.catgis.GeoParquetTestFixtures.empty(parquet.toPath());
         String summary = GeoParquetReader.getSummary(parquet);
         assertTrue(summary.contains("GeoParquet"));
-        assertTrue(summary.contains("EPSG:4326"));
+        assertTrue(summary.contains("OGC:CRS84"));
+        assertTrue(summary.contains("Filas declaradas: 0"));
     }
 
     @Test
