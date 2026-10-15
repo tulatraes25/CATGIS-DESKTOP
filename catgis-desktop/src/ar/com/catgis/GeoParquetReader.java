@@ -222,6 +222,13 @@ public final class GeoParquetReader {
                     || physical.getRepetition_type() == FieldRepetitionType.REPEATED) {
                 throw invalid("Columna WKB ausente, anidada o con tipo fisico incorrecto: " + boundedText(entry.getKey(), 128));
             }
+            // M1 supports unannotated binary WKB. Text/decimal/other logical
+            // annotations, including newer Parquet spatial logical types, need
+            // an explicit compatibility contract, never silent reinterpretation.
+            if (physical.isSetConverted_type() || physical.isSetLogicalType()) {
+                throw invalid("Anotacion logica de columna no compatible con esta inspeccion WKB: "
+                        + boundedText(entry.getKey(), 128));
+            }
             geometryColumns.put(entry.getKey(), geometryColumn(entry.getValue()));
         }
         GeometryColumn primary = geometryColumns.get(primaryName);
@@ -283,17 +290,39 @@ public final class GeoParquetReader {
                         || column.getTotal_uncompressed_size() < 0) {
                     throw invalid("Metadatos de columna incoherentes.");
                 }
-                long offset = column.getData_page_offset();
-                if (column.isSetDictionary_page_offset()) {
-                    offset = Math.min(offset, column.getDictionary_page_offset());
-                }
-                if (offset < 4 || offset > footerStart || column.getData_page_offset() > footerStart
-                        || column.getTotal_compressed_size() > footerStart - offset) {
-                    throw invalid("La columna apunta fuera del cuerpo del archivo.");
-                }
+                validateColumnExtent(group, column, footerStart);
             }
         }
         if (rows != footer.getNum_rows()) { throw invalid("El total de filas no coincide con los grupos de filas."); }
+    }
+
+    private static void validateColumnExtent(RowGroup group, ColumnMetaData column,
+                                             long footerStart) throws IOException {
+        long dataOffset = column.getData_page_offset();
+        // Arrow can emit an empty dictionary but no data page for zero rows.
+        // In that case data_page_offset=0 is an ABSENT page, not a byte address.
+        boolean absentDataPage = dataOffset == 0 && group.getNum_rows() == 0 && column.getNum_values() == 0;
+        long start = dataOffset;
+        if (column.isSetDictionary_page_offset()) {
+            long dictionaryOffset = column.getDictionary_page_offset();
+            if (dictionaryOffset < 4 || dictionaryOffset > footerStart
+                    || (!absentDataPage && dictionaryOffset >= dataOffset)) {
+                throw invalid("La pagina de diccionario apunta fuera de su columna.");
+            }
+            start = dictionaryOffset;
+        } else if (absentDataPage) {
+            if (column.getTotal_compressed_size() != 0 || column.getTotal_uncompressed_size() != 0) {
+                throw invalid("La columna declara bytes pero no tiene paginas.");
+            }
+            return;
+        }
+        long bytes = column.getTotal_compressed_size();
+        if (start < 4 || start > footerStart || bytes > footerStart - start
+                || (!absentDataPage && (dataOffset < 4 || dataOffset > footerStart
+                    || (bytes > 0 && dataOffset - start >= bytes)
+                    || (column.getNum_values() > 0 && bytes == 0)))) {
+            throw invalid("La columna apunta fuera del cuerpo del archivo.");
+        }
     }
 
     private static GeometryColumn geometryColumn(JsonNode column) throws IOException {
