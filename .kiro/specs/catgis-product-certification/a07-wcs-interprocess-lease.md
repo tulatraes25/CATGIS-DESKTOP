@@ -21,6 +21,13 @@ JVMs. Issue #87 also tracks separate path-identity/TOCTOU and power-loss risks.
   Lock files are deliberately **never removed**, preventing lock-inode races.
 - Before network/staging, resolve the existing output parent with `toRealPath()`
   so aliases to the same physical parent share one canonical target key.
+  **Mandatory source correction after first CI:** `WcsTargetLock.lockPath()`
+  must independently resolve the parent with `toRealPath()`; otherwise
+  a direct lease caller using `/var` versus the WCS caller's `/private/var`
+  may hash different targets on macOS (and Windows folder aliases similarly).
+  A multi-platform negative test originally exposed this defect: 979 tests,
+  one failed on Windows and both macOS runners despite Linux CI passing.
+  Repair the identity in the lock implementation, not by relaxing assertions.
   Use the normalized output filename within that parent, consistent on
   Windows/default macOS case-insensitive filesystems.
 - Require safe regular lock path with NOFOLLOW_LINKS, enforce marker integrity,
