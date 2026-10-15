@@ -10,7 +10,6 @@ import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -69,7 +68,8 @@ class AtlasEngineSafetyContractTest {
     }
 
     private static int checksum(BufferedImage image) {
-        return Arrays.hashCode(((DataBufferInt) image.getRaster().getDataBuffer()).getData());
+        return Arrays.hashCode(image.getRGB(0, 0, image.getWidth(), image.getHeight(),
+                null, 0, image.getWidth()));
     }
 
     private static void assertOriginal(LayoutModel template) {
@@ -165,13 +165,6 @@ class AtlasEngineSafetyContractTest {
     void atomicPublisherFailureCleansStageAndNeverPublishesFinalPage() throws Exception {
         LayoutModel template = model();
         Path dir = tempDir.resolve("atlas");
-        AtomicMoveNotSupportedException error = assertThrows(
-                AtomicMoveNotSupportedException.class, () -> {
-                    // The public wrapper translates the unsupported atomic move to
-                    // IOException. Verify that explicitly below instead.
-                    throw new AtomicMoveNotSupportedException("unused", "unused", "unused");
-                });
-        assertNotNull(error);
         IOException blocked = assertThrows(IOException.class, () ->
                 AtlasEngine.generateAndSave(template, List.of(PAGE_A),
                         dir.toFile(), "atlas", 72,
