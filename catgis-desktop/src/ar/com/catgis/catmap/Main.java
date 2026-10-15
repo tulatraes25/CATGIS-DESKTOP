@@ -1295,19 +1295,19 @@ public class Main {
 
     private static void exportSvg() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("SVG (*.svg)", "svg"));
+        chooser.setFileFilter(new FileNameExtensionFilter("SVG raster (PNG incrustado, no vectorial) (*.svg)", "svg"));
         if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
             File file = chooser.getSelectedFile();
             if (!file.getName().toLowerCase().endsWith(".svg")) {
                 file = new File(file.getAbsolutePath() + ".svg");
             }
-            statusLabel.setText("Exportando SVG...");
+            statusLabel.setText("Exportando SVG rasterizado...");
             try {
                 SvgExportEngine.exportSvg(layoutModel, file, exportResolution);
-                statusLabel.setText("SVG exportado: " + file.getName());
+                statusLabel.setText("SVG rasterizado exportado: " + file.getName());
                 NotificationManager.info(mainFrame,
                         "Exportar SVG",
-                        "SVG exportado correctamente:\n" + file.getAbsolutePath());
+                        "SVG exportado con PNG incrustado (no es vectorial editable).\nArchivo: " + file.getAbsolutePath());
             } catch (Exception ex) {
                 NotificationManager.error(mainFrame,
                         "Error",
