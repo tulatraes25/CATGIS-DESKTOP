@@ -735,6 +735,41 @@ class WcsAtomicStreamDownloadContractTest {
         assertNoStagingFile();
     }
 
+    @Test
+    void concurrentWcsDownloadOnSameTargetFailsBeforeHttpAndRecoversAfterRelease() throws Exception {
+        byte[] valid = realGeoTiff(16, 16);
+        byte[] existing = realGeoTiff(8, 8);
+        openServer();
+        AtomicInteger requests = new AtomicInteger();
+        server.createContext("/wcs", exchange -> {
+            requests.incrementAndGet();
+            respond(exchange, 200, "image/tiff", valid);
+        });
+        server.start();
+        Path destination = tempDir.resolve("protected WCS output.tif");
+        Files.write(destination, existing);
+
+        try (WcsTargetLock lease = WcsTargetLock.tryAcquire(destination)) {
+            assertTrue(lease != null, "The separate writer must hold the real kernel lease.");
+            IOException blocked = assertThrows(IOException.class, () ->
+                    WcsClient.downloadCoverageToFile(origin, "dem",
+                            "-70,-46,-69,-45", "EPSG:4326",
+                            16, 16, destination.toFile()));
+            assertTrue(blocked.getMessage().contains("already publishing"));
+            assertEquals(0, requests.get(), "Conflict must reject before network and staging.");
+            assertArrayEquals(existing, Files.readAllBytes(destination));
+            assertNoStagingFile();
+        }
+
+        WcsClient.downloadCoverageToFile(origin, "dem",
+                "-70,-46,-69,-45", "EPSG:4326", 16, 16, destination.toFile());
+        assertEquals(1, requests.get());
+        assertArrayEquals(valid, Files.readAllBytes(destination));
+        assertNoStagingFile();
+        assertTrue(Files.isRegularFile(WcsTargetLock.lockPath(destination)),
+                "Permanent lease marker prevents stale inode/unlink races.");
+    }
+
     private byte[] realGeoTiff(int width, int height) throws Exception {
         return realGeoTiff(width, height, -70.0, -69.0, -46.0, -45.0, "EPSG:4326");
     }
