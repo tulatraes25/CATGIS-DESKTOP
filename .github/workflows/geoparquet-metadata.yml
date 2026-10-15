@@ -23,7 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Resolve isolated fixture path on the runner
-        run: echo "CATGIS_GEOPARQUET_FIXTURES=$RUNNER_TEMP/catgis-geoparquet-fixtures" >> "$GITHUB_ENV"
+        run: |
+          echo "CATGIS_GEOPARQUET_FIXTURES=$RUNNER_TEMP/catgis-geoparquet-fixtures" >> "$GITHUB_ENV"
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
@@ -34,7 +35,8 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install test-only Arrow and PROJ wheels without persistent cache
-        run: python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: pyarrow==21.0.0 pyproj==3.7.2
+        run: |
+          python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: pyarrow==21.0.0 pyproj==3.7.2
       - name: Generate and independently reopen actual point and polygon Parquet files
         run: python tools/qa/generate_geoparquet_fixtures.py "$CATGIS_GEOPARQUET_FIXTURES"
       - name: Restore bounded shared Gradle dependency cache
