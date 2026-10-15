@@ -20,6 +20,17 @@ public final class CatmapSerializer {
 
     private CatmapSerializer() {}
 
+    private static final int MAX_PAGES = 200;
+    private static final int MAX_ELEMENTS = 25000;
+    private static final long MAX_LAYOUT_FILE_BYTES = 128L * 1024L * 1024L;
+    private static final int MAX_EMBEDDED_PNG_BYTES = 24 * 1024 * 1024;
+    private static final long MAX_EMBEDDED_IMAGE_PIXELS = 32_000_000L;
+
+    @FunctionalInterface
+    interface EmbeddedImageEncoder {
+        byte[] encode(BufferedImage image) throws IOException;
+    }
+
     @FunctionalInterface
     interface AtomicLayoutPublisher {
         void publish(java.nio.file.Path staging, java.nio.file.Path target) throws IOException;
@@ -57,9 +68,27 @@ public final class CatmapSerializer {
      * a previous good .catmap or blindly deleting a previous backup.
      */
     static void save(LayoutModel model, File file, AtomicLayoutPublisher publisher) throws IOException {
+        save(model, file, publisher, CatmapSerializer::encodeEmbeddedPng);
+    }
+
+    /** Failure injection for embedded-image encoding before target publication. */
+    static void save(LayoutModel model, File file, AtomicLayoutPublisher publisher,
+                     EmbeddedImageEncoder imageEncoder) throws IOException {
         java.util.Objects.requireNonNull(model, "CATMAP layout model");
         java.util.Objects.requireNonNull(file, "CATMAP layout destination");
         java.util.Objects.requireNonNull(publisher, "CATMAP atomic publisher");
+        java.util.Objects.requireNonNull(imageEncoder, "CATMAP embedded PNG encoder");
+        int pageCount = model.getPageCount();
+        if (pageCount < 1 || pageCount > MAX_PAGES) {
+            throw new IOException("CATMAP page count must be between 1 and " + MAX_PAGES);
+        }
+        int count = 0;
+        for (int page = 0; page < pageCount; page++) {
+            count += model.getPageElements(page).size();
+            if (count > MAX_ELEMENTS) {
+                throw new IOException("CATMAP layout has too many elements.");
+            }
+        }
 
         java.nio.file.Path requested = file.toPath().toAbsolutePath().normalize();
         java.nio.file.Path parent = requested.getParent();
@@ -79,15 +108,34 @@ public final class CatmapSerializer {
             try (BufferedWriter w = java.nio.file.Files.newBufferedWriter(staged, StandardCharsets.UTF_8,
                     java.nio.file.StandardOpenOption.TRUNCATE_EXISTING,
                     java.nio.file.StandardOpenOption.WRITE)) {
-                w.write("# CATMAP Layout v1");
+                boolean multipage = pageCount > 1;
+                w.write(multipage ? "# CATMAP Layout v2" : "# CATMAP Layout v1");
                 w.newLine();
                 w.write("PAGE_SIZE=A4");
                 w.newLine();
                 w.write("PAGE_ORIENTATION=LANDSCAPE");
                 w.newLine();
-                for (LayoutElement el : model.getElements()) {
-                    w.write(serializeElement(el));
+                if (multipage) {
+                    w.write("PAGE_COUNT=" + pageCount);
                     w.newLine();
+                    w.write("CURRENT_PAGE=" + model.getCurrentPage());
+                    w.newLine();
+                    for (int page = 0; page < pageCount; page++) {
+                        w.write("PAGE_BEGIN=" + page);
+                        w.newLine();
+                        for (LayoutElement element : model.getPageElements(page)) {
+                            w.write(serializeElement(element, imageEncoder));
+                            w.newLine();
+                        }
+                        w.write("PAGE_END=" + page);
+                        w.newLine();
+                    }
+                } else {
+                    // Remain byte-compatible with existing v1 single-page files.
+                    for (LayoutElement element : model.getElements()) {
+                        w.write(serializeElement(element, imageEncoder));
+                        w.newLine();
+                    }
                 }
                 w.write("# End of layout");
                 w.newLine();
@@ -135,35 +183,149 @@ public final class CatmapSerializer {
      * Load layout from .catmap file.
      */
     public static LayoutModel load(File file) throws IOException {
+        java.util.Objects.requireNonNull(file, "CATMAP layout source");
+        if (java.nio.file.Files.size(file.toPath()) > MAX_LAYOUT_FILE_BYTES) {
+            throw new IOException("CATMAP layout exceeds the maximum supported file size.");
+        }
         LayoutModel model = new LayoutModel();
+        boolean v2 = false;
+        int expectedPages = -1;
+        int selectedPage = 0;
+        int activePage = -1;
+        int completedPages = 0;
+        int elementCount = 0;
 
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(
+                new FileInputStream(file), StandardCharsets.UTF_8))) {
             String line;
             while ((line = r.readLine()) != null) {
                 String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
-                if (trimmed.startsWith("PAGE_")) continue; // Skip page settings for now
-
-                LayoutElement element = parseElement(trimmed);
-                if (element != null) {
-                    model.addElement(element);
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                if ("# CATMAP Layout v2".equals(trimmed)) {
+                    v2 = true;
+                    continue;
+                }
+                if (trimmed.startsWith("#")) {
+                    continue;
+                }
+                if (!v2) {
+                    if (trimmed.startsWith("PAGE_BEGIN=") || trimmed.startsWith("PAGE_END=")
+                            || trimmed.startsWith("PAGE_COUNT=")) {
+                        throw new IOException("CATMAP multi-page document is missing its v2 header.");
+                    }
+                    if (trimmed.startsWith("PAGE_")) {
+                        continue; // Backward-compatible v1 page metadata.
+                    }
+                    LayoutElement element = parseElement(trimmed);
+                    if (element != null) {
+                        model.addElement(element);
+                        if (++elementCount > MAX_ELEMENTS) {
+                            throw new IOException("CATMAP layout exceeds element count limit.");
+                        }
+                    }
+                    continue;
+                }
+                if (trimmed.startsWith("PAGE_COUNT=")) {
+                    if (expectedPages >= 0 || activePage != -1) {
+                        throw new IOException("CATMAP v2 page count repeated or out of order.");
+                    }
+                    expectedPages = parseStrictPageNumber(trimmed.substring(11), MAX_PAGES);
+                    if (expectedPages < 1) {
+                        throw new IOException("CATMAP v2 must contain at least one page.");
+                    }
+                } else if (trimmed.startsWith("CURRENT_PAGE=")) {
+                    if (activePage != -1 || completedPages > 0) {
+                        throw new IOException("CATMAP v2 current page out of order.");
+                    }
+                    selectedPage = parseStrictPageNumber(trimmed.substring(13), MAX_PAGES);
+                } else if (trimmed.startsWith("PAGE_BEGIN=")) {
+                    int page = parseStrictPageNumber(trimmed.substring(11), MAX_PAGES);
+                    if (expectedPages < 1 || activePage != -1 || page != completedPages
+                            || page >= expectedPages) {
+                        throw new IOException("CATMAP v2 page begin sequence is invalid.");
+                    }
+                    if (page > 0) {
+                        model.addPage();
+                    }
+                    model.setCurrentPage(page);
+                    activePage = page;
+                } else if (trimmed.startsWith("PAGE_END=")) {
+                    int page = parseStrictPageNumber(trimmed.substring(9), MAX_PAGES);
+                    if (activePage != page) {
+                        throw new IOException("CATMAP v2 page end does not match page begin.");
+                    }
+                    activePage = -1;
+                    completedPages++;
+                } else if (trimmed.startsWith("PAGE_SIZE=")
+                        || trimmed.startsWith("PAGE_ORIENTATION=")) {
+                    // Legacy fixed A4/landscape metadata. Editable per-page
+                    // dimensions are a separate product/model acceptance gate.
+                    if (activePage != -1) {
+                        throw new IOException("CATMAP v2 page metadata inside element section.");
+                    }
+                } else if (trimmed.startsWith("ELEMENT|")) {
+                    if (activePage < 0) {
+                        throw new IOException("CATMAP v2 element outside a page section.");
+                    }
+                    LayoutElement element = parseElement(trimmed);
+                    if (element == null) {
+                        throw new IOException("CATMAP v2 has an unsupported or corrupt element.");
+                    }
+                    if (element instanceof LayoutImage image
+                            && trimmed.contains("|IMAGE_DATA=")
+                            && !trimmed.endsWith("|IMAGE_DATA=")
+                            && image.getImage() == null) {
+                        throw new IOException("CATMAP v2 contains undecodable embedded image data.");
+                    }
+                    model.getCurrentPageElements().add(element);
+                    if (++elementCount > MAX_ELEMENTS) {
+                        throw new IOException("CATMAP layout exceeds element count limit.");
+                    }
+                } else {
+                    throw new IOException("CATMAP v2 contains unrecognized layout metadata.");
                 }
             }
         }
 
+        if (v2) {
+            if (expectedPages < 1 || activePage != -1 || completedPages != expectedPages
+                    || selectedPage >= expectedPages) {
+                throw new IOException("CATMAP v2 is truncated or has an invalid page count.");
+            }
+            model.setCurrentPage(selectedPage);
+        }
         return model;
     }
 
-    // Public entry for undo/redo in LayoutModel
+    private static int parseStrictPageNumber(String text, int max) throws IOException {
+        try {
+            int value = Integer.parseInt(text.trim());
+            if (value < 0 || value > max) {
+                throw new IOException("CATMAP page number is outside allowed range.");
+            }
+            return value;
+        } catch (NumberFormatException invalid) {
+            throw new IOException("CATMAP page number is malformed.", invalid);
+        }
+    }
+
+    // Public entry for undo/redo in LayoutModel.
     public static String serializeElementRaw(LayoutElement el) {
-        return serializeElement(el);
+        try {
+            return serializeElement(el, CatmapSerializer::encodeEmbeddedPng);
+        } catch (IOException failure) {
+            throw new UncheckedIOException("CATMAP image could not be serialized.", failure);
+        }
     }
 
     public static LayoutElement parseElementRaw(String line) {
         return parseElement(line);
     }
 
-    private static String serializeElement(LayoutElement el) {
+    private static String serializeElement(LayoutElement el, EmbeddedImageEncoder encoder)
+            throws IOException {
         StringBuilder sb = new StringBuilder();
         sb.append("ELEMENT|");
         sb.append(el.getClass().getSimpleName()).append("|");
@@ -211,14 +373,9 @@ public final class CatmapSerializer {
         } else if (el instanceof LayoutImage image) {
             BufferedImage bi = image.getImage();
             if (bi != null) {
-                try {
-                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                    ImageIO.write(bi, "png", baos);
-                    String encoded = Base64.getEncoder().encodeToString(baos.toByteArray());
-                    sb.append("|IMAGE_DATA=").append(encoded);
-                } catch (Exception e) {
-                    sb.append("|IMAGE_DATA=");
-                }
+                byte[] bytes = encoder.encode(bi);
+                validateEncodedPng(bytes);
+                sb.append("|IMAGE_DATA=").append(Base64.getEncoder().encodeToString(bytes));
             } else {
                 sb.append("|IMAGE_DATA=");
             }
@@ -227,6 +384,40 @@ public final class CatmapSerializer {
         }
 
         return sb.toString();
+    }
+
+    private static byte[] encodeEmbeddedPng(BufferedImage image) throws IOException {
+        if (image.getWidth() <= 0 || image.getHeight() <= 0
+                || (long) image.getWidth() * image.getHeight() > MAX_EMBEDDED_IMAGE_PIXELS) {
+            throw new IOException("CATMAP embedded image has unsupported dimensions.");
+        }
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        if (!ImageIO.write(image, "png", output)) {
+            throw new IOException("CATMAP PNG image encoder is unavailable.");
+        }
+        byte[] bytes = output.toByteArray();
+        validateEncodedPng(bytes);
+        return bytes;
+    }
+
+    private static void validateEncodedPng(byte[] bytes) throws IOException {
+        if (bytes == null || bytes.length < 24 || bytes.length > MAX_EMBEDDED_PNG_BYTES) {
+            throw new IOException("CATMAP embedded PNG is missing or exceeds size limits.");
+        }
+        byte[] magic = {(byte) 137, 80, 78, 71, 13, 10, 26, 10};
+        for (int i = 0; i < magic.length; i++) {
+            if (bytes[i] != magic[i]) {
+                throw new IOException("CATMAP embedded image is not PNG.");
+            }
+        }
+        if (bytes[12] != 'I' || bytes[13] != 'H' || bytes[14] != 'D' || bytes[15] != 'R') {
+            throw new IOException("CATMAP embedded image has no PNG header.");
+        }
+        int width = java.nio.ByteBuffer.wrap(bytes, 16, 4).getInt();
+        int height = java.nio.ByteBuffer.wrap(bytes, 20, 4).getInt();
+        if (width <= 0 || height <= 0 || (long) width * height > MAX_EMBEDDED_IMAGE_PIXELS) {
+            throw new IOException("CATMAP embedded PNG dimensions exceed safety limits.");
+        }
     }
 
     private static LayoutElement parseElement(String line) {
@@ -404,11 +595,20 @@ public final class CatmapSerializer {
                     String data = part.substring(11);
                     if (!data.isEmpty()) {
                         try {
+                            if (data.length() > ((MAX_EMBEDDED_PNG_BYTES + 2L) / 3L) * 4L) {
+                                throw new IOException("CATMAP base64 image exceeds configured budget.");
+                            }
                             byte[] bytes = Base64.getDecoder().decode(data);
+                            validateEncodedPng(bytes);
                             BufferedImage bi = ImageIO.read(new java.io.ByteArrayInputStream(bytes));
-                            if (bi != null) img.setImage(bi);
-                        } catch (Exception ignored) {
-                            CatgisLogger.warn("CatmapSerializer: no se pudo decodificar IMAGE_DATA", null);
+                            if (bi == null) {
+                                throw new IOException("CATMAP PNG decoder returned no image.");
+                            }
+                            img.setImage(bi);
+                        } catch (Exception failed) {
+                            // Legacy v1 remains tolerant. The v2 page loader
+                            // rejects nonempty but undecodable IMAGE_DATA.
+                            CatgisLogger.warn("CatmapSerializer: no se pudo decodificar IMAGE_DATA", failed);
                         }
                     }
                 }
