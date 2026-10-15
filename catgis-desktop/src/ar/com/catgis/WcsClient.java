@@ -312,33 +312,42 @@ public final class WcsClient {
         if (outputFile == null) {
             throw new IllegalArgumentException("WCS output file is required.");
         }
-        Path destination = outputFile.toPath().toAbsolutePath();
-        Path parent = destination.getParent();
-        if (parent == null || !Files.isDirectory(parent)) {
+        Path requestedDestination = outputFile.toPath().toAbsolutePath().normalize();
+        Path requestedParent = requestedDestination.getParent();
+        if (requestedParent == null || !Files.isDirectory(requestedParent)) {
             throw new IOException("WCS output directory does not exist.");
         }
-        validateWcsOutputTarget(destination);
+        // Resolve parent aliases (including symlink/junction parent paths) so
+        // two clients targeting one physical output share the same lease key.
+        Path destination = requestedParent.toRealPath()
+                .resolve(requestedDestination.getFileName());
+        try (WcsTargetLock lease = WcsTargetLock.tryAcquire(destination)) {
+            if (lease == null) {
+                throw new IOException("Another CATGIS WCS download is already publishing this destination.");
+            }
+            validateWcsOutputTarget(destination);
 
-        // A failed WCS v2 attempt cannot reset the byte allowance for v1.
-        long[] remainingBytes = {maxReceivedBytes};
-        Path staging = Files.createTempFile(parent, ".catgis-wcs-", ".part");
-        try {
+            // A failed WCS v2 attempt cannot reset the byte allowance for v1.
+            long[] remainingBytes = {maxReceivedBytes};
+            Path staging = Files.createTempFile(parent, ".catgis-wcs-", ".part");
             try {
-                streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                        width, height, format, WcsVersion.V2_0_1, staging, remainingBytes);
-            } catch (Exception v2Failure) {
                 try {
                     streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                            width, height, format, WcsVersion.V1_0_0, staging, remainingBytes);
-                } catch (Exception v1Failure) {
-                    v1Failure.addSuppressed(v2Failure);
-                    throw v1Failure;
+                            width, height, format, WcsVersion.V2_0_1, staging, remainingBytes);
+                } catch (Exception v2Failure) {
+                    try {
+                        streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
+                                width, height, format, WcsVersion.V1_0_0, staging, remainingBytes);
+                    } catch (Exception v1Failure) {
+                        v1Failure.addSuppressed(v2Failure);
+                        throw v1Failure;
+                    }
                 }
-            }
 
-            publishStagedCoverage(staging, destination, mover);
-        } finally {
-            Files.deleteIfExists(staging);
+                publishStagedCoverage(staging, destination, mover);
+            } finally {
+                Files.deleteIfExists(staging);
+            }
         }
     }
 
