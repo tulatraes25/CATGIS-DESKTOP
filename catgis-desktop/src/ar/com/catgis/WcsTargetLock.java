@@ -48,7 +48,15 @@ final class WcsTargetLock implements AutoCloseable {
                 || canonicalTarget.getParent() == null) {
             throw new IOException("Canonical absolute WCS target is required.");
         }
-        String identity = canonicalTarget.toString();
+        // Always canonicalize the existing parent INSIDE the lease layer.
+        // A caller may supply /var vs /private/var on macOS or an aliased
+        // directory on Windows. Hashing the uncanonicalized spelling would
+        // create two lock inodes for the same output, defeating exclusivity.
+        // Do not resolve the final target itself: it may not yet exist or
+        // may be a symlink that publication must reject separately.
+        Path canonicalParent = canonicalTarget.getParent().toRealPath();
+        Path resolvedTarget = canonicalParent.resolve(canonicalTarget.getFileName());
+        String identity = resolvedTarget.toString();
         String platform = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
         if (platform.startsWith("windows") || platform.contains("mac")
                 || platform.contains("darwin")) {
@@ -63,7 +71,7 @@ final class WcsTargetLock implements AutoCloseable {
         } catch (NoSuchAlgorithmException missingSha256) {
             throw new IOException("Required lock identity algorithm unavailable.", missingSha256);
         }
-        return canonicalTarget.getParent().resolve(
+        return canonicalParent.resolve(
                 ".catgis-lock-wcs-" + HexFormat.of().formatHex(digest) + ".lck");
     }
 
