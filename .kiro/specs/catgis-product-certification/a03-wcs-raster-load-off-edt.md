@@ -1,6 +1,6 @@
 # CATGIS SPEC/Kiro — A0.3 WCS raster loading outside Swing EDT
 
-Status: DRAFT / GITHUB-FIRST / NOT_IMPLEMENTED / NOT_CERTIFIED
+Status: TRANCHE_A_CODE_CANDIDATE / GITHUB-FIRST / NOT_CERTIFIED
 Issue: #91
 Protected-main parent: `c748a6eecfefd743df16e501921ec74f104fb500` (PR #92 merged).
 Freeze: no new WCS features, no local GUI tests until A0.7 is satisfied.
@@ -59,9 +59,48 @@ registration and have no compensation on failure.
    merge, then fresh main CI/Certification and independent attestation.
    Never certify merely because an .app package exists.
 
-## Current next step
+## Current implementation tranche A
 
-This SPEC-only draft may serve as evidence PR for the predecessor main.
-Before source changes, authenticate post-PR92 main CI+Certification on
-`c748a6ee...`. Then implement and certify the source in this branch.
-A0.3, A0.7, #86, #87 and #43 remain OPEN.
+Source has now been written **only in PR #93 draft**, not merged. The
+preceding main push CI has succeeded, but predecessor push Certification
+and authenticated attestation must be successful before merge. This
+branch is expressly untrusted until exact-head CI and 15-job Certification
+on all four OS targets pass.
+
+- WcsDialog keeps download network I/O in its existing SwingWorker and
+  asks resolution on EDT after the saved GeoTIFF completes; -1 cancels
+  import without deleting the download.
+- WcsRasterAsyncLoad<LocalRasterData> moves actual raster decoding into
+  doInBackground, then runs the project/layer/map registration callback
+  only from SwingWorker.done() on EDT.
+- While either stage runs, Download is disabled. A Cancel Download button
+  cancels **network transfer only**; full user cancellation of a native
+  raster decode is still a separate UI tranche to avoid promising
+  immediate interruption of uncooperative native libraries.
+- Closing the dialog cancels the worker; an in-flight decode that ignores
+  interrupts may finish later but its returned raster is disposed rather
+  than registered. Callback ownership is enforced using AtomicReference.
+- WCS layer commit uses a compensating rollback if registration throws.
+  Failed import preserves the saved TIFF.
+- Four headless tests cover EDT responsiveness with blocked background
+  decoding, cancellation disposal, simulated publish failure, and
+  closing/invalid chooser selection.
+
+## Explicit residuals before claim of full #91 closure
+
+- Native real tiny GeoTIFF Preview/Full CRS+pixel+NoData integration
+  specifically through the WcsDialog import coordinator is not yet proved.
+- A cancel button for the *native raster decode* is not enabled by
+  this tranche, because it may ignore interruption; user can close and
+  the result will not be registered. Robust worker shutdown and
+  component lifecycle acceptance remain for tranche B.
+- Failure injection into real AppContext project+map commit and verified
+  rollback is not yet executable in a headless harness.
+- UI runtime on actual Windows/Linux/macOS remains unverified.
+
+## Next gate
+
+Run exact HEAD CI and Certification for the new source revision;
+reconcile main post-PR92 event=push evidence, authenticate predecessor,
+then normal expected-SHA merge + post-main CI/Certification/attestation.
+Until then TRANCHE_A=NOT_CERTIFIED and issue #91/A0.3/A0.7 OPEN.
