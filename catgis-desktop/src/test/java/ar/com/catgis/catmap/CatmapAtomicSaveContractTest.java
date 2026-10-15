@@ -48,11 +48,14 @@ class CatmapAtomicSaveContractTest {
         Path output = dir.resolve("mapa final con espacios.catmap");
         CatmapSerializer.save(model("original"), output.toFile());
         byte[] previous = Files.readAllBytes(output);
+        // macOS may alias /var to /private/var. CATMAP resolves the parent
+        // before atomic publication, so the test must use that same identity.
+        Path canonicalOutput = output.getParent().toRealPath().resolve(output.getFileName());
 
         IOException error = assertThrows(IOException.class, () ->
                 CatmapSerializer.save(model("new unfinished version"), output.toFile(),
                         (staged, destination) -> {
-                            if (destination.equals(output)) {
+                            if (destination.equals(canonicalOutput)) {
                                 throw new AtomicMoveNotSupportedException(
                                         staged.toString(), destination.toString(),
                                         "simulated unsupported atomic rename");
@@ -77,11 +80,12 @@ class CatmapAtomicSaveContractTest {
         byte[] current = Files.readAllBytes(output);
         Path backup = dir.resolve("backup-safety.catmap.bak");
         assertArrayEquals(old, Files.readAllBytes(backup));
+        Path canonicalBackup = backup.getParent().toRealPath().resolve(backup.getFileName());
 
         IOException error = assertThrows(IOException.class, () ->
                 CatmapSerializer.save(model("pending"), output.toFile(),
                         (staged, destination) -> {
-                            if (destination.equals(backup)) {
+                            if (destination.equals(canonicalBackup)) {
                                 throw new AtomicMoveNotSupportedException(
                                         staged.toString(), destination.toString(),
                                         "simulated unsupported backup rename");
