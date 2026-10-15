@@ -43,6 +43,32 @@ public class LayoutLabel implements LayoutElement {
         this.boundsMm = new Rectangle2D.Double(xMm, yMm, wMm, hMm);
     }
 
+    /**
+     * Independent label state for CATMAP atlas rendering. Layout overrides
+     * must never change an element still owned by the open editor.
+     */
+    public LayoutLabel copyForAtlas() {
+        Rectangle2D.Double b = boundsMm;
+        LayoutLabel copy = new LayoutLabel(id, text, b.x, b.y, b.width, b.height);
+        copy.name = name;
+        copy.zOrder = zOrder;
+        copy.visible = visible;
+        copy.locked = locked;
+        copy.selected = selected;
+        copy.font = font;
+        copy.color = color;
+        copy.bgColor = bgColor;
+        copy.borderColor = borderColor;
+        copy.borderWidth = borderWidth;
+        copy.paddingPx = paddingPx;
+        copy.dynamicExpression = dynamicExpression;
+        copy.haloColor = haloColor;
+        copy.haloWidth = haloWidth;
+        copy.underlined = underlined;
+        copy.groupId = groupId;
+        return copy;
+    }
+
     public String getText() { return text; }
     public void setText(String text) { this.text = text; }
     public Font getFont() { return font; }
