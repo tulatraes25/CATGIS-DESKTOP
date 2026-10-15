@@ -93,16 +93,36 @@ public final class PolygonCoverageAudit {
                     throw new IllegalArgumentException("La interseccion tiene area no finita.");
                 }
                 if (area > 0) {
-                    checkedOutput(intersection, a.getSRID());
+                    Geometry areaGeometry = overlapArea(intersection, a.getSRID());
                     if (found.size() >= MAX_OVERLAPS) {
                         throw new IllegalArgumentException("Demasiados solapamientos; subdivida el trabajo.");
                     }
-                    found.add(new Overlap(i, j, intersection));
+                    found.add(new Overlap(i, j, areaGeometry));
                 }
             }
         }
         checkActive();
         return List.copyOf(found);
+    }
+
+    /** Keep all area components when JTS also returns boundary-only contacts. */
+    private static Geometry overlapArea(Geometry intersection, int srid) {
+        if (intersection instanceof Polygonal) {
+            return checkedOutput(intersection, srid);
+        }
+        List<Polygon> areas = new ArrayList<>();
+        intersection.apply((GeometryFilter) component -> {
+            checkActive();
+            if (component instanceof Polygon polygon && !polygon.isEmpty()) {
+                areas.add(polygon);
+            }
+        });
+        if (areas.isEmpty()) {
+            throw new IllegalArgumentException("La interseccion declara area pero no contiene poligonos.");
+        }
+        // Do not union/buffer/repair: only separate lower-dimensional contacts
+        // from the already-computed intersection, preserving the actual area.
+        return checkedOutput(intersection.getFactory().buildGeometry(areas), srid);
     }
 
     private static List<Geometry> snapshot(List<? extends Geometry> inputs) {
