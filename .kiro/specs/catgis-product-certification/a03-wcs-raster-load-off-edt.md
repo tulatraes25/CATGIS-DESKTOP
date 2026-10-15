@@ -118,3 +118,33 @@ constructor's Cancel-button ActionListener captured final statusLabel
 before the latter was definitely assigned. The label is now initialized
 before installing that listener (source commit 9e56efad...). No quality
 gates have been relaxed; a new exact HEAD is subject to fresh CI.
+
+
+## Windows native file-lock regression (2026-10-15)
+
+Candidate `99a2a4c24dd64034bce850ac0ae31bfeb1c0ad31` passed Linux CI,
+but Windows Certification job `116197026573` failed **one of 988
+tests**, with 15 optional skips: `WcsRasterAsyncLoadContractTest.actualSmallGeotiffPreviewAndFullDecodeOnWorkerWithoutBlockingEdt`.
+The JUnit XML artifact `11941170845` contains the actual suppressed
+`java.nio.file.FileSystemException`: the input
+`WCS coverage with spaces.tif` was still in use when JUnit attempted
+temp-directory cleanup. This is a genuine Windows file-handle lifetime
+bug/regression, not an infrastructure timeout. macOS/Linux passing does
+not prove that Windows files close correctly.
+
+The prior `RasterImageLoader.loadWithGeoTools` only invoked
+`reader.dispose()`, without disposing its newly read and potentially
+reprojected `GridCoverage2D` image graph. The correction explicitly
+disposes the distinct display/source/original coverages in reverse
+dependency order before the reader (after materializing an independent
+BufferedImage for the map), with logged best-effort exceptions.
+No change to geo data or on-disk source. The test additionally calls
+`Files.delete(inputGeoTiff)` immediately after Preview and Full, and
+must succeed on Windows without GC or retries. The corrected source
+and test require fresh exact-HEAD CI and full all-platform Certification,
+including a successful replacement Windows job. Do **not** relax
+temp-directory cleanup, disable the test, or hide file locks with GC.
+
+Remaining risks: the synthetic GeoTiffWriter fixture does not certify
+all third-party TIFF codecs, ultra-large native datasets or physical
+Windows GIS GUI; verify separately under A0.7.
