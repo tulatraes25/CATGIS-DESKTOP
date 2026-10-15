@@ -11,6 +11,7 @@ import java.awt.image.RenderedImage;
 import java.awt.image.Raster;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,7 @@ import java.security.MessageDigest;
 import java.util.Locale;
 
 import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
 
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -221,13 +223,24 @@ public class RasterImageLoader {
         }
 
         AbstractGridCoverage2DReader reader = null;
+        // TIFF file streams must be under CATGIS ownership. GeoTools 34.x
+        // can retain Windows file locks after reader.dispose() when given a
+        // File directly; a separately owned stream is closed unconditionally.
+        FileInputStream tiffFileStream = null;
+        ImageInputStream tiffImageStream = null;
         GridCoverage2D coverage = null;
         GridCoverage2D sourceAwareCoverage = null;
         GridCoverage2D displayCoverage = null;
         try {
-            reader = (AbstractGridCoverage2DReader) format.getReader(file);
-            if (reader == null && isTiff(file.getName().toLowerCase(Locale.ROOT))) {
-                reader = new GeoTiffReader(file);
+            if (isTiff(file.getName().toLowerCase(Locale.ROOT))) {
+                tiffFileStream = new FileInputStream(file);
+                tiffImageStream = ImageIO.createImageInputStream(tiffFileStream);
+                if (tiffImageStream == null) {
+                    throw new IOException("Unable to open GeoTIFF image input stream.");
+                }
+                reader = new GeoTiffReader(tiffImageStream);
+            } else {
+                reader = (AbstractGridCoverage2DReader) format.getReader(file);
             }
             if (reader == null) {
                 throw new IOException("GeoTools encontro formato pero no pudo crear reader para: " + file.getName()
@@ -280,6 +293,22 @@ public class RasterImageLoader {
                 }
             } catch (RuntimeException failed) {
                 CatgisLogger.warn("RasterImageLoader: reader cleanup failed", failed);
+            }
+            // GeoTools does not own these streams: close both independently
+            // even if GeoTiffReader.dispose() threw or closed one already.
+            try {
+                if (tiffImageStream != null) {
+                    tiffImageStream.close();
+                }
+            } catch (IOException failed) {
+                CatgisLogger.warn("RasterImageLoader: TIFF ImageInputStream cleanup failed", failed);
+            }
+            try {
+                if (tiffFileStream != null) {
+                    tiffFileStream.close();
+                }
+            } catch (IOException failed) {
+                CatgisLogger.warn("RasterImageLoader: TIFF FileInputStream cleanup failed", failed);
             }
         }
     }
