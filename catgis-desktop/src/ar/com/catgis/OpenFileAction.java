@@ -154,16 +154,7 @@ public class OpenFileAction extends AbstractAction {
                     return false;
                 }
             } else if (lowerName.endsWith(".parquet") || lowerName.endsWith(".geoparquet")) {
-                // GeoParquet: read metadata and show info
-                try {
-                    var meta = GeoParquetReader.readMetadata(file);
-                    String info = GeoParquetReader.getSummary(file);
-                    NotificationManager.info(parent, "GeoParquet Info", info);
-                    return false; // GeoParquet requires parquet-hadoop for full support
-                } catch (Exception ex) {
-                    AppErrorSupport.showErrorDialog(parent, "GeoParquet", "No se pudo leer el archivo GeoParquet.", ex);
-                    return false;
-                }
+                return GeoParquetInspection.open(file, parent, showDialogs);
             }
 
             if (data != null) {
