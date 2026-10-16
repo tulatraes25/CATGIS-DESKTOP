@@ -402,13 +402,9 @@ public class ExportVectorLayerAction {
         }
     }
 
-    private static void exportSingleFileSafely(
-            Layer layer,
-            ShapefileData data,
-            File file,
-            String option,
-            String resolvedTargetCode,
-            KmlExportOptions kmlOptions) throws Exception {
+    private static void exportSingleFileSafely(Layer layer, ShapefileData data, File file,
+                                               String option, String resolvedTargetCode,
+                                               KmlExportOptions kmlOptions) throws Exception {
         int expectedFeatures = data != null && data.getFeatures() != null
                 ? data.getFeatures().size()
                 : 0;
@@ -431,54 +427,10 @@ public class ExportVectorLayerAction {
                                 "Formato vectorial de archivo unico no soportado: " + option);
                     }
                 },
-                staging -> validateSingleFileExport(
-                        staging.toFile(), option, expectedFeatures));
+                staging -> VectorSingleFileExportValidator.validate(
+                        staging.toFile(), expectedFeatures));
     }
 
-    private static void validateSingleFileExport(
-            File stagedFile, String option, int expectedFeatures) throws Exception {
-        if (GEOJSON_OPTION.equals(option)) {
-            ShapefileData reloaded = GeoJsonLoader.load(stagedFile);
-            if (reloaded == null || reloaded.getFeatureCount() != expectedFeatures) {
-                throw new java.io.IOException(
-                        "El GeoJSON temporal no conserva la cantidad de entidades.");
-            }
-            return;
-        }
-        if (DXF_OPTION.equals(option)) {
-            if (expectedFeatures == 0) {
-                String text = java.nio.file.Files.readString(
-                        stagedFile.toPath(), StandardCharsets.UTF_8);
-                if (!text.contains("ENTITIES") || !text.contains("EOF")) {
-                    throw new java.io.IOException("El DXF temporal esta incompleto.");
-                }
-                return;
-            }
-            ShapefileData reloaded = DxfLoader.load(stagedFile);
-            if (reloaded == null || reloaded.getFeatureCount() <= 0) {
-                throw new java.io.IOException("El DXF temporal no contiene geometria valida.");
-            }
-            return;
-        }
-        if (KML_OPTION.equals(option) || KMZ_OPTION.equals(option)) {
-            ShapefileData reloaded = KmlLoader.load(stagedFile);
-            if (reloaded == null
-                    || (expectedFeatures > 0 && reloaded.getFeatureCount() <= 0)) {
-                throw new java.io.IOException("El KML/KMZ temporal no contiene geometria valida.");
-            }
-            return;
-        }
-        if (GPX_OPTION.equals(option)) {
-            GpxImportResult reloaded = GpxLoader.load(stagedFile);
-            if (reloaded == null
-                    || (expectedFeatures > 0 && !reloaded.hasAnyData())) {
-                throw new java.io.IOException("El GPX temporal no contiene geometria valida.");
-            }
-            return;
-        }
-        throw new IllegalArgumentException(
-                "No existe validador para el formato vectorial: " + option);
-    }
 
     private static void exportToShapefile(Layer layer, ShapefileData data, File file, String targetCode) throws Exception {
         TransformResult transformResult = transformFeaturesToTarget(layer, data, targetCode, SHAPEFILE_OPTION);
