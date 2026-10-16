@@ -7,12 +7,15 @@ from pathlib import Path
 import platform
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
+from geoparquet_probe_integrity import (
+    assert_source_unchanged, capture_source_state, validate_junit_reports,
+)
 
 
 def main() -> None:
     root = Path(__file__).resolve().parents[2]
     os.chdir(root)
+    source_state = capture_source_state(root)
     architecture = platform.machine().lower()
     expected = os.environ['EXPECTED_PROBE_ARCH']
     allowed = {'x64': {'x86_64', 'amd64'}, 'arm64': {'arm64', 'aarch64'}}
@@ -41,12 +44,8 @@ def main() -> None:
     subprocess.run(launcher + project + ['--offline', 'clean', 'test', 'probeDependencyInventory'],
                    env=env, check=True, timeout=600)
     results = root / 'tools/qa/geoparquet-reader-probe/build/test-results/test'
-    suites = [ET.parse(path).getroot() for path in results.glob('TEST-*.xml')]
-    totals = {key: sum(int(suite.get(key, '0')) for suite in suites)
-              for key in ('tests', 'failures', 'errors', 'skipped')}
+    totals = validate_junit_reports(results)
     print('GEOPARQUET_REAL_ROW_PROBE', totals, flush=True)
-    if totals != {'tests': 17, 'failures': 0, 'errors': 0, 'skipped': 0}:
-        raise RuntimeError('Every independent row and I/O test must execute successfully, without skips.')
     manifest = json.loads((fixtures / 'probe-sha256.json').read_text(encoding='utf-8'))
     if len(manifest) != 19:
         raise RuntimeError('Incomplete independent row fixture manifest.')
@@ -54,7 +53,8 @@ def main() -> None:
         if hashlib.sha256((fixtures / name).read_bytes()).hexdigest() != expected_hash:
             raise RuntimeError('Row reader modified a source fixture: ' + name)
     print('ROW_PROBE_SOURCE_HASHES_UNCHANGED', len(manifest), flush=True)
-    subprocess.run(['git', 'diff', '--exit-code'], check=True, timeout=30)
+    assert_source_unchanged(root, source_state)
+    print('ROW_PROBE_TRACKED_SOURCE_UNCHANGED', source_state.commit, source_state.tree, flush=True)
     inventory = root / 'tools/qa/geoparquet-reader-probe/build/reports/probe-dependencies.tsv'
     if not inventory.is_file():
         raise RuntimeError('Missing isolated dependency measurement.')

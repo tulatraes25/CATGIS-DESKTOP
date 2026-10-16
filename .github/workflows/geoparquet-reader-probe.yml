@@ -1,6 +1,15 @@
 name: CATGIS GeoParquet Row Reader Probe
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/qa/geoparquet-reader-probe/**'
+      - 'tools/qa/*geoparquet*'
+      - 'catgis-desktop/src/ar/com/catgis/GeoParquetReader.java'
+      - '.github/workflows/geoparquet-reader-probe.yml'
+      - '.kiro/specs/catgis-geoparquet-metadata/**'
+      - '.gitattributes'
   pull_request:
     branches: [main]
     paths:
@@ -8,7 +17,8 @@ on:
       - 'tools/qa/*geoparquet*'
       - 'catgis-desktop/src/ar/com/catgis/GeoParquetReader.java'
       - '.github/workflows/geoparquet-reader-probe.yml'
-      - '.kiro/specs/catgis-geoparquet-metadata/ROW_READER_PROBE.md'
+      - '.kiro/specs/catgis-geoparquet-metadata/**'
+      - '.gitattributes'
 
 permissions:
   contents: read
@@ -47,6 +57,10 @@ jobs:
         with:
           python-version: '3.12'
           architecture: ${{ matrix.architecture }}
+      - name: Test source and result evidence guards without extra dependencies
+        run: python -m unittest discover -s tools/qa -p 'test_geoparquet_probe_integrity.py' -v
+      - name: Verify original source checkout before dependency downloads
+        run: python tools/qa/geoparquet_probe_integrity.py
       - name: Install test-only Arrow and PROJ wheels without persistent cache
         run: |
           python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: pyarrow==21.0.0 pyproj==3.7.2
