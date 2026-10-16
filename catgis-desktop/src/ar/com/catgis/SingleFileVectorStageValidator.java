@@ -9,8 +9,8 @@ import java.nio.file.Files;
 import java.util.Locale;
 
 /** Independent reopen validation for staged single-file vector exports. */
-final class VectorSingleFileExportValidator {
-    private VectorSingleFileExportValidator() {}
+final class SingleFileVectorStageValidator {
+    private SingleFileVectorStageValidator() {}
 
     static void validate(File stagedFile, int expectedFeatures) throws Exception {
         if (stagedFile == null) {

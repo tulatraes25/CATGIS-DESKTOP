@@ -427,7 +427,7 @@ public class ExportVectorLayerAction {
                                 "Formato vectorial de archivo unico no soportado: " + option);
                     }
                 },
-                staging -> VectorSingleFileExportValidator.validate(
+                staging -> SingleFileVectorStageValidator.validate(
                         staging.toFile(), expectedFeatures));
     }
 
