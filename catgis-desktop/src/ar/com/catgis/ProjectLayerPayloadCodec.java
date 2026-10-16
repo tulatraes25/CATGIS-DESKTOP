@@ -1,6 +1,7 @@
 package ar.com.catgis;
 
 import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import java.util.HashMap;
 import java.util.Map;

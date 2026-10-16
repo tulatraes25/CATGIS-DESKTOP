@@ -1,6 +1,7 @@
 package ar.com.catgis;
 
 import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.online.OnlineWmsLayer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
