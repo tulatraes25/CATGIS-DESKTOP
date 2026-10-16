@@ -1,3 +1,7 @@
+import java.security.MessageDigest
+import java.util.Locale
+import java.util.jar.JarFile
+
 plugins { id 'java' }
 
 // Isolated research build. NOT included by catgis-desktop/settings.gradle.
@@ -52,15 +56,15 @@ tasks.register('probeDependencyInventory') {
                 .sort { it.moduleVersion.id.toString() }.each { artifact ->
             File jar = artifact.file
             total += jar.length()
-            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            def digest = MessageDigest.getInstance('SHA-256')
             jar.withInputStream { stream ->
                 byte[] block = new byte[65536]
                 for (int count; (count = stream.read(block)) != -1;) { digest.update(block, 0, count) }
             }
             def notices = []
-            new java.util.jar.JarFile(jar).withCloseable { archive ->
+            new JarFile(jar).withCloseable { archive ->
                 archive.entries().each { entry ->
-                    if (entry.name.toUpperCase(java.util.Locale.ROOT).matches('.*(LICENSE|NOTICE)([./_-].*)?')) {
+                    if (entry.name.toUpperCase(Locale.ROOT).matches('.*(LICENSE|NOTICE)([./_-].*)?')) {
                         notices.add(entry.name)
                     }
                 }
