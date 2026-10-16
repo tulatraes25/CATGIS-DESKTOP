@@ -698,9 +698,9 @@ public final class TopographyWorkflowSupport {
         }
 
         if (CadLayerSupport.isCadLayer(sourceLayer)) {
-            String cadSource = CRSDefinitions.normalizeCode(sourceLayer.getSourceCRS());
-            if (!cadSource.isBlank()) {
-                sourceLayer.setSourceCRS(cadSource);
+            String cadSource = sourceLayer.getSourceCRS();
+            if (cadSource != null && !cadSource.isBlank()) {
+                sourceLayer.setSourceCRS(CRSDefinitions.normalizeCode(cadSource));
             }
             return data;
         }

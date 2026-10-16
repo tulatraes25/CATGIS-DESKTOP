@@ -86,6 +86,21 @@ class VectorCrsTransformSupportTest {
     }
 
     @Test
+    void blankCadSourceIsNotInventedAsWgs84() throws Exception {
+        ReleaseTestSupport.initializeAppContext("CAD CRS truth");
+        AppContext.project().setProjectCRS("EPSG:4326");
+
+        ShapefileData data = ReleaseTestSupport.buildPointData(
+                "cad", "EPSG:4326", new Coordinate(1.0, 2.0), "A", 1);
+        Layer layer = ReleaseTestSupport.buildVectorLayer(
+                "cad", Path.of("cad.dxf"), "");
+
+        TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
+
+        assertTrue(layer.getSourceCRS() == null || layer.getSourceCRS().isBlank());
+    }
+
+    @Test
     void invalidSourceFailsBeforeLayerCrsIsRelabeled() throws Exception {
         ReleaseTestSupport.initializeAppContext("CRS strict failure");
         AppContext.project().setProjectCRS("EPSG:4326");

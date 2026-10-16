@@ -73,6 +73,7 @@ final class VectorCrsTransformSupport {
         try {
             String srs = CRS.toSRS(crs, true);
             if (srs != null && !srs.isBlank()) {
+                CRSDefinitions.decode(srs, true);
                 return CRSDefinitions.normalizeCode(srs);
             }
         } catch (Exception ignored) {
@@ -91,6 +92,7 @@ final class VectorCrsTransformSupport {
         try {
             String srs = CRS.toSRS(crs, true);
             if (srs != null && !srs.isBlank()) {
+                CRSDefinitions.decode(srs, true);
                 return CRSDefinitions.normalizeCode(srs);
             }
         } catch (Exception ignored) {
