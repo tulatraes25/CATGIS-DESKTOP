@@ -77,31 +77,48 @@ class SpectralIndexEngineTest {
         assertTrue(val > 190 && val < 215, "NDWI(200,50) should be ~202, got: " + val);
     }
 
+
     @Test
-    void eviFormulaCorrect() {
-        // EVI simplified = 2.5 * (a - b) / (a + 6*b + 1) where a=NIR, b=Red
-        // a=NIR=200, b=Red=50 => 2.5*150/(200+300+1) = 375/501 = 0.749
-        BufferedImage nir = createConstantImage(1, 1, 200);
+    void twoBandEviIsRejectedInsteadOfUsingASimplifiedFormula() {
+        BufferedImage nir = createConstantImage(1, 1, 100);
         BufferedImage red = createConstantImage(1, 1, 50);
-        BufferedImage result = SpectralIndexEngine.computeIndex(nir, red, "EVI");
-        WritableRaster raster = result.getRaster();
-        double val = raster.getSampleDouble(0, 0, 0);
-        // Normalized: (0.749+1)/2*255 = 222
-        assertTrue(val > 215 && val < 230, "EVI(200,50) should be ~222, got: " + val);
+        assertThrows(IllegalArgumentException.class,
+                () -> SpectralIndexEngine.computeIndex(nir, red, "EVI"));
     }
 
     @Test
-    void bsiFormulaCorrect() {
-        // BSI = (a - b) / (a + b) where a=SWIR, b=Red
-        // a=SWIR=200, b=Red=50 => 150/250 = 0.6
-        BufferedImage swir = createConstantImage(1, 1, 200);
-        BufferedImage red = createConstantImage(1, 1, 50);
-        BufferedImage result = SpectralIndexEngine.computeIndex(swir, red, "BSI");
-        WritableRaster raster = result.getRaster();
-        double val = raster.getSampleDouble(0, 0, 0);
-        // Normalized: (0.6+1)/2*255 = 204
-        assertTrue(val > 190 && val < 215, "BSI(200,50) should be ~204, got: " + val);
+    void properThreeBandEviMatchesFormula() {
+        double raw = SpectralIndexEngine.computeRaw3(100, 50, 20, "EVI");
+        assertEquals(125.0 / 251.0, raw, 1e-12);
+        BufferedImage result = SpectralIndexEngine.computeIndex3(
+                createConstantImage(1, 1, 100),
+                createConstantImage(1, 1, 50),
+                createConstantImage(1, 1, 20), "EVI");
+        assertEquals((raw + 1.0) * 0.5 * 255.0,
+                result.getRaster().getSampleDouble(0, 0, 0), 1.0);
     }
+
+    @Test
+    void twoBandBsiIsRejectedInsteadOfUsingASimplifiedFormula() {
+        BufferedImage swir = createConstantImage(1, 1, 100);
+        BufferedImage red = createConstantImage(1, 1, 50);
+        assertThrows(IllegalArgumentException.class,
+                () -> SpectralIndexEngine.computeIndex(swir, red, "BSI"));
+    }
+
+    @Test
+    void properFourBandBsiMatchesFormula() {
+        double raw = SpectralIndexEngine.computeRaw4(100, 50, 60, 20, "BSI");
+        assertEquals(70.0 / 230.0, raw, 1e-12);
+        BufferedImage result = SpectralIndexEngine.computeIndex4(
+                createConstantImage(1, 1, 100),
+                createConstantImage(1, 1, 50),
+                createConstantImage(1, 1, 60),
+                createConstantImage(1, 1, 20), "BSI");
+        assertEquals((raw + 1.0) * 0.5 * 255.0,
+                result.getRaster().getSampleDouble(0, 0, 0), 1.0);
+    }
+
 
     @Test
     void saviFormulaCorrect() {
@@ -181,6 +198,31 @@ class SpectralIndexEngineTest {
         assertNull(SpectralIndexEngine.computeIndex(null, null, "NDVI"));
         assertNull(SpectralIndexEngine.computeIndex(
                 new BufferedImage(5, 5, BufferedImage.TYPE_BYTE_GRAY), null, "NDVI"));
+    }
+
+    @Test
+    void unknownIndexIsRejectedInsteadOfReturningNeutralGray() {
+        BufferedImage a = createConstantImage(1, 1, 10);
+        BufferedImage b = createConstantImage(1, 1, 20);
+        assertThrows(IllegalArgumentException.class,
+                () -> SpectralIndexEngine.computeIndex(a, b, "TYPO"));
+    }
+
+    @Test
+    void eviRequiresEqualDimensions() {
+        assertNull(SpectralIndexEngine.computeIndex3(
+                createConstantImage(1, 1, 100),
+                createConstantImage(2, 1, 50),
+                createConstantImage(1, 1, 20), "EVI"));
+    }
+
+    @Test
+    void bsiRequiresEqualDimensions() {
+        assertNull(SpectralIndexEngine.computeIndex4(
+                createConstantImage(1, 1, 100),
+                createConstantImage(1, 1, 50),
+                createConstantImage(1, 2, 60),
+                createConstantImage(1, 1, 20), "BSI"));
     }
 
     private BufferedImage createConstantImage(int w, int h, int value) {

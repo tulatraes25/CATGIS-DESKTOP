@@ -82,7 +82,7 @@ public class SpectralIndexDialog extends JDialog {
         bandBSpinner = new JSpinner(new SpinnerNumberModel(3, 1, 20, 1));
         form.add(bandBSpinner, gbc);
 
-        add(form, BorderLayout.CENTER);
+        // The form and description share the center; footer remains independently visible.
 
         // Description
         descriptionArea = new JTextArea();
@@ -90,7 +90,12 @@ public class SpectralIndexDialog extends JDialog {
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setBorder(BorderFactory.createTitledBorder("Descripcion y Formula"));
-        add(descriptionArea, BorderLayout.SOUTH);
+        JPanel contentPanel = new JPanel(new BorderLayout(8, 8));
+        contentPanel.add(form, BorderLayout.NORTH);
+        JScrollPane descriptionScroll = new JScrollPane(descriptionArea);
+        descriptionScroll.setBorder(BorderFactory.createEmptyBorder());
+        contentPanel.add(descriptionScroll, BorderLayout.CENTER);
+        add(contentPanel, BorderLayout.CENTER);
 
         // Footer
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -117,12 +122,19 @@ public class SpectralIndexDialog extends JDialog {
         int idx = indexCombo.getSelectedIndex();
         if (idx < 0 || idx >= indices.size()) return;
         SpectralIndexEngine.SpectralIndex si = indices.get(idx);
+        int requiredBands = SpectralIndexEngine.requiredBandCount(si.id());
+        String availability = requiredBands > 2
+                ? "\n\nRequiere " + requiredBands
+                    + " bandas. Este flujo de dos bandas lo bloquea para evitar un resultado incorrecto."
+                : "";
         descriptionArea.setText(si.description()
                 + "\n\nFormula: " + si.formula()
                 + "\n\nBanda A: " + si.bandA()
                 + "\nBanda B: " + si.bandB()
-                + "\n\nRango de valores: " + java.util.Arrays.toString(SpectralIndexEngine.getIndexRange(si.id()))
-                + "\nPaleta: " + SpectralIndexEngine.getColorRampName(si.id()));
+                + "\n\nRango de valores: "
+                + java.util.Arrays.toString(SpectralIndexEngine.getIndexRange(si.id()))
+                + "\nPaleta: " + SpectralIndexEngine.getColorRampName(si.id())
+                + availability);
     }
 
     private void refreshRasterLayers() {
@@ -139,6 +151,17 @@ public class SpectralIndexDialog extends JDialog {
         int idx = indexCombo.getSelectedIndex();
         if (idx < 0 || idx >= indices.size()) {
             NotificationManager.warn(this, null, "Selecciona un indice.");
+            return;
+        }
+        SpectralIndexEngine.SpectralIndex si = indices.get(idx);
+        int requiredBands = SpectralIndexEngine.requiredBandCount(si.id());
+        if (requiredBands > 2) {
+            statusLabel.setText(si.id() + " requiere " + requiredBands + " bandas.");
+            statusLabel.setForeground(Color.RED);
+            NotificationManager.warn(this,
+                    "Bandas adicionales requeridas",
+                    si.name() + " requiere " + requiredBands
+                            + " bandas. CATGIS no calculara una formula simplificada de dos bandas.");
             return;
         }
 
@@ -194,11 +217,10 @@ public class SpectralIndexDialog extends JDialog {
         statusLabel.setForeground(Color.BLUE);
 
         // Extract bands (convert 1-based to 0-based)
-        BufferedImage bandAImage = extractBand(image, bandA - 1);
-        BufferedImage bandBImage = extractBand(image, bandB - 1);
+        BufferedImage bandAImage = RasterBandExtractor.extractZeroBased(image, bandA - 1);
+        BufferedImage bandBImage = RasterBandExtractor.extractZeroBased(image, bandB - 1);
 
-        // Compute index
-        SpectralIndexEngine.SpectralIndex si = indices.get(idx);
+        // Compute index using the exact source samples, without an intermediate 8-bit cast.
         BufferedImage result = SpectralIndexEngine.computeIndex(bandAImage, bandBImage, si.id());
 
         if (result == null) {
@@ -226,22 +248,4 @@ public class SpectralIndexDialog extends JDialog {
                         + "Se agrego como nueva capa: " + resultName);
     }
 
-    private BufferedImage extractBand(BufferedImage source, int bandIndex) {
-        int w = source.getWidth();
-        int h = source.getHeight();
-        BufferedImage band = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-        Raster src = source.getRaster();
-        WritableRaster dst = band.getRaster();
-        double[] pixel = new double[src.getNumBands()];
-        double[] out = new double[1];
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                src.getPixel(x, y, pixel);
-                int idx = Math.min(bandIndex, pixel.length - 1);
-                out[0] = pixel[idx];
-                dst.setPixel(x, y, out);
-            }
-        }
-        return band;
-    }
 }

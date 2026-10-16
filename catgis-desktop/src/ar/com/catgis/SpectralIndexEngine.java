@@ -3,7 +3,6 @@ package ar.com.catgis;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,8 +31,9 @@ public final class SpectralIndexEngine {
                     "NDVI corregido para efecto del suelo. L=0.5 por defecto.",
                     "NIR (Banda 4 o 5)", "Rojo (Banda 3)", "((NIR - Red) / (NIR + Red + 0.5)) * 1.5"),
             new SpectralIndex("EVI", "EVI - Indice de Vegetacion Mejorado",
-                    "NDVI mejorado con correccion atmosferica. Rango: -1 a +1.",
-                    "NIR (Banda 4 o 5)", "Rojo (Banda 3)", "2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)"),
+                    "Indice de vegetacion con correccion atmosferica; requiere NIR, rojo y azul.",
+                    "NIR (Banda 4 o 5)", "Rojo (Banda 3)",
+                    "2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)"),
             new SpectralIndex("NBR", "NBR - Ratio de Quemadura Normalizado",
                     "Detecta areas quemadas y vigor de vegetacion. Rango: -1 a +1.",
                     "NIR (Banda 4 o 5)", "SWIR (Banda 5 o 6)", "(NIR - SWIR) / (NIR + SWIR)"),
@@ -41,169 +41,192 @@ public final class SpectralIndexEngine {
                     "Estima el contenido de humedad de la vegetacion. Rango: -1 a +1.",
                     "NIR (Banda 4 o 5)", "SWIR (Banda 5 o 6)", "(NIR - SWIR) / (NIR + SWIR)"),
             new SpectralIndex("BSI", "BSI - Indice de Suelo Desnudo",
-                    "Detecta areas de suelo expuesto sin vegetacion.",
-                    "SWIR (Banda 5 o 6)", "Rojo (Banda 3)", "((SWIR + Red) - (NIR + Blue)) / ((SWIR + Red) + (NIR + Blue))"),
+                    "Detecta suelo expuesto; requiere SWIR, rojo, NIR y azul.",
+                    "SWIR (Banda 5 o 6)", "Rojo (Banda 3)",
+                    "((SWIR + Red) - (NIR + Blue)) / ((SWIR + Red) + (NIR + Blue))"),
             new SpectralIndex("NDRE", "NDRE - NDVI de Borde Rojo",
                     "Sensible a cambios en clorofila. Util para cultivos en crecimiento.",
                     "Red Edge (Banda 5 o 6)", "Rojo (Banda 3)", "(RE - Red) / (RE + Red)"),
             new SpectralIndex("MSAVI2", "MSAVI2 - SAVI Modificado",
                     "SAVI automatico sin necesidad de parametro L.",
-                    "NIR (Banda 4 o 5)", "Rojo (Banda 3)", "(2 * NIR + 1 - sqrt((2*NIR+1)^2 - 8*(NIR-Red))) / 2"),
+                    "NIR (Banda 4 o 5)", "Rojo (Banda 3)",
+                    "(2 * NIR + 1 - sqrt((2*NIR+1)^2 - 8*(NIR-Red))) / 2"),
             new SpectralIndex("NDGI", "NDGI - Indice de Diferencia Verde",
                     "Detecta cambios en vegetacion y suelo desnudo.",
                     "Verde (Banda 2)", "NIR (Banda 4 o 5)", "(Green - NIR) / (Green + NIR)"),
             new SpectralIndex("TNDVI", "TNDVI - NDVI Transformado",
                     "NDVI transformado para mejorar contraste en areas con poca variacion.",
-                    "NIR (Banda 4 o 5)", "Rojo (Banda 3)", "sqrt(((NIR - Red) / (NIR + Red)) + 0.5)")
+                    "NIR (Banda 4 o 5)", "Rojo (Banda 3)",
+                    "sqrt(((NIR - Red) / (NIR + Red)) + 0.5)")
         );
     }
 
-    /**
-     * Compute a spectral index from two single-band images.
-     */
-    public static BufferedImage computeIndex(BufferedImage bandA, BufferedImage bandB, String indexId) {
+    public static int requiredBandCount(String indexId) {
+        return switch (indexId) {
+            case "EVI" -> 3;
+            case "BSI" -> 4;
+            case "NDVI", "NDGI", "NDWI", "MNDWI", "NBR", "NDMI", "NDRE",
+                    "SAVI", "MSAVI2", "TNDVI" -> 2;
+            default -> throw new IllegalArgumentException("Unknown spectral index: " + indexId);
+        };
+    }
+
+    public static BufferedImage computeIndex(BufferedImage bandA, BufferedImage bandB,
+                                             String indexId) {
         if (bandA == null || bandB == null) return null;
-        int w = bandA.getWidth();
-        int h = bandA.getHeight();
-        if (w != bandB.getWidth() || h != bandB.getHeight()) return null;
+        requireArity(indexId, 2);
+        int width = bandA.getWidth();
+        int height = bandA.getHeight();
+        if (width != bandB.getWidth() || height != bandB.getHeight()) return null;
 
-        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-        Raster ra = bandA.getRaster();
-        Raster rb = bandB.getRaster();
-        WritableRaster out = result.getRaster();
-
-        double[] pixelA = new double[ra.getNumBands()];
-        double[] pixelB = new double[rb.getNumBands()];
-        double[] outPixel = new double[1];
-
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                ra.getPixel(x, y, pixelA);
-                rb.getPixel(x, y, pixelB);
-                double a = pixelA[0];
-                double b = pixelB[0];
-                double value = computePixel(a, b, indexId);
-                outPixel[0] = normalizeToByte(value, indexId);
-                out.setPixel(x, y, outPixel);
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        Raster first = bandA.getRaster();
+        Raster second = bandB.getRaster();
+        WritableRaster output = result.getRaster();
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                double value = computeRaw2(first.getSampleDouble(x, y, 0),
+                        second.getSampleDouble(x, y, 0), indexId);
+                output.setSample(x, y, 0, normalizeToByte(value));
             }
         }
         return result;
     }
 
-    /**
-     * Compute a 3-band spectral index (e.g., proper EVI with NIR, RED, BLUE).
-     */
     public static BufferedImage computeIndex3(BufferedImage bandA, BufferedImage bandB,
                                                BufferedImage bandC, String indexId) {
         if (bandA == null || bandB == null || bandC == null) return null;
-        int w = Math.min(Math.min(bandA.getWidth(), bandB.getWidth()), bandC.getWidth());
-        int h = Math.min(Math.min(bandA.getHeight(), bandB.getHeight()), bandC.getHeight());
-        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-        double[] outPixel = new double[1];
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                double a = bandA.getRaster().getSample(x, y, 0);
-                double b = bandB.getRaster().getSample(x, y, 0);
-                double c = bandC.getRaster().getSample(x, y, 0);
-                double val = computePixel3(a, b, c, indexId);
-                outPixel[0] = normalizeToByte(val, indexId);
-                result.getRaster().setPixel(x, y, outPixel);
+        requireArity(indexId, 3);
+        if (!sameDimensions(bandA, bandB) || !sameDimensions(bandA, bandC)) return null;
+        int width = bandA.getWidth();
+        int height = bandA.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                double value = computeRaw3(
+                        bandA.getRaster().getSampleDouble(x, y, 0),
+                        bandB.getRaster().getSampleDouble(x, y, 0),
+                        bandC.getRaster().getSampleDouble(x, y, 0), indexId);
+                result.getRaster().setSample(x, y, 0, normalizeToByte(value));
             }
         }
         return result;
     }
 
-    /**
-     * Compute NDVI from Red and NIR bands.
-     */
+    public static BufferedImage computeIndex4(BufferedImage bandA, BufferedImage bandB,
+                                               BufferedImage bandC, BufferedImage bandD,
+                                               String indexId) {
+        if (bandA == null || bandB == null || bandC == null || bandD == null) return null;
+        requireArity(indexId, 4);
+        if (!sameDimensions(bandA, bandB) || !sameDimensions(bandA, bandC)
+                || !sameDimensions(bandA, bandD)) return null;
+        int width = bandA.getWidth();
+        int height = bandA.getHeight();
+        BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                double value = computeRaw4(
+                        bandA.getRaster().getSampleDouble(x, y, 0),
+                        bandB.getRaster().getSampleDouble(x, y, 0),
+                        bandC.getRaster().getSampleDouble(x, y, 0),
+                        bandD.getRaster().getSampleDouble(x, y, 0), indexId);
+                result.getRaster().setSample(x, y, 0, normalizeToByte(value));
+            }
+        }
+        return result;
+    }
+
     public static BufferedImage computeNDVI(BufferedImage redBand, BufferedImage nirBand) {
         return computeIndex(nirBand, redBand, "NDVI");
     }
 
-    /**
-     * Compute NDWI from Green and NIR bands.
-     */
     public static BufferedImage computeNDWI(BufferedImage greenBand, BufferedImage nirBand) {
         return computeIndex(greenBand, nirBand, "NDWI");
     }
 
-    private static double computePixel(double a, double b, String indexId) {
+    static double computeRaw2(double a, double b, String indexId) {
+        requireArity(indexId, 2);
         return switch (indexId) {
-            case "NDVI", "NDGI", "NDWI", "MNDWI", "NBR", "NDMI", "NDRE" -> {
-                double denom = a + b;
-                yield denom == 0 ? 0 : (a - b) / denom;
-            }
+            case "NDVI", "NDGI", "NDWI", "MNDWI", "NBR", "NDMI", "NDRE" ->
+                    normalizedDifference(a, b);
             case "SAVI" -> {
-                double denom = a + b + 0.5;
-                yield denom == 0 ? 0 : ((a - b) / denom) * 1.5;
-            }
-            case "EVI" -> {
-                double denom = a + 6 * b + 1;
-                yield denom == 0 ? 0 : Math.min(1, Math.max(-1, 2.5 * (a - b) / denom));
-            }
-            case "BSI" -> {
-                double num = a - b;
-                double denom = a + b;
-                yield denom == 0 ? 0 : Math.min(1, Math.max(-1, num / denom));
+                double denominator = a + b + 0.5;
+                yield denominator == 0.0 ? 0.0 : ((a - b) / denominator) * 1.5;
             }
             case "MSAVI2" -> {
                 double inner = (2 * a + 1) * (2 * a + 1) - 8 * (a - b);
                 yield inner < 0 ? 0 : (2 * a + 1 - Math.sqrt(inner)) / 2;
             }
             case "TNDVI" -> {
-                double inner = (a - b) / (a + b) + 0.5;
+                double denominator = a + b;
+                if (denominator == 0.0) yield 0.0;
+                double inner = (a - b) / denominator + 0.5;
                 yield inner < 0 ? 0 : Math.sqrt(inner);
             }
-            default -> 0;
+            default -> throw new IllegalArgumentException(
+                    "Index is not a two-band formula: " + indexId);
         };
     }
 
-    /**
-     * Compute pixel value for 3-band indices.
-     * @param a band A pixel value
-     * @param b band B pixel value
-     * @param c band C pixel value
-     * @param indexId index identifier
-     */
-    private static double computePixel3(double a, double b, double c, String indexId) {
-        return switch (indexId) {
-            case "EVI3" -> { // 3-band EVI: 2.5 * (NIR - RED) / (NIR + 6*RED - 7.5*BLUE + 1)
-                double denom = a + 6 * b - 7.5 * c + 1;
-                yield denom == 0 ? 0 : Math.min(1, Math.max(-1, 2.5 * (a - b) / denom));
-            }
-            default -> computePixel(a, b, indexId);
-        };
+    static double computeRaw3(double nir, double red, double blue, String indexId) {
+        requireArity(indexId, 3);
+        double denominator = nir + 6 * red - 7.5 * blue + 1;
+        if (denominator == 0.0) return 0.0;
+        return clampUnit(2.5 * (nir - red) / denominator);
     }
 
-    private static double normalizeToByte(double value, String indexId) {
-        // Most indices range from -1 to +1
-        // Normalize to 0-255 for display
-        double normalized = (value + 1.0) / 2.0; // Maps -1..+1 to 0..1
+    static double computeRaw4(double swir, double red, double nir, double blue,
+                              String indexId) {
+        requireArity(indexId, 4);
+        double numerator = (swir + red) - (nir + blue);
+        double denominator = (swir + red) + (nir + blue);
+        return denominator == 0.0 ? 0.0 : clampUnit(numerator / denominator);
+    }
+
+    private static double normalizedDifference(double a, double b) {
+        double denominator = a + b;
+        return denominator == 0.0 ? 0.0 : (a - b) / denominator;
+    }
+
+    private static double clampUnit(double value) {
+        return Math.min(1.0, Math.max(-1.0, value));
+    }
+
+    private static boolean sameDimensions(BufferedImage first, BufferedImage second) {
+        return first.getWidth() == second.getWidth()
+                && first.getHeight() == second.getHeight();
+    }
+
+    private static void requireArity(String indexId, int actualBands) {
+        int required = requiredBandCount(indexId);
+        if (required != actualBands) {
+            throw new IllegalArgumentException("Spectral index " + indexId + " requires "
+                    + required + " bands, not " + actualBands + ".");
+        }
+    }
+
+    private static double normalizeToByte(double value) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException("Spectral index produced a non-finite value.");
+        }
+        double normalized = (value + 1.0) / 2.0;
         return Math.max(0, Math.min(255, normalized * 255));
     }
 
-    /**
-     * Get the display range for an index (min, max for color ramp).
-     */
     public static double[] getIndexRange(String indexId) {
-        return switch (indexId) {
-            case "NDVI", "NDGI", "NDWI", "MNDWI", "NBR", "NDMI", "NDRE", "SAVI", "EVI", "MSAVI2", "TNDVI" ->
-                    new double[]{-1.0, 1.0};
-            case "BSI" -> new double[]{-1.0, 1.0};
-            default -> new double[]{-1.0, 1.0};
-        };
+        requiredBandCount(indexId);
+        return new double[]{-1.0, 1.0};
     }
 
-    /**
-     * Get a descriptive color ramp name for an index.
-     */
     public static String getColorRampName(String indexId) {
+        requiredBandCount(indexId);
         return switch (indexId) {
-            case "NDVI", "NDGI", "SAVI", "EVI", "MSAVI2", "TNDVI", "NDRE" -> "Vegetacion (rojo-verde)";
+            case "NDVI", "NDGI", "SAVI", "EVI", "MSAVI2", "TNDVI", "NDRE" ->
+                    "Vegetacion (rojo-verde)";
             case "NDWI", "MNDWI" -> "Agua (azul)";
             case "NBR", "NDMI" -> "Quemadura (marron-verde)";
             case "BSI" -> "Suelo (marron)";
-            default -> "Escala de grises";
+            default -> throw new IllegalArgumentException("Unknown spectral index: " + indexId);
         };
     }
 }

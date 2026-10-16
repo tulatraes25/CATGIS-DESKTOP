@@ -173,15 +173,19 @@ public final class BatchProcessor {
      */
     public static void applySpectralIndex(File input, File output, String indexId, int bandA, int bandB) throws Exception {
         java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(input);
-        if (image == null) throw new Exception("No se pudo leer: " + input.getName());
-
-        java.awt.image.BufferedImage bandAImage = extractBand(image, bandA);
-        java.awt.image.BufferedImage bandBImage = extractBand(image, bandB);
-
-        java.awt.image.BufferedImage result = SpectralIndexEngine.computeIndex(bandAImage, bandBImage, indexId);
-        if (result != null) {
-            javax.imageio.ImageIO.write(result, "tif", output);
+        if (image == null) throw new IOException("No se pudo leer: " + input.getName());
+        if (SpectralIndexEngine.requiredBandCount(indexId) != 2) {
+            throw new IllegalArgumentException("El indice " + indexId
+                    + " requiere mas de dos bandas y no puede ejecutarse por esta ruta.");
         }
+
+        // Batch/UI band numbers are human-facing and one-based (B1..Bn).
+        java.awt.image.BufferedImage bandAImage = RasterBandExtractor.extractOneBased(image, bandA);
+        java.awt.image.BufferedImage bandBImage = RasterBandExtractor.extractOneBased(image, bandB);
+
+        java.awt.image.BufferedImage result = SpectralIndexEngine.computeIndex(
+                bandAImage, bandBImage, indexId);
+        writeTiffOrThrow(result, output);
     }
 
     /**
@@ -208,27 +212,16 @@ public final class BatchProcessor {
         }
 
         java.awt.image.BufferedImage result = RasterReclassifyEngine.reclassify(image, rules, -1, false);
-        if (result != null) {
-            javax.imageio.ImageIO.write(result, "tif", output);
-        }
+        writeTiffOrThrow(result, output);
     }
 
-    private static java.awt.image.BufferedImage extractBand(java.awt.image.BufferedImage composite, int bandIndex) {
-        int w = composite.getWidth();
-        int h = composite.getHeight();
-        java.awt.image.BufferedImage band = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_BYTE_GRAY);
-        java.awt.image.Raster src = composite.getRaster();
-        java.awt.image.WritableRaster dst = band.getRaster();
-        double[] pixel = new double[src.getNumBands()];
-        double[] out = new double[1];
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                src.getPixel(x, y, pixel);
-                int idx = Math.min(bandIndex, pixel.length - 1);
-                out[0] = pixel[idx];
-                dst.setPixel(x, y, out);
-            }
+    private static void writeTiffOrThrow(java.awt.image.BufferedImage image, File output)
+            throws IOException {
+        if (image == null) {
+            throw new IOException("La operacion raster no produjo un resultado.");
         }
-        return band;
+        if (!javax.imageio.ImageIO.write(image, "tif", output)) {
+            throw new IOException("No hay un escritor TIFF disponible para publicar el resultado.");
+        }
     }
 }
