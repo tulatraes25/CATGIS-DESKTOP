@@ -81,7 +81,6 @@ final class ProjectLayerPayloadCodec {
             return;
         }
         Map<String, String> keyed = collectKeyed(parts);
-        int legacyStart = payloadStart + 1; // payloadStart itself is non-raster opacity.
 
         if (layer instanceof OnlineTileLayer tile) {
             if (hasPrefix(keyed, "TILE_")) {
@@ -94,7 +93,7 @@ final class ProjectLayerPayloadCodec {
                 tile.setTermsUrl(value(keyed, "TILE_TERMS"));
                 tile.setRequiresApiKey(parseBoolean(keyed, "TILE_REQUIRES_KEY", tile.isRequiresApiKey()));
             } else {
-                decodeLegacyTile(tile, parts, legacyStart);
+                decodeLegacyTile(tile, parts, rasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof OnlineWmsLayer wms) {
             if (hasPrefix(keyed, "WMS_")) {
@@ -116,7 +115,7 @@ final class ProjectLayerPayloadCodec {
                         parseDouble(keyed, "WMS_MAX_X"),
                         parseDouble(keyed, "WMS_MAX_Y"));
             } else {
-                decodeLegacyWms(wms, parts, legacyStart);
+                decodeLegacyWms(wms, parts, rasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof OnlineWfsLayer wfs) {
             if (hasPrefix(keyed, "WFS_")) {
@@ -128,7 +127,7 @@ final class ProjectLayerPayloadCodec {
                 wfs.setVersion(value(keyed, "WFS_VERSION"));
                 wfs.setReadOnly(parseBoolean(keyed, "WFS_READ_ONLY", wfs.isReadOnly()));
             } else {
-                decodeLegacyWfs(wfs, parts, legacyStart);
+                decodeLegacyWfs(wfs, parts, nonRasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof GeoPackageLayer gpkg) {
             if (hasPrefix(keyed, "GPKG_")) {
@@ -138,7 +137,7 @@ final class ProjectLayerPayloadCodec {
                 gpkg.setGeometryTypeLabel(value(keyed, "GPKG_GEOMETRY"));
                 gpkg.setReadOnly(parseBoolean(keyed, "GPKG_READ_ONLY", gpkg.isReadOnly()));
             } else {
-                decodeLegacyGeoPackage(gpkg, parts, legacyStart);
+                decodeLegacyGeoPackage(gpkg, parts, nonRasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof PostgisLayer postgis) {
             if (hasPrefix(keyed, "POSTGIS_")) {
@@ -152,7 +151,7 @@ final class ProjectLayerPayloadCodec {
                 postgis.setGeometryTypeLabel(value(keyed, "POSTGIS_GEOMETRY"));
                 postgis.setReadOnly(parseBoolean(keyed, "POSTGIS_READ_ONLY", postgis.isReadOnly()));
             } else {
-                decodeLegacyPostgis(postgis, parts, legacyStart);
+                decodeLegacyPostgis(postgis, parts, nonRasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof SpatiaLiteLayer spatialite) {
             if (hasPrefix(keyed, "SPATIALITE_")) {
@@ -161,6 +160,16 @@ final class ProjectLayerPayloadCodec {
                 spatialite.setGeometryTypeLabel(value(keyed, "SPATIALITE_GEOMETRY"));
             }
         }
+    }
+
+    private static int nonRasterLegacyStart(int payloadStart) {
+        return payloadStart + 1;
+    }
+
+    private static int rasterLegacyStart(int payloadStart) {
+        // RasterLayer serialization is:
+        // opacity, grayscale, autoContrast, red, green, blue, rasterMode.
+        return payloadStart + 7;
     }
 
     private static void decodeLegacyTile(OnlineTileLayer tile, String[] parts, int start) {
