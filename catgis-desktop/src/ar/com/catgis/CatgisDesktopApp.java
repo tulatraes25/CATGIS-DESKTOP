@@ -465,13 +465,14 @@ public class CatgisDesktopApp extends JFrame {
     }
 
     private void initializeProjectAtStartup() {
-        if (currentProject == null) {
-            currentProject = new Project(I18n.t("Proyecto actual"));
+        Project project = getProject();
+        if (project == null) {
+            project = new Project(I18n.t("Proyecto actual"));
         }
-        AppContext.get().setProject(currentProject);
-        String currentCode = currentProject.getProjectCRS();
+        setProject(project);
+        String currentCode = project.getProjectCRS();
         if (currentCode == null || currentCode.isBlank()) {
-            currentProject.setProjectCRS("EPSG:4326");
+            project.setProjectCRS("EPSG:4326");
             if (statusBar != null) {
                 statusBar.setMessage(I18n.format(
                         "CRS del proyecto inicial: {0}. Podés cambiarlo desde Proyecto > CRS del proyecto.",
@@ -488,15 +489,16 @@ public class CatgisDesktopApp extends JFrame {
         }
         startupProjectCrsPromptShown = true;
 
-        if (currentProject == null) {
-            currentProject = new Project(I18n.t("Proyecto actual"));
-            AppContext.get().setProject(currentProject);
+        Project project = getProject();
+        if (project == null) {
+            project = new Project(I18n.t("Proyecto actual"));
+            setProject(project);
         }
 
-        String fallbackCode = currentProject.getProjectCRS();
+        String fallbackCode = project.getProjectCRS();
         if (fallbackCode == null || fallbackCode.isBlank()) {
             fallbackCode = "EPSG:4326";
-            currentProject.setProjectCRS(fallbackCode);
+            project.setProjectCRS(fallbackCode);
         }
 
         String chosenCode = CRSSelectorDialog.chooseBlocking(
@@ -505,13 +507,13 @@ public class CatgisDesktopApp extends JFrame {
                 fallbackCode
         );
         if (chosenCode != null && !chosenCode.isBlank()) {
-            currentProject.setProjectCRS(chosenCode);
+            project.setProjectCRS(chosenCode);
         }
 
         if (statusBar != null) {
             statusBar.setMessage(I18n.format(
                     "CRS inicial del proyecto: {0}",
-                    CRSDefinitions.getLabelForCode(currentProject.getProjectCRS())
+                    CRSDefinitions.getLabelForCode(project.getProjectCRS())
             ));
         }
 
@@ -525,32 +527,35 @@ public class CatgisDesktopApp extends JFrame {
 
     public static void updateWindowTitle() {
         JFrame frame = getMainFrame();
-        if (frame == null || currentProject == null) {
+        Project project = getProject();
+        if (frame == null || project == null) {
             return;
         }
 
-        String projectName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");
-        String crs = currentProject.getProjectCRS() != null && !currentProject.getProjectCRS().isBlank()
-                ? currentProject.getProjectCRS()
+        String projectName = project.getName() != null ? project.getName() : I18n.t("Proyecto actual");
+        String crs = project.getProjectCRS() != null && !project.getProjectCRS().isBlank()
+                ? project.getProjectCRS()
                 : "EPSG:4326";
-        String dirtyPrefix = currentProject.isModified() ? "* " : "";
+        String dirtyPrefix = project.isModified() ? "* " : "";
 
-        frame.setTitle(I18n.format("CATGIS \u2014 {0}{1} | {2}", dirtyPrefix, projectName, CRSDefinitions.getLabelForCode(crs)));
+        frame.setTitle(I18n.format("CATGIS \u2014 {0}{1} | {2}",
+                dirtyPrefix, projectName, CRSDefinitions.getLabelForCode(crs)));
         refreshProjectHeader();
     }
 
     public static void refreshProjectHeader() {
-        if (currentProject == null) {
+        Project project = getProject();
+        if (project == null) {
             return;
         }
 
-        String projectName = currentProject.getName() != null && !currentProject.getName().isBlank()
-                ? currentProject.getName()
+        String projectName = project.getName() != null && !project.getName().isBlank()
+                ? project.getName()
                 : I18n.t("Proyecto actual");
-        String crs = currentProject.getProjectCRS() != null && !currentProject.getProjectCRS().isBlank()
-                ? currentProject.getProjectCRS()
+        String crs = project.getProjectCRS() != null && !project.getProjectCRS().isBlank()
+                ? project.getProjectCRS()
                 : "EPSG:4326";
-        int layerCount = currentProject.getLayers() != null ? currentProject.getLayers().size() : 0;
+        int layerCount = project.getLayers() != null ? project.getLayers().size() : 0;
 
         if (sidebarTitleLabel != null) {
             sidebarTitleLabel.setText(I18n.t("Capas"));
@@ -590,31 +595,37 @@ public class CatgisDesktopApp extends JFrame {
     @Deprecated
     public static void markProjectClean() {
         AppContext.get().markProjectClean();
+        updateWindowTitle();
     }
 
     public static boolean hasUnsavedProjectChanges() {
-        return currentProject != null && currentProject.isModified();
+        Project project = getProject();
+        return project != null && project.isModified();
     }
 
     public static void renameCurrentProject() {
-        if (currentProject == null) {
-            currentProject = new Project(I18n.t("Proyecto actual"));
-            AppContext.get().setProject(currentProject);
+        Project project = getProject();
+        if (project == null) {
+            project = new Project(I18n.t("Proyecto actual"));
+            setProject(project);
         }
 
-        String currentName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");
-        String newName = JOptionPane.showInputDialog(getMainFrame(), I18n.t("Nombre del proyecto:"), currentName);
+        String currentName = project.getName() != null ? project.getName() : I18n.t("Proyecto actual");
+        String newName = JOptionPane.showInputDialog(
+                getMainFrame(), I18n.t("Nombre del proyecto:"), currentName);
         if (newName == null) {
             return;
         }
 
         String trimmed = newName.trim();
         if (trimmed.isEmpty()) {
-            NotificationManager.warn(getMainFrame(), null, I18n.t("El nombre del proyecto no puede quedar vacio."));
+            NotificationManager.warn(
+                    getMainFrame(), null,
+                    I18n.t("El nombre del proyecto no puede quedar vacio."));
             return;
         }
 
-        currentProject.setName(trimmed);
+        project.setName(trimmed);
         markProjectDirty();
         if (statusBar != null) {
             statusBar.setMessage(I18n.format("Proyecto renombrado: {0}", trimmed));
@@ -650,15 +661,23 @@ public class CatgisDesktopApp extends JFrame {
     }
 
     public static boolean confirmProjectContinuation(String actionLabel) {
-        if (!hasUnsavedProjectChanges()) {
+        Project project = getProject();
+        if (project == null || !project.isModified()) {
             return true;
         }
 
-        String projectName = currentProject.getName() != null ? currentProject.getName() : I18n.t("Proyecto actual");
-        Object[] options = {I18n.t("Guardar"), I18n.t("No guardar"), I18n.t("Cancelar")};
+        String projectName = project.getName() != null
+                ? project.getName()
+                : I18n.t("Proyecto actual");
+        Object[] options = {
+                I18n.t("Guardar"), I18n.t("No guardar"), I18n.t("Cancelar")
+        };
         int result = JOptionPane.showOptionDialog(
                 getMainFrame(),
-                I18n.format("El proyecto \"{0}\" tiene cambios sin guardar.\n\n¿Queres guardar antes de {1}?", projectName, actionLabel),
+                I18n.format(
+                        "El proyecto \"{0}\" tiene cambios sin guardar.\n\n"
+                                + "¿Queres guardar antes de {1}?",
+                        projectName, actionLabel),
                 I18n.t("Cambios sin guardar"),
                 JOptionPane.YES_NO_CANCEL_OPTION,
                 JOptionPane.WARNING_MESSAGE,
