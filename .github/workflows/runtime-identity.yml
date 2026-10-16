@@ -3,16 +3,8 @@ name: CATGIS Runtime Identity
 on:
   pull_request:
     branches: [main]
-    paths:
-      - '.github/workflows/runtime-identity.yml'
-      - 'tools/qa/*runtime_identity*'
-      - 'catgis-desktop/**'
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/runtime-identity.yml'
-      - 'tools/qa/*runtime_identity*'
-      - 'catgis-desktop/**'
 
 permissions:
   contents: read
@@ -33,8 +25,11 @@ jobs:
           - {name: Linux17, os: ubuntu-latest, feature: '17', arch: x86_64, package: verifyLinuxAppImage}
           - {name: Linux21, os: ubuntu-latest, feature: '21', arch: x86_64, package: verifyLinuxAppImage}
           - {name: Windows17, os: windows-latest, feature: '17', arch: x86_64, package: verifyWindowsAppImage}
+          - {name: Windows21, os: windows-latest, feature: '21', arch: x86_64, package: verifyWindowsAppImage}
           - {name: MacIntel17, os: macos-15-intel, feature: '17', arch: x86_64, package: verifyMacAppImage}
+          - {name: MacIntel21, os: macos-15-intel, feature: '21', arch: x86_64, package: verifyMacAppImage}
           - {name: MacArm17, os: macos-15, feature: '17', arch: aarch64, package: verifyMacAppImage}
+          - {name: MacArm21, os: macos-15, feature: '21', arch: aarch64, package: verifyMacAppImage}
     env:
       CATGIS_EXPECTED_JAVA_FEATURE: ${{ matrix.feature }}
       REQUIRED_ARCH: ${{ matrix.arch }}
@@ -51,10 +46,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-disabled: true
-      - name: Test evidence checker and snapshot source
+      - name: Test evidence and attestation guards and snapshot source
         shell: bash
         run: |
           python tools/qa/test_runtime_identity.py
+          python tools/qa/test_runtime_attestation.py
           python tools/qa/check_runtime_identity.py snapshot --snapshot "$RUNNER_TEMP/runtime-before.json"
       - name: Resolve dependencies without substituting another JVM
         working-directory: catgis-desktop
@@ -84,8 +80,7 @@ jobs:
           path: |
             catgis-desktop/build/runtime-identity/*.json
             catgis-desktop/build/test-results/test/TEST-ar.com.catgis.JavaRuntimeIdentityContractTest.xml
-            catgis-desktop/build/installer/linux/app-image/CATGIS Desktop/lib/runtime/release
-            catgis-desktop/build/installer/macos/app-image/CATGIS Desktop.app/Contents/runtime/Contents/Home/release
-            catgis-desktop/build/installer/windows/app-image/CATGIS Desktop/runtime/release
+            catgis-desktop/build/installer/**/runtime/release
+            catgis-desktop/build/installer/**/runtime/Contents/Home/release
           if-no-files-found: ignore
           retention-days: 3

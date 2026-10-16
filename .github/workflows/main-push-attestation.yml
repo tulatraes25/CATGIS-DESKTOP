@@ -23,7 +23,7 @@ jobs:
       REPOSITORY: ${{ github.repository }}
       REQUIRED_MAIN_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
     steps:
-      - name: Verify CI and Certification push runs and required jobs
+      - name: Verify CI Certification and runtime-identity push runs
         shell: bash
         run: |
           python3 - <<'PY'
@@ -68,20 +68,14 @@ jobs:
               },
           }
 
-          # Read the protected main SHA's OWN workflow, not the PR's updated
-          # workflow, so a first platform-introduction PR remains attested
-          # against the prior main. After merge, the new platform jobs become
-          # mandatory and cannot be skipped in successful main push evidence.
-          meta = request_json(
-              "/contents/.github/workflows/certification.yml?ref=" + sha)
+          # Inspect protected-main source, never infer requirements from a PR badge.
+          meta = request_json("/contents/.github/workflows/certification.yml?ref=" + sha)
           if meta.get("encoding") != "base64" or not meta.get("content"):
               raise SystemExit("Cannot inspect exact-main certification.yml")
           cert_source = base64.b64decode(meta["content"]).decode("utf-8")
           optional_platform_jobs = [
-              ("linux-appimage-package:",
-               {"Linux App Image Package Contract"}),
-              ("windows-appimage-package:",
-               {"Windows App Image Package Contract"}),
+              ("linux-appimage-package:", {"Linux App Image Package Contract"}),
+              ("windows-appimage-package:", {"Windows App Image Package Contract"}),
               ("macos-full-suite-appimage:",
                {"Certification macOS Intel Full Suite + App Image",
                 "Certification macOS Apple Silicon Full Suite + App Image"}),
@@ -90,87 +84,74 @@ jobs:
                 "Real Native GDAL macOS Apple Silicon"}),
           ]
           for workflow_job_id, gate_job_names in optional_platform_jobs:
-              if re.search(r"(?m)^  " + re.escape(workflow_job_id) +
-                           r"\s*$", cert_source):
+              if re.search(r"(?m)^  " + re.escape(workflow_job_id) + r"\s*$", cert_source):
                   required["certification.yml"].update(gate_job_names)
                   print("ATTEST REQUIRED protected-main job:", sorted(gate_job_names))
 
-          # An additional independent-format workflow becomes mandatory only
-          # after its introduction in the protected main, never retroactively.
+          # First-introduction PRs attest old main; after merge these are mandatory.
           workflow_files = request_json("/contents/.github/workflows?ref=" + sha)
           if not isinstance(workflow_files, list):
               raise SystemExit("Cannot inspect exact-main workflow inventory")
           if any(row.get("name") == "geoparquet-metadata.yml" for row in workflow_files):
               required["geoparquet-metadata.yml"] = {"GeoParquet Independent Metadata Interop"}
               print("ATTEST REQUIRED protected-main GeoParquet independent interoperability")
+          if any(row.get("name") == "runtime-identity.yml" for row in workflow_files):
+              required["runtime-identity.yml"] = {
+                  "Runtime identity " + platform + str(feature)
+                  for platform in ("Linux", "Windows", "MacIntel", "MacArm")
+                  for feature in (17, 21)
+              }
+              print("ATTEST REQUIRED protected-main runtime identity:", sorted(required["runtime-identity.yml"]))
 
-          report = [f"## CATGIS main push attestation — exact SHA \u0060{sha}\u0060",
+          report = [f"## CATGIS main push attestation - exact SHA `{sha}`",
                     "", "| Workflow | Run ID | Attempt | Conclusion |",
                     "|---|---:|---:|---|"]
           problems = []
 
           for workflow, expected_jobs in required.items():
-              query = urllib.parse.urlencode(
-                  {"head_sha": sha, "event": "push", "per_page": 100})
+              query = urllib.parse.urlencode({"head_sha": sha, "event": "push", "per_page": 100})
               data = request_json(f"/actions/workflows/{workflow}/runs?{query}")
-              runs = [
-                  run for run in data.get("workflow_runs", [])
-                  if run.get("head_sha") == sha and run.get("event") == "push"
-                  and run.get("head_branch") == "main"
-                  and run.get("status") == "completed"
-                  and run.get("conclusion") == "success"
-              ]
+              runs = [run for run in data.get("workflow_runs", [])
+                      if run.get("head_sha") == sha and run.get("event") == "push"
+                      and run.get("head_branch") == "main" and run.get("status") == "completed"
+                      and run.get("conclusion") == "success"]
               if not runs:
                   problems.append(f"{workflow}: no completed SUCCESS push run on main at {sha}")
-                  report.append(f"| {workflow} | missing | — | BLOCKED |")
+                  report.append(f"| {workflow} | missing | - | BLOCKED |")
                   continue
-
               success = None
               rejected = []
-              for run in sorted(
-                  runs, key=lambda row: (row.get("run_number", 0),
-                                         row.get("run_attempt", 0)), reverse=True
-              ):
+              for run in sorted(runs, key=lambda row: (row.get("run_number", 0), row.get("run_attempt", 0)),
+                                reverse=True):
                   run_id = run["id"]
                   attempt = run.get("run_attempt", 1)
-                  jobs_data = request_json(
-                      f"/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100")
-                  jobs = {
-                      job.get("name"): job
-                      for job in jobs_data.get("jobs", [])
-                  }
-                  missing = sorted(
-                      name for name in expected_jobs
-                      if jobs.get(name, {}).get("status") != "completed"
-                      or jobs.get(name, {}).get("conclusion") != "success"
-                  )
+                  jobs_data = request_json(f"/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100")
+                  rows = jobs_data.get("jobs", [])
+                  jobs = {job.get("name"): job for job in rows}
+                  if len(jobs) != len(rows) or jobs_data.get("total_count", len(rows)) != len(rows):
+                      rejected.append(f"run {run_id} attempt {attempt}: duplicate or incomplete job inventory")
+                      continue
+                  missing = sorted(name for name in expected_jobs
+                                   if jobs.get(name, {}).get("status") != "completed"
+                                   or jobs.get(name, {}).get("conclusion") != "success")
                   if missing:
                       rejected.append(f"run {run_id} attempt {attempt} missing PASS jobs: {missing}")
                       continue
                   success = (run, jobs)
                   break
-
               if success is None:
                   problems.append(f"{workflow}: " + "; ".join(rejected))
-                  report.append(f"| {workflow} | no qualifying jobs | — | BLOCKED |")
+                  report.append(f"| {workflow} | no qualifying jobs | - | BLOCKED |")
                   continue
-
               run, jobs = success
-              report.append(
-                  f"| [{workflow}]({run['html_url']}) | {run['id']} "
-                  f"| {run.get('run_attempt', 1)} | SUCCESS |"
-              )
-              report.append("")
-              report.append(f"Required jobs, {workflow}:")
+              report.append(f"| [{workflow}]({run['html_url']}) | {run['id']} "
+                            f"| {run.get('run_attempt', 1)} | SUCCESS |")
+              report.extend(["", f"Required jobs, {workflow}:"])
               for name in sorted(expected_jobs):
-                  job = jobs[name]
-                  report.append(
-                      f"- {name}: SUCCESS (job {job['id']})"
-                  )
+                  report.append(f"- {name}: SUCCESS (job {jobs[name]['id']})")
               report.append("")
               print(f"ATTEST PASS workflow={workflow} main_sha={sha} "
-                    f"run_id={run['id']} attempt={run.get('run_attempt', 1)} "
-                    f"url={run['html_url']}")
+                    f"run_id={run['id']} attempt={run.get('run_attempt', 1)} url={run['html_url']}")
               for name in sorted(expected_jobs):
                   print(f"  PASS job={name} id={jobs[name]['id']}")
 
@@ -179,7 +160,6 @@ jobs:
               report.extend(f"- {reason}" for reason in problems)
               for reason in problems:
                   print("ATTEST BLOCKED:", reason, file=sys.stderr)
-
           summary_path = os.getenv("GITHUB_STEP_SUMMARY")
           if summary_path:
               with open(summary_path, "a", encoding="utf-8") as output:
