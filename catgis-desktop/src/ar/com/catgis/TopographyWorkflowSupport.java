@@ -705,11 +705,20 @@ public final class TopographyWorkflowSupport {
             return data;
         }
 
-        String sourceCrs = CRSDefinitions.normalizeCode(sourceLayer.getSourceCRS());
-        String targetCrs = CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
-        if (sourceCrs.isBlank() || targetCrs.isBlank() || sourceCrs.equalsIgnoreCase(targetCrs)) {
-            sourceLayer.setSourceCRS(targetCrs.isBlank() ? sourceCrs : targetCrs);
-            if (!targetCrs.isBlank() && shouldNormalizeSchemaCrs(data, targetCrs)) {
+        String sourceCrs = VectorCrsTransformSupport.resolveSourceText(sourceLayer, data);
+        String targetCrs = AppContext.project().getProjectCRS();
+        if (sourceCrs.isBlank()) {
+            throw new IllegalStateException(
+                    "La capa no declara un CRS de origen utilizable; CATGIS no asumira EPSG:4326.");
+        }
+        if (targetCrs == null || targetCrs.isBlank()) {
+            throw new IllegalStateException(
+                    "El proyecto no declara un CRS destino utilizable.");
+        }
+        if (VectorCrsTransformSupport.equivalent(sourceCrs, targetCrs)) {
+            String canonicalTarget = VectorCrsTransformSupport.canonicalText(targetCrs);
+            sourceLayer.setSourceCRS(canonicalTarget);
+            if (shouldNormalizeSchemaCrs(data, targetCrs)) {
                 return rebuildDataWithTargetSchema(data, targetCrs);
             }
             return data;
@@ -733,9 +742,11 @@ public final class TopographyWorkflowSupport {
                 projected.add(feature);
                 continue;
             }
-            Geometry transformed = CoordinateTransformSupport.reprojectGeometry(geometry, sourceCrs, targetCrs);
+            Geometry transformed = VectorCrsTransformSupport.reprojectGeometry(
+                    geometry, sourceCrs, targetCrs);
             if (transformed == null || transformed.isEmpty()) {
-                transformed = (Geometry) geometry.copy();
+                throw new IllegalStateException(
+                        "La reproyeccion produjo una geometria vacia; la capa original fue preservada.");
             }
             projected.add(cloneFeatureWithGeometry(feature, transformed, targetSchema));
             if (projectedEnvelope == null) {
@@ -745,7 +756,7 @@ public final class TopographyWorkflowSupport {
             }
         }
 
-        sourceLayer.setSourceCRS(targetCrs);
+        sourceLayer.setSourceCRS(VectorCrsTransformSupport.canonicalText(targetCrs));
         return new ShapefileData(
                 projected,
                 projectedEnvelope != null ? projectedEnvelope : data.getEnvelope(),
@@ -761,11 +772,11 @@ public final class TopographyWorkflowSupport {
             return false;
         }
         try {
-            String schemaCrs = CRSDefinitions.normalizeCode(org.geotools.referencing.CRS.toSRS(
-                    data.getSchema().getCoordinateReferenceSystem(),
-                    true
-            ));
-            return schemaCrs.isBlank() || !schemaCrs.equalsIgnoreCase(targetCrs);
+            if (data.getSchema().getCoordinateReferenceSystem() == null) {
+                return true;
+            }
+            return !VectorCrsTransformSupport.equivalent(
+                    VectorCrsTransformSupport.schemaText(data.getSchema()), targetCrs);
         } catch (Exception ex) {
             return true;
         }
@@ -829,7 +840,7 @@ public final class TopographyWorkflowSupport {
             for (var descriptor : sourceSchema.getAttributeDescriptors()) {
                 if (descriptor.equals(sourceSchema.getGeometryDescriptor())) {
                     if (targetCrs != null && !targetCrs.isBlank()) {
-                        builder.setCRS(CRSDefinitions.decode(targetCrs, true));
+                        builder.setCRS(VectorCrsTransformSupport.resolve(targetCrs));
                     }
                     builder.add(descriptor.getLocalName(), descriptor.getType().getBinding());
                 } else {
