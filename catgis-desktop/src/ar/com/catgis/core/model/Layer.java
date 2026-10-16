@@ -630,6 +630,10 @@ public class Layer {
     }
 
     public void setSourceCRS(String sourceCRS) {
+        if (sourceCRS == null || sourceCRS.isBlank()) {
+            this.sourceCRS = "";
+            return;
+        }
         this.sourceCRS = CRSDefinitions.normalizeCode(sourceCRS);
     }
 
