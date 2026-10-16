@@ -25,7 +25,8 @@ public class BatchProcessorDialog extends JDialog {
     private SwingWorker<List<File>, Void> scanWorker;
     private int scanGeneration;
     private String scannedInputPath = "";
-    private boolean scannedIncludeSubdirs;\n    private String scannedOperation = "";
+    private boolean scannedIncludeSubdirs;
+    private String scannedOperation = "";
 
     public BatchProcessorDialog() {
         super((Frame) null, "Procesamiento por Lotes", false);
@@ -318,9 +319,13 @@ public class BatchProcessorDialog extends JDialog {
                     statusLabel.setForeground(result.failed() == 0 ? new Color(0, 128, 0) : Color.RED);
                     progressBar.setValue(100);
                     scanButton.setEnabled(true);
+                    operationCombo.setEnabled(true);
+                    includeSubdirsCheck.setEnabled(true);
                     runButton.setEnabled(!currentFiles.isEmpty()
                             && normalizedInput.equals(scannedInputPath)
-                            && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs);
+                            && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs
+                            && java.util.Objects.equals(operationCombo.getSelectedItem(),
+                                    scannedOperation));
 
                     if (!result.errors().isEmpty()) {
                         StringBuilder sb = new StringBuilder("Errores:\n");
@@ -336,9 +341,13 @@ public class BatchProcessorDialog extends JDialog {
                     }
                 } catch (Exception e) {
                     scanButton.setEnabled(true);
+                    operationCombo.setEnabled(true);
+                    includeSubdirsCheck.setEnabled(true);
                     runButton.setEnabled(!currentFiles.isEmpty()
                             && normalizedInput.equals(scannedInputPath)
-                            && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs);
+                            && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs
+                            && java.util.Objects.equals(operationCombo.getSelectedItem(),
+                                    scannedOperation));
                     statusLabel.setText("Error: " + e.getMessage());
                     statusLabel.setForeground(Color.RED);
                 }
