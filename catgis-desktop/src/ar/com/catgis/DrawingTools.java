@@ -69,7 +69,12 @@ public class DrawingTools {
                     AppContext.project().getProjectCRS() != null &&
                     !AppContext.project().getProjectCRS().isBlank())
                     ? AppContext.project().getProjectCRS()
-                    : "EPSG:4326";
+                    : "";
+
+            if (projectCRS.isBlank()) {
+                NotificationManager.warn(panel, null, "Definí el CRS del proyecto antes de medir.");
+                return;
+            }
 
             if ("DISTANCE".equalsIgnoreCase(panel.getMeasurementMode())) {
                 if (panel.measurementTool.getPoints().size() < 2) {
@@ -120,61 +125,11 @@ public class DrawingTools {
     }
 
     private Geometry buildMeasurementLineInMeters(List<Coordinate> coordinates, String sourceCRSCode) {
-        try {
-            if (coordinates == null || coordinates.size() < 2) {
-                return null;
-            }
-
-            org.locationtech.jts.geom.GeometryFactory gf = new org.locationtech.jts.geom.GeometryFactory();
-            org.locationtech.jts.geom.LineString line =
-                    gf.createLineString(coordinates.toArray(new Coordinate[0]));
-
-            return reprojectGeometryToMetric(line, sourceCRSCode);
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo construir la geometria de medicion lineal", ex);
-            return null;
-        }
+        return MapMeasurementUtils.buildLineInMeters(coordinates, sourceCRSCode);
     }
 
     private Geometry buildMeasurementPolygonInMeters(List<Coordinate> coordinates, String sourceCRSCode) {
-        try {
-            Geometry polygon = DrawFeatureBuilder.buildPolygon(coordinates);
-            if (polygon == null) {
-                return null;
-            }
-
-            return reprojectGeometryToMetric(polygon, sourceCRSCode);
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo construir la geometria de medicion de area", ex);
-            return null;
-        }
-    }
-
-    private Geometry reprojectGeometryToMetric(Geometry geometry, String sourceCRSCode) {
-        try {
-            if (geometry == null || geometry.isEmpty()) {
-                return geometry;
-            }
-
-            String sourceCode = (sourceCRSCode != null && !sourceCRSCode.isBlank())
-                    ? sourceCRSCode
-                    : "EPSG:4326";
-
-            String targetMetricCode = panel.chooseMetricCRSForMeasurement(sourceCode);
-
-            if (sourceCode.equalsIgnoreCase(targetMetricCode)) {
-                return geometry;
-            }
-
-            CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
-            CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetMetricCode, true);
-            MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-
-            return JTS.transform(geometry, transform);
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo reproyectar la geometria para medicion", ex);
-            return geometry;
-        }
+        return MapMeasurementUtils.buildPolygonInMeters(coordinates, sourceCRSCode);
     }
 
     private String formatDistance(double meters) {

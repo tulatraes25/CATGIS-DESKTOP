@@ -196,22 +196,29 @@ public class MapUtilities {
             return env;
         }
         try {
-            if (sourceCode == null || sourceCode.isBlank()) return env;
-            if (targetCode == null || targetCode.isBlank()) return env;
-            if (sourceCode.equalsIgnoreCase(targetCode)) return env;
+            if (sourceCode == null || sourceCode.isBlank()) return null;
+            if (targetCode == null || targetCode.isBlank()) return null;
+            if (sourceCode.equalsIgnoreCase(targetCode)) return new Envelope(env);
 
             Envelope manualEnv = CoordinateTransformSupport.reprojectEnvelope(env, sourceCode, targetCode);
-            if (manualEnv != null && !manualEnv.isNull()) return manualEnv;
+            if (isFiniteEnvelope(manualEnv)) return manualEnv;
 
             CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
             CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-            return JTS.transform(env, null, transform, 10);
+            Envelope transformed = JTS.transform(env, null, transform, 10);
+            return isFiniteEnvelope(transformed) ? transformed : null;
         } catch (Exception ex) {
-            return env;
+            return null;
         } finally {
             logSlowTransform("reprojectEnvelopeIfNeeded", startedAt, sourceCode, targetCode, env);
         }
+    }
+
+    private static boolean isFiniteEnvelope(Envelope env) {
+        return env != null && !env.isNull()
+                && Double.isFinite(env.getMinX()) && Double.isFinite(env.getMinY())
+                && Double.isFinite(env.getMaxX()) && Double.isFinite(env.getMaxY());
     }
 
     // ========================================================================

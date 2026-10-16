@@ -778,7 +778,12 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
                     AppContext.project().getProjectCRS() != null &&
                     !AppContext.project().getProjectCRS().isBlank())
                     ? AppContext.project().getProjectCRS()
-                    : "EPSG:4326";
+                    : "";
+
+            if (projectCRS.isBlank()) {
+                NotificationManager.warn(this, null, "Definí el CRS del proyecto antes de medir.");
+                return;
+            }
 
             List<Coordinate> coords = measurementTool.getPoints();
             String mode = getMeasurementMode();

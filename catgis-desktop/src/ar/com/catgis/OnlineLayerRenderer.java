@@ -262,7 +262,7 @@ public final class OnlineLayerRenderer {
             return null;
         }
         if (sourceCrs == null || sourceCrs.isBlank() || targetCrs == null || targetCrs.isBlank()) {
-            return new Envelope(projectEnvelope);
+            return null;
         }
         if (sourceCrs.equalsIgnoreCase(targetCrs)) {
             return new Envelope(projectEnvelope);
@@ -278,8 +278,9 @@ public final class OnlineLayerRenderer {
         Envelope transformed = null;
         for (double[] corner : corners) {
             double[] out = panel.transformPoint(corner[0], corner[1], sourceCrs, targetCrs);
-            if (out == null || out.length < 2 || Double.isNaN(out[0]) || Double.isNaN(out[1])) {
-                continue;
+            if (out == null || out.length < 2
+                    || !Double.isFinite(out[0]) || !Double.isFinite(out[1])) {
+                return null;
             }
             if (transformed == null) {
                 transformed = new Envelope(out[0], out[0], out[1], out[1]);
