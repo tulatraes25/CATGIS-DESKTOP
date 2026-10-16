@@ -17,19 +17,24 @@ final class VectorCrsTransformSupport {
 
     private VectorCrsTransformSupport() {}
 
-    static CoordinateReferenceSystem resolve(String text) throws Exception {
+    static CoordinateReferenceSystem resolve(String text) {
         if (text == null || text.isBlank()) {
             throw new IllegalArgumentException("CRS vacio.");
         }
         String trimmed = text.trim();
-        if (looksLikeWkt(trimmed)) {
-            return CRS.parseWKT(trimmed);
+        try {
+            if (looksLikeWkt(trimmed)) {
+                return CRS.parseWKT(trimmed);
+            }
+            return CRSDefinitions.decode(trimmed, true);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException(
+                    "No se pudo resolver el CRS: " + describe(trimmed), ex);
         }
-        return CRSDefinitions.decode(trimmed, true);
     }
 
     static Geometry reprojectGeometry(
-            Geometry geometry, String sourceText, String targetText) throws Exception {
+            Geometry geometry, String sourceText, String targetText) {
         if (geometry == null) {
             return null;
         }
@@ -41,16 +46,25 @@ final class VectorCrsTransformSupport {
         if (CRS.equalsIgnoreMetadata(source, target)) {
             return geometry.copy();
         }
-        MathTransform transform = CRS.findMathTransform(source, target, true);
-        Geometry transformed = JTS.transform(geometry, transform);
-        ensureFinite(transformed);
-        if (transformed == null || transformed.isEmpty()) {
-            throw new IllegalStateException("La reproyeccion produjo geometria vacia.");
+        try {
+            MathTransform transform = CRS.findMathTransform(source, target, true);
+            Geometry transformed = JTS.transform(geometry, transform);
+            ensureFinite(transformed);
+            if (transformed == null || transformed.isEmpty()) {
+                throw new IllegalStateException("La reproyeccion produjo geometria vacia.");
+            }
+            return transformed;
+        } catch (RuntimeException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalStateException(
+                    "No se pudo reproyectar la geometria desde "
+                            + describe(sourceText) + " hacia " + describe(targetText),
+                    ex);
         }
-        return transformed;
     }
 
-    static boolean equivalent(String left, String right) throws Exception {
+    static boolean equivalent(String left, String right) {
         if (left == null || left.isBlank() || right == null || right.isBlank()) {
             return false;
         }
@@ -87,7 +101,7 @@ final class VectorCrsTransformSupport {
         }
     }
 
-    static String canonicalText(String text) throws Exception {
+    static String canonicalText(String text) {
         CoordinateReferenceSystem crs = resolve(text);
         try {
             String srs = CRS.toSRS(crs, true);
@@ -99,6 +113,14 @@ final class VectorCrsTransformSupport {
             // WKT-only CRS remains WKT rather than a fabricated authority code.
         }
         return crs.toWKT();
+    }
+
+    private static String describe(String text) {
+        if (text == null) {
+            return "<null>";
+        }
+        String oneLine = text.replace('\n', ' ').replace('\r', ' ').trim();
+        return oneLine.length() <= 96 ? oneLine : oneLine.substring(0, 96) + "...";
     }
 
     private static boolean looksLikeWkt(String text) {
