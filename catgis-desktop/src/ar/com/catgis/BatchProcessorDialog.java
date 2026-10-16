@@ -4,7 +4,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
-import java.util.List;\nimport java.util.concurrent.CancellationException;
+import java.util.List;
+import java.util.concurrent.CancellationException;
 
 /**
  * Dialog for batch processing multiple GIS files.
