@@ -1,0 +1,63 @@
+name: CATGIS GeoParquet Row Reader Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tools/qa/geoparquet-reader-probe/**'
+      - 'tools/qa/*geoparquet*'
+      - 'catgis-desktop/src/ar/com/catgis/GeoParquetReader.java'
+      - '.github/workflows/geoparquet-reader-probe.yml'
+      - '.kiro/specs/catgis-geoparquet-metadata/ROW_READER_PROBE.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: geoparquet-row-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  row-reader:
+    name: GeoParquet Row Probe ${{ matrix.variant }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {variant: Linux, os: ubuntu-latest, architecture: x64}
+          - {variant: Windows, os: windows-latest, architecture: x64}
+          - {variant: macOS Intel, os: macos-15-intel, architecture: x64}
+          - {variant: macOS ARM, os: macos-15, architecture: arm64}
+    env:
+      PROJ_NETWORK: 'OFF'
+      EXPECTED_PROBE_ARCH: ${{ matrix.architecture }}
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Java 17 for the actual runner architecture
+        uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: temurin
+          architecture: ${{ matrix.architecture }}
+      - name: Install independent fixture generator
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.architecture }}
+      - name: Install test-only Arrow and PROJ wheels without persistent cache
+        run: python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: pyarrow==21.0.0 pyproj==3.7.2
+      - name: Generate real files, resolve isolated dependencies, run offline row contracts
+        run: python tools/qa/run_geoparquet_rows_probe.py
+      - name: Preserve small failure diagnostics only
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geoparquet-row-probe-failure-${{ matrix.architecture }}-${{ runner.os }}
+          path: |
+            tools/qa/geoparquet-reader-probe/build/test-results/test/
+            tools/qa/geoparquet-reader-probe/build/reports/probe-dependencies.tsv
+          if-no-files-found: warn
+          retention-days: 7

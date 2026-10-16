@@ -1,0 +1,77 @@
+plugins { id 'java' }
+
+// Isolated research build. NOT included by catgis-desktop/settings.gradle.
+// No dependency below is added to the application or its installers.
+repositories { mavenCentral() }
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+
+dependencies {
+    // Match the existing metadata decoder's Parquet minor line for this probe.
+    // This is a pinned comparison baseline, not a claim to use the newest release.
+    implementation 'org.apache.parquet:parquet-hadoop:1.17.1'
+    implementation 'org.apache.parquet:parquet-column:1.17.1'
+    implementation 'org.apache.parquet:parquet-format-structures:1.17.1'
+    implementation platform('com.fasterxml.jackson:jackson-bom:2.21.7')
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'org.locationtech.jts:jts-core:1.20.0'
+    // Client classes only: no cluster, daemon, filesystem service or AWS SDK.
+    // Measure this cost before deciding whether it belongs in the product.
+    implementation 'org.apache.hadoop:hadoop-client-api:3.4.3'
+    runtimeOnly 'org.apache.hadoop:hadoop-client-runtime:3.4.3'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+sourceSets.main.java {
+    srcDirs = ['src/main/java', '../../../catgis-desktop/src']
+    include 'ar/com/catgis/probe/**'
+    // Compile the ACTUAL current inspector, not a copied or fake replacement.
+    include 'ar/com/catgis/GeoParquetReader.java'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.named('test') {
+    useJUnitPlatform()
+    maxParallelForks = 1
+    maxHeapSize = '384m'
+    systemProperty 'java.awt.headless', 'true'
+    testLogging { events 'passed', 'failed', 'skipped'; exceptionFormat = 'full'; showStandardStreams = true }
+}
+
+tasks.register('resolveProbeDependencies') {
+    doLast {
+        configurations.findAll { it.canBeResolved }.each { it.resolve() }
+    }
+}
+
+tasks.register('probeDependencyInventory') {
+    doLast {
+        def rows = ['coordinate\tjar_bytes\tsha256\tlicense_notice_entries']
+        long total = 0
+        configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+                .sort { it.moduleVersion.id.toString() }.each { artifact ->
+            File jar = artifact.file
+            total += jar.length()
+            def digest = java.security.MessageDigest.getInstance('SHA-256')
+            jar.withInputStream { stream ->
+                byte[] block = new byte[65536]
+                for (int count; (count = stream.read(block)) != -1;) { digest.update(block, 0, count) }
+            }
+            def notices = []
+            new java.util.jar.JarFile(jar).withCloseable { archive ->
+                archive.entries().each { entry ->
+                    if (entry.name.toUpperCase(java.util.Locale.ROOT).matches('.*(LICENSE|NOTICE)([./_-].*)?')) {
+                        notices.add(entry.name)
+                    }
+                }
+            }
+            rows.add("${artifact.moduleVersion.id}\t${jar.length()}\t${digest.digest().encodeHex()}\t${notices.join(';')}")
+        }
+        File report = layout.buildDirectory.file('reports/probe-dependencies.tsv').get().asFile
+        report.parentFile.mkdirs()
+        report.setText(rows.join('\n') + '\n', 'UTF-8')
+        println rows.join('\n')
+        println "PROBE_RUNTIME_JAR_BYTES=${total} JARS=${rows.size() - 1}"
+        println 'Notice filenames are an inventory, NOT a completed distribution/license audit.'
+    }
+}
