@@ -48,7 +48,8 @@ jobs:
           python-version: '3.12'
           architecture: ${{ matrix.architecture }}
       - name: Install test-only Arrow and PROJ wheels without persistent cache
-        run: python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: pyarrow==21.0.0 pyproj==3.7.2
+        run: |
+          python -m pip install --disable-pip-version-check --no-cache-dir --only-binary=:all: pyarrow==21.0.0 pyproj==3.7.2
       - name: Generate real files, resolve isolated dependencies, run offline row contracts
         run: python tools/qa/run_geoparquet_rows_probe.py
       - name: Preserve small failure diagnostics only
