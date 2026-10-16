@@ -1,111 +1,155 @@
 # SPEC/Kiro #112 - executable local GeoParquet row-reader decision
 
-BASE: d10ad77247e47755b7da35bf6460604a396e8188 (normal merge #121).
-STATUS: RESEARCH_IMPLEMENTED / EXECUTION_PENDING / NOT_PRODUCT_CERTIFIED.
+BASE: d10ad77247e47755b7da35bf6460604a396e8188 (normal, post-main-verified merge #121).
+STATUS: RESEARCH_IMPLEMENTED / CORRECTION_AWAITING_EXACT_HEAD_EVIDENCE / NOT_PRODUCT_CERTIFIED.
 A0.7: OPEN. No user PC/OpenCode/GUI/release actions.
 
-## Goal and reason
+## Goal and isolation
 
-M1 inspects real metadata; M2 keeps its existing open flow off EDT. Neither reads
-row-page geometries/attributes into a layer. Stop treating further metadata UI
-work as a substitute for actual ingestion. This bounded experiment tests a
-candidate maintained decoder against independently generated Arrow files BEFORE
-adding libraries to the desktop distribution or claiming usable layer support.
-
-## Isolation and candidate
+M1 inspects real metadata; M2 keeps its existing open flow off EDT. Neither imports
+rows as a usable CATGIS layer. This experiment must read genuine geometry and typed
+attributes before an adapter or its dependencies are accepted in the product.
 
 A standalone Gradle project under tools/qa/geoparquet-reader-probe compiles its
-two probe classes and the ACTUAL unchanged current GeoParquetReader. It does not
-include the desktop settings/build, Main class, UI or project state. No existing
-production source, dependency, workflow or test is changed.
+probe classes plus the ACTUAL unchanged GeoParquetReader. It does not include the
+desktop Main, application settings/build, UI or project state. Existing production
+source, dependencies, tests and workflows remain unchanged. Only an independent
+path-scoped PR workflow and research/SPEC files are added.
 
-Apache parquet-hadoop/column/format-structures 1.17.1 and Hadoop client API/runtime
-3.4.3 are pinned comparison baselines, NOT claims of latest release or minimum
-footprint. Jackson 2.21.7 matches the application metadata line; JTS 1.20.0 decodes
-WKB. A Hadoop cluster is not used. Record the complete resolved JAR inventory,
-byte sizes, SHA256 and available LICENSE/NOTICE entry names. This inventory is
-not a vulnerability assessment or completed legal/distribution clearance.
+Pinned Apache Parquet 1.17.1, Hadoop client API/runtime 3.4.3, Jackson 2.21.7 and
+JTS 1.20.0 are comparison baselines, not latest-release/security/distribution
+clearance claims. No cluster, external data service, native extension installation
+or Python runtime is added to CATGIS. Python/Arrow/PROJ are independent test-only
+fixture generators. Apache decodes Parquet pages/codecs and JTS decodes WKB; no
+third-party source or new homemade binary parser is copied into the project.
 
-A plain configuration does not magically remove Hadoop client class references.
-This experiment measures whether the controlled local-file path actually works
-and how much the transitive client costs. GeoTools/DuckDB and a verified GDAL
-Parquet driver remain alternatives if this footprint or behavior is unsuitable.
-No native extension download, external server or Python runtime is added to the
-installed application: Python/Arrow/PROJ here are only independent fixture tools.
+## Failure-driven evidence and corrected input boundary
 
-Primary source references reviewed: Apache parquet-java tag apache-parquet-1.17.1,
-ParquetReadOptions, HadoopCodecs, PageReadStore and DelegatingSeekableInputStream;
-https://geoparquet.org/releases/v1.1.0/ ;
-https://gdal.org/en/stable/drivers/vector/parquet.html .
-Third-party implementation is consumed as a dependency, not copied into CATGIS.
+Initial workflow YAML, Arrow compliant-LIST fixture schema and Gradle java-name
+shadowing defects were corrected without suppressing any row assertion. Failed
+runs and exact candidate history remain in PR #122.
+
+On bea96a88, row workflow 38828289797 / Linux job116740823091 executed16 tests:
+2 failed. The custom local input path returned center X=0 instead of0.5 and
+positive zero instead of the declared negative-zero bit pattern. Other tests
+passing did not make this a usable reader.
+
+Independent Arrow oracles were strengthened to compare exact point WKB and raw
+float/double bits, because semantic equality alone treats signed zeros as equal.
+The original fixture generator already writes point(0.5,0.5); its expected value
+was correct and unchanged. All original16 Java test methods/expectations remain.
+
+A seventeenth diagnostic compares scalar construction, direct WKB decoding, the
+official Hadoop local adapter and the custom adapter under both default and probe
+read options. Diagnostic values must be copied INSIDE the live page, rather than
+returning a borrowed Group after its page was closed. The initial diagnostic's
+lifetime mistake was corrected; it is not evidence of an upstream decoder defect.
+
+Exact acaa3d908b9b1213e1b9f036dbf27d427cee1b9b / workflow38829278735 /
+Windows job116744015659 full log:
+- Arrow confirms original center WKB for(0.5,0.5) and negative-zero bits.
+- Direct JTS and primitive Group scalar controls preserve both values.
+- Official HadoopInputFile preserves both values BEFORE page close with BOTH
+  option sets; byte-array and stream JTS decoding agree.
+- The custom channel/stream adapter returns zeros BEFORE page close with BOTH
+  option sets. All17 tests ran;3 failed, including8 assertions in the new control.
+
+This isolates the failing boundary to that custom I/O path. It does NOT prove a
+specific JDK channel bug or an upstream Parquet/JTS defect. The correction in
+f4b651b41bf7cb3be93aed19f13e6c13cc9aaac3 replaces it with explicit delegation of
+all read/readFully/ByteBuffer/seek/close methods to the already verified official
+HadoopInputFile stream. LocalProbeInput retains only validation, workload limits
+and cooperative cancellation. No expected value or test method was removed.
+The unchanged seventeen tests must validate the corrected wrapper on every OS.
+
+The wrapper checks regular/no-follow metadata and size before/after open, but the
+official path open can follow a concurrently replaced path. These checks are NOT
+a hostile TOCTOU or immutable-file snapshot guarantee. Closing always delegates,
+even after cancellation. Filesystem-client caches and native resource behavior
+need separate production investigation; this is not an application-wide sandbox.
 
 ## Explicit small-file contract
 
-Read a regular local no-follow file (12 bytes to 4 MiB), first validating M1
-metadata. Use official ParquetFileReader with row-group/page decoding and page
-checksum verification. No hand-written Thrift, compression or Parquet decoder.
-Use bounded original local I/O with Apache's DelegatingSeekableInputStream for
-correct direct, sliced and partial ByteBuffer behavior.
+Supported workload: local regular files12bytes..4MiB, <=10000 rows, <=8MiB declared
+row-group bytes, <=32MiB aggregate declared bytes, <=1MiB decoded binary/text value.
+A384MiB test JVM heap and workflow timeout expose failures; they do not prove a
+universal native-memory/RSS, malicious allocation or decompression bound.
 
-The tested schema is flat optional/required unannotated BOOLEAN/INT32/INT64/
-FLOAT/DOUBLE, UTF8 text and unannotated binary WKB geometry. Preserve exact Java
-numeric types, int64 beyond double precision, negative zero, Unicode and null
-attributes/geometries. Decode every declared geometry column; retain primary
-selection and declared CRS state without inventing EPSG or transforming values.
+Flat optional/required primitive BOOLEAN/INT32/INT64/FLOAT/DOUBLE, UTF8 strings
+and unannotated binary WKB geometry are tested. Preserve exact numeric Java types,
+int64 beyond2^53, signed zero, Unicode and nulls. Decode every geometry column,
+retain primary selection and metadata CRS states; never invent SRID or transform
+coordinates. Codecs tested: uncompressed, Snappy, GZIP. Nested/repeated/other
+logical types/codecs are explicitly unsupported, not silently converted.
 
-Reject nested/repeated/other logical types and codecs outside the current test
-subset (uncompressed, Snappy and GZIP). Reject incomplete rows, invalid/trailing
-WKB and corrupt checksum-bearing data pages, without returning partial success.
-Bound file bytes, row count, per-row-group declarations and individual decoded
-value sizes. These limits are an experimental workload envelope, NOT proof of
-a hard bound on malicious decoder allocations, total native memory or process RSS.
-A separate 384 MiB JVM heap and job deadline make failures visible in CI.
+Reject malformed metadata, row-count mismatch, invalid/trailing WKB and corrupt
+checksum-bearing pages without returning a partial successful scan. No semantic
+claim about full3D/M, spherical edges or complete PROJJSON authority handling.
+JTS validity is not proof that every malformed geometry is rejected without
+possible decoder repair. Polygon-area checks are planar source-coordinate
+oracles, not geodesic or transformed area claims.
 
-Rows are materialized for this small experiment; full streaming layer integration
-and a dataset abstraction are still needed. Returned maps permit genuine nulls
-and are read-only; JTS geometry object mutability is not a deep-immutability claim.
-Cancellation is cooperative at local reads and scan boundaries, not an instant
-kill inside a codec. Size checks are not a hostile same-size snapshot guarantee.
-JTS validity and trailing-byte checks do not prove every malformed WKB is rejected
-without any decoder repair; 3D/M, spherical edges and full PROJJSON semantics need
-explicit production contracts. Row values and polygon areas in these tests are
-not a claim of CRS-transformed or geodesic calculations.
+Rows are materialized for the small experiment, NOT streaming into CATGIS layers.
+Maps own null-preserving read-only containers; geometry deep immutability is not
+claimed. Cancellation is cooperative at delegated reads and row boundaries, not
+a forced interruption inside a native codec. Other formats are untouched.
 
-## Independent data and sixteen tests
+## Independent fixtures and mandatory seventeen-test gate
 
-Keep the existing ten-file Arrow fixture set and its manifest unchanged. Extend
-it with nine checksum-bearing typed/codec/malformed-page/WKB/nested fixtures;
-Arrow reopens every genuine container and independently refuses the deliberately
-corrupted page. Malformed WKB fixtures are valid Parquet containers, not fake
-success files. All nineteen source hashes must survive the Java run unchanged.
+Keep the original10 Arrow fixture files/manifest unchanged. Nine extra typed,
+codec, malformed-WKB, nested and checksum-fault files produce19 source hashes.
+Arrow independently reopens every positive container with metadata/data equality,
+compares floating-point bits, confirms the literal center WKB and independently
+rejects the deliberately corrupted checksum page. Malformed-WKB cases are real
+Parquet containers, not fake valid geometries.
 
-Thirteen actual row tests cover points/coordinates, projected polygon areas and
-int/null attributes, unknown/default CRS distinction, two geometry columns,
-empty datasets, three codecs and exact numeric types, genuine metadata failures,
-unsupported schemas/codecs, invalid WKB/pages, cancellation/row budget, repeated
-read/rename/delete and a Java17 socket-denial diagnostic. The network diagnostic
-is not a native-code security sandbox or a complete cold-start offline audit.
-A final test proves the desktop Main is not present on the probe classpath.
-Three I/O tests exercise direct/sliced buffers, independent positions/EOF and
-cancelled-read handle closure. None is silently optional or skipped.
+Original13 row tests cover actual coordinates/areas, typed/null attributes, CRS
+state, multiple geometries, empty data, three codecs, malformed/unsupported input,
+cancellation, file-handle closure, Java socket-denial and absent desktop Main.
+Three actual I/O tests cover direct/sliced buffers, independent seeks/EOF and
+cancelled-read closure. The added diagnostic is the seventeenth test. Java17's
+socket-denial check is a diagnostic, not a native sandbox or full cold-start
+offline proof. No skipped or optional probe tests are permitted.
 
-## Workflow, observed evidence and decision gate
+The four-platform workflow checks actual Java17 Linux/Windows/Mac Intel/Mac ARM
+and prints checkout SHA/tree/architecture. Resolve dependencies separately, then
+execute clean tests with Gradle --offline. Never retry a failing test as an
+infrastructure failure. Require exactly17 tests, zero failures/errors/skips,
+19 unchanged AFTER-JAVA hashes, clean tracked files and dependency inventory on
+each platform. Generating/hash-checking inputs BEFORE a failed test is not the
+same evidence as completing the AFTER-JAVA integrity gate.
 
-New path-scoped PR workflow executes the probe on actual Java17 Linux, Windows,
-Mac Intel and Apple Silicon. Record actual checkout/tree and runner architecture.
-Resolve its isolated dependencies first; then execute the complete probe with
-Gradle --offline. Never retry a failed test as though it were an infrastructure
-failure. All sixteen tests, zero failures/errors/skips, nineteen unchanged hashes
-and dependency inventory are required per platform.
+## Measured footprint and adoption decision
 
-At authoring time no new test PASS is claimed. Existing main/pull-request CI,
-Certification and M1 independent interop remain required and unchanged. Prior-main
-attestation from this research PR may certify d10ad.../#121 only; it cannot certify
-unmerged row-reader code. Leave the probe PR draft/non-merged until its evidence
-and dependency decision are reviewed. A successful probe is not an installed
-feature and does not close #112 or A0.7.
+The failed bea96a88 Linux run successfully measured29 runtime JARs totaling
+94,469,231bytes. This is the full isolated classpath, NOT incremental installer
+growth: some dependencies already overlap the application. Hadoop-client API and
+runtime are19,730,067 and30,269,075bytes; fastutil is23,730,770bytes. Complete JAR
+coordinates/SHA256/notice-entry inventory is emitted by each successful probe.
+Notice filenames are not completed license/security clearance. Heap-pool peak
+sums are diagnostics, not simultaneous maximum heap usage or process RSS.
 
-Next after measured success: choose the production adapter (or reject this one),
-resolve resource/CRS/schema and dependency-distribution obligations, then integrate
-real geometries/attributes with CATGIS's existing layer abstractions and background
-job contract. No feature advertisement or new menu before that full workflow.
+Even after a successful matrix, choose or reject this adapter based on measured
+behavior, dependency footprint, distribution/security review and resource/CRS
+requirements. Alternatives remain a verified existing GDAL Parquet driver or a
+separately assessed GeoTools/DuckDB route. Do not install multiple redundant
+engines or automatic extensions merely to make a feature appear supported.
+
+## Certification boundary and next gate
+
+Keep PR #122 draft and non-merged as a research experiment. Existing exact-head
+application CI/Certification/M1 interop and predecessor-main attestation remain
+unchanged. d10ad/#121 is independently post-main verified; its proof does NOT
+certify unmerged probe source. Current corrected-source execution must be observed,
+not inferred from the successful official-adapter diagnostic.
+
+A successful probe does not close #112 or A0.7. Next after evidence/adoption:
+produce the actual bounded/streaming adapter with precise schema/CRS contracts,
+integrate geometries and attributes into existing CATGIS layer abstractions and
+background jobs, test real layer/project workflows and then physical installed
+GUI behavior. No new capability advertisement before that end-to-end acceptance.
+
+Primary references reviewed: Apache parquet-java tag apache-parquet-1.17.1
+(ParquetReadOptions, HadoopInputFile, PageReadStore, DelegatingSeekableInputStream,
+LocalInputFile); https://geoparquet.org/releases/v1.1.0/ ;
+https://gdal.org/en/stable/drivers/vector/parquet.html .
