@@ -29,3 +29,16 @@ Existing ReleaseVectorInteropTest exercises production GeoJSON/DXF/KML/KMZ paths
 Shapefile remains destructive on protected main until #155B. Project-wide save is not transaction-safe while any mutable vector source can be partially replaced. PostGIS remains a separate database transaction contract. This tranche does not claim crash-durable directory metadata fsync or physical Windows handle behavior beyond repository runners.
 
 Require exact-head CI/Certification/Runtime Identity/GeoParquet and authenticated predecessor-main evidence, normal expected-head merge, then fresh-main proof.
+
+
+## Active legacy menu surfaces folded into this tranche
+Source audit found two additional user-facing writers outside ExportVectorLayerAction:
+- Layer context menu -> DxfExportEngine wrote canonical DXF directly through PrintWriter/FileOutputStream.
+- Main menu -> KmlExportEngine wrote raw source coordinates directly as KML with no source CRS, which can encode projected metres as WGS84 degrees.
+
+Current candidate centralizes both:
+- DxfExportEngine writes to VectorSingleFilePublisher staging, checks PrintWriter error state, reopens with DxfLoader, then atomically publishes.
+- KmlExportEngine menu delegates to ExportVectorLayerAction so source CRS is transformed to EPSG:4326 and the same staged/reopen/atomic publication is used.
+- the old public feature-list-only KML writer is fail-closed because that API has no source CRS and cannot prove KML coordinate semantics.
+
+LegacyVectorExportSafetyContractTest proves DXF loader roundtrip and projected EPSG:32719 -> KML WGS84 coordinate roundtrip.
