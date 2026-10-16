@@ -38,7 +38,7 @@ final class VectorMeasurementSupport {
             }
         } catch (Exception ignored) { CatgisLogger.warn("VectorMeasurementSupport: operation failed", ignored); }
 
-        return Math.abs(geometry.getArea());
+        return Double.NaN;
     }
 
     static double resolveLengthMeters(Layer layer, Geometry geometry) {
@@ -58,7 +58,7 @@ final class VectorMeasurementSupport {
         try {
             CoordinateReferenceSystem sourceCrs = decode(sourceCode);
             if (sourceCrs == null) {
-                return Math.abs(geometry.getLength());
+                return Double.NaN;
             }
 
             Geometry workingGeometry = perimeterMode ? extractPerimeterGeometry(geometry) : geometry;
@@ -79,7 +79,7 @@ final class VectorMeasurementSupport {
             }
         } catch (Exception ignored) { CatgisLogger.warn("VectorMeasurementSupport: operation failed", ignored); }
 
-        return Math.abs(geometry.getLength());
+        return Double.NaN;
     }
 
     private static Geometry toMetricGeometry(Layer layer, Geometry geometry) throws Exception {
@@ -90,7 +90,7 @@ final class VectorMeasurementSupport {
         String sourceCode = resolveSourceCode(layer);
         CoordinateReferenceSystem sourceCrs = decode(sourceCode);
         if (sourceCrs == null) {
-            return geometry;
+            return null;
         }
 
         if (isProjectedMetric(sourceCrs)) {
@@ -98,13 +98,16 @@ final class VectorMeasurementSupport {
         }
 
         String metricCode = resolveMetricCrs(layer, geometry, sourceCode, sourceCrs);
-        if (metricCode == null || metricCode.isBlank() || metricCode.equalsIgnoreCase(sourceCode)) {
+        if (metricCode == null || metricCode.isBlank()) {
+            return null;
+        }
+        if (metricCode.equalsIgnoreCase(sourceCode)) {
             return geometry;
         }
 
         CoordinateReferenceSystem metricCrs = decode(metricCode);
         if (metricCrs == null) {
-            return geometry;
+            return null;
         }
 
         MathTransform transform = CRS.findMathTransform(sourceCrs, metricCrs, true);
@@ -244,7 +247,7 @@ final class VectorMeasurementSupport {
             Point geographic = (Point) JTS.transform(centroid, transform);
             return geographic.getCoordinate();
         } catch (Exception ex) {
-            return centroid.getCoordinate();
+            return null;
         }
     }
 
@@ -297,18 +300,16 @@ final class VectorMeasurementSupport {
     }
 
     private static String resolveSourceCode(Layer layer) {
-        if (layer != null && layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank()) {
-            return CRSDefinitions.normalizeCode(layer.getSourceCRS());
+        if (layer == null || layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
+            return "";
         }
-        if (AppContext.project() != null
-                && AppContext.project().getProjectCRS() != null
-                && !AppContext.project().getProjectCRS().isBlank()) {
-            return CRSDefinitions.normalizeCode(AppContext.project().getProjectCRS());
-        }
-        return "";
+        return CRSDefinitions.normalizeCode(layer.getSourceCRS());
     }
 
     private static CoordinateReferenceSystem decode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
         try {
             String normalized = CRSDefinitions.normalizeCode(code);
             if (normalized == null || normalized.isBlank()) {

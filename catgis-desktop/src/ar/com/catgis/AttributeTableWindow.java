@@ -602,21 +602,28 @@ public class AttributeTableWindow extends JFrame {
         switch (token.toLowerCase()) {
             case "$area":
             case "$area_m2":
-                return VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry);
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry), token);
             case "$area_ha":
-                return VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry) / 10000d;
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry), token) / 10000d;
             case "$area_km2":
-                return VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry) / 1_000_000d;
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry), token) / 1_000_000d;
             case "$length":
             case "$length_m":
-                return VectorMeasurementSupport.resolveLengthMeters(layer, geometry);
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolveLengthMeters(layer, geometry), token);
             case "$length_km":
-                return VectorMeasurementSupport.resolveLengthMeters(layer, geometry) / 1000d;
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolveLengthMeters(layer, geometry), token) / 1000d;
             case "$perimeter":
             case "$perimeter_m":
-                return VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry);
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry), token);
             case "$perimeter_km":
-                return VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry) / 1000d;
+                return requireFiniteMetric(
+                        VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry), token) / 1000d;
             case "$x":
                 if (geometry instanceof Point) {
                     return ((Point) geometry).getX();
@@ -630,6 +637,15 @@ public class AttributeTableWindow extends JFrame {
             default:
                 throw new IllegalArgumentException("Token geometrico no soportado: " + token);
         }
+    }
+
+    private double requireFiniteMetric(double value, String token) {
+        if (!Double.isFinite(value)) {
+            throw new IllegalArgumentException(
+                    "No se puede calcular " + token
+                            + " sin un CRS de origen válido para la capa.");
+        }
+        return value;
     }
 
     private Object evaluateExpressionValueForRow(String expression, int row, Class<?> targetType) {

@@ -42,21 +42,32 @@ public final class MapMeasurementUtils {
     public static Geometry reprojectToMetric(Geometry geometry, String sourceCRSCode) {
         try {
             if (geometry == null || geometry.isEmpty()) return geometry;
-            String sourceCode = (sourceCRSCode != null && !sourceCRSCode.isBlank()) ? sourceCRSCode : "EPSG:4326";
+            if (sourceCRSCode == null || sourceCRSCode.isBlank()) return null;
+            String sourceCode = sourceCRSCode.trim();
             String targetCode = chooseMetricCRS(sourceCode);
-            if (sourceCode.equalsIgnoreCase(targetCode)) return geometry;
+            if (targetCode == null || targetCode.isBlank()) return null;
+            if (sourceCode.equalsIgnoreCase(targetCode)) return geometry.copy();
             CoordinateReferenceSystem sourceCRS = CRSDefinitions.decode(sourceCode, true);
             CoordinateReferenceSystem targetCRS = CRSDefinitions.decode(targetCode, true);
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-            return JTS.transform(geometry, transform);
+            Geometry transformed = JTS.transform(geometry, transform);
+            return isFiniteGeometry(transformed) ? transformed : null;
         } catch (Exception ex) {
             AppErrorSupport.logFailure("No se pudo reproyectar geometria para medicion", ex);
-            return geometry;
+            return null;
         }
     }
 
+    private static boolean isFiniteGeometry(Geometry geometry) {
+        if (geometry == null || geometry.isEmpty()) return geometry != null;
+        for (Coordinate c : geometry.getCoordinates()) {
+            if (c == null || !Double.isFinite(c.x) || !Double.isFinite(c.y)) return false;
+        }
+        return true;
+    }
+
     public static String chooseMetricCRS(String sourceCRSCode) {
-        if (sourceCRSCode == null || sourceCRSCode.isBlank()) return "EPSG:3857";
+        if (sourceCRSCode == null || sourceCRSCode.isBlank()) return "";
         String code = sourceCRSCode.trim().toUpperCase(Locale.ROOT);
         if (code.equals("EPSG:4326")) return "EPSG:3857";
         if (code.startsWith("EPSG:327") || code.startsWith("EPSG:326")) return code;

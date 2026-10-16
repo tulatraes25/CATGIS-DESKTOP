@@ -196,9 +196,9 @@ public class MapUtilities {
             return env;
         }
         try {
-            if (sourceCode == null || sourceCode.isBlank()) return env;
-            if (targetCode == null || targetCode.isBlank()) return env;
-            if (sourceCode.equalsIgnoreCase(targetCode)) return env;
+            if (sourceCode == null || sourceCode.isBlank()) return null;
+            if (targetCode == null || targetCode.isBlank()) return null;
+            if (sourceCode.equalsIgnoreCase(targetCode)) return new Envelope(env);
 
             Envelope manualEnv = CoordinateTransformSupport.reprojectEnvelope(env, sourceCode, targetCode);
             if (manualEnv != null && !manualEnv.isNull()) return manualEnv;
@@ -208,7 +208,7 @@ public class MapUtilities {
             MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
             return JTS.transform(env, null, transform, 10);
         } catch (Exception ex) {
-            return env;
+            return null;
         } finally {
             logSlowTransform("reprojectEnvelopeIfNeeded", startedAt, sourceCode, targetCode, env);
         }
