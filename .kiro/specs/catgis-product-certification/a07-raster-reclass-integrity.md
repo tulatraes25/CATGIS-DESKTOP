@@ -47,3 +47,4 @@ evidence. No user PC/OpenCode/release changes.
 ## Main synchronization
 
 This candidate was re-synchronized after PR #138 advanced protected main to `f7e0a43155a92f9d2a0062ffe6e8c6749a1a1237`. All earlier green runs on `62285be0a2fb7ffa50b174c8cfcbda91731165ba` are historical evidence only and cannot authorize merge of the new synchronized head. Fresh exact-head gates are mandatory.
+
