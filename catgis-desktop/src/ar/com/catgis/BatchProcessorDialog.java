@@ -278,6 +278,8 @@ public class BatchProcessorDialog extends JDialog {
         String operation = selectedOperation;
         runButton.setEnabled(false);
         scanButton.setEnabled(false);
+        operationCombo.setEnabled(false);
+        includeSubdirsCheck.setEnabled(false);
         statusLabel.setText("Procesando...");
         statusLabel.setForeground(Color.BLUE);
         progressBar.setValue(0);
@@ -342,12 +344,12 @@ public class BatchProcessorDialog extends JDialog {
                 }
             }
         }.execute();
+    }
+
     private static BatchFileDiscovery.InputKind inputKindForOperation(String operation) {
         if ("Copiar archivos".equals(operation)) {
             return BatchFileDiscovery.InputKind.ALL_GIS;
         }
         return BatchFileDiscovery.InputKind.TIFF_RASTER;
-    }
-
     }
 }
