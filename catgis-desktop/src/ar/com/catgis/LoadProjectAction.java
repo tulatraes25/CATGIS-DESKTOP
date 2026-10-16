@@ -62,8 +62,10 @@ public class LoadProjectAction extends AbstractAction {
             return false;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
+        try (BufferedReader reader = ProjectOpenReadBudget.openChecked(file)) {
+            ProjectOpenReadBudget budget = new ProjectOpenReadBudget();
             String firstLine = reader.readLine();
+            budget.checkLine(firstLine);
 
             if (firstLine == null || !firstLine.trim().equals("CATGIS_PROJECT")) {
                 if (showDialogs) {
@@ -83,6 +85,7 @@ public class LoadProjectAction extends AbstractAction {
 
             String line;
             while ((line = reader.readLine()) != null) {
+                budget.checkLine(line);
                 if (line.trim().isEmpty()) {
                     continue;
                 }
