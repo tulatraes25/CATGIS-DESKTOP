@@ -108,6 +108,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify committed Java LF and exact checkout integrity
+        shell: bash
+        run: |
+          python3 tools/qa/test_java_source_integrity.py
+          python3 tools/qa/check_java_source_integrity.py
+
+      - name: Prove the exact twelve-file mechanical repair
+        if: github.event_name == 'pull_request' && github.head_ref == 'maintenance/java-lf-integrity-post121'
+        shell: bash
+        run: |
+          git fetch --no-tags --depth=1 origin d10ad77247e47755b7da35bf6460604a396e8188 7f211a19ac7ed470bda8205c5c969296089cf7da
+          python3 tools/qa/check_java_source_integrity.py --prove-normalization d10ad77247e47755b7da35bf6460604a396e8188 7f211a19ac7ed470bda8205c5c969296089cf7da
+
       - name: Validate history sanitation helper
         shell: pwsh
         run: |
