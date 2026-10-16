@@ -278,7 +278,6 @@ public final class SpatiaLiteLoader {
                 }
             }
             if (!found) {
-                store.dispose();
                 throw new UnsupportedFormatException(
                         "La tabla SpatiaLite solicitada no existe: " + layer.getTableName());
             }

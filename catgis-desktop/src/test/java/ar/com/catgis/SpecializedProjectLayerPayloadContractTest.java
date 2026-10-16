@@ -168,6 +168,53 @@ class SpecializedProjectLayerPayloadContractTest {
     }
 
     @Test
+    void legacyPositionalTileWmsAndWfsPayloadsStartAfterOpacity() {
+        OnlineTileLayer tile = new OnlineTileLayer("Legacy tile");
+        tile.setOpacity(0.31f);
+        String tileLegacy = replaceKeyedWithLegacy(
+                SaveProjectAction.buildLayerLine(tile),
+                "TILE_",
+                List.of("osm", "Provider", "https://tiles.invalid/{z}/{x}/{y}.png",
+                        "1", "19", "attr", "https://terms.invalid", "true"));
+        OnlineTileLayer restoredTile = assertInstanceOf(OnlineTileLayer.class,
+                LoadProjectAction.parseLayer(tileLegacy));
+        assertEquals(0.31f, restoredTile.getOpacity(), 1e-6);
+        assertEquals("osm", restoredTile.getSourceId());
+        assertEquals(19, restoredTile.getMaxZoom());
+        assertTrue(restoredTile.isRequiresApiKey());
+
+        OnlineWfsLayer wfs = new OnlineWfsLayer("Legacy WFS");
+        wfs.setOpacity(0.47f);
+        String wfsLegacy = replaceKeyedWithLegacy(
+                SaveProjectAction.buildLayerLine(wfs),
+                "WFS_",
+                List.of("Provider", "https://wfs.invalid", "cat:roads", "Roads",
+                        "EPSG:4326", "2.0.0", "true"));
+        OnlineWfsLayer restoredWfs = assertInstanceOf(OnlineWfsLayer.class,
+                LoadProjectAction.parseLayer(wfsLegacy));
+        assertEquals(0.47f, restoredWfs.getOpacity(), 1e-6);
+        assertEquals("Provider", restoredWfs.getProviderName());
+        assertEquals("cat:roads", restoredWfs.getTypeName());
+
+        OnlineWmsLayer wms = new OnlineWmsLayer("Legacy WMS");
+        wms.setOpacity(0.63f);
+        String wmsLegacy = replaceKeyedWithLegacy(
+                SaveProjectAction.buildLayerLine(wms),
+                "WMS_",
+                List.of("src", "Provider", "https://wms.invalid", "roads", "style",
+                        "EPSG:3857", "1.3.0", "image/png", "true", "attr",
+                        "https://terms.invalid", "EPSG:4326",
+                        "-10", "-20", "30", "40"));
+        OnlineWmsLayer restoredWms = assertInstanceOf(OnlineWmsLayer.class,
+                LoadProjectAction.parseLayer(wmsLegacy));
+        assertEquals(0.63f, restoredWms.getOpacity(), 1e-6);
+        assertEquals("src", restoredWms.getSourceId());
+        assertEquals("roads", restoredWms.getLayerNames());
+        assertEquals(-10.0, restoredWms.getExtentMinX(), 0.0);
+        assertEquals(40.0, restoredWms.getExtentMaxY(), 0.0);
+    }
+
+    @Test
     void legacyPositionalGeopackagePayloadStartsAfterOpacity() {
         GeoPackageLayer layer = new GeoPackageLayer("Legacy GPKG", "/data/legacy.gpkg");
         layer.setOpacity(0.44f);
