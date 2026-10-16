@@ -29,6 +29,23 @@ class VectorCrsTransformSupportTest {
     }
 
     @Test
+    void layerPreservesUnknownCrsUntilAnExplicitCrsIsAssigned() {
+        Layer layer = ReleaseTestSupport.buildVectorLayer(
+                "unknown", Path.of("unknown.geojson"), "");
+
+        assertTrue(layer.getSourceCRS() == null || layer.getSourceCRS().isBlank());
+
+        layer.setSourceCRS("   ");
+        assertTrue(layer.getSourceCRS() == null || layer.getSourceCRS().isBlank());
+
+        layer.setSourceCRS(null);
+        assertTrue(layer.getSourceCRS() == null || layer.getSourceCRS().isBlank());
+
+        layer.setSourceCRS("EPSG:3035");
+        assertEquals("EPSG:3035", layer.getSourceCRS());
+    }
+
+    @Test
     void arbitraryEpsg3035MatchesDirectGeoToolsTransform() throws Exception {
         Point source = GEOMETRY_FACTORY.createPoint(new Coordinate(4321000.0, 3210000.0));
 
