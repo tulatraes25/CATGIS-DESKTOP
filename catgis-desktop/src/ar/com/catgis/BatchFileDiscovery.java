@@ -14,6 +14,8 @@ import java.util.stream.Stream;
 
 /** File discovery for batch workflows, kept outside Swing. */
 final class BatchFileDiscovery {
+    enum InputKind { ALL_GIS, TIFF_RASTER }
+
     private static final int MAX_FILES = 100_000;
 
     private BatchFileDiscovery() {}
