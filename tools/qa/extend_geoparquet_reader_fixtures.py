@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import struct
 from pathlib import Path
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -24,6 +25,10 @@ def main() -> None:
     for name, digest in baseline.items():
         if hashlib.sha256((root / name).read_bytes()).hexdigest() != digest:
             raise ValueError('Baseline fixture changed: ' + name)
+    center = pq.read_table(root / 'multiple.parquet')['center'][0].as_py()
+    print('INDEPENDENT_CENTER_WKB', center.hex(), 'XY', struct.unpack('<BIdd', center)[2:], flush=True)
+    if center != point(0.5, 0.5):
+        raise AssertionError('Independent center differs from the original declared (0.5,0.5) fixture.')
 
     def write(name: str, table: pa.Table, compression: str = 'snappy') -> None:
         path = root / name
@@ -36,6 +41,23 @@ def main() -> None:
             print('EXPECTED_SCHEMA', table.schema)
             print('OBSERVED_SCHEMA', restored.schema)
             raise AssertionError('Independent row/attribute/WKB mismatch: ' + name)
+        # Arrow semantic equality considers -0.0 and +0.0 equal. Compare the
+        # actual floating-point representation as a second independent oracle.
+        for field in table.schema:
+            if pa.types.is_float32(field.type) or pa.types.is_float64(field.type):
+                pack = '<f' if pa.types.is_float32(field.type) else '<d'
+                expected_values = table[field.name].to_pylist()
+                observed_values = restored[field.name].to_pylist()
+                for index, (expected, observed) in enumerate(zip(expected_values, observed_values)):
+                    if expected is None:
+                        if observed is not None:
+                            raise AssertionError('Independent null mismatch: ' + name)
+                    elif observed is None or struct.pack(pack, expected) != struct.pack(pack, observed):
+                        raise AssertionError(f'Independent floating-point bits changed: {name}/{field.name}/{index}: '
+                                             f'{expected!r} -> {observed!r}')
+                if field.name == 'amplitude':
+                    print('INDEPENDENT_AMPLITUDE_BITS', name,
+                          [None if value is None else struct.pack(pack, value).hex() for value in observed_values], flush=True)
         print('ARROW_ROW_PROBE_FILE', name, table.num_rows, table.schema)
 
     typed = with_geo(pa.table({
@@ -55,9 +77,6 @@ def main() -> None:
             ('trailing-wkb.parquet', point(2, 3) + bytes([0]))):
         write(name, with_geo(pa.table({'shape': pa.array([point(0, 0), second], type=pa.binary())}),
                              geo('shape', ['Point'])))
-    # Parquet's compliant LIST writer calls the child "element", while Arrow's
-    # list_(int32()) defaults to "item". Match the declared fixture schema to
-    # the format instead of disabling the exact metadata/row equality assertion.
     nested_type = pa.list_(pa.field('element', pa.int32()))
     nested = with_geo(pa.table({'shape': pa.array([point(0, 0)], type=pa.binary()),
                                'values': pa.array([[1, 2]], type=nested_type)}), geo('shape', ['Point']))

@@ -32,7 +32,6 @@ def main() -> None:
     wrapper = root / 'catgis-desktop' / ('gradlew.bat' if os.name == 'nt' else 'gradlew')
     launcher = [str(wrapper)] if os.name == 'nt' else ['bash', str(wrapper)]
     project = ['--no-daemon', '-p', 'tools/qa/geoparquet-reader-probe']
-    # No persistent CI cache. Retry only dependency resolution, never a failing test.
     for attempt in range(3):
         result = subprocess.run(launcher + project + ['resolveProbeDependencies'], env=env, timeout=600)
         if result.returncode == 0:
@@ -46,7 +45,7 @@ def main() -> None:
     totals = {key: sum(int(suite.get(key, '0')) for suite in suites)
               for key in ('tests', 'failures', 'errors', 'skipped')}
     print('GEOPARQUET_REAL_ROW_PROBE', totals, flush=True)
-    if totals != {'tests': 16, 'failures': 0, 'errors': 0, 'skipped': 0}:
+    if totals != {'tests': 17, 'failures': 0, 'errors': 0, 'skipped': 0}:
         raise RuntimeError('Every independent row and I/O test must execute successfully, without skips.')
     manifest = json.loads((fixtures / 'probe-sha256.json').read_text(encoding='utf-8'))
     if len(manifest) != 19:
@@ -55,7 +54,6 @@ def main() -> None:
         if hashlib.sha256((fixtures / name).read_bytes()).hexdigest() != expected_hash:
             raise RuntimeError('Row reader modified a source fixture: ' + name)
     print('ROW_PROBE_SOURCE_HASHES_UNCHANGED', len(manifest), flush=True)
-    # The experiment must not modify tracked sources, the real inspector or build files.
     subprocess.run(['git', 'diff', '--exit-code'], check=True, timeout=30)
     inventory = root / 'tools/qa/geoparquet-reader-probe/build/reports/probe-dependencies.tsv'
     if not inventory.is_file():
