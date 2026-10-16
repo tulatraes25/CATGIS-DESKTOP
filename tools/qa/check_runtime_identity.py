@@ -94,12 +94,50 @@ def release_fields(data: bytes) -> dict:
     return values
 
 
-def verify_release(data: bytes, expected: int, arch: str) -> None:
+def verify_release(data: bytes, expected: int, arch: str, *, runtime_arch: str | None = None) -> None:
     values = release_fields(data)
     require(feature(values.get("JAVA_VERSION", "")) == expected,
             "Packaged runtime version differs from selected target")
-    require(architecture(values.get("OS_ARCH", "")) == architecture(arch),
-            "Packaged runtime architecture differs from host")
+    # jlink release files need not retain the source JDK's OS_ARCH field.
+    # Never invent it: require direct executed-runtime or PE-machine evidence.
+    declared = values.get("OS_ARCH")
+    require(declared is not None or runtime_arch is not None, "Missing independent package architecture proof")
+    if declared is not None:
+        require(architecture(declared) == architecture(arch), "Declared package architecture differs from host")
+    if runtime_arch is not None:
+        require(architecture(runtime_arch) == architecture(arch), "Observed package architecture differs from host")
+
+
+def pe_architecture(path: Path) -> str:
+    """Read the actual 64-bit PE machine, not only an MZ signature."""
+    with path.open("rb") as source:
+        dos = source.read(64)
+        require(len(dos) == 64 and dos[:2] == b"MZ", "Missing DOS header in packaged JVM DLL")
+        offset = struct.unpack_from("<I", dos, 60)[0]
+        size = source.seek(0, 2)
+        require(64 <= offset <= LIMIT and offset + 26 <= size, "Invalid bounded PE header offset")
+        source.seek(offset)
+        coff = source.read(24)
+        require(len(coff) == 24 and coff[:4] == b"PE\x00\x00", "Invalid PE signature")
+        machine = struct.unpack_from("<H", coff, 4)[0]
+        optional_size = struct.unpack_from("<H", coff, 20)[0]
+        require(2 <= optional_size <= 4096 and offset + 24 + optional_size <= size,
+                "Truncated or invalid PE optional header")
+        optional = source.read(optional_size)
+        require(len(optional) == optional_size and optional[:2] == b"\x0b\x02", "Runtime is not PE32+")
+        supported = {0x8664: "x86_64", 0xAA64: "aarch64"}
+        require(machine in supported, "Unsupported JVM DLL machine")
+        return supported[machine]
+
+
+def executed_runtime_architecture(output: str, expected: int, arch: str) -> str:
+    require(len(output) <= 65536, "Unexpected runtime diagnostic output size")
+    versions = re.findall(r"(?m)^\s*java.specification.version\s*=\s*(\d+)\s*$", output)
+    hosts = re.findall(r"(?m)^\s*os.arch\s*=\s*(\S+)\s*$", output)
+    require(len(versions) == 1 and int(versions[0]) == expected, "Executed packaged Java is wrong or ambiguous")
+    require(len(hosts) == 1 and architecture(hosts[0]) == architecture(arch),
+            "Executed package architecture is wrong or ambiguous")
+    return architecture(hosts[0])
 
 
 def verify_junit(path: Path) -> None:
@@ -179,21 +217,15 @@ def validate(root: Path, expected: int, os_name: str, arch: str, before: Path) -
     }
     require(os_name in homes, "Unknown package OS")
     home = project / homes[os_name]
-    verify_release(read_small(home / "release"), expected, arch)
-    mode = "release_metadata_and_jvm_dll"
+    mode = "release_metadata_and_pe_machine"
     if os_name == "Windows":
-        with (home / "bin/server/jvm.dll").open("rb") as source:
-            require(source.read(2) == b"MZ", "Missing real PE runtime DLL")
+        observed_arch = pe_architecture(home / "bin/server/jvm.dll")
     else:
         result = subprocess.run([str(home / "bin/java"), "-XshowSettings:properties", "-version"],
                                 capture_output=True, text=True, timeout=20, check=True)
-        output = result.stdout + result.stderr
-        require(len(output) <= 65536, "Unexpected runtime diagnostic output size")
-        version = re.search(r"(?m)^\s*java.specification.version\s*=\s*(\d+)\s*$", output)
-        host = re.search(r"(?m)^\s*os.arch\s*=\s*(\S+)\s*$", output)
-        require(version is not None and int(version.group(1)) == expected, "Executed packaged Java is wrong")
-        require(host is not None and architecture(host.group(1)) == architecture(arch), "Executed package architecture is wrong")
+        observed_arch = executed_runtime_architecture(result.stdout + result.stderr, expected, arch)
         mode = "executed_packaged_java_no_gui"
+    verify_release(read_small(home / "release"), expected, arch, runtime_arch=observed_arch)
     require(json_record(before) == source_identity(root), "Source changed during evidence verification")
     return {"status": "PASS_BOUNDED_RUNTIME_IDENTITY_NOT_GUI", "expected": expected,
             "os": os_name, "arch": architecture(arch), "package_proof": mode, "junit": counts,

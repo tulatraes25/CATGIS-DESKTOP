@@ -62,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
-            if ./gradlew --no-daemon -PcatgisJavaVersion="$CATGIS_EXPECTED_JAVA_FEATURE" -Porg.gradle.java.installations.auto-download=false resolveCiDependencies; then exit 0; fi
+            if ./gradlew --no-daemon -PcatgisJavaVersion="$CATGIS_EXPECTED_JAVA_FEATURE" -Dorg.gradle.java.installations.auto-download=false resolveCiDependencies; then exit 0; fi
             if [ "$attempt" -eq 3 ]; then exit 1; fi
             sleep $((attempt * 10))
           done
@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew --offline --no-daemon -PcatgisJavaVersion="$CATGIS_EXPECTED_JAVA_FEATURE" -Porg.gradle.java.installations.auto-download=false -I gradle/runtime-identity.init.gradle clean test "$PACKAGE_TASK" jacocoTestCoverageVerification
+          ./gradlew --offline --no-daemon -PcatgisJavaVersion="$CATGIS_EXPECTED_JAVA_FEATURE" -Dorg.gradle.java.installations.auto-download=false -I gradle/runtime-identity.init.gradle clean test "$PACKAGE_TASK" jacocoTestCoverageVerification
       - name: Verify actual JVM class versions package and unchanged source
         shell: bash
         run: |
@@ -84,5 +84,8 @@ jobs:
           path: |
             catgis-desktop/build/runtime-identity/*.json
             catgis-desktop/build/test-results/test/TEST-ar.com.catgis.JavaRuntimeIdentityContractTest.xml
+            catgis-desktop/build/installer/linux/app-image/CATGIS Desktop/lib/runtime/release
+            catgis-desktop/build/installer/macos/app-image/CATGIS Desktop.app/Contents/runtime/Contents/Home/release
+            catgis-desktop/build/installer/windows/app-image/CATGIS Desktop/runtime/release
           if-no-files-found: ignore
           retention-days: 3
