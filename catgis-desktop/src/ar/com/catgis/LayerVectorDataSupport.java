@@ -142,14 +142,22 @@ final class LayerVectorDataSupport {
             }
             data = FlatGeobufLoader.load(path);
             if (isBlank(layer.getSourceCRS())) {
-                layer.setSourceCRS("EPSG:4326");
+                String detected = FlatGeobufCrsSupport.schemaCode(data.getSchema());
+                if (detected.isBlank()) {
+                    throw new IllegalStateException(
+                            "La capa FlatGeobuf no declara un CRS utilizable. "
+                                    + "Asigne explicitamente el CRS de origen antes de usarla.");
+                }
+                layer.setSourceCRS(detected);
             }
             return projectAndAttach(layer, data);
         }
         if (lowerPath.endsWith(".las") || lowerPath.endsWith(".laz")) {
             data = loadLasFile(path, layer);
             if (isBlank(layer.getSourceCRS())) {
-                layer.setSourceCRS("EPSG:4326");
+                throw new IllegalStateException(
+                        "La capa LAS/LAZ no tiene un CRS de origen certificado. "
+                                + "CATGIS no asumira EPSG:4326; asigne el CRS correcto antes de usarla.");
             }
             return projectAndAttach(layer, data);
         }

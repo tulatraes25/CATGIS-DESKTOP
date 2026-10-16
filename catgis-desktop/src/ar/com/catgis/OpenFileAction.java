@@ -17,6 +17,7 @@ import ar.com.catgis.climate.NetCdfLoader;
 import javax.swing.AbstractAction;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.io.File;
@@ -140,6 +141,27 @@ public class OpenFileAction extends AbstractAction {
                     return false;
                 }
                 data = FlatGeobufLoader.load(file);
+                sourceCRS = FlatGeobufCrsSupport.schemaCode(data.getSchema());
+                if (sourceCRS.isBlank()) {
+                    if (!showDialogs || GraphicsEnvironment.isHeadless()) {
+                        CatgisLogger.warn(
+                                "FlatGeobuf sin CRS: se rechazo la importacion no interactiva de "
+                                        + file.getAbsolutePath(),
+                                null);
+                        return false;
+                    }
+                    String fallback = AppContext.project() != null
+                            ? AppContext.project().getProjectCRS()
+                            : "EPSG:4326";
+                    String selectedCrs = CRSSelectorDialog.chooseBlocking(
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            "CRS de origen FlatGeobuf",
+                            fallback);
+                    if (selectedCrs == null || selectedCrs.isBlank()) {
+                        return false;
+                    }
+                    sourceCRS = selectedCrs;
+                }
                 layerDisplayName = file.getName();
             } else if (lowerName.endsWith(".pmtiles")) {
                 // PMTiles: read metadata and show info (tiles are not directly displayable as vector/raster)

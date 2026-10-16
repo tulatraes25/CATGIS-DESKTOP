@@ -184,7 +184,10 @@ public final class FlatGeobufLoader {
             channel.read(headerBuf);
             headerBuf.flip();
 
+            ByteBuffer rawHeaderForCrs = headerBuf.asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN);
             HeaderMeta header = HeaderMeta.read(headerBuf);
+            FlatGeobufCrsSupport.Resolution sourceCrs =
+                    FlatGeobufCrsSupport.resolve(rawHeaderForCrs);
 
             CatgisLogger.debug("FlatGeobuf header: geometry="
                     + GeometryType.name((short) header.geometryType)
@@ -192,7 +195,8 @@ public final class FlatGeobufLoader {
                     + ", columns=" + (header.columns != null ? header.columns.size() : 0)
                     + ", indexNodeSize=" + header.indexNodeSize);
 
-            SimpleFeatureType schema = buildSchema(header, file.getName());
+            SimpleFeatureType schema = buildSchema(
+                    header, file.getName(), sourceCrs.coordinateReferenceSystem());
             SimpleFeatureBuilder builder = new SimpleFeatureBuilder(schema);
 
             long featuresCount = header.featuresCount;
@@ -296,10 +300,16 @@ public final class FlatGeobufLoader {
         return envelope;
     }
 
-    private static SimpleFeatureType buildSchema(HeaderMeta header, String sourceName) {
+    private static SimpleFeatureType buildSchema(
+            HeaderMeta header,
+            String sourceName,
+            org.geotools.api.referencing.crs.CoordinateReferenceSystem sourceCrs) {
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
         String name = sourceName.replaceAll("[^a-zA-Z0-9_]", "_");
         typeBuilder.setName(name);
+        if (sourceCrs != null) {
+            typeBuilder.setCRS(sourceCrs);
+        }
         typeBuilder.add("the_geom", Geometry.class);
 
         List<ColumnMeta> columns = header.columns;
