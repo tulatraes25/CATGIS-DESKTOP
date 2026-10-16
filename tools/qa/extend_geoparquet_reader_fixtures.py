@@ -31,7 +31,10 @@ def main() -> None:
             raise FileExistsError(path)
         pq.write_table(table, path, compression=compression, row_group_size=2,
                        use_dictionary=True, write_page_checksum=True, version='2.6')
-        if not pq.read_table(path).equals(table, check_metadata=True):
+        restored = pq.read_table(path)
+        if not restored.equals(table, check_metadata=True):
+            print('EXPECTED_SCHEMA', table.schema)
+            print('OBSERVED_SCHEMA', restored.schema)
             raise AssertionError('Independent row/attribute/WKB mismatch: ' + name)
         print('ARROW_ROW_PROBE_FILE', name, table.num_rows, table.schema)
 
@@ -52,8 +55,12 @@ def main() -> None:
             ('trailing-wkb.parquet', point(2, 3) + bytes([0]))):
         write(name, with_geo(pa.table({'shape': pa.array([point(0, 0), second], type=pa.binary())}),
                              geo('shape', ['Point'])))
+    # Parquet's compliant LIST writer calls the child "element", while Arrow's
+    # list_(int32()) defaults to "item". Match the declared fixture schema to
+    # the format instead of disabling the exact metadata/row equality assertion.
+    nested_type = pa.list_(pa.field('element', pa.int32()))
     nested = with_geo(pa.table({'shape': pa.array([point(0, 0)], type=pa.binary()),
-                               'values': pa.array([[1, 2]], type=pa.list_(pa.int32()))}), geo('shape', ['Point']))
+                               'values': pa.array([[1, 2]], type=nested_type)}), geo('shape', ['Point']))
     write('nested.parquet', nested)
     write('zstd.parquet', typed, 'zstd')
     write('checksummed.parquet', typed, 'NONE')
@@ -68,7 +75,6 @@ def main() -> None:
     if bad_page.exists():
         raise FileExistsError(bad_page)
     bad_page.write_bytes(data)
-    # Confirm Arrow itself rejects the corrupted payload with checksum checking.
     try:
         pq.read_table(bad_page, page_checksum_verification=True)
     except (OSError, pa.ArrowException):
