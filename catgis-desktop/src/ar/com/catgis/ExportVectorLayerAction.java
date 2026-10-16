@@ -310,17 +310,13 @@ public class ExportVectorLayerAction {
                 return false;
             }
 
+            String resolvedTargetCode = resolveTargetCode(layer, option, targetCode);
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
-                exportToShapefile(layer, data, file, resolveTargetCode(layer, option, targetCode));
-            } else if (DXF_OPTION.equals(option)) {
-                exportToDxf(layer, data, file, resolveTargetCode(layer, option, targetCode));
-            } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolveTargetCode(layer, option, targetCode));
-            } else if (GPX_OPTION.equals(option)) {
-                exportToGpx(layer, data, file);
+                exportToShapefile(layer, data, file, resolvedTargetCode);
             } else {
-                exportToKml(layer, data, file, kmlOptions);
+                exportSingleFileSafely(
+                        layer, data, file, option, resolvedTargetCode, kmlOptions);
             }
 
             if (showSuccessMessage) {
@@ -386,14 +382,9 @@ public class ExportVectorLayerAction {
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
                 exportToShapefile(layer, data, file, resolvedTargetCode);
-            } else if (DXF_OPTION.equals(option)) {
-                exportToDxf(layer, data, file, resolvedTargetCode);
-            } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolvedTargetCode);
-            } else if (GPX_OPTION.equals(option)) {
-                exportToGpx(layer, data, file);
             } else {
-                exportToKml(layer, data, file, kmlOptions);
+                exportSingleFileSafely(
+                        layer, data, file, option, resolvedTargetCode, kmlOptions);
             }
 
             if (!GPX_OPTION.equals(option)) {
@@ -409,6 +400,84 @@ public class ExportVectorLayerAction {
             showExportError(parent, ex);
             return false;
         }
+    }
+
+    private static void exportSingleFileSafely(
+            Layer layer,
+            ShapefileData data,
+            File file,
+            String option,
+            String resolvedTargetCode,
+            KmlExportOptions kmlOptions) throws Exception {
+        int expectedFeatures = data != null && data.getFeatures() != null
+                ? data.getFeatures().size()
+                : 0;
+        String suffix = extensionForOption(option);
+        VectorSingleFilePublisher.publish(
+                file,
+                suffix,
+                staging -> {
+                    File stagedFile = staging.toFile();
+                    if (DXF_OPTION.equals(option)) {
+                        exportToDxf(layer, data, stagedFile, resolvedTargetCode);
+                    } else if (GEOJSON_OPTION.equals(option)) {
+                        exportToGeoJson(layer, data, stagedFile, resolvedTargetCode);
+                    } else if (GPX_OPTION.equals(option)) {
+                        exportToGpx(layer, data, stagedFile);
+                    } else if (KML_OPTION.equals(option) || KMZ_OPTION.equals(option)) {
+                        exportToKml(layer, data, stagedFile, kmlOptions);
+                    } else {
+                        throw new IllegalArgumentException(
+                                "Formato vectorial de archivo unico no soportado: " + option);
+                    }
+                },
+                staging -> validateSingleFileExport(
+                        staging.toFile(), option, expectedFeatures));
+    }
+
+    private static void validateSingleFileExport(
+            File stagedFile, String option, int expectedFeatures) throws Exception {
+        if (GEOJSON_OPTION.equals(option)) {
+            ShapefileData reloaded = GeoJsonLoader.load(stagedFile);
+            if (reloaded == null || reloaded.getFeatureCount() != expectedFeatures) {
+                throw new java.io.IOException(
+                        "El GeoJSON temporal no conserva la cantidad de entidades.");
+            }
+            return;
+        }
+        if (DXF_OPTION.equals(option)) {
+            if (expectedFeatures == 0) {
+                String text = java.nio.file.Files.readString(
+                        stagedFile.toPath(), StandardCharsets.UTF_8);
+                if (!text.contains("ENTITIES") || !text.contains("EOF")) {
+                    throw new java.io.IOException("El DXF temporal esta incompleto.");
+                }
+                return;
+            }
+            ShapefileData reloaded = DxfLoader.load(stagedFile);
+            if (reloaded == null || reloaded.getFeatureCount() <= 0) {
+                throw new java.io.IOException("El DXF temporal no contiene geometria valida.");
+            }
+            return;
+        }
+        if (KML_OPTION.equals(option) || KMZ_OPTION.equals(option)) {
+            ShapefileData reloaded = KmlLoader.load(stagedFile);
+            if (reloaded == null
+                    || (expectedFeatures > 0 && reloaded.getFeatureCount() <= 0)) {
+                throw new java.io.IOException("El KML/KMZ temporal no contiene geometria valida.");
+            }
+            return;
+        }
+        if (GPX_OPTION.equals(option)) {
+            GpxImportResult reloaded = GpxLoader.load(stagedFile);
+            if (reloaded == null
+                    || (expectedFeatures > 0 && !reloaded.hasAnyData())) {
+                throw new java.io.IOException("El GPX temporal no contiene geometria valida.");
+            }
+            return;
+        }
+        throw new IllegalArgumentException(
+                "No existe validador para el formato vectorial: " + option);
     }
 
     private static void exportToShapefile(Layer layer, ShapefileData data, File file, String targetCode) throws Exception {
