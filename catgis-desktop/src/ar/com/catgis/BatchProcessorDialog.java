@@ -4,7 +4,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.File;
-import java.util.List;
+import java.util.List;\nimport java.util.concurrent.CancellationException;
 
 /**
  * Dialog for batch processing multiple GIS files.
@@ -18,7 +18,13 @@ public class BatchProcessorDialog extends JDialog {
     private final JTextArea fileListArea;
     private final JProgressBar progressBar;
     private final JLabel statusLabel;
-    private List<File> currentFiles;
+    private final JButton scanButton;
+    private final JButton runButton;
+    private List<File> currentFiles = List.of();
+    private SwingWorker<List<File>, Void> scanWorker;
+    private int scanGeneration;
+    private String scannedInputPath = "";
+    private boolean scannedIncludeSubdirs;
 
     public BatchProcessorDialog() {
         super((Frame) null, "Procesamiento por Lotes", false);
@@ -82,26 +88,28 @@ public class BatchProcessorDialog extends JDialog {
         includeSubdirsCheck = new JCheckBox("Incluir subdirectorios");
         form.add(includeSubdirsCheck, gbc);
 
-        add(form, BorderLayout.NORTH);
+        // Form and file preview share the body; the title keeps the NORTH region.
 
         // File list
         fileListArea = new JTextArea();
         fileListArea.setEditable(false);
         fileListArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         fileListArea.setBorder(BorderFactory.createTitledBorder("Archivos encontrados"));
-        add(new JScrollPane(fileListArea), BorderLayout.CENTER);
+        JPanel bodyPanel = new JPanel(new BorderLayout(8, 8));
+        bodyPanel.add(form, BorderLayout.NORTH);
+        bodyPanel.add(new JScrollPane(fileListArea), BorderLayout.CENTER);
+        add(bodyPanel, BorderLayout.CENTER);
 
-        // Progress
+        // Progress and controls coexist in the footer; neither can replace the other.
         JPanel progressPanel = new JPanel(new BorderLayout());
         progressBar = new JProgressBar(0, 100);
         progressPanel.add(progressBar, BorderLayout.CENTER);
-        add(progressPanel, BorderLayout.SOUTH);
 
-        // Footer
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton scanButton = new JButton("Escanear");
+        scanButton = new JButton("Escanear");
         scanButton.addActionListener(e -> scanDirectory());
-        JButton runButton = new JButton("Ejecutar");
+        runButton = new JButton("Ejecutar");
+        runButton.setEnabled(false);
         runButton.addActionListener(e -> executeBatch());
         JButton closeButton = new JButton("Cerrar");
         closeButton.addActionListener(e -> dispose());
@@ -110,7 +118,16 @@ public class BatchProcessorDialog extends JDialog {
         footer.add(closeButton);
         statusLabel = new JLabel("Selecciona un directorio y escanea.");
         footer.add(statusLabel);
-        add(footer, BorderLayout.SOUTH);
+        JPanel southPanel = new JPanel(new BorderLayout(4, 4));
+        southPanel.add(progressPanel, BorderLayout.NORTH);
+        southPanel.add(footer, BorderLayout.SOUTH);
+        add(southPanel, BorderLayout.SOUTH);
+
+        includeSubdirsCheck.addActionListener(e -> {
+            if (!inputDirField.getText().trim().isEmpty()) {
+                scanDirectory();
+            }
+        });
     }
 
     public static void open() {
@@ -139,27 +156,95 @@ public class BatchProcessorDialog extends JDialog {
     private void scanDirectory() {
         String inputPath = inputDirField.getText().trim();
         if (inputPath.isEmpty()) {
+            currentFiles = List.of();
+            runButton.setEnabled(false);
             NotificationManager.warn(this, null, "Selecciona un directorio de entrada.");
             return;
         }
 
         File inputDir = new File(inputPath);
         if (!inputDir.isDirectory()) {
+            currentFiles = List.of();
+            runButton.setEnabled(false);
             NotificationManager.warn(this, null, "El directorio no existe.");
             return;
         }
 
-        currentFiles = BatchProcessor.findAllGisFiles(inputDir);
-        fileListArea.setText("");
-        for (File f : currentFiles) {
-            fileListArea.append(f.getName() + " (" + (f.length() / 1024) + " KB)\n");
+        int generation = ++scanGeneration;
+        if (scanWorker != null && !scanWorker.isDone()) {
+            scanWorker.cancel(true);
         }
-        statusLabel.setText(currentFiles.size() + " archivos encontrados.");
+        boolean includeSubdirs = includeSubdirsCheck.isSelected();
+        String normalizedPath = inputDir.toPath().toAbsolutePath().normalize().toString();
+        currentFiles = List.of();
+        scannedInputPath = "";
+        runButton.setEnabled(false);
+        scanButton.setEnabled(false);
+        progressBar.setIndeterminate(true);
+        statusLabel.setForeground(Color.BLUE);
+        statusLabel.setText(includeSubdirs ? "Escaneando directorio y subdirectorios..." : "Escaneando directorio...");
+
+        scanWorker = new SwingWorker<>() {
+            @Override
+            protected List<File> doInBackground() throws Exception {
+                return BatchFileDiscovery.find(inputDir, includeSubdirs);
+            }
+
+            @Override
+            protected void done() {
+                if (generation != scanGeneration) {
+                    return;
+                }
+                scanButton.setEnabled(true);
+                progressBar.setIndeterminate(false);
+                try {
+                    List<File> found = get();
+                    currentFiles = found;
+                    scannedInputPath = normalizedPath;
+                    scannedIncludeSubdirs = includeSubdirs;
+                    fileListArea.setText("");
+                    java.nio.file.Path root = inputDir.toPath().toAbsolutePath().normalize();
+                    for (File file : found) {
+                        java.nio.file.Path absolute = file.toPath().toAbsolutePath().normalize();
+                        String display;
+                        try {
+                            display = root.relativize(absolute).toString();
+                        } catch (IllegalArgumentException unrelatedRoot) {
+                            display = file.getName();
+                        }
+                        fileListArea.append(display + " (" + (file.length() / 1024) + " KB)\n");
+                    }
+                    runButton.setEnabled(!found.isEmpty());
+                    statusLabel.setForeground(found.isEmpty() ? Color.DARK_GRAY : new Color(0, 128, 0));
+                    statusLabel.setText(found.size() + " archivos encontrados.");
+                } catch (CancellationException cancelled) {
+                    currentFiles = List.of();
+                    statusLabel.setForeground(Color.DARK_GRAY);
+                    statusLabel.setText("Escaneo cancelado.");
+                } catch (Exception failure) {
+                    currentFiles = List.of();
+                    runButton.setEnabled(false);
+                    Throwable cause = failure.getCause() != null ? failure.getCause() : failure;
+                    statusLabel.setForeground(Color.RED);
+                    statusLabel.setText("No se pudo completar el escaneo.");
+                    NotificationManager.warn(BatchProcessorDialog.this,
+                            "Error de escaneo",
+                            cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName());
+                }
+            }
+        };
+        scanWorker.execute();
     }
 
     private void executeBatch() {
-        if (currentFiles == null || currentFiles.isEmpty()) {
-            NotificationManager.warn(this, null, "No hay archivos para procesar. Escanea primero.");
+        String inputPath = inputDirField.getText().trim();
+        String normalizedInput = inputPath.isEmpty() ? ""
+                : new File(inputPath).toPath().toAbsolutePath().normalize().toString();
+        if (currentFiles.isEmpty() || !normalizedInput.equals(scannedInputPath)
+                || includeSubdirsCheck.isSelected() != scannedIncludeSubdirs) {
+            runButton.setEnabled(false);
+            NotificationManager.warn(this, null,
+                    "El directorio u opciones cambiaron. Escanea nuevamente antes de ejecutar.");
             return;
         }
 
@@ -170,11 +255,18 @@ public class BatchProcessorDialog extends JDialog {
         }
 
         File outputDir = new File(outputPath);
-        if (!outputDir.exists()) {
-            outputDir.mkdirs();
+        if (!outputDir.exists() && !outputDir.mkdirs()) {
+            NotificationManager.warn(this, null, "No se pudo crear el directorio de salida.");
+            return;
+        }
+        if (!outputDir.isDirectory()) {
+            NotificationManager.warn(this, null, "La salida seleccionada no es un directorio.");
+            return;
         }
 
         String operation = (String) operationCombo.getSelectedItem();
+        runButton.setEnabled(false);
+        scanButton.setEnabled(false);
         statusLabel.setText("Procesando...");
         statusLabel.setForeground(Color.BLUE);
         progressBar.setValue(0);
@@ -212,6 +304,10 @@ public class BatchProcessorDialog extends JDialog {
                     statusLabel.setText("Completado: " + result.success() + " exitosos, " + result.failed() + " fallidos");
                     statusLabel.setForeground(result.failed() == 0 ? new Color(0, 128, 0) : Color.RED);
                     progressBar.setValue(100);
+                    scanButton.setEnabled(true);
+                    runButton.setEnabled(!currentFiles.isEmpty()
+                            && normalizedInput.equals(scannedInputPath)
+                            && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs);
 
                     if (!result.errors().isEmpty()) {
                         StringBuilder sb = new StringBuilder("Errores:\n");
@@ -226,6 +322,10 @@ public class BatchProcessorDialog extends JDialog {
                                         + result.success() + " archivos procesados en " + outputPath);
                     }
                 } catch (Exception e) {
+                    scanButton.setEnabled(true);
+                    runButton.setEnabled(!currentFiles.isEmpty()
+                            && normalizedInput.equals(scannedInputPath)
+                            && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs);
                     statusLabel.setText("Error: " + e.getMessage());
                     statusLabel.setForeground(Color.RED);
                 }
