@@ -1,0 +1,86 @@
+name: CATGIS Runtime Identity
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catgis-runtime-identity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  identity:
+    name: Runtime identity ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: Linux17, os: ubuntu-latest, feature: '17', arch: x86_64, package: verifyLinuxAppImage}
+          - {name: Linux21, os: ubuntu-latest, feature: '21', arch: x86_64, package: verifyLinuxAppImage}
+          - {name: Windows17, os: windows-latest, feature: '17', arch: x86_64, package: verifyWindowsAppImage}
+          - {name: Windows21, os: windows-latest, feature: '21', arch: x86_64, package: verifyWindowsAppImage}
+          - {name: MacIntel17, os: macos-15-intel, feature: '17', arch: x86_64, package: verifyMacAppImage}
+          - {name: MacIntel21, os: macos-15-intel, feature: '21', arch: x86_64, package: verifyMacAppImage}
+          - {name: MacArm17, os: macos-15, feature: '17', arch: aarch64, package: verifyMacAppImage}
+          - {name: MacArm21, os: macos-15, feature: '21', arch: aarch64, package: verifyMacAppImage}
+    env:
+      CATGIS_EXPECTED_JAVA_FEATURE: ${{ matrix.feature }}
+      REQUIRED_ARCH: ${{ matrix.arch }}
+      PACKAGE_TASK: ${{ matrix.package }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.feature }}
+          distribution: temurin
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-disabled: true
+      - name: Test evidence and attestation guards and snapshot source
+        shell: bash
+        run: |
+          python tools/qa/test_runtime_identity.py
+          python tools/qa/test_runtime_attestation.py
+          python tools/qa/check_runtime_identity.py snapshot --snapshot "$RUNNER_TEMP/runtime-before.json"
+      - name: Resolve dependencies without substituting another JVM
+        working-directory: catgis-desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon -PcatgisJavaVersion="$CATGIS_EXPECTED_JAVA_FEATURE" -Dorg.gradle.java.installations.auto-download=false resolveCiDependencies; then exit 0; fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+            sleep $((attempt * 10))
+          done
+      - name: Full tests and package with observed compiler and launcher
+        working-directory: catgis-desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --offline --no-daemon -PcatgisJavaVersion="$CATGIS_EXPECTED_JAVA_FEATURE" -Dorg.gradle.java.installations.auto-download=false -I gradle/runtime-identity.init.gradle clean test "$PACKAGE_TASK" jacocoTestCoverageVerification
+      - name: Verify actual JVM class versions package and unchanged source
+        shell: bash
+        run: |
+          python tools/qa/check_runtime_identity.py verify --snapshot "$RUNNER_TEMP/runtime-before.json" --feature "$CATGIS_EXPECTED_JAVA_FEATURE" --os "$RUNNER_OS" --arch "$REQUIRED_ARCH"
+      - name: Retain small failure diagnostics only
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-identity-failure-${{ matrix.name }}
+          path: |
+            catgis-desktop/build/runtime-identity/*.json
+            catgis-desktop/build/test-results/test/TEST-ar.com.catgis.JavaRuntimeIdentityContractTest.xml
+            catgis-desktop/build/installer/**/runtime/release
+            catgis-desktop/build/installer/**/runtime/Contents/Home/release
+          if-no-files-found: ignore
+          retention-days: 3

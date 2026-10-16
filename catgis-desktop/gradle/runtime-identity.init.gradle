@@ -1,0 +1,42 @@
+import groovy.json.JsonOutput
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.testing.Test
+
+// Explicit diagnostic lane only. Does not alter the repository default target.
+def text = System.getenv('CATGIS_EXPECTED_JAVA_FEATURE') ?: ''
+if (!(text in ['17', '21'])) {
+    throw new GradleException('Runtime identity lane requires explicit Java17 or Java21.')
+}
+def expected = text.toInteger()
+gradle.projectsEvaluated {
+    gradle.rootProject.allprojects { p ->
+        if (p.plugins.hasPlugin('java')) {
+            def save = { String taskName, String role, metadata ->
+                int actual = metadata.languageVersion.asInt()
+                if (actual != expected) {
+                    throw new GradleException("${role} selected Java${actual}, expected Java${expected}")
+                }
+                File destination = p.layout.buildDirectory.file("runtime-identity/${taskName}.json").get().asFile
+                destination.parentFile.mkdirs()
+                destination.text = JsonOutput.toJson([
+                    role: role, feature: actual, expected: expected,
+                    installation: metadata.installationPath.asFile.absolutePath
+                ])
+                p.logger.lifecycle("RUNTIME_IDENTITY ${role} actual=${actual} expected=${expected}")
+            }
+            p.tasks.withType(JavaCompile).configureEach { compilation ->
+                compilation.doFirst {
+                    save(compilation.name, 'compiler', compilation.javaCompiler.get().metadata)
+                }
+            }
+            p.tasks.withType(Test).configureEach { testing ->
+                testing.systemProperty('catgis.certification.expectedJava', text)
+                testing.systemProperty('catgis.certification.evidenceDirectory',
+                    p.layout.buildDirectory.dir('runtime-identity').get().asFile.absolutePath)
+                testing.doFirst {
+                    save(testing.name, 'test-launcher', testing.javaLauncher.get().metadata)
+                }
+            }
+        }
+    }
+}

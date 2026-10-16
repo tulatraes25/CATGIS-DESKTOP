@@ -23,10 +23,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         id: gradle-deps
@@ -63,10 +63,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         id: gradle-deps
@@ -99,10 +99,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -152,10 +152,10 @@ jobs:
       PROJ_NETWORK: 'OFF'
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Set up Gradle without uploaded/cache artifacts
         uses: gradle/actions/setup-gradle@v4
@@ -241,10 +241,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Install native Java 17 for this Mac architecture
+      - name: Install native Java 21 for this Mac architecture
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Set up Gradle without GitHub cache storage
         uses: gradle/actions/setup-gradle@v4
@@ -318,7 +318,7 @@ jobs:
             echo "- Host architecture: $(uname -m)"
             echo "- Bundle size: $(du -sh "$app" | cut -f1)"
             echo "- Main JAR SHA-256: $(shasum -a 256 "$jar" | cut -d' ' -f1)"
-            echo '- JDK17 bundled; CATGIS/CATMAP native launchers and Java tests passed'
+            echo '- Bundled runtime version printed above; exact version/architecture enforced by Runtime Identity'
             echo '- Unsigned, not notarized; no .app/.dmg binaries uploaded'
           } >> "$GITHUB_STEP_SUMMARY"
   linux-full-suite:
@@ -331,10 +331,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -393,10 +393,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -435,10 +435,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -497,10 +497,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -536,10 +536,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -581,10 +581,10 @@ jobs:
         working-directory: catgis-desktop
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4
@@ -629,10 +629,10 @@ jobs:
       CATGIS_TEST_POSTGIS_PASSWORD: catgis_test_password
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: temurin
       - name: Restore bounded Gradle dependency cache
         uses: actions/cache@v4

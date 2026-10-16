@@ -29,7 +29,11 @@ Ver: [inventario y cierre de ramas](docs/repository/BRANCH_INVENTORY_2026-10-04.
 
 ## Desarrollo
 
-CATGIS Desktop usa Gradle y Java 17 como baseline del repositorio.
+CATGIS Desktop usa Gradle y **Java 21 como objetivo predeterminado de compilación, pruebas y empaquetado**, según `catgis-desktop/gradle.properties`. Esta política conserva el objetivo que ya utilizaba el proyecto; no cambia sus dependencias ni degrada el runtime.
+
+**Java 17 es una variante de compilación explícita para comprobar compatibilidad del código fuente**, no una garantía de que un binario generado para Java 21 pueda ejecutarse con Java 17. La matriz de identidad exige ambas versiones en Windows, Linux, Mac Intel y Apple Silicon, observando compilador, JVM de pruebas, bytecode y runtime del paquete. Instalar una versión con `setup-java` no certifica por sí solo que Gradle la haya utilizado.
+
+Ver [política y límites de compatibilidad Java](docs/quality/JAVA_RUNTIME_POLICY.md). Los registros históricos conservan su valor para el SHA y entorno realmente observados, pero las etiquetas antiguas de Java 17 no sustituyen estas comprobaciones. La certificación de interfaz, JNI e instalación final sigue siendo independiente.
 
 En Windows:
 
