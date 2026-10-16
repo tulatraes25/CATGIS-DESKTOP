@@ -53,3 +53,9 @@ predecessor-main evidence before merge, then fresh main evidence.
 ## Failed-candidate evidence retained
 
 Head `6fb6f69730e50f6e100e43ef0cc4751ba97abfa5` failed CI `38921538977`, Runtime Identity `38921538707` and Certification `38921538774` on the same deterministic contract: `legacyPositionalTileWmsAndWfsPayloadsStartAfterOpacity` expected tile source `osm` but decoded `false`. Root cause was the wrong +1 legacy offset for RasterLayer-derived Tile/WMS. This failure is code evidence, not infrastructure, and is not relabeled as PASS.
+
+## Regression guard after #166 integration
+
+During exact-main resynchronization, an older candidate SaveProjectAction version was found to replace certified ProjectFilePublisher staging with a direct FileWriter of the canonical .catgis file. This is a P0 regression and was rejected before merge. The integration now preserves the current protected-main atomic publishing call site while only replacing the specialized payload builder. ArchitectureCertificationTest guards against recurrence, and ProjectFilePublisherContractTest continues to prove byte-exact previous-file preservation and staging cleanup on write/move/validation failure.
+
+CANDIDATE / NOT_CERTIFIED until full exact-head and post-main workflow evidence. No claim of full cross-file project transactionality or staged project open.
