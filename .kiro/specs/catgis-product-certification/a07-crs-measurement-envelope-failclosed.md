@@ -17,6 +17,7 @@ After PR #160, UNKNOWN is preserved at the Layer model/data-mutation boundary, b
 ## Design
 
 - UNKNOWN/invalid measurement CRS => unavailable: null for map geometry, NaN for low-level vector metrics.
+- Recognize arbitrary projected metric CRS from decoded axis units, not EPSG prefix lists. Geographic measurements derive a local UTM zone from the transformed WGS84 centroid; outside the supported UTM latitude domain fail closed rather than force Web Mercator.
 - No layer-source CRS inheritance from project CRS.
 - DrawingTools delegates to the same MapMeasurementUtils implementation as MapPanel.
 - user measurement requires an explicit project CRS and reports a warning if absent.
@@ -26,7 +27,7 @@ After PR #160, UNKNOWN is preserved at the Layer model/data-mutation boundary, b
 
 ## Contracts
 
-CrsMeasurementEnvelopeFailClosedContractTest verifies blank/invalid measurement rejection, valid EPSG:4326 metric result, UNKNOWN layer not inheriting EPSG:32719 project CRS, exact known UTM metric length, blank/invalid envelope rejection, declared identity copy and valid online 4326->3857 envelope.
+CrsMeasurementEnvelopeFailClosedContractTest verifies blank/invalid measurement rejection, valid EPSG:4326 metric result, arbitrary metric EPSG:3035 staying metric, UNKNOWN layer not inheriting EPSG:32719 project CRS, exact known UTM metric length, field-expression rejection of unavailable metrics, GeoTools-oracle EPSG:3035->4326 envelope, blank/invalid envelope rejection, declared identity copy and valid online 4326->3857 envelope.
 
 Existing ReleaseFieldCalculatorTest keeps valid geographic metric behavior.
 
