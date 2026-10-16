@@ -19,13 +19,18 @@ final class BatchFileDiscovery {
     private BatchFileDiscovery() {}
 
     static List<File> find(File directory, boolean includeSubdirs) throws IOException {
+        return find(directory, includeSubdirs, InputKind.ALL_GIS);
+    }
+
+    static List<File> find(File directory, boolean includeSubdirs, InputKind kind)
+            throws IOException {
         if (directory == null || !directory.isDirectory()) {
             return List.of();
         }
 
         List<File> files = new ArrayList<>();
         if (!includeSubdirs) {
-            files.addAll(BatchProcessor.findAllGisFiles(directory));
+            files.addAll(findInDirectory(directory, kind));
             ensureLimit(files.size());
         } else {
             try (Stream<Path> paths = Files.walk(directory.toPath())) {
@@ -36,7 +41,7 @@ final class BatchFileDiscovery {
                     if (Thread.currentThread().isInterrupted()) {
                         throw new IOException("Escaneo cancelado.");
                     }
-                    files.addAll(BatchProcessor.findAllGisFiles(directories.next().toFile()));
+                    files.addAll(findInDirectory(directories.next().toFile(), kind));
                     ensureLimit(files.size());
                 }
             } catch (UncheckedIOException failure) {
@@ -46,6 +51,16 @@ final class BatchFileDiscovery {
 
         files.sort(Comparator.comparing(File::getAbsolutePath, String.CASE_INSENSITIVE_ORDER));
         return List.copyOf(files);
+    }
+
+    private static List<File> findInDirectory(File directory, InputKind kind) {
+        if (kind == InputKind.TIFF_RASTER) {
+            List<File> raster = new ArrayList<>();
+            raster.addAll(BatchProcessor.findFiles(directory, ".tif"));
+            raster.addAll(BatchProcessor.findFiles(directory, ".tiff"));
+            return raster;
+        }
+        return BatchProcessor.findAllGisFiles(directory);
     }
 
     private static void ensureLimit(int count) throws IOException {

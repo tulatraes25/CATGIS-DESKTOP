@@ -25,7 +25,7 @@ public class BatchProcessorDialog extends JDialog {
     private SwingWorker<List<File>, Void> scanWorker;
     private int scanGeneration;
     private String scannedInputPath = "";
-    private boolean scannedIncludeSubdirs;
+    private boolean scannedIncludeSubdirs;\n    private String scannedOperation = "";
 
     public BatchProcessorDialog() {
         super((Frame) null, "Procesamiento por Lotes", false);
@@ -83,6 +83,11 @@ public class BatchProcessorDialog extends JDialog {
                 "Reclasificar raster"
         });
         form.add(operationCombo, gbc);
+        operationCombo.addActionListener(e -> {
+            if (!inputDirField.getText().trim().isEmpty()) {
+                scanDirectory();
+            }
+        });
 
         // Options
         gbc.gridy = 3; gbc.gridx = 0;
@@ -176,6 +181,8 @@ public class BatchProcessorDialog extends JDialog {
             scanWorker.cancel(true);
         }
         boolean includeSubdirs = includeSubdirsCheck.isSelected();
+        String selectedOperation = (String) operationCombo.getSelectedItem();
+        BatchFileDiscovery.InputKind inputKind = inputKindForOperation(selectedOperation);
         String normalizedPath = inputDir.toPath().toAbsolutePath().normalize().toString();
         currentFiles = List.of();
         scannedInputPath = "";
@@ -188,7 +195,7 @@ public class BatchProcessorDialog extends JDialog {
         scanWorker = new SwingWorker<>() {
             @Override
             protected List<File> doInBackground() throws Exception {
-                return BatchFileDiscovery.find(inputDir, includeSubdirs);
+                return BatchFileDiscovery.find(inputDir, includeSubdirs, inputKind);
             }
 
             @Override
@@ -203,6 +210,7 @@ public class BatchProcessorDialog extends JDialog {
                     currentFiles = found;
                     scannedInputPath = normalizedPath;
                     scannedIncludeSubdirs = includeSubdirs;
+                    scannedOperation = selectedOperation != null ? selectedOperation : "";
                     fileListArea.setText("");
                     java.nio.file.Path root = inputDir.toPath().toAbsolutePath().normalize();
                     for (File file : found) {
@@ -217,7 +225,7 @@ public class BatchProcessorDialog extends JDialog {
                     }
                     runButton.setEnabled(!found.isEmpty());
                     statusLabel.setForeground(found.isEmpty() ? Color.DARK_GRAY : new Color(0, 128, 0));
-                    statusLabel.setText(found.size() + " archivos encontrados.");
+                    statusLabel.setText(found.size() + " archivos compatibles encontrados.");
                 } catch (CancellationException cancelled) {
                     currentFiles = List.of();
                     statusLabel.setForeground(Color.DARK_GRAY);
@@ -241,8 +249,10 @@ public class BatchProcessorDialog extends JDialog {
         String inputPath = inputDirField.getText().trim();
         String normalizedInput = inputPath.isEmpty() ? ""
                 : new File(inputPath).toPath().toAbsolutePath().normalize().toString();
+        String selectedOperation = (String) operationCombo.getSelectedItem();
         if (currentFiles.isEmpty() || !normalizedInput.equals(scannedInputPath)
-                || includeSubdirsCheck.isSelected() != scannedIncludeSubdirs) {
+                || includeSubdirsCheck.isSelected() != scannedIncludeSubdirs
+                || !java.util.Objects.equals(selectedOperation, scannedOperation)) {
             runButton.setEnabled(false);
             NotificationManager.warn(this, null,
                     "El directorio u opciones cambiaron. Escanea nuevamente antes de ejecutar.");
@@ -265,7 +275,7 @@ public class BatchProcessorDialog extends JDialog {
             return;
         }
 
-        String operation = (String) operationCombo.getSelectedItem();
+        String operation = selectedOperation;
         runButton.setEnabled(false);
         scanButton.setEnabled(false);
         statusLabel.setText("Procesando...");
@@ -332,5 +342,12 @@ public class BatchProcessorDialog extends JDialog {
                 }
             }
         }.execute();
+    private static BatchFileDiscovery.InputKind inputKindForOperation(String operation) {
+        if ("Copiar archivos".equals(operation)) {
+            return BatchFileDiscovery.InputKind.ALL_GIS;
+        }
+        return BatchFileDiscovery.InputKind.TIFF_RASTER;
+    }
+
     }
 }

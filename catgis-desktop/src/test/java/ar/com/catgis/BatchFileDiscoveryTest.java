@@ -43,6 +43,33 @@ class BatchFileDiscoveryTest {
     }
 
     @Test
+    void tiffRasterModeDoesNotOfferVectorOrUnsupportedRasterFiles() throws Exception {
+        Files.createFile(directory.resolve("scene.tif"));
+        Files.createFile(directory.resolve("scene.tiff"));
+        Files.createFile(directory.resolve("roads.shp"));
+        Files.createFile(directory.resolve("grid.asc"));
+        Files.createFile(directory.resolve("image.img"));
+
+        List<java.io.File> files = BatchFileDiscovery.find(
+                directory.toFile(), false, BatchFileDiscovery.InputKind.TIFF_RASTER);
+
+        assertEquals(List.of("scene.tif", "scene.tiff"),
+                files.stream().map(java.io.File::getName).toList());
+    }
+
+    @Test
+    void allGisModeRetainsTheExistingCopyWorkflowSurface() throws Exception {
+        Files.createFile(directory.resolve("scene.tif"));
+        Files.createFile(directory.resolve("roads.shp"));
+        Files.createFile(directory.resolve("track.gpx"));
+
+        List<java.io.File> files = BatchFileDiscovery.find(
+                directory.toFile(), false, BatchFileDiscovery.InputKind.ALL_GIS);
+
+        assertEquals(3, files.size());
+    }
+
+    @Test
     void resultsHaveStableAbsolutePathOrder() throws Exception {
         Path nested = Files.createDirectory(directory.resolve("nested"));
         Files.createFile(directory.resolve("z.tif"));
