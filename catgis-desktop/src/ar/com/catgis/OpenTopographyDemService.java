@@ -15,8 +15,6 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -24,19 +22,19 @@ import java.util.Map;
 public final class OpenTopographyDemService {
 
     private static final String API_BASE = "https://portal.opentopography.org/API/globaldem";
-    private static final DecimalFormat DECIMAL = new DecimalFormat("0.000000", DecimalFormatSymbols.getInstance(Locale.US));
 
     private OpenTopographyDemService() {
     }
 
     /** Returns the authenticated request URI. Treat it as sensitive, never diagnostic text. */
     public static URI buildDownloadUri(OpenTopographyDataset dataset, Envelope latLonEnvelope, String apiKey) {
+        return encodeRequest(dataset, requestBounds(latLonEnvelope), apiKey);
+    }
+
+    private static URI encodeRequest(OpenTopographyDataset dataset,
+                                     OpenTopographyRequestBounds bounds, String apiKey) {
         if (dataset == null) {
             throw new IllegalArgumentException("Debe elegir un dataset DEM.");
-        }
-        Envelope normalized = normalizeWgs84Envelope(latLonEnvelope);
-        if (normalized == null || normalized.isNull()) {
-            throw new IllegalArgumentException("No se pudo determinar un area valida para descargar el DEM.");
         }
         if (apiKey == null || apiKey.isBlank()) {
             throw new IllegalArgumentException("Debes indicar una API key de OpenTopography.");
@@ -44,10 +42,10 @@ public final class OpenTopographyDemService {
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("demtype", dataset.getApiCode());
-        params.put("south", DECIMAL.format(normalized.getMinY()));
-        params.put("north", DECIMAL.format(normalized.getMaxY()));
-        params.put("west", DECIMAL.format(normalized.getMinX()));
-        params.put("east", DECIMAL.format(normalized.getMaxX()));
+        params.put("south", bounds.southText());
+        params.put("north", bounds.northText());
+        params.put("west", bounds.westText());
+        params.put("east", bounds.eastText());
         params.put("outputFormat", "GTiff");
         params.put("API_Key", apiKey.trim());
 
@@ -65,6 +63,7 @@ public final class OpenTopographyDemService {
         return URI.create(API_BASE + "?" + query);
     }
 
+    /** Omitted projectCrs retains the historical API convention: input coordinates are WGS84 lon/lat. */
     public static FileDownloadResult download(OpenTopographyDataset dataset,
                                               Envelope projectEnvelope,
                                               String projectCrs,
@@ -94,16 +93,22 @@ public final class OpenTopographyDemService {
             throw new IllegalArgumentException("Debes indicar un archivo de salida para el DEM.");
         }
         checkInterrupted();
+        // Snapshot the source before projection. Later caller mutation must not
+        // change the geographic description of the already-issued request.
+        Envelope latLonEnvelope = snapshotFiniteArea(projectEnvelope);
+        if (projectCrs != null && !projectCrs.isBlank()) {
+            latLonEnvelope = RasterCoverageSupport.reprojectEnvelope(latLonEnvelope, projectCrs, "EPSG:4326");
+        }
+        OpenTopographyRequestBounds bounds = requestBounds(latLonEnvelope);
+        URI uri = encodeRequest(dataset, bounds, apiKey);
+        checkInterrupted();
+        // Invalid coordinates, precision or authentication never create output
+        // directories or contact the provider. Keep valid mkdir behavior.
         java.io.File parent = outputFile.getAbsoluteFile().getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             throw new IOException("No se pudo crear la carpeta de destino para el DEM descargado.");
         }
 
-        Envelope latLonEnvelope = projectEnvelope;
-        if (projectEnvelope != null && projectCrs != null && !projectCrs.isBlank()) {
-            latLonEnvelope = RasterCoverageSupport.reprojectEnvelope(projectEnvelope, projectCrs, "EPSG:4326");
-        }
-        URI uri = buildDownloadUri(dataset, latLonEnvelope, apiKey);
         // Only fixed local event names and numeric fields belong in diagnostics.
         // The request URI, response headers/body and exception chains may echo credentials.
         CatgisLogger.info("[EMERGENCY-DEM] OpenTopography request started");
@@ -146,13 +151,12 @@ public final class OpenTopographyDemService {
             }
             checkInterrupted();
             failureCode = "SIDECAR";
-            RasterSidecarSupport.write(outputFile,
-                    latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null,
-                    dataset.getSourceCrsCode());
+            // This records the effective REQUEST extent, not verified embedded
+            // GeoTIFF bounds. Delivered raster validation is a separate gate.
+            RasterSidecarSupport.write(outputFile, requestEnvelope(bounds), dataset.getSourceCrsCode());
             CatgisLogger.info("[EMERGENCY-DEM] OpenTopography download finished in "
                     + ((System.nanoTime() - startedAt) / 1_000_000L) + " ms");
-            return new FileDownloadResult(outputFile,
-                    latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null, uri);
+            return new FileDownloadResult(outputFile, requestEnvelope(bounds), uri);
         } catch (java.net.http.HttpTimeoutException | java.net.SocketTimeoutException timeout) {
             throw safeFailure("TIMEOUT");
         } catch (InterruptedException | InterruptedIOException interrupted) {
@@ -177,18 +181,26 @@ public final class OpenTopographyDemService {
         }
     }
 
-    private static Envelope normalizeWgs84Envelope(Envelope envelope) {
+    private static Envelope snapshotFiniteArea(Envelope envelope) {
         if (envelope == null || envelope.isNull()) {
-            return null;
+            throw new IllegalArgumentException("No se pudo determinar un area valida para descargar el DEM.");
         }
-        double south = Math.max(-90d, Math.min(90d, Math.min(envelope.getMinY(), envelope.getMaxY())));
-        double north = Math.max(-90d, Math.min(90d, Math.max(envelope.getMinY(), envelope.getMaxY())));
-        double west = Math.max(-180d, Math.min(180d, Math.min(envelope.getMinX(), envelope.getMaxX())));
-        double east = Math.max(-180d, Math.min(180d, Math.max(envelope.getMinX(), envelope.getMaxX())));
-        if (north <= south || east <= west) {
-            return null;
-        }
+        double west = envelope.getMinX();
+        double east = envelope.getMaxX();
+        double south = envelope.getMinY();
+        double north = envelope.getMaxY();
+        OpenTopographyRequestBounds.requireFiniteArea(west, east, south, north);
         return new Envelope(west, east, south, north);
+    }
+
+    private static OpenTopographyRequestBounds requestBounds(Envelope envelope) {
+        Envelope snapshot = snapshotFiniteArea(envelope);
+        return OpenTopographyRequestBounds.of(snapshot.getMinX(), snapshot.getMaxX(),
+                snapshot.getMinY(), snapshot.getMaxY());
+    }
+
+    private static Envelope requestEnvelope(OpenTopographyRequestBounds bounds) {
+        return new Envelope(bounds.westValue(), bounds.eastValue(), bounds.southValue(), bounds.northValue());
     }
 
     /** requestUri() is sensitive and retained for API compatibility, not logging. */
