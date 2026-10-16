@@ -1,146 +1,215 @@
 package ar.com.catgis;
 
-import java.awt.image.*;
-import java.util.*;
+import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
+import java.util.ArrayList;
+import java.util.List;
 
 public final class RasterReclassifyEngine {
 
     private RasterReclassifyEngine() {}
 
-    public record ReclassRule(double from, double to, double newValue, String label) {}
+    public record ReclassRule(double from, double to, double newValue, String label) {
+        public ReclassRule {
+            if (!Double.isFinite(from) || !Double.isFinite(to)
+                    || !Double.isFinite(newValue)) {
+                throw new IllegalArgumentException(
+                        "Reclassification rules require finite numeric values.");
+            }
+            if (from > to) {
+                throw new IllegalArgumentException(
+                        "Reclassification rule lower bound exceeds upper bound.");
+            }
+            label = label == null ? "" : label;
+        }
+    }
 
-    public static BufferedImage reclassify(BufferedImage source, List<ReclassRule> rules, double noDataValue, boolean useNodata) {
-        if (source == null || rules == null || rules.isEmpty()) return source;
-        int w = source.getWidth();
-        int h = source.getHeight();
-        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-        Raster raster = source.getRaster();
-        WritableRaster out = result.getRaster();
-        double[] pixel = new double[raster.getNumBands()];
-        double[] outPixel = new double[1];
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                raster.getPixel(x, y, pixel);
-                double val = pixel[0];
-                if (useNodata && Math.abs(val - noDataValue) < 1e-9) {
-                    outPixel[0] = noDataValue;
-                } else {
-                    boolean matched = false;
+    public static BufferedImage reclassify(BufferedImage source,
+                                           List<ReclassRule> rules,
+                                           double noDataValue,
+                                           boolean useNodata) {
+        if (source == null || rules == null || rules.isEmpty()) {
+            return source;
+        }
+        validateRules(rules);
+
+        int width = source.getWidth();
+        int height = source.getHeight();
+        BufferedImage result = RasterNumericImages.createDoubleBand(width, height);
+        Raster input = source.getRaster();
+        WritableRaster output = result.getRaster();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                double value = input.getSampleDouble(x, y, 0);
+                double classified = noDataValue;
+
+                if (Double.isFinite(value)
+                        && !(useNodata && isNoDataSample(value, noDataValue))) {
                     for (ReclassRule rule : rules) {
-                        if (val >= rule.from() && val <= rule.to()) {
-                            outPixel[0] = rule.newValue();
-                            matched = true;
+                        // Backward-compatible deterministic policy:
+                        // both endpoints are inclusive and the first matching rule wins.
+                        if (value >= rule.from() && value <= rule.to()) {
+                            classified = rule.newValue();
                             break;
                         }
                     }
-                    if (!matched) outPixel[0] = noDataValue;
                 }
-                out.setSample(x, y, 0, outPixel[0]);
+                output.setSample(x, y, 0, classified);
             }
         }
         return result;
     }
 
-    public static double[] computeStatistics(BufferedImage source, double noData, boolean skipNodata) {
-        int w = source.getWidth(), h = source.getHeight();
+    public static double[] computeStatistics(BufferedImage source,
+                                             double noData,
+                                             boolean skipNodata) {
+        if (source == null) {
+            throw new IllegalArgumentException("Source raster is required.");
+        }
+
         Raster raster = source.getRaster();
-        double[] pixel = new double[raster.getNumBands()];
-        double min = Double.MAX_VALUE, max = -Double.MAX_VALUE, sum = 0;
-        int count = 0;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                raster.getPixel(x, y, pixel);
-                double v = pixel[0];
-                if (skipNodata && Math.abs(v - noData) < 1e-9) continue;
-                if (v < min) min = v;
-                if (v > max) max = v;
-                sum += v;
+        long count = 0L;
+        double min = Double.POSITIVE_INFINITY;
+        double max = Double.NEGATIVE_INFINITY;
+        double mean = 0.0;
+        double m2 = 0.0;
+
+        for (int y = 0; y < source.getHeight(); y++) {
+            for (int x = 0; x < source.getWidth(); x++) {
+                double value = raster.getSampleDouble(x, y, 0);
+                if (!Double.isFinite(value)
+                        || (skipNodata && isNoDataSample(value, noData))) {
+                    continue;
+                }
+
                 count++;
+                min = Math.min(min, value);
+                max = Math.max(max, value);
+                double delta = value - mean;
+                mean += delta / count;
+                double delta2 = value - mean;
+                m2 += delta * delta2;
             }
         }
-        double mean = count > 0 ? sum / count : 0;
-        double sumSq = 0;
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                raster.getPixel(x, y, pixel);
-                double v = pixel[0];
-                if (skipNodata && Math.abs(v - noData) < 1e-9) continue;
-                sumSq += (v - mean) * (v - mean);
-            }
+
+        if (count == 0L) {
+            return new double[]{
+                    Double.NaN, Double.NaN, Double.NaN, Double.NaN, 0.0
+            };
         }
-        double stddev = count > 1 ? Math.sqrt(sumSq / (count - 1)) : 0;
+        double stddev = count > 1L ? Math.sqrt(m2 / (count - 1L)) : 0.0;
         return new double[]{min, max, mean, stddev, (double) count};
     }
 
-    public static List<ReclassRule> equalIntervalBreaks(double min, double max, int classes) {
-        List<ReclassRule> rules = new ArrayList<>();
-        double step = (max - min) / classes;
-        for (int i = 0; i < classes; i++) {
-            double from = min + i * step;
-            double to = i == classes - 1 ? max : min + (i + 1) * step;
-            rules.add(new ReclassRule(from, to, i + 1, "Class " + (i + 1)));
+    public static List<ReclassRule> equalIntervalBreaks(double min,
+                                                         double max,
+                                                         int classes) {
+        if (!Double.isFinite(min) || !Double.isFinite(max)) {
+            throw new IllegalArgumentException("Class bounds must be finite.");
         }
-        return rules;
+        if (classes <= 0) {
+            throw new IllegalArgumentException("Class count must be positive.");
+        }
+        if (max < min) {
+            throw new IllegalArgumentException("Maximum must be >= minimum.");
+        }
+        if (max == min && classes != 1) {
+            throw new IllegalArgumentException(
+                    "A zero-width range can only produce one class.");
+        }
+
+        List<ReclassRule> rules = new ArrayList<>(classes);
+        double step = classes == 1 ? 0.0 : (max - min) / classes;
+        for (int index = 0; index < classes; index++) {
+            double from = min + index * step;
+            double to = index == classes - 1 ? max : min + (index + 1) * step;
+            rules.add(new ReclassRule(
+                    from, to, index + 1, "Class " + (index + 1)));
+        }
+        return List.copyOf(rules);
     }
 
     /**
      * Fill NoData gaps in a single-band raster using iterative mean interpolation.
-     * Each pass fills NoData pixels that have at least minValidNeighbors valid
-     * neighbors in a 3x3 window, replacing them with the mean of those neighbors.
-     * Repeats until no more pixels are filled.
-     *
-     * @param source       source raster
-     * @param noDataValue  value that marks NoData
-     * @return new raster with gaps filled, or source if no gaps found
+     * Integer inputs are promoted to a double analytical raster if interpolation
+     * is required so fractional means cannot be silently truncated.
      */
     public static BufferedImage fillNodata(BufferedImage source, double noDataValue) {
         return fillNodata(source, noDataValue, 1);
     }
 
-    public static BufferedImage fillNodata(BufferedImage source, double noDataValue, int minValidNeighbors) {
-        if (source == null) return null;
-        int w = source.getWidth();
-        int h = source.getHeight();
-        Raster raster = source.getRaster();
-        double[] pixel = new double[raster.getNumBands()];
+    public static BufferedImage fillNodata(BufferedImage source,
+                                           double noDataValue,
+                                           int minValidNeighbors) {
+        if (source == null) {
+            return null;
+        }
+        if (minValidNeighbors < 1 || minValidNeighbors > 8) {
+            throw new IllegalArgumentException(
+                    "minValidNeighbors must be between 1 and 8.");
+        }
 
-        BufferedImage work = new BufferedImage(w, h, source.getType());
+        Raster sourceRaster = source.getRaster();
+        int width = source.getWidth();
+        int height = source.getHeight();
+        boolean hasGap = false;
+        for (int y = 0; y < height && !hasGap; y++) {
+            for (int x = 0; x < width; x++) {
+                if (isNoDataSample(
+                        sourceRaster.getSampleDouble(x, y, 0), noDataValue)) {
+                    hasGap = true;
+                    break;
+                }
+            }
+        }
+        if (!hasGap) {
+            return source;
+        }
+
+        BufferedImage work = RasterNumericImages.createDoubleBand(width, height);
         WritableRaster workRaster = work.getRaster();
-        // Copy source to work
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                raster.getPixel(x, y, pixel);
-                workRaster.setSample(x, y, 0, pixel[0]);
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                workRaster.setSample(
+                        x, y, 0, sourceRaster.getSampleDouble(x, y, 0));
             }
         }
 
         boolean changed;
         int passes = 0;
-        int maxPasses = Math.max(w, h); // worst case: fill diagonal
+        int maxPasses = Math.max(width, height);
         do {
             changed = false;
             passes++;
-            double[][] snapshot = new double[h][w];
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
-                    snapshot[y][x] = workRaster.getSample(x, y, 0);
+            double[][] snapshot = new double[height][width];
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    snapshot[y][x] = workRaster.getSampleDouble(x, y, 0);
                 }
             }
-            for (int y = 0; y < h; y++) {
-                for (int x = 0; x < w; x++) {
-                    double val = snapshot[y][x];
-                    if (!isNodata(val, noDataValue)) continue;
-                    double sum = 0;
+
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    if (!isNoDataSample(snapshot[y][x], noDataValue)) {
+                        continue;
+                    }
+                    double sum = 0.0;
                     int count = 0;
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dx = -1; dx <= 1; dx++) {
-                            if (dx == 0 && dy == 0) continue;
+                            if (dx == 0 && dy == 0) {
+                                continue;
+                            }
                             int nx = x + dx;
                             int ny = y + dy;
-                            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-                            double nv = snapshot[ny][nx];
-                            if (!isNodata(nv, noDataValue)) {
-                                sum += nv;
+                            if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                                continue;
+                            }
+                            double neighbor = snapshot[ny][nx];
+                            if (!isNoDataSample(neighbor, noDataValue)) {
+                                sum += neighbor;
                                 count++;
                             }
                         }
@@ -156,7 +225,25 @@ public final class RasterReclassifyEngine {
         return work;
     }
 
-    private static boolean isNodata(double val, double noData) {
-        return Double.isNaN(val) || Double.isInfinite(val) || Math.abs(val - noData) < 1e-9;
+    static boolean isNoDataSample(double value, double noData) {
+        if (!Double.isFinite(value)) {
+            return true;
+        }
+        if (Double.isNaN(noData)) {
+            return false;
+        }
+        if (!Double.isFinite(noData)) {
+            return false;
+        }
+        return Double.compare(value, noData) == 0;
+    }
+
+    private static void validateRules(List<ReclassRule> rules) {
+        for (ReclassRule rule : rules) {
+            if (rule == null) {
+                throw new IllegalArgumentException(
+                        "Reclassification rules cannot contain null entries.");
+            }
+        }
     }
 }
