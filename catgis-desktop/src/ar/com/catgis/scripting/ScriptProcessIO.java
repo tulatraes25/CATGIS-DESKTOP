@@ -114,9 +114,12 @@ final class ScriptProcessIO {
                     problem = append(problem, "Script output could not be read.");
                 }
             }
-            if (!delete(stdin) | !delete(stdout) | !delete(directory)) {
-                problem = append(problem, "Temporary script I/O could not be completely removed.");
+            Cleanup cleanup = cleanupOwned(new Path[]{stdin, stdout, directory}, 2000,
+                    path -> Files.deleteIfExists(path));
+            if (!cleanup.success()) {
+                problem = append(problem, cleanup.error());
             }
+            interrupted |= Thread.interrupted();
             if (interrupted) {
                 problem = append(problem, "Script execution interrupted.");
                 Thread.currentThread().interrupt();
@@ -135,15 +138,66 @@ final class ScriptProcessIO {
         return previous.isEmpty() ? next : previous + " " + next;
     }
 
-    private static boolean delete(Path path) {
-        if (path == null) {
-            return true;
-        }
+    @FunctionalInterface
+    interface DeleteOperation {
+        void delete(Path path) throws IOException;
+    }
+
+    record Cleanup(boolean success, String error) {}
+
+    /**
+     * Retry only owned paths for a bounded interval. A terminated child does
+     * not guarantee immediate delete availability on every filesystem. Never
+     * retry the script itself, recursively remove unknown files, or hide a
+     * persistent failure. The deletion seam permits deterministic fault tests.
+     */
+    static Cleanup cleanupOwned(Path[] paths, long waitMillis, DeleteOperation deletion) {
+        boolean interrupted = Thread.interrupted();
+        long started = System.nanoTime();
+        long budget = TimeUnit.MILLISECONDS.toNanos(Math.max(0, waitMillis));
+        boolean[] removed = new boolean[paths.length];
         try {
-            Files.deleteIfExists(path);
-            return true;
-        } catch (IOException | RuntimeException ex) {
-            return false;
+            while (true) {
+                boolean complete = true;
+                boolean retryable = true;
+                java.util.Set<String> failures = new java.util.LinkedHashSet<>();
+                for (int i = 0; i < paths.length; i++) {
+                    if (removed[i] || paths[i] == null) {
+                        continue;
+                    }
+                    try {
+                        deletion.delete(paths[i]);
+                        removed[i] = true;
+                    } catch (java.nio.file.NoSuchFileException absent) {
+                        removed[i] = true;
+                    } catch (IOException failure) {
+                        complete = false;
+                        failures.add(failure.getClass().getSimpleName());
+                    } catch (RuntimeException failure) {
+                        complete = false;
+                        retryable = false;
+                        failures.add(failure.getClass().getSimpleName());
+                    }
+                }
+                if (complete) {
+                    return new Cleanup(true, "");
+                }
+                long remaining = budget - (System.nanoTime() - started);
+                if (!retryable || remaining <= 0) {
+                    return new Cleanup(false, "Temporary script I/O could not be completely removed ("
+                            + String.join(", ", failures) + ").");
+                }
+                try {
+                    TimeUnit.NANOSECONDS.sleep(Math.min(remaining, TimeUnit.MILLISECONDS.toNanos(25)));
+                } catch (InterruptedException signal) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            interrupted |= Thread.interrupted();
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 }

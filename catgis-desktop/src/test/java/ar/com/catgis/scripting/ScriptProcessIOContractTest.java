@@ -251,6 +251,96 @@ class ScriptProcessIOContractTest {
         assertEquals(input, result.output());
     }
 
+    @Test
+    void temporaryDeletionFailureRetriesOwnedFilesAndActuallyRemovesThem() throws Exception {
+        Path parent = Files.createDirectory(owned.resolve("controlled-lock"));
+        Path input = Files.writeString(parent.resolve("input"), "bytes");
+        Path output = Files.writeString(parent.resolve("output"), "result");
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        var cleanup = ScriptProcessIO.cleanupOwned(new Path[]{input, output, parent}, 2000, path -> {
+            if (path.equals(input) && attempts.incrementAndGet() <= 2) {
+                throw new java.nio.file.AccessDeniedException("synthetic handle lock");
+            }
+            Files.deleteIfExists(path);
+        });
+        assertTrue(cleanup.success(), cleanup.error());
+        assertEquals("", cleanup.error());
+        assertTrue(attempts.get() >= 3);
+        assertFalse(Files.exists(parent));
+    }
+
+    @Test
+    void permanentDeletionFailureStaysExplicitAndDoesNotLeakPrivatePaths() throws Exception {
+        Path kept = Files.writeString(owned.resolve("keep"), "ORIGINAL");
+        try {
+            var cleanup = ScriptProcessIO.cleanupOwned(new Path[]{kept}, 0, path -> {
+                throw new java.nio.file.AccessDeniedException("PRIVATE_PATH_TOKEN");
+            });
+            assertFalse(cleanup.success());
+            assertTrue(cleanup.error().contains("AccessDeniedException"));
+            assertFalse(cleanup.error().contains("PRIVATE_PATH_TOKEN"));
+            assertEquals("ORIGINAL", Files.readString(kept));
+        } finally {
+            Files.deleteIfExists(kept);
+        }
+    }
+
+    @Test
+    void cleanupNeverRecursivelyDeletesAnUnknownDirectoryEntry() throws Exception {
+        Path parent = Files.createDirectory(owned.resolve("unowned-entry"));
+        Path unknown = Files.writeString(parent.resolve("do-not-delete"), "KEEP");
+        try {
+            var cleanup = ScriptProcessIO.cleanupOwned(new Path[]{parent}, 0, Files::deleteIfExists);
+            assertFalse(cleanup.success());
+            assertTrue(cleanup.error().contains("DirectoryNotEmptyException"));
+            assertEquals("KEEP", Files.readString(unknown));
+        } finally {
+            Files.delete(unknown);
+            Files.delete(parent);
+        }
+    }
+
+    @Test
+    void cleanupRestoresInterruptAndDoesNotPretendAnOpenFileWasRemoved() throws Exception {
+        Path input = Files.writeString(owned.resolve("interrupted-cleanup"), "bytes");
+        java.util.concurrent.atomic.AtomicInteger attempts = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            var cleanup = ScriptProcessIO.cleanupOwned(new Path[]{input}, 2000, path -> {
+                if (attempts.incrementAndGet() == 1) {
+                    Thread.currentThread().interrupt();
+                    throw new java.nio.file.AccessDeniedException("controlled lock");
+                }
+                Files.deleteIfExists(path);
+            });
+            assertTrue(cleanup.success(), cleanup.error());
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertFalse(Files.exists(input));
+        } finally {
+            Thread.interrupted();
+            Files.deleteIfExists(input);
+        }
+    }
+
+    @Test
+    void cleanupAttemptsOtherOwnedFilesAfterOnePermanentFailure() throws Exception {
+        Path locked = Files.writeString(owned.resolve("locked"), "KEEP");
+        Path removable = Files.writeString(owned.resolve("removable"), "REMOVE");
+        try {
+            var cleanup = ScriptProcessIO.cleanupOwned(new Path[]{locked, null, removable}, 0, path -> {
+                if (path.equals(locked)) {
+                    throw new java.nio.file.AccessDeniedException("controlled failure");
+                }
+                Files.deleteIfExists(path);
+            });
+            assertFalse(cleanup.success());
+            assertTrue(Files.exists(locked));
+            assertFalse(Files.exists(removable));
+        } finally {
+            Files.deleteIfExists(locked);
+            Files.deleteIfExists(removable);
+        }
+    }
+
     private ScriptProcessIO.Outcome run(String mode, String input) throws Exception {
         return ScriptProcessIO.run(command(mode), 30, input, owned);
     }
@@ -293,7 +383,12 @@ class ScriptProcessFixture {
             case "oversized" -> System.out.print("x".repeat(2 * 1024 * 1024));
             case "silent" -> { }
             case "wait" -> {
-                Files.writeString(Path.of(args[1]), Long.toString(ProcessHandle.current().pid()));
+                Path ready = Path.of(args[1]);
+                Path staging = ready.resolveSibling(ready.getFileName() + ".staging");
+                Files.writeString(staging, Long.toString(ProcessHandle.current().pid()));
+                // Existence now proves the complete PID was closed and published.
+                // Never expose a created-but-empty marker to the cancelling parent.
+                Files.move(staging, ready, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
                 Thread.sleep(60000);
             }
             case "mark" -> Files.writeString(Path.of(args[1]), "STARTED");
