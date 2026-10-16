@@ -46,8 +46,11 @@ public final class ScriptEngine {
      * Execute a Python script file with timeout and optional stdin input.
      */
     public static ScriptResult executeScript(File scriptFile, long timeoutSeconds, String stdinInput) {
-        if (!scriptFile.exists()) {
-            return new ScriptResult(false, "", "Script file not found: " + scriptFile.getAbsolutePath());
+        if (scriptFile == null || !scriptFile.isFile()) {
+            return new ScriptResult(false, "", "Script file not found or not a regular file.");
+        }
+        if (timeoutSeconds <= 0 || Thread.currentThread().isInterrupted()) {
+            return new ScriptResult(false, "", "Script execution interrupted or timeout is not positive.");
         }
 
         try {
@@ -63,46 +66,10 @@ public final class ScriptEngine {
             // Inject CATGIS context
             injectCatgisEnvironment(pb.environment());
 
-            Process process = pb.start();
-
-            // Write stdin if provided
-            if (stdinInput != null && !stdinInput.isEmpty()) {
-                try (OutputStream os = process.getOutputStream()) {
-                    os.write(stdinInput.getBytes(StandardCharsets.UTF_8));
-                }
-            }
-
-            StringBuilder output = new StringBuilder();
-            StringBuilder error = new StringBuilder();
-
-            // Read output in a separate thread to avoid deadlock
-            Thread reader = new Thread(() -> {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        output.append(line).append("\n");
-                    }
-                } catch (Exception ignored) { CatgisLogger.warn("ScriptEngine: operation failed", ignored); }
-            });
-            reader.start();
-
-            boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                reader.interrupt();
-                return new ScriptResult(false, output.toString(),
-                        "Script execution timed out after " + timeoutSeconds + " seconds.");
-            }
-
-            reader.join(2000); // Wait for reader to finish
-            int exitCode = process.exitValue();
-
-            if (exitCode != 0) {
-                error.append("Exit code: ").append(exitCode);
-            }
-
-            return new ScriptResult(exitCode == 0, output.toString(), error.toString());
+            // Standard I/O is explicitly UTF-8 on Windows and Unix alike.
+            pb.environment().put("PYTHONIOENCODING", "utf-8");
+            ScriptProcessIO.Outcome result = ScriptProcessIO.run(pb, timeoutSeconds, stdinInput);
+            return new ScriptResult(result.success(), result.output(), result.error());
 
         } catch (Exception ex) {
             return new ScriptResult(false, "", ex.getMessage());
