@@ -14,8 +14,9 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.ActionEvent;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Locale;
 
 public class SaveProjectAction extends AbstractAction {
@@ -85,7 +86,10 @@ public class SaveProjectAction extends AbstractAction {
             return false;
         }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8))) {
+        try {
+            Path published = ProjectFilePublisher.publish(file, staging -> {
+                try (BufferedWriter writer = Files.newBufferedWriter(
+                        staging, StandardCharsets.UTF_8)) {
             writer.write("CATGIS_PROJECT");
             writer.newLine();
 
@@ -148,14 +152,18 @@ public class SaveProjectAction extends AbstractAction {
                 writer.newLine();
             }
 
-            AppContext.project().setProjectFile(file);
-            AppContext.project().setName(stripExtension(file.getName()));
+                }
+            });
+            File publishedFile = published.toFile();
+
+            AppContext.project().setProjectFile(publishedFile);
+            AppContext.project().setName(stripExtension(publishedFile.getName()));
             CatgisDesktopApp.markProjectClean();
-            FileChooserSupport.rememberFile("project-save", file);
-            FileChooserSupport.rememberFile("project-open", file);
+            FileChooserSupport.rememberFile("project-save", publishedFile);
+            FileChooserSupport.rememberFile("project-open", publishedFile);
 
             if (CatgisDesktopApp.statusBar != null) {
-                AppContext.setStatusMessage("Proyecto guardado: " + file.getAbsolutePath());
+                AppContext.setStatusMessage("Proyecto guardado: " + publishedFile.getAbsolutePath());
             }
 
             if (showDialogs) {
