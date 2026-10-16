@@ -22,7 +22,8 @@ MapPanel display fallback is explicitly outside this tranche and remains a separ
 
 - arbitrary EPSG:3035 -> EPSG:4326 matches direct GeoTools transform numerically;
 - WKT source is parsed and transformed;
-- model boundary preserves null/blank source CRS as UNKNOWN until explicit assignment;\n- blank layer CRS uses real schema EPSG:3035 rather than defaulting to 4326;
+- model boundary preserves null/blank source CRS as UNKNOWN until explicit assignment;
+- blank layer CRS uses real schema EPSG:3035 rather than defaulting to 4326;
 - invalid authority fails and leaves layer CRS and source geometry unchanged.
 
 Require exact-head CI/Certification/RuntimeIdentity/GeoParquet and authenticated predecessor-main evidence, expected-head merge, then fresh-main proof.
