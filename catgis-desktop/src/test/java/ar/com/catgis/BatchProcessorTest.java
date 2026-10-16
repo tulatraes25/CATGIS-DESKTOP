@@ -6,6 +6,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -219,6 +221,40 @@ class BatchProcessorTest {
         assertEquals(1, result.failed());
         assertEquals(1, result.errors().size());
         assertTrue(result.errors().get(0).contains("fail.txt"));
+    }
+
+    @Test
+    void applyReclassifyRoundTripsSignedFractionalAndLargeValuesThroughTiff() throws Exception {
+        BufferedImage input = new BufferedImage(3, 1, BufferedImage.TYPE_BYTE_GRAY);
+        input.getRaster().setSample(0, 0, 0, 5);
+        input.getRaster().setSample(1, 0, 0, 15);
+        input.getRaster().setSample(2, 0, 0, 25);
+        File source = tempDir.resolve("reclass-source.tif").toFile();
+        File output = tempDir.resolve("reclass-output.tif").toFile();
+        assertTrue(ImageIO.write(input, "tif", source));
+
+        BatchProcessor.applyReclassify(
+                source, output, "0-10=-5.5;11-20=300.25;21-30=1e3");
+
+        BufferedImage restored = ImageIO.read(output);
+        assertNotNull(restored);
+        assertEquals(-5.5, restored.getRaster().getSampleDouble(0, 0, 0), 1e-9);
+        assertEquals(300.25, restored.getRaster().getSampleDouble(1, 0, 0), 1e-9);
+        assertEquals(1000.0, restored.getRaster().getSampleDouble(2, 0, 0), 1e-9);
+    }
+
+    @Test
+    void applyReclassifyRejectsMalformedRulesBeforePublishingOutput() throws Exception {
+        BufferedImage input = new BufferedImage(1, 1, BufferedImage.TYPE_BYTE_GRAY);
+        input.getRaster().setSample(0, 0, 0, 5);
+        File source = tempDir.resolve("invalid-rule-source.tif").toFile();
+        File output = tempDir.resolve("invalid-rule-output.tif").toFile();
+        assertTrue(ImageIO.write(input, "tif", source));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> BatchProcessor.applyReclassify(source, output, "-5--1=7;broken"));
+
+        assertFalse(output.exists());
     }
 
     // --- Template tests ---
