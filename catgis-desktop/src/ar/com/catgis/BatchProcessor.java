@@ -195,23 +195,11 @@ public final class BatchProcessor {
         java.awt.image.BufferedImage image = javax.imageio.ImageIO.read(input);
         if (image == null) throw new Exception("No se pudo leer: " + input.getName());
 
-        // Parse simple rules from format "from1-to1=new1;from2-to2=new2"
-        List<RasterReclassifyEngine.ReclassRule> rules = new ArrayList<>();
-        for (String ruleStr : rulesJson.split(";")) {
-            String[] parts = ruleStr.split("-");
-            if (parts.length >= 2) {
-                String[] right = parts[1].split("=");
-                if (right.length >= 2) {
-                    rules.add(new RasterReclassifyEngine.ReclassRule(
-                            Double.parseDouble(parts[0]),
-                            Double.parseDouble(right[0]),
-                            Double.parseDouble(right[1]),
-                            right.length > 2 ? right[2] : ""));
-                }
-            }
-        }
+        List<RasterReclassifyEngine.ReclassRule> rules =
+                RasterReclassRuleParser.parse(rulesJson);
 
-        java.awt.image.BufferedImage result = RasterReclassifyEngine.reclassify(image, rules, -1, false);
+        java.awt.image.BufferedImage result =
+                RasterReclassifyEngine.reclassify(image, rules, -1, false);
         writeTiffOrThrow(result, output);
     }
 
