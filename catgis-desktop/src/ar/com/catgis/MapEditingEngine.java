@@ -43,7 +43,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            NotificationManager.warn(map, null, "Mover vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Mover vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_MOVE_VERTEX;
@@ -52,7 +52,7 @@ class MapEditingEngine {
         map.clearAdjacentPolygonState();
         map.clearCadConstructionState();
         map.setTool("SELECT");
-        map.showCopiedMessage("Modo mover vÃ©rtice activo.");
+        map.showCopiedMessage("Modo mover vértice activo.");
         map.refreshEditingUi();
     }
 
@@ -71,7 +71,7 @@ class MapEditingEngine {
         map.clearAdjacentPolygonState();
         map.clearCadConstructionState();
         map.setTool("SELECT");
-        map.showCopiedMessage("Modo mover elementos activo. ArrastrÃ¡ una entidad seleccionada.");
+        map.showCopiedMessage("Modo mover elementos activo. Arrastrá una entidad seleccionada.");
         map.refreshEditingUi();
     }
 
@@ -80,7 +80,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            NotificationManager.warn(map, null, "Agregar vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Agregar vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_ADD_VERTEX;
@@ -89,7 +89,7 @@ class MapEditingEngine {
         map.clearAdjacentPolygonState();
         map.clearCadConstructionState();
         map.setTool("SELECT");
-        map.showCopiedMessage("Modo agregar vÃ©rtice activo. HacÃ© clic o arrastrÃ¡ una caja sobre un tramo.");
+        map.showCopiedMessage("Modo agregar vértice activo. Hacé clic o arrastrá una caja sobre un tramo.");
         map.refreshEditingUi();
     }
 
@@ -98,7 +98,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            NotificationManager.warn(map, null, "Eliminar vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Eliminar vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_REMOVE_VERTEX;
@@ -107,7 +107,7 @@ class MapEditingEngine {
         map.clearAdjacentPolygonState();
         map.clearCadConstructionState();
         map.setTool("SELECT");
-        map.showCopiedMessage("Modo eliminar vÃ©rtice activo. HacÃ© clic o arrastrÃ¡ una caja para quitar uno o varios vÃ©rtices.");
+        map.showCopiedMessage("Modo eliminar vértice activo. Hacé clic o arrastrá una caja para quitar uno o varios vértices.");
         map.refreshEditingUi();
     }
 
@@ -116,7 +116,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            NotificationManager.warn(map, null, "Unir vÃ©rtices sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Unir vértices sólo funciona sobre líneas o polígonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_JOIN_VERTEX;
@@ -126,7 +126,7 @@ class MapEditingEngine {
         map.clearAdjacentPolygonState();
         map.clearCadConstructionState();
         map.setTool("SELECT");
-        map.showCopiedMessage("Modo unir vÃ©rtices activo. ElegÃ­ un vÃ©rtice base y despuÃ©s otro vÃ©rtice o un rectÃ¡ngulo.");
+        map.showCopiedMessage("Modo unir vértices activo. Elegí un vértice base y después otro vértice o un rectángulo.");
         map.refreshEditingUi();
     }
 
@@ -135,7 +135,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeatureLinearOrPolygonal()) {
-            NotificationManager.warn(map, null, "Cortar geometrÃ­a sÃ³lo funciona sobre lÃ­neas o polÃ­gonos.");
+            NotificationManager.warn(map, null, "Cortar geometría sólo funciona sobre líneas o polígonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_CUT;
@@ -145,8 +145,8 @@ class MapEditingEngine {
         map.clearCadConstructionState();
         map.setTool("SELECT");
         String hint = map.isSelectedFeaturePolygonal()
-                ? "Modo cortar activo. DibujÃ¡ la lÃ­nea de corte y terminÃ¡ con doble clic."
-                : "Modo cortar activo. HacÃ© clic sobre la lÃ­nea en el punto donde querÃ©s cortarla.";
+                ? "Modo cortar activo. Dibujá la línea de corte y terminá con doble clic."
+                : "Modo cortar activo. Hacé clic sobre la línea en el punto donde querés cortarla.";
         map.showCopiedMessage(hint);
         map.refreshEditingUi();
     }
@@ -156,7 +156,7 @@ class MapEditingEngine {
             return;
         }
         if (!map.isSelectedFeaturePolygonal()) {
-            NotificationManager.warn(map, null, "La opciÃ³n agujero solo funciona sobre polÃ­gonos.");
+            NotificationManager.warn(map, null, "La opción agujero solo funciona sobre polígonos.");
             return;
         }
         map.featureEditOperation = MapPanel.EDIT_OP_HOLE;
@@ -165,7 +165,7 @@ class MapEditingEngine {
         map.clearAdjacentPolygonState();
         map.clearCadConstructionState();
         map.setTool("SELECT");
-        map.showCopiedMessage("Modo agujero activo. DibujÃ¡ el polÃ­gono interior y terminÃ¡ con doble clic.");
+        map.showCopiedMessage("Modo agujero activo. Dibujá el polígono interior y terminá con doble clic.");
         map.refreshEditingUi();
     }
 
@@ -329,18 +329,18 @@ class MapEditingEngine {
         Coordinate displayTarget = new Coordinate(map.screenToWorldX(screenX), map.screenToWorldY(screenY));
         LineSplitProjection projection = map.findEditableSegmentProjection(displayGeometry, displayTarget, screenX, screenY, MapPanel.EDIT_SEGMENT_TOLERANCE_PX);
         if (projection == null || projection.segmentIndex < 0 || projection.projected == null) {
-            map.showCopiedMessage("No se encontrÃ³ un tramo cercano para agregar el vÃ©rtice.");
+            map.showCopiedMessage("No se encontró un tramo cercano para agregar el vértice.");
             return true;
         }
 
         Coordinate sourceCoordinate = map.toSourceCoordinate(projection.projected.x, projection.projected.y, map.selectedLayer);
         Geometry updated = buildGeometryWithAddedVertex((Geometry) geomObj, projection.segmentIndex, sourceCoordinate);
         if (updated == null) {
-            map.showCopiedMessage("No se pudo agregar el vÃ©rtice en esa geometrÃ­a.");
+            map.showCopiedMessage("No se pudo agregar el vértice en esa geometría.");
             return true;
         }
 
-        updateSelectedFeatureGeometry(updated, "VÃ©rtice agregado.");
+        updateSelectedFeatureGeometry(updated, "Vértice agregado.");
         return true;
     }
 
@@ -352,17 +352,17 @@ class MapEditingEngine {
 
         int vertexIndex = findEditableVertexIndex(screenX, screenY);
         if (vertexIndex < 0) {
-            map.showCopiedMessage("No se encontrÃ³ un vÃ©rtice cercano para eliminar.");
+            map.showCopiedMessage("No se encontró un vértice cercano para eliminar.");
             return true;
         }
 
         Geometry updated = buildGeometryWithRemovedVertex((Geometry) geomObj, vertexIndex);
         if (updated == null) {
-            map.showCopiedMessage("No se pudo eliminar ese vÃ©rtice.");
+            map.showCopiedMessage("No se pudo eliminar ese vértice.");
             return true;
         }
 
-        updateSelectedFeatureGeometry(updated, "VÃ©rtice eliminado.");
+        updateSelectedFeatureGeometry(updated, "Vértice eliminado.");
         return true;
     }
 
@@ -378,19 +378,19 @@ class MapEditingEngine {
 
         List<Integer> vertexIndexes = collectEditableVertexIndexes(selectionBounds);
         if (vertexIndexes.isEmpty()) {
-            map.showCopiedMessage("No se encontrÃ³ ningÃºn vÃ©rtice dentro del rectÃ¡ngulo.");
+            map.showCopiedMessage("No se encontró ningún vértice dentro del rectángulo.");
             return true;
         }
 
         Geometry updated = buildGeometryWithRemovedVertices(geometry, vertexIndexes);
         if (updated == null) {
-            map.showCopiedMessage("No se pudieron eliminar esos vÃ©rtices.");
+            map.showCopiedMessage("No se pudieron eliminar esos vértices.");
             return true;
         }
 
         String message = vertexIndexes.size() == 1
-                ? "VÃ©rtice eliminado."
-                : vertexIndexes.size() + " vÃ©rtices eliminados.";
+                ? "Vértice eliminado."
+                : vertexIndexes.size() + " vértices eliminados.";
         updateSelectedFeatureGeometry(updated, message);
         return true;
     }
@@ -402,13 +402,13 @@ class MapEditingEngine {
 
         int vertexIndex = findEditableVertexIndex(screenX, screenY);
         if (vertexIndex < 0) {
-            map.showCopiedMessage("No se encontrÃ³ un vÃ©rtice cercano para unir.");
+            map.showCopiedMessage("No se encontró un vértice cercano para unir.");
             return true;
         }
 
         if (map.joinTargetVertexIndex < 0 || map.joinTargetVertexIndex == vertexIndex) {
             map.joinTargetVertexIndex = vertexIndex;
-            map.showCopiedMessage("VÃ©rtice base seleccionado. ElegÃ­ otro vÃ©rtice o arrastrÃ¡ un rectÃ¡ngulo para unirlos.");
+            map.showCopiedMessage("Vértice base seleccionado. Elegí otro vértice o arrastrá un rectángulo para unirlos.");
             map.repaint();
             return true;
         }
@@ -425,7 +425,7 @@ class MapEditingEngine {
 
         List<Integer> vertexIndexes = collectEditableVertexIndexes(selectionBounds);
         if (vertexIndexes.isEmpty()) {
-            map.showCopiedMessage("No se encontrÃ³ ningÃºn vÃ©rtice dentro del rectÃ¡ngulo.");
+            map.showCopiedMessage("No se encontró ningún vértice dentro del rectángulo.");
             return true;
         }
 
@@ -434,7 +434,7 @@ class MapEditingEngine {
             targetIndex = vertexIndexes.remove(0);
             if (vertexIndexes.isEmpty()) {
                 map.joinTargetVertexIndex = targetIndex;
-                map.showCopiedMessage("VÃ©rtice base seleccionado. Ahora marcÃ¡ otros vÃ©rtices para unirlos.");
+                map.showCopiedMessage("Vértice base seleccionado. Ahora marcá otros vértices para unirlos.");
                 map.repaint();
                 return true;
             }
@@ -453,19 +453,19 @@ class MapEditingEngine {
 
         if (vertexIndexes == null || vertexIndexes.isEmpty()) {
             map.showCopiedMessage(fromSelection
-                    ? "MarcÃ¡ al menos otro vÃ©rtice para unirlo al vÃ©rtice base."
-                    : "ElegÃ­ otro vÃ©rtice distinto del vÃ©rtice base.");
+                    ? "Marcá al menos otro vértice para unirlo al vértice base."
+                    : "Elegí otro vértice distinto del vértice base.");
             return true;
         }
 
         Geometry updated = buildGeometryWithJoinedVertices(geometry, targetIndex, vertexIndexes);
         if (updated == null) {
-            map.showCopiedMessage("No se pudieron unir esos vÃ©rtices. ProbÃ¡ dentro del mismo tramo o polÃ­gono.");
+            map.showCopiedMessage("No se pudieron unir esos vértices. Probá dentro del mismo tramo o polígono.");
             return true;
         }
 
         map.joinTargetVertexIndex = -1;
-        updateSelectedFeatureGeometry(updated, vertexIndexes.size() == 1 ? "VÃ©rtices unidos." : "VÃ©rtices unidos al vÃ©rtice base.");
+        updateSelectedFeatureGeometry(updated, vertexIndexes.size() == 1 ? "Vértices unidos." : "Vértices unidos al vértice base.");
         return true;
     }
 
@@ -782,14 +782,14 @@ class MapEditingEngine {
 
         if (MapPanel.EDIT_OP_CUT.equals(map.featureEditOperation)) {
             updated = buildCutGeometryWithSketch(sourceGeometry, sourceSketch);
-            message = "GeometrÃ­a cortada.";
+            message = "Geometría cortada.";
         } else if (MapPanel.EDIT_OP_HOLE.equals(map.featureEditOperation)) {
             updated = buildGeometryWithHole(sourceGeometry, sourceSketch);
             message = "Agujero creado.";
         }
 
         if (updated == null) {
-            map.showCopiedMessage("No se pudo aplicar la ediciÃ³n geomÃ©trica.");
+            map.showCopiedMessage("No se pudo aplicar la edición geométrica.");
             return;
         }
 
