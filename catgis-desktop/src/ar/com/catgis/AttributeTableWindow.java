@@ -602,27 +602,27 @@ public class AttributeTableWindow extends JFrame {
         switch (token.toLowerCase()) {
             case "$area":
             case "$area_m2":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry), token);
             case "$area_ha":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry), token) / 10000d;
             case "$area_km2":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolveAreaSquareMeters(layer, geometry), token) / 1_000_000d;
             case "$length":
             case "$length_m":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolveLengthMeters(layer, geometry), token);
             case "$length_km":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolveLengthMeters(layer, geometry), token) / 1000d;
             case "$perimeter":
             case "$perimeter_m":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry), token);
             case "$perimeter_km":
-                return requireFiniteMetric(
+                return GeometryMetricExpressionSupport.requireFinite(
                         VectorMeasurementSupport.resolvePerimeterMeters(layer, geometry), token) / 1000d;
             case "$x":
                 if (geometry instanceof Point) {
@@ -639,14 +639,6 @@ public class AttributeTableWindow extends JFrame {
         }
     }
 
-    private double requireFiniteMetric(double value, String token) {
-        if (!Double.isFinite(value)) {
-            throw new IllegalArgumentException(
-                    "No se puede calcular " + token
-                            + " sin un CRS de origen válido para la capa.");
-        }
-        return value;
-    }
 
     private Object evaluateExpressionValueForRow(String expression, int row, Class<?> targetType) {
         String expr = expression != null ? expression.trim() : "";

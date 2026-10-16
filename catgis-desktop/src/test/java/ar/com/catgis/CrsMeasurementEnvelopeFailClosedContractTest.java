@@ -53,12 +53,46 @@ class CrsMeasurementEnvelopeFailClosedContractTest {
     }
 
     @Test
+    void arbitraryProjectedMetricCrsIsNotForcedThroughWebMercator() {
+        LineString line = new org.locationtech.jts.geom.GeometryFactory().createLineString(
+                new Coordinate[]{new Coordinate(4321000, 3210000), new Coordinate(4321100, 3210000)});
+        Geometry metric = MapMeasurementUtils.reprojectToMetric(line, "EPSG:3035");
+        assertNotNull(metric);
+        assertEquals(100d, metric.getLength(), 1e-6);
+        assertEquals("EPSG:3035", MapMeasurementUtils.chooseMetricCRS("EPSG:3035"));
+    }
+
+    @Test
     void knownMetricLayerKeepsMetricLength() {
         Layer layer = new Layer("utm", "", "VECTOR");
         layer.setSourceCRS("EPSG:32719");
         LineString line = new org.locationtech.jts.geom.GeometryFactory().createLineString(
                 new Coordinate[]{new Coordinate(500000, 6200000), new Coordinate(500100, 6200000)});
         assertEquals(100d, VectorMeasurementSupport.resolveLengthMeters(layer, line), 1e-9);
+    }
+
+    @Test
+    void fieldMetricGuardRejectsUnavailableMeasurementInsteadOfConvertingItToZero() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> GeometryMetricExpressionSupport.requireFinite(Double.NaN, "$area_m2"));
+        assertTrue(ex.getMessage().contains("CRS"));
+        assertEquals(12.5,
+                GeometryMetricExpressionSupport.requireFinite(12.5, "$length_m"), 0d);
+    }
+
+    @Test
+    void envelopeTransformMatchesGeoToolsForArbitraryProjectedCrs() throws Exception {
+        MapPanel panel = new MapPanel();
+        MapUtilities utilities = new MapUtilities(panel);
+        Envelope input = new Envelope(4321000, 4322000, 3210000, 3211000);
+        Envelope actual = utilities.reprojectEnvelopeIfNeeded(input, "EPSG:3035", "EPSG:4326");
+        var source = CRSDefinitions.decode("EPSG:3035", true);
+        var target = CRSDefinitions.decode("EPSG:4326", true);
+        var transform = org.geotools.referencing.CRS.findMathTransform(source, target, true);
+        Envelope expected = org.geotools.geometry.jts.JTS.transform(input, null, transform, 10);
+        assertNotNull(actual);
+        assertEquals(expected.getMinX(), actual.getMinX(), 1e-8);
+        assertEquals(expected.getMaxY(), actual.getMaxY(), 1e-8);
     }
 
     @Test
