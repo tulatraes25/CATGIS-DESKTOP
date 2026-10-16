@@ -1,6 +1,6 @@
 # SPEC/Kiro #155A - fail-closed single-file vector publication
 
-BASE: 48ef1490ae87ab356a0210e6efa238eae31ab8be
+BASE: 5ce112493427257093391cbb101423531dbe9f04
 STATUS: CANDIDATE / NOT_CERTIFIED
 A0.7: OPEN
 
