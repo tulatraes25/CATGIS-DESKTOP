@@ -42,8 +42,8 @@ class ProjectOpenReadBudgetContractTest {
         fewLines.checkLine("two");
         assertThrows(IOException.class, () -> fewLines.checkLine("three"));
         ProjectOpenReadBudget control = new ProjectOpenReadBudget();
-        assertThrows(IOException.class, () -> control.checkLine("PROJECT_CRS|EPSG:32719\u0000"));
-        assertThrows(IOException.class, () -> control.checkLine("metadata\u0001"));
+        assertThrows(IOException.class, () -> control.checkLine("PROJECT_CRS|EPSG:32719" + (char) 0));
+        assertThrows(IOException.class, () -> control.checkLine("metadata" + (char) 1));
     }
 
     @Test
@@ -79,7 +79,7 @@ class ProjectOpenReadBudgetContractTest {
         AppContext.setCurrentProject(before);
         Path poisoned = directory.resolve("broken.catgis");
         Files.writeString(poisoned,
-                "CATGIS_PROJECT\nPROJECT_CRS|EPSG:4326\nPROJECT_META|STUDY_NAME|bad\u0000data\n",
+                "CATGIS_PROJECT\nPROJECT_CRS|EPSG:4326\nPROJECT_META|STUDY_NAME|bad" + (char) 0 + "data\n",
                 StandardCharsets.UTF_8);
         assertFalse(LoadProjectAction.loadProjectFile(poisoned.toFile(), false));
         assertSame(before, AppContext.project());
