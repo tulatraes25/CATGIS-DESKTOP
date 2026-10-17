@@ -1,7 +1,8 @@
 # SPEC/Kiro #159C — WFS unspecified request CRS truth
 
-BASE_SHA: 228e30c60c330eedf8f918d3a4ffae9e660c953d
-STATUS: CANDIDATE / NOT_CERTIFIED
+BASE_SHA: 2d2c1c608ef82e75da22524486d0f9d368a2ddce
+STATUS: REPORTED / CANDIDATE / NOT_CERTIFIED
+Historical implementation: PR #169; ported selectively to current baseline.
 A0.7: OPEN
 Issue: #159 / #163
 
