@@ -278,9 +278,8 @@ public final class SpatiaLiteLoader {
                 }
             }
             if (!found) {
-                CatgisLogger.warn("SpatiaLite: table '" + layer.getTableName()
-                        + "' not found, using first available: " + names[0], null);
-                typeName = names[0];
+                throw new UnsupportedFormatException(
+                        "La tabla SpatiaLite solicitada no existe: " + layer.getTableName());
             }
 
             CatgisLogger.debug("SpatiaLite: loading features from table '" + typeName + "'");

@@ -184,7 +184,7 @@ public class SaveProjectAction extends AbstractAction {
         }
     }
 
-    private static String buildLayerLine(Layer layer) {
+    static String buildLayerLine(Layer layer) {
         String type = safe(layer.getType());
         String name = safe(layer.getName());
         String path = safe(layer.getPath());
@@ -272,70 +272,7 @@ public class SaveProjectAction extends AbstractAction {
             sb.append("|").append(layer.getOpacity());
         }
 
-        if (layer instanceof OnlineTileLayer) {
-            OnlineTileLayer tile = (OnlineTileLayer) layer;
-            sb.append("|").append(safe(tile.getSourceId()))
-              .append("|").append(safe(tile.getProviderName()))
-              .append("|").append(safe(tile.getUrlTemplate()))
-              .append("|").append(tile.getMinZoom())
-              .append("|").append(tile.getMaxZoom())
-              .append("|").append(safe(tile.getAttribution()))
-              .append("|").append(safe(tile.getTermsUrl()))
-              .append("|").append(tile.isRequiresApiKey());
-        }
-
-        if (layer instanceof OnlineWmsLayer) {
-            OnlineWmsLayer wms = (OnlineWmsLayer) layer;
-            sb.append("|").append(safe(wms.getSourceId()))
-              .append("|").append(safe(wms.getProviderName()))
-              .append("|").append(safe(wms.getServiceUrl()))
-              .append("|").append(safe(wms.getLayerNames()))
-              .append("|").append(safe(wms.getStyleNames()))
-              .append("|").append(safe(wms.getRequestCrs()))
-              .append("|").append(safe(wms.getVersion()))
-              .append("|").append(safe(wms.getImageFormat()))
-              .append("|").append(wms.isTransparent())
-              .append("|").append(safe(wms.getAttribution()))
-              .append("|").append(safe(wms.getTermsUrl()))
-              .append("|").append(safe(wms.getExtentCrs()))
-              .append("|").append(wms.getExtentMinX())
-              .append("|").append(wms.getExtentMinY())
-              .append("|").append(wms.getExtentMaxX())
-              .append("|").append(wms.getExtentMaxY());
-        }
-
-        if (layer instanceof OnlineWfsLayer) {
-            OnlineWfsLayer wfs = (OnlineWfsLayer) layer;
-            sb.append("|").append(safe(wfs.getProviderName()))
-              .append("|").append(safe(wfs.getServiceUrl()))
-              .append("|").append(safe(wfs.getTypeName()))
-              .append("|").append(safe(wfs.getTypeTitle()))
-              .append("|").append(safe(wfs.getRequestCrs()))
-              .append("|").append(safe(wfs.getVersion()))
-              .append("|").append(wfs.isReadOnly());
-        }
-
-        if (layer instanceof GeoPackageLayer) {
-            GeoPackageLayer geoPackage = (GeoPackageLayer) layer;
-            sb.append("|").append(safe(geoPackage.getTableName()))
-              .append("|").append(safe(geoPackage.getIdentifier()))
-              .append("|").append(safe(geoPackage.getDescription()))
-              .append("|").append(safe(geoPackage.getGeometryTypeLabel()))
-              .append("|").append(geoPackage.isReadOnly());
-        }
-
-        if (layer instanceof PostgisLayer) {
-            PostgisLayer postgis = (PostgisLayer) layer;
-            sb.append("|").append(safe(postgis.getHost()))
-              .append("|").append(postgis.getPort())
-              .append("|").append(safe(postgis.getDatabaseName()))
-              .append("|").append(safe(postgis.getSchemaName()))
-              .append("|").append(safe(postgis.getUserName()))
-              .append("|").append(safe(postgis.getTypeName()))
-              .append("|").append(safe(postgis.getTableName()))
-              .append("|").append(safe(postgis.getGeometryTypeLabel()))
-              .append("|").append(postgis.isReadOnly());
-        }
+        ProjectLayerPayloadCodec.appendKeyedPayload(sb, layer);
 
         if (layer.isInGroup()) {
             sb.append("|").append("GROUP=").append(safe(layer.getGroupName()));
