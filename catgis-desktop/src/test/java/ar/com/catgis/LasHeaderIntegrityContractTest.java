@@ -16,6 +16,16 @@ class LasHeaderIntegrityContractTest {
     @TempDir Path folder;
 
     @Test
+    void unknownLasCrsMustFailClosedBeforeAnyDatasetRead() {
+        assertThrows(IllegalStateException.class,
+                () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs(null));
+        assertThrows(IllegalStateException.class,
+                () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs("  "));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs("EPSG:32719"));
+    }
+
+    @Test
     void largeLidarFileCannotBecomeSilentlyTruncatedVectorLayer() {
         assertThrows(IOException.class,
                 () -> LayerVectorDataSupport.requireCompleteLasDataset(50_001));
