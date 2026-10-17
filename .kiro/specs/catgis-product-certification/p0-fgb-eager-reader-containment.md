@@ -71,3 +71,21 @@ keys. True end-to-end GDAL-generated fixture and indexed multigigabyte
 streaming remain separate acceptance gates; #175 is still OPEN.
 References: https://flatgeobuf.org/ and
 https://github.com/flatgeobuf/flatgeobuf/blob/master/src/fbs/feature.fbs.
+
+## F — independent GDAL real-file acceptance gate
+
+Native GDAL on Linux, macOS Intel and macOS arm64 now must execute a
+THIRD JUnit tagged `native-gdal` test (no skip permitted).
+`FlatGeobufNativeGdalPropertiesIntegrationTest` creates a tiny GeoJSON
+fixture with UTF-8 names, signed decimal and optional null attributes,
+writes actual indexed AND non-indexed .fgb with OS-installed ogr2ogr,
+then verifies the CATGIS loader's feature count, typed numeric/string
+values and original point coordinates. Installed GDAL executable
+must be available from trusted `CATGIS_GDAL_BIN` and each command
+has a 90-second hard timeout. No user data/files/secrets involved.
+
+Certification matrix strictly changes expected native-GDAL JUnit
+accounting from 2 to 3 total, zero skip/failure/error across all three
+supported host OS architectures. If this reveals parser divergence,
+reject the PR and fix the real format—not waive/skip the test.
+Still no indexed gigabyte-scale reader or Windows native GUI claim.

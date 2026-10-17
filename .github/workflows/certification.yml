@@ -173,12 +173,12 @@ jobs:
               HOMEBREW_NO_AUTO_UPDATE=1 brew install gdal
             fi
           fi
-          for tool in gdal_translate gdalwarp gdalinfo; do
+          for tool in gdal_translate gdalwarp gdalinfo ogr2ogr; do
             command -v "$tool" >/dev/null
           done
           bin="$(dirname "$(command -v gdal_translate)")"
           test "${bin:0:1}" = '/'
-          for tool in gdal_translate gdalwarp gdalinfo; do test -x "$bin/$tool"; done
+          for tool in gdal_translate gdalwarp gdalinfo ogr2ogr; do test -x "$bin/$tool"; done
           echo "CATGIS_GDAL_BIN=$bin" >> "$GITHUB_ENV"
           gdalinfo --version
           echo "OS=$RUNNER_OS ARCH=$(uname -m) GDAL=$bin"
@@ -210,8 +210,8 @@ jobs:
               for key in checks:
                   checks[key] += int(suite.attrib.get(key, '0'))
           print('REAL_NATIVE_GDAL:', checks)
-          if checks != {'tests': 2, 'failures': 0, 'errors': 0, 'skipped': 0}:
-              raise SystemExit('Native GDAL did not execute exactly one successful real integration test')
+          if checks != {'tests': 3, 'failures': 0, 'errors': 0, 'skipped': 0}:
+              raise SystemExit('Native GDAL raster and FlatGeobuf integrations must all pass without skips')
           PY
           {
             echo '### CATGIS native GDAL raster round-trip PASS'
