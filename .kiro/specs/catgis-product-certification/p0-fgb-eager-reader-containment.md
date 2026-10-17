@@ -51,3 +51,23 @@ For files with declared feature count zero (unknown), enforce the same
 
 Still no lazy/indexed multigigabyte adapter and no certified typed-property
 codec. Keep #175 OPEN.
+
+## E — lossless typed FlatGeobuf feature attributes (candidate)
+
+The previous `readColumnValue` treated `Feature.properties(i)` as the
+i-th numeric field; this is a byte vector of indexed, typed entries.
+The new bounded decoder understands per-column u16 keys + little-endian
+values across all 15 official ColumnType variants, including signed vs
+unsigned widths, 64-bit unsigned integers as BigInteger, strict UTF-8,
+date-time/JSON text and exact binary arrays. Missing keys stay null.
+Truncated/duplicate/unsupported fields or type conversion errors abort
+the WHOLE import instead of setting null and reporting success.
+Per-feature independent schema overrides are explicitly unsupported
+(fail closed); raw attribute payload limited to 8 MiB per feature.
+
+Unit contracts cover missing/null, UTF-8, JSON/DateTime, UInt/ULong,
+signed values, binary, malformed lengths, invalid bool/UTF-8 and repeated
+keys. True end-to-end GDAL-generated fixture and indexed multigigabyte
+streaming remain separate acceptance gates; #175 is still OPEN.
+References: https://flatgeobuf.org/ and
+https://github.com/flatgeobuf/flatgeobuf/blob/master/src/fbs/feature.fbs.

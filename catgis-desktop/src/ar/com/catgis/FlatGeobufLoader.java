@@ -282,21 +282,7 @@ public final class FlatGeobufLoader {
     }
 
     private static Class<?> columnTypeToClass(byte columnType) {
-        return switch (columnType) {
-            case org.wololo.flatgeobuf.generated.ColumnType.Bool -> Boolean.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.Byte -> Byte.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.Short -> Short.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.Int -> Integer.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.Long -> Long.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.Float -> Float.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.Double -> Double.class;
-            case org.wololo.flatgeobuf.generated.ColumnType.String -> String.class;
-            default -> {
-                CatgisLogger.debug("FlatGeobuf: unknown column type " + columnType
-                        + ", defaulting to String");
-                yield String.class;
-            }
-        };
+        return FlatGeobufPropertyDecoder.bindingFor(columnType);
     }
 
     private static SimpleFeature convertFeature(Feature fbFeature,
@@ -318,50 +304,27 @@ public final class FlatGeobufLoader {
         geometry = requireRealGeometry(geometry);
         builder.set("the_geom", geometry);
 
-        List<ColumnMeta> columns = header.columns;
-        if (columns != null) {
-            for (int i = 0; i < columns.size(); i++) {
-                ColumnMeta col = columns.get(i);
-                String colName = col.name != null ? col.name : "col_" + i;
-                colName = colName.replaceAll("[^a-zA-Z0-9_]", "_");
-                if (colName.isEmpty()) {
-                    colName = "col_" + i;
-                }
-
-                Object value = readColumnValue(fbFeature, i, col.type);
-                try {
-                    builder.set(colName, value);
-                } catch (Exception e) {
-                    CatgisLogger.warn("FlatGeobuf: failed to set column '" + colName
-                            + "' (type=" + col.type + ")", e);
-                    builder.set(colName, null);
-                }
+        // A Feature contains a typed, variable-length key/value buffer,
+        // never one numeric byte per column. Decode it exactly once.
+        List<ColumnMeta> columns = header.columns != null ? header.columns : List.of();
+        Object[] values = FlatGeobufPropertyDecoder.decode(fbFeature, columns);
+        for (int i = 0; i < columns.size(); i++) {
+            ColumnMeta col = columns.get(i);
+            String colName = col.name != null ? col.name : "col_" + i;
+            colName = colName.replaceAll("[^a-zA-Z0-9_]", "_");
+            if (colName.isEmpty()) {
+                colName = "col_" + i;
+            }
+            try {
+                builder.set(colName, values[i]);
+            } catch (RuntimeException invalid) {
+                throw new IllegalArgumentException(
+                        "FlatGeobuf: el atributo '" + colName
+                                + "' no respeta su tipo declarado; carga rechazada.", invalid);
             }
         }
 
         return builder.buildFeature(String.valueOf(sourceIndex));
-    }
-
-    private static Object readColumnValue(Feature fbFeature, int colIndex, byte columnType) {
-        try {
-            double raw = fbFeature.properties(colIndex);
-            return switch (columnType) {
-                case org.wololo.flatgeobuf.generated.ColumnType.Bool -> raw != 0.0;
-                case org.wololo.flatgeobuf.generated.ColumnType.Byte -> (byte) raw;
-                case org.wololo.flatgeobuf.generated.ColumnType.Short -> (short) raw;
-                case org.wololo.flatgeobuf.generated.ColumnType.Int -> (int) raw;
-                case org.wololo.flatgeobuf.generated.ColumnType.Long -> (long) raw;
-                case org.wololo.flatgeobuf.generated.ColumnType.Float -> (float) raw;
-                case org.wololo.flatgeobuf.generated.ColumnType.Double -> raw;
-                case org.wololo.flatgeobuf.generated.ColumnType.String ->
-                        String.valueOf((long) raw);
-                default -> raw;
-            };
-        } catch (Exception e) {
-            CatgisLogger.debug("FlatGeobuf: failed to read column " + colIndex
-                    + " (type=" + columnType + ")");
-            return null;
-        }
     }
 
     // The official FlatGeobuf magic is EIGHT bytes: fgb<major>fgb<patch>.
