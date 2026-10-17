@@ -97,6 +97,29 @@ final class FlatGeobufCrsSupport {
         return Resolution.unknown();
     }
 
+    /** Never silently honor a cached/manual CRS that contradicts file metadata. */
+    static void requireConsistentWithAssignedCrs(Resolution header, String assigned) {
+        if (header == null || header.coordinateReferenceSystem() == null
+                || assigned == null || assigned.isBlank()) {
+            return;
+        }
+        try {
+            CoordinateReferenceSystem declared = CRSDefinitions.decode(assigned, true);
+            if (!CRS.equalsIgnoreMetadata(header.coordinateReferenceSystem(), declared)) {
+                throw new IllegalArgumentException(
+                        "FlatGeobuf: el CRS de la capa (" + assigned
+                                + ") contradice el CRS de cabecera (" + header.sourceCode()
+                                + "). Revise la asignación antes de cargar.");
+            }
+        } catch (IllegalArgumentException inconsistent) {
+            throw inconsistent;
+        } catch (Exception unsupported) {
+            throw new IllegalArgumentException(
+                    "FlatGeobuf: CRS de capa no verificable frente a la cabecera: "
+                            + assigned, unsupported);
+        }
+    }
+
     static String schemaCode(SimpleFeatureType schema) {
         if (schema == null || schema.getCoordinateReferenceSystem() == null) {
             return "";
