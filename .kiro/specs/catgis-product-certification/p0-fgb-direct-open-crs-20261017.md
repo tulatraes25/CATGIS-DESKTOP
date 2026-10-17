@@ -38,3 +38,36 @@ fresh push certification is mandatory.
 
 Residual: full UI manual CRS selection/gesture, close/reopen and native
 real-world file roundtrips remain F3/runtime acceptance; no A0.7 closure.
+
+
+## Follow-up architecture finding: projected display CRS is not file-source CRS
+
+Source review confirmed that both `OpenFileAction.addVectorLayer` and
+`LayerVectorDataSupport.projectAndAttach` call
+`TopographyWorkflowSupport.projectVectorDataToCurrentProject`, which
+sets the mutable in-memory layer `sourceCRS` to the *project target CRS*
+after reprojection. `SaveProjectAction.buildLayerLine` previously wrote
+that projected CRS into the persisted file-source CRS field. On reopen,
+`LayerVectorDataSupport` correctly compares the saved CRS with the FGB
+header, thus rejecting valid EPSG:32719 files in an EPSG:4326 project.
+Unconditionally relaxing the header validation would instead hide tampered
+source metadata and destroy the fail-closed guarantee.
+
+Minimal isolated fix:
+- `FlatGeobufSourceCrsProvenance` records the *original* FGB file CRS
+  before projection in the layer's existing transient user metadata.
+- Rendering/projected layer `sourceCRS` retains the established
+  in-memory-target semantics, avoiding double transformations.
+- `SaveProjectAction` uses original FGB source CRS for the existing
+  project-file field. Other vector/raster files preserve original behavior.
+- During project reopen, capture the restored original CRS again before
+  reprojecting so repeated save/reopen cycles are idempotent.
+- No header I/O on the UI thread is added to save. No project file format
+  migration or serialized extra field is introduced.
+- `FlatGeobufProjectCrsRoundTripContractTest` exercises the actual
+  serializer and parser with projected EPSG:32719/4326, repeated
+  save/reopen, manual source CRS for headerless FGB, and non-FGB control.
+
+Residual: legacy projects previously persisted with an erroneous target
+sourceCRS can still fail closed; a separate explicit reconciliation UI/gate
+is required instead of silently overriding historical user assignments.
