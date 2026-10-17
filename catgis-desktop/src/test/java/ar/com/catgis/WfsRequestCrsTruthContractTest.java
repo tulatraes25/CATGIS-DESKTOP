@@ -7,7 +7,11 @@ import org.geotools.referencing.CRS;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Point;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WfsRequestCrsTruthContractTest {
 
