@@ -53,7 +53,8 @@ public class OnlineWfsLayer extends Layer implements ReadOnlyVectorLayerSource {
     }
 
     public void setRequestCrs(String requestCrs) {
-        this.requestCrs = CRSDefinitions.normalizeCode(requestCrs);
+        this.requestCrs = requestCrs == null || requestCrs.isBlank()
+                ? "" : CRSDefinitions.normalizeCode(requestCrs);
     }
 
     public String getVersion() {
