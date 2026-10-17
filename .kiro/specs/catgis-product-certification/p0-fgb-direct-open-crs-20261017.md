@@ -28,7 +28,10 @@ coordinates. The dialog to load FGB did not block unreferenced imports.
 
 `OpenFileFlatGeobufCrsContractTest` covers preservation of EPSG:32719,
 explicit EPSG:4326, and unknown/null CRS without a silent fallback.
-`FlatGeobufCrsSupportTest` covers actual FGB header CRS decoding.
+It also builds real framed FlatGeobuf header files, checks bounded loader
+acceptance, asserts the projected EPSG:32719 survives the full file-to-data
+path, and asserts a headless import of CRS-free FGB fails closed.
+`FlatGeobufCrsSupportTest` independently covers header CRS decoding.
 Candidate requires exact-HEAD CI, Certification, Runtime Identity, GeoParquet,
 and authenticated predecessor-main push attestation. After normal merge,
 fresh push certification is mandatory.
