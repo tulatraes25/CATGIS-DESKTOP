@@ -184,7 +184,8 @@ public class SaveProjectAction extends AbstractAction {
         }
     }
 
-    private static String buildLayerLine(Layer layer) {
+    // Package-visible seam: assert on-disk CRS provenance survives project serialization.
+    static String buildLayerLine(Layer layer) {
         String type = safe(layer.getType());
         String name = safe(layer.getName());
         String path = safe(layer.getPath());
