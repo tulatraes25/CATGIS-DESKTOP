@@ -20,7 +20,9 @@ final class ProjectLocalSourcePreflight {
     private ProjectLocalSourcePreflight() {}
 
     static void requireExistingLocalSources(List<? extends Layer> layers) throws IOException {
-        if (layers == null) return;
+        if (layers == null) {
+            return;
+        }
         for (Layer layer : layers) {
             requireExistingLocalSource(layer);
         }
@@ -53,7 +55,7 @@ final class ProjectLocalSourcePreflight {
         try {
             Path file = Path.of(source);
             if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)
-                    || Files.size(file) <= 0) {
+                    || !Files.isReadable(file) || Files.size(file) <= 0) {
                 throw new IOException("La capa local no tiene un archivo regular legible: "
                         + safeName(layer));
             }

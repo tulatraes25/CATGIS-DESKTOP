@@ -67,7 +67,9 @@ final class ProjectOpenReadBudget {
     }
 
     void checkLine(String line) throws IOException {
-        if (line == null) return;
+        if (line == null) {
+            return;
+        }
         if (++lineCount > maxLines) {
             throw new IOException("El proyecto supera la cantidad de registros permitida.");
         }
