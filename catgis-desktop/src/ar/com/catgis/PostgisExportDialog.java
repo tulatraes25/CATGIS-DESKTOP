@@ -71,7 +71,6 @@ public class PostgisExportDialog extends JDialog {
 
         modeCombo = new JComboBox<>(new PostgisTableWriteMode[]{
                 PostgisTableWriteMode.CREATE_NEW,
-                PostgisTableWriteMode.REPLACE_TABLE,
                 PostgisTableWriteMode.APPEND_RECORDS
         });
         addToProjectCheck = new JCheckBox("Agregar el resultado al proyecto como capa CATSERVER editable", true);
@@ -89,7 +88,7 @@ public class PostgisExportDialog extends JDialog {
         helpArea.setLineWrap(true);
         helpArea.setWrapStyleWord(true);
         helpArea.setText("Usá este flujo para enviar una capa vectorial local o derivada hacia CATSERVER. "
-                + "CATSERVER reutiliza el motor PostgreSQL/PostGIS de CATGIS y permite crear una tabla nueva, reemplazarla o anexar registros.");
+                + "CATSERVER utiliza PostgreSQL/PostGIS para crear tablas y anexar registros. El reemplazo de tablas existentes está deshabilitado hasta certificar su transacción segura.");
 
         statusLabel = new JLabel("Completa la conexión, elegí schema, tabla y modo de escritura.");
 

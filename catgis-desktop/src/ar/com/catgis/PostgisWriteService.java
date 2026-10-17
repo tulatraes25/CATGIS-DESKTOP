@@ -153,7 +153,19 @@ public final class PostgisWriteService {
         }
     }
 
+    static void rejectUnsafeReplace(PostgisTableWriteMode mode) {
+        if (mode == PostgisTableWriteMode.REPLACE_TABLE) {
+            throw new UnsupportedOperationException(
+                    "Reemplazar tabla PostGIS está deshabilitado por seguridad. "
+                    + "Creá una tabla nueva o anexá registros; "
+                    + "el reemplazo transaccional permanece pendiente de certificación.");
+        }
+    }
+
     public static WriteResult writeLayer(WriteRequest request) throws Exception {
+        // The old drop-then-create mode can destroy the last valid user table.
+        // Block it BEFORE opening a connection until a transactional swap is certified.
+        rejectUnsafeReplace(request != null ? request.mode() : null);
         String validationMessage = validateRequest(request);
         if (!validationMessage.isBlank()) {
             throw new IllegalArgumentException(validationMessage);
@@ -196,14 +208,8 @@ public final class PostgisWriteService {
                     typeNameForWrite = findMatchingTypeName(store.getTypeNames(), schemaName, tableName);
                     break;
                 case REPLACE_TABLE:
-                    if (existingTypeName != null) {
-                        store.removeSchema(existingTypeName);
-                    }
-                    targetSchema = buildTargetSchema(transformed.featureType, tableName, targetCrsCode);
-                    store.createSchema(targetSchema);
-                    createdTable = true;
-                    typeNameForWrite = findMatchingTypeName(store.getTypeNames(), schemaName, tableName);
-                    break;
+                    throw new UnsupportedOperationException(
+                            "La sustitución PostGIS requiere una transacción de intercambio certificada.");
                 case APPEND_RECORDS:
                     if (existingTypeName == null || existingSchema == null) {
                         throw new IllegalArgumentException("La tabla destino no existe para anexar registros.");

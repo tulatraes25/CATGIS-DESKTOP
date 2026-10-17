@@ -3,10 +3,28 @@ package ar.com.catgis;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PostgisWriteServiceTest {
+
+    @Test
+    void unsafeReplaceModeIsBlockedBeforeAnyDatabaseConnection() {
+        assertFalse(PostgisTableWriteMode.REPLACE_TABLE.isVisibleInExportDialog());
+        assertThrows(UnsupportedOperationException.class, () ->
+                PostgisWriteService.writeLayer(
+                        new PostgisWriteService.WriteRequest(
+                                null, null, null, "public", "critical_table",
+                                PostgisTableWriteMode.REPLACE_TABLE, false)));
+        assertThrows(UnsupportedOperationException.class, () ->
+                PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.REPLACE_TABLE));
+        assertDoesNotThrow(() -> PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.CREATE_NEW));
+        assertDoesNotThrow(() -> PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.APPEND_RECORDS));
+        assertDoesNotThrow(() -> PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.OVERWRITE_CONTENT));
+    }
 
     @Test
     void suggestsStableNeutralTableNames() {

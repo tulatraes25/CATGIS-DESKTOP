@@ -2,7 +2,7 @@ package ar.com.catgis;
 
 public enum PostgisTableWriteMode {
     CREATE_NEW("Crear nueva tabla", true),
-    REPLACE_TABLE("Reemplazar tabla existente", true),
+    REPLACE_TABLE("Reemplazar tabla existente (no disponible)", false),
     APPEND_RECORDS("Anexar registros", true),
     OVERWRITE_CONTENT("Sobrescribir contenido actual", false);
 
