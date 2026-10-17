@@ -33,3 +33,23 @@ required local layer rejection, view/CATMAP malformed record handling and
 false success/clean state are NOT addressed. Optional remote data is not
 silently declared fully loaded. #149 recovery must reuse the future stage API.
 No OpenCode/PC/release authorization; A0.7 OPEN.
+
+## Subgate B — local source existence before live-session mutation
+
+The existing loader parsed into a detached Project but cleared the previous
+map/layers BEFORE it attempted to load local files. A missing local Shapefile,
+GeoPackage, GPX, SpatiaLite or raster path therefore allowed partial success
+and could discard the open in-memory map.
+
+ProjectLocalSourcePreflight now checks required local files are regular,
+non-symlink, nonempty sources after parsing and before clearAllLayers or
+AppContext.setCurrentProject. Legacy spatialite://file#table is mapped to a
+physical source path for this check. Online WMS/WFS/XYZ and PostGIS are
+explicitly deferred remote sources and derived rasters may be regenerated.
+Tests prove missing local vector rejects the whole open and preserves project
+identity, modified flag, CRS and prior layer state before any destructive call.
+
+Residual #144 still OPEN: this verifies existence, NOT full parse/readability,
+CRS integrity, database table presence or successful detached reconstruction.
+A file may disappear after preflight (TOCTOU). Remote states must eventually
+report DEFERRED rather than loaded. No transaction guarantee or merge claim.

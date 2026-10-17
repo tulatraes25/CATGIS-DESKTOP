@@ -185,6 +185,8 @@ public class LoadProjectAction extends AbstractAction {
             }
 
             normalizeCatserverGrouping(loadedProject);
+            // Reject missing mandatory local sources before clearing the live workspace.
+            ProjectLocalSourcePreflight.requireExistingLocalSources(loadedProject.getLayers());
 
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.clearLayers();
