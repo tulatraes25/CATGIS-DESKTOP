@@ -59,8 +59,13 @@ class ProjectOpenRecordIntegrityContractTest {
         AppContext.setCurrentProject(prior);
         Path candidate = directory.resolve("corrupt-" + Math.abs(corruptRecord.hashCode()) + ".catgis");
         Files.writeString(candidate,
-                "CATGIS_PROJECT\\nPROJECT_CRS|EPSG:4326\\n" + corruptRecord + "\\n",
+                "CATGIS_PROJECT\nPROJECT_CRS|EPSG:4326\n" + corruptRecord + "\n",
                 StandardCharsets.UTF_8);
+        var physicalLines = Files.readAllLines(candidate, StandardCharsets.UTF_8);
+        assertEquals(3, physicalLines.size(), "Fixture must use real physical newlines");
+        assertEquals("CATGIS_PROJECT", physicalLines.get(0));
+        assertEquals("PROJECT_CRS|EPSG:4326", physicalLines.get(1));
+        assertEquals(corruptRecord, physicalLines.get(2));
         assertFalse(LoadProjectAction.loadProjectFile(candidate.toFile(), false),
                 () -> "Malformed record accepted: " + corruptRecord);
         assertSame(prior, AppContext.project());
