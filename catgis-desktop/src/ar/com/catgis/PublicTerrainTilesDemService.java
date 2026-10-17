@@ -39,6 +39,18 @@ public final class PublicTerrainTilesDemService {
                                               Envelope latLonEnvelope,
                                               PublicDemDetailLevel detailLevel,
                                               java.io.File outputFile) throws Exception {
+        return downloadFromTileBase(dataset, latLonEnvelope, detailLevel, outputFile, TILE_BASE);
+    }
+
+    // An injectable base is intentionally package-private: production always uses the fixed HTTPS provider.
+    static FileDownloadResult downloadFromTileBase(TerrainTilesDataset dataset,
+                                                   Envelope latLonEnvelope,
+                                                   PublicDemDetailLevel detailLevel,
+                                                   java.io.File outputFile,
+                                                   String tileBase) throws Exception {
+        if (tileBase == null || tileBase.isBlank()) {
+            throw new IllegalArgumentException("La URL base de tiles no puede estar vacía.");
+        }
         long startedAt = System.nanoTime();
         if (dataset == null) {
             throw new IllegalArgumentException("Debes elegir una fuente DEM publica.");
@@ -63,7 +75,7 @@ public final class PublicTerrainTilesDemService {
                 + " tiles=" + plan.tileCount
                 + " output=" + plan.outputWidth + "x" + plan.outputHeight
                 + " file=" + outputFile.getAbsolutePath());
-        writeGeoTiff(plan, outputFile);
+        writeGeoTiff(plan, outputFile, tileBase);
         CatgisLogger.info("[EMERGENCY-DEM] Terrain download finished in "
                 + ((System.nanoTime() - startedAt) / 1_000_000L)
                 + " ms file=" + outputFile.getAbsolutePath());
@@ -155,7 +167,7 @@ public final class PublicTerrainTilesDemService {
         );
     }
 
-    private static void writeGeoTiff(DownloadPlan plan, java.io.File outputFile) throws Exception {
+    private static void writeGeoTiff(DownloadPlan plan, java.io.File outputFile, String tileBase) throws Exception {
         SampleModel sampleModel = new BandedSampleModel(DataBuffer.TYPE_FLOAT, plan.outputWidth, plan.outputHeight, 1);
         DataBufferFloat buffer = new DataBufferFloat(plan.outputWidth * plan.outputHeight);
         WritableRaster raster = WritableRaster.createWritableRaster(sampleModel, buffer, null);
@@ -171,7 +183,7 @@ public final class PublicTerrainTilesDemService {
             for (int tileX = plan.tileMinX; tileX <= plan.tileMaxX; tileX++) {
                 int placementX = (tileX - plan.tileMinX) * TILE_SIZE;
                 int placementY = (tileY - plan.tileMinY) * TILE_SIZE;
-                placeTile(client, plan, elevationData, mosaicWidth, tileX, tileY, placementX, placementY);
+                placeTile(client, plan, elevationData, mosaicWidth, tileX, tileY, placementX, placementY, tileBase);
             }
         }
 
@@ -209,8 +221,9 @@ public final class PublicTerrainTilesDemService {
                                   int tileX,
                                   int tileY,
                                   int placementX,
-                                  int placementY) throws Exception {
-        URI uri = URI.create(TILE_BASE + "/" + plan.zoom + "/" + tileX + "/" + tileY + ".png");
+                                  int placementY,
+                                  String tileBase) throws Exception {
+        URI uri = URI.create(tileBase + "/" + plan.zoom + "/" + tileX + "/" + tileY + ".png");
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .header("Accept", "image/png")
                 .header("User-Agent", "CATGIS Desktop")
