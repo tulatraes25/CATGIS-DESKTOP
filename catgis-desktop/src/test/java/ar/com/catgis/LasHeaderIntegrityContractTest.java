@@ -65,6 +65,16 @@ class LasHeaderIntegrityContractTest {
         ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putDouble(139, 0d);
         Files.write(file, bytes);
         assertThrows(IOException.class, () -> LasReader.readHeader(file.toFile()));
+
+        bytes = Files.readAllBytes(fixture(2, 1, 1));
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putDouble(147, -0.1d);
+        Files.write(file, bytes);
+        assertThrows(IOException.class, () -> LasReader.readHeader(file.toFile()));
+
+        bytes = Files.readAllBytes(fixture(2, 1, 1));
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putDouble(163, Double.POSITIVE_INFINITY);
+        Files.write(file, bytes);
+        assertThrows(IOException.class, () -> LasReader.readHeader(file.toFile()));
     }
 
     @Test
@@ -98,12 +108,12 @@ class LasHeaderIntegrityContractTest {
         bytes.putDouble(155, -70d);
         bytes.putDouble(163, -70d);
         bytes.putDouble(171, 5d);
-        bytes.putDouble(179, -59d);
-        bytes.putDouble(187, -60d);
-        bytes.putDouble(195, -50d);
-        bytes.putDouble(203, -51d);
-        bytes.putDouble(211, 305d);
-        bytes.putDouble(219, 300d);
+        bytes.putDouble(179, -69d);
+        bytes.putDouble(187, -71d);
+        bytes.putDouble(195, -69d);
+        bytes.putDouble(203, -71d);
+        bytes.putDouble(211, 6d);
+        bytes.putDouble(219, 4d);
         if (minor >= 4) {
             bytes.putLong(247, declared);
         }
