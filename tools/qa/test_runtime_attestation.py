@@ -92,13 +92,23 @@ class FakeApi:
             result = [{"name": name} for name in self.names]
         elif re.fullmatch(r"/actions/workflows/[^/]+/runs", path):
             assert query == {"head_sha": [SHA], "event": ["push"], "per_page": ["100"]}
-            wordef execute(api: FakeApi, sha: str = SHA) -> tuple[int, str]:
-    """Exercise real PR attestation with a synthetic event and mocked GitHub API."""
+            workflow = path.split("/")[-2]
+            if workflow not in self.runs:
+                raise AssertionError("Do not require a lane absent from protected main")
+            result = {"workflow_runs": self.runs[workflow]}
+        elif re.fullmatch(r"/actions/runs/\d+/attempts/1/jobs", path):
+            assert query == {"per_page": ["100"]}
+            result = self.jobs[int(path.split("/")[3])]
+        else:
+            raise AssertionError("Unexpected API path: " + path)
+        return io.BytesIO(json.dumps(result).encode())
+
+
+def execute(api: FakeApi, sha: str = SHA) -> tuple[int, str]:
+    """Exercise shipped attestation against synthetic live-main and PR responses."""
     output = io.StringIO()
     code = compile(embedded_script(), "shipped-main-attestation", "exec")
     status = 0
-    # GitHub runners always provide GITHUB_EVENT_PATH. The old harness omitted
-    # it, which made every native/Java17 attestation fixture fail before any API test.
     with tempfile.TemporaryDirectory(prefix="catgis-attest-fixture-") as folder:
         event_path = Path(folder) / "event.json"
         event_path.write_text(json.dumps({
@@ -119,15 +129,6 @@ class FakeApi:
                 exec(code, {"__name__": "__main__"})
             except SystemExit as failure:
                 status = failure.code if isinstance(failure.code, int) else 1
-    return status, output.getvalue()
-with patch.dict(os.environ, {"GITHUB_TOKEN": "SYNTHETIC_ONLY", "REPOSITORY": "example/test",
-                                 "REQUIRED_MAIN_SHA": sha}, clear=True), \
-            patch("urllib.request.urlopen", side_effect=api.open), \
-            contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
-        try:
-            exec(code, {"__name__": "__main__"})
-        except SystemExit as failure:
-            status = failure.code if isinstance(failure.code, int) else 1
     return status, output.getvalue()
 
 
@@ -202,20 +203,20 @@ class RuntimeAttestationContractTest(unittest.TestCase):
                 api.jobs[index]["jobs"].pop()
                 self.assertEqual(1, execute(api)[0])
 
-    def test_live_main_drift_is_rejected_before_attesting_old_green(self):
+    def test_live_main_drift_is_rejected_before_old_green_attestation(self):
         api = FakeApi()
         api.live_main = "c" * 40
         with self.assertRaisesRegex(ValueError, "STALE_MAIN_BASE"):
             execute(api)
         self.assertFalse(any("/actions/workflows/" in url for url in api.seen))
 
-    def test_live_pr_head_drift_blocks_existing_event(self):
+    def test_live_pr_head_drift_blocks_stale_event(self):
         api = FakeApi()
         api.pr_head = "d" * 40
         with self.assertRaisesRegex(ValueError, "STALE_PR_HEAD"):
             execute(api)
 
-    def test_live_pr_base_drift_blocks_event(self):
+    def test_live_pr_base_drift_blocks_stale_event(self):
         api = FakeApi()
         api.pr_base = "d" * 40
         with self.assertRaisesRegex(ValueError, "STALE_PR_BASE"):
