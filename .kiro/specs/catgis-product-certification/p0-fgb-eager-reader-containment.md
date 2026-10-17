@@ -38,3 +38,16 @@ HeaderPrefix reader now consumes the two halves for FGB major version 3,
 and accepts only the existing legacy CATGIS 4-byte magic separately. It never
 guesses from file size. Tests include a 32 MiB sparse official-signature
 file and malformed trailing magic to prevent silent ambiguity.
+
+## D — exact packed R-tree size and unknown header count
+
+The previous ad-hoc formula skipped the leaf level and could position
+the feature reader at incorrect bytes. Compute all packed levels, including
+leaf entries and parents, each exactly 40 bytes, with checked arithmetic
+and node size 2..65535. Verify count=1/16/17/100 with branching 16.
+
+For files with declared feature count zero (unknown), enforce the same
+100,000 decoded-feature maximum inside the parser, not only at the header.
+
+Still no lazy/indexed multigigabyte adapter and no certified typed-property
+codec. Keep #175 OPEN.

@@ -87,6 +87,16 @@ class FlatGeobufFrameSafetyContractTest {
     }
 
     @Test
+    void exactPackedRtreeNodeCountMatchesSourceFormat() throws Exception {
+        assertEquals(40L, FlatGeobufLoader.estimateIndexSize(1, 16));
+        assertEquals(680L, FlatGeobufLoader.estimateIndexSize(16, 16));
+        assertEquals(800L, FlatGeobufLoader.estimateIndexSize(17, 16));
+        assertEquals(4320L, FlatGeobufLoader.estimateIndexSize(100, 16));
+        assertThrows(IOException.class, () -> FlatGeobufLoader.estimateIndexSize(1, 1));
+        assertThrows(IOException.class, () -> FlatGeobufLoader.estimateIndexSize(1, 0));
+    }
+
+    @Test
     void malformedFramesCannotSilentlyBecomePartialLayer() {
         for (int badSize : new int[]{-1, 0, 6, Integer.MAX_VALUE}) {
             assertThrows(IOException.class,

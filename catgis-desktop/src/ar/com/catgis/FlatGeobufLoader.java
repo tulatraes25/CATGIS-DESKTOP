@@ -189,6 +189,9 @@ public final class FlatGeobufLoader {
                 dataBuf.order(ByteOrder.LITTLE_ENDIAN);
 
                 while (dataBuf.remaining() >= 4) {
+                    if (features.size() >= MAX_EAGER_FEATURES) {
+                        throw new IOException("FlatGeobuf requiere visor indexado: máximo de entidades en RAM.");
+                    }
                     int featureSize = dataBuf.getInt();
                     requireFeatureFrameSize(featureSize, dataBuf.remaining());
 
@@ -417,12 +420,21 @@ public final class FlatGeobufLoader {
         }
     }
 
-    private static long estimateIndexSize(long featuresCount, int indexNodeSize) {
-        if (indexNodeSize <= 0 || featuresCount <= 0) {
-            return 0;
+    static long estimateIndexSize(long featuresCount, int indexNodeSize) throws IOException {
+        if (featuresCount <= 0 || indexNodeSize < 2 || indexNodeSize > 65535) {
+            throw new IOException("Índice R-tree FlatGeobuf con parámetros inválidos.");
         }
-        long numNodes = (featuresCount + indexNodeSize - 1) / indexNodeSize;
-        return numNodes * (4L + (long) indexNodeSize * 40);
+        try {
+            long nodes = featuresCount;
+            long level = featuresCount;
+            while (level > 1) {
+                level = 1 + (level - 1) / indexNodeSize;
+                nodes = Math.addExact(nodes, level);
+            }
+            return Math.multiplyExact(nodes, 40L);
+        } catch (ArithmeticException overflow) {
+            throw new IOException("Índice FlatGeobuf excede el rango de offsets.", overflow);
+        }
     }
 
     private static ShapefileData emptyResult(HeaderMeta header, String sourceName,
