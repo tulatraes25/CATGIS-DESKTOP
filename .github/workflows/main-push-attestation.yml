@@ -59,6 +59,87 @@ jobs:
                   detail = error.read(512).decode("utf-8", "replace")
                   raise RuntimeError(f"GitHub API {path}: HTTP {error.code}: {detail}") from error
 
+          # BEGIN_ATTESTATION_BINDING_CONTRACT
+          def attest_live_main_binding(event_name, event, required_main_sha, live_main_sha,
+                                       pr, ancestry, dispatch_ref, dispatch_sha):
+              """Reject stale pull-request events, moved refs and unreconciled heads."""
+              def require_sha(value, label):
+                  if not isinstance(value, str) or not re.fullmatch(r"[0-9a-fA-F]{40}", value):
+                      raise ValueError(f"{label} must be a full 40-digit Git SHA")
+                  return value.lower()
+          
+              observed = require_sha(live_main_sha, "live main")
+              required = require_sha(required_main_sha, "requested main")
+              if observed != required:
+                  raise ValueError(f"STALE_MAIN_BASE: event={required} live={observed}")
+          
+              if event_name == "workflow_dispatch":
+                  dispatch = require_sha(dispatch_sha, "workflow dispatch SHA")
+                  if dispatch_ref != "refs/heads/main" or dispatch != observed:
+                      raise ValueError("DISPATCH_NOT_LIVE_MAIN")
+                  return {"main_sha": observed, "head_sha": None, "pr_number": None}
+          
+              if event_name != "pull_request":
+                  raise ValueError(f"UNSUPPORTED_ATTESTATION_EVENT: {event_name}")
+          
+              number = event.get("number")
+              event_pr = event.get("pull_request")
+              if isinstance(number, bool) or not isinstance(number, int) or number <= 0:
+                  raise ValueError("MISSING_EVENT_PR_NUMBER")
+              if not isinstance(event_pr, dict) or not isinstance(pr, dict):
+                  raise ValueError("MISSING_PR_EVIDENCE")
+              if pr.get("number") != number or pr.get("state") != "open":
+                  raise ValueError("CURRENT_PR_NO_LONGER_MATCHES_EVENT")
+          
+              event_base = require_sha(event_pr.get("base", {}).get("sha"), "event PR base")
+              current_base = require_sha(pr.get("base", {}).get("sha"), "live PR base")
+              event_head = require_sha(event_pr.get("head", {}).get("sha"), "event PR head")
+              current_head = require_sha(pr.get("head", {}).get("sha"), "live PR head")
+              if event_pr.get("base", {}).get("ref") != "main" or pr.get("base", {}).get("ref") != "main":
+                  raise ValueError("PR_BASE_BRANCH_NOT_MAIN")
+              if event_base != observed or current_base != observed:
+                  raise ValueError(f"STALE_PR_BASE: event={event_base} pr={current_base} live={observed}")
+              if event_head != current_head:
+                  raise ValueError(f"STALE_PR_HEAD: event={event_head} live={current_head}")
+              if not isinstance(ancestry, dict) or ancestry.get("behind_by") != 0 or ancestry.get("ahead_by", 0) <= 0:
+                  raise ValueError("PR_HEAD_NOT_DESCENDED_FROM_LIVE_MAIN")
+              return {"main_sha": observed, "head_sha": current_head, "pr_number": number}
+          
+          
+          def eligible_main_push_run(run, main_sha):
+              """Pending, failed, misdirected and non-push results are never attestable."""
+              return isinstance(run, dict) and (run.get("head_sha") == main_sha
+                      and run.get("event") == "push" and run.get("head_branch") == "main"
+                      and run.get("status") == "completed" and run.get("conclusion") == "success")
+          # END_ATTESTATION_BINDING_CONTRACT
+
+          # Live refs are read from GitHub with the read-only workflow token;
+          # no untrusted pull-request checkout or executable PR code is loaded.
+          with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as stream:
+              event_payload = json.load(stream)
+          event_name = os.environ["GITHUB_EVENT_NAME"]
+          live_data = request_json("/git/ref/heads/main")
+          live_sha = live_data.get("object", {}).get("sha")
+          pr_data = None
+          ancestry_data = None
+          if event_name == "pull_request":
+              event_number = event_payload.get("number")
+              if isinstance(event_number, bool) or not isinstance(event_number, int) or event_number <= 0:
+                  raise SystemExit("Invalid attestation pull request number")
+              pr_data = request_json(f"/pulls/{event_number}")
+              current_head = pr_data.get("head", {}).get("sha")
+              if not isinstance(current_head, str) or not re.fullmatch(r"[0-9a-f]{40}", current_head):
+                  raise SystemExit("Invalid GitHub pull-request head SHA")
+              if isinstance(live_sha, str) and re.fullmatch(r"[0-9a-f]{40}", live_sha):
+                  ancestry_data = request_json(f"/compare/{live_sha}...{current_head}")
+          binding = attest_live_main_binding(
+              event_name, event_payload, sha, live_sha, pr_data, ancestry_data,
+              os.environ.get("GITHUB_REF"), os.environ.get("GITHUB_SHA"))
+          print("ATTEST_BINDING_PASS: main_sha=" + binding["main_sha"]
+                + " head_sha=" + str(binding["head_sha"])
+                + " pr_number=" + str(binding["pr_number"])
+                + " event=" + event_name)
+
           required = {
               "ci.yml": {"Java Desktop Build & Test", "Repository Safety Checks", "Web Viewer Lint"},
               "certification.yml": {
@@ -112,9 +193,7 @@ jobs:
               query = urllib.parse.urlencode({"head_sha": sha, "event": "push", "per_page": 100})
               data = request_json(f"/actions/workflows/{workflow}/runs?{query}")
               runs = [run for run in data.get("workflow_runs", [])
-                      if run.get("head_sha") == sha and run.get("event") == "push"
-                      and run.get("head_branch") == "main" and run.get("status") == "completed"
-                      and run.get("conclusion") == "success"]
+                      if eligible_main_push_run(run, sha)]
               if not runs:
                   problems.append(f"{workflow}: no completed SUCCESS push run on main at {sha}")
                   report.append(f"| {workflow} | missing | - | BLOCKED |")
@@ -154,6 +233,17 @@ jobs:
                     f"run_id={run['id']} attempt={run.get('run_attempt', 1)} url={run['html_url']}")
               for name in sorted(expected_jobs):
                   print(f"  PASS job={name} id={jobs[name]['id']}")
+
+          # Close the ref-movement window before publishing a PASS.
+          last_live = request_json("/git/ref/heads/main").get("object", {}).get("sha")
+          if last_live != binding["main_sha"]:
+              problems.append("LIVE_MAIN_MOVED_DURING_ATTESTATION")
+          if binding["pr_number"] is not None:
+              last_pr = request_json(f"/pulls/{binding['pr_number']}")
+              if last_pr.get("head", {}).get("sha") != binding["head_sha"]:
+                  problems.append("PR_HEAD_MOVED_DURING_ATTESTATION")
+              if last_pr.get("base", {}).get("sha") != binding["main_sha"]:
+                  problems.append("PR_BASE_MOVED_DURING_ATTESTATION")
 
           if problems:
               report.extend(["", "### Missing or insufficient evidence"])
