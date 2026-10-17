@@ -6,6 +6,7 @@ import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Uncompressed LAS 1.0-1.4 reader for legacy point formats 0-3.
@@ -35,6 +36,9 @@ public final class LasReader {
         if (file == null || !file.isFile()) {
             throw new IllegalArgumentException("File does not exist: " + file);
         }
+        if (file.getName().toLowerCase(Locale.ROOT).endsWith(".laz")) {
+            throw new IOException("LAZ está comprimido: se requiere un lector PDAL/LAZ certificado.");
+        }
 
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
             byte[] sig = new byte[4];
@@ -53,8 +57,12 @@ public final class LasReader {
 
             raf.seek(94);
             int headerSize = readUShort(raf);
-            if (headerSize < 227 || raf.length() < headerSize) {
-                throw new IOException("Invalid or truncated LAS header.");
+            int minimumHeaderSize = versionMinor == 4 ? 375
+                    : versionMinor == 3 ? 235 : 227;
+            if (headerSize < minimumHeaderSize || raf.length() < headerSize) {
+                throw new IOException("Invalid or truncated LAS " + versionMajor
+                        + "." + versionMinor + " header: expected at least "
+                        + minimumHeaderSize + " bytes.");
             }
 
             raf.seek(96);
@@ -111,6 +119,30 @@ public final class LasReader {
             double minY = readDouble(raf);
             double maxZ = readDouble(raf);
             double minZ = readDouble(raf);
+
+            if (!Double.isFinite(scaleX) || !Double.isFinite(scaleY)
+                    || !Double.isFinite(scaleZ)
+                    || scaleX <= 0 || scaleY <= 0 || scaleZ <= 0
+                    || !Double.isFinite(offsetX) || !Double.isFinite(offsetY)
+                    || !Double.isFinite(offsetZ)
+                    || !Double.isFinite(minX) || !Double.isFinite(maxX)
+                    || !Double.isFinite(minY) || !Double.isFinite(maxY)
+                    || !Double.isFinite(minZ) || !Double.isFinite(maxZ)
+                    || minX > maxX || minY > maxY || minZ > maxZ) {
+                throw new IOException("LAS: escala, offset o extensión inválidos.");
+            }
+            // Fail closed before any geometry allocation or partial preview:
+            // even a caller requesting only a prefix must not silently accept
+            // an authoritative header claiming records beyond EOF.
+            try {
+                long expectedBytes = Math.multiplyExact(pointCount, (long) recordLength);
+                long requiredFileBytes = Math.addExact(pointOffset, expectedBytes);
+                if (requiredFileBytes > raf.length()) {
+                    throw new IOException("LAS truncado: faltan puntos declarados en el encabezado.");
+                }
+            } catch (ArithmeticException overflow) {
+                throw new IOException("LAS: conteo de puntos excede el rango de archivo.", overflow);
+            }
 
             return new LasHeader(versionMajor, versionMinor, pointCount,
                     minX, minY, minZ, maxX, maxY, maxZ,
