@@ -22,6 +22,9 @@ class FlatGeobufProjectCrsRoundTripContractTest {
         // to the project CRS once the geometry is transformed.
         original.setSourceCRS("EPSG:4326");
         assertEquals("EPSG:4326", original.getSourceCRS());
+        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(original);
+        assertEquals("EPSG:32719", FlatGeobufSourceCrsProvenance.crsForProjectFile(original),
+                "A second projection must never erase original source provenance");
 
         String line = SaveProjectAction.buildLayerLine(original);
         assertEquals("EPSG:32719", serializedSourceCrs(line));
