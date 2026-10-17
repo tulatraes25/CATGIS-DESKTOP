@@ -92,6 +92,28 @@ class LasHeaderIntegrityContractTest {
     }
 
     @Test
+    void nonFiniteDecodedCoordinatesAndOutOfBoundsPointsAreRejected() throws Exception {
+        Path file = fixture(2, 1, 1);
+        byte[] bytes = Files.readAllBytes(file);
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+                .putDouble(131, Double.MAX_VALUE);
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+                .putInt(227, Integer.MAX_VALUE);
+        Files.write(file, bytes);
+        // The header itself contains a finite scale; actual coordinates
+        // become infinite only once a real point is decoded.
+        LasReader.readHeader(file.toFile());
+        assertThrows(IOException.class, () -> LasReader.readPoints(file.toFile(), 1));
+
+        bytes = Files.readAllBytes(fixture(2, 1, 1));
+        ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+                .putInt(227, 2000);
+        Files.write(file, bytes);
+        // x = -70 + 2000*0.01 = -50, while header declares [-71, -69].
+        assertThrows(IOException.class, () -> LasReader.readPoints(file.toFile(), 1));
+    }
+
+    @Test
     void invertedBoundingBoxAndCompressedExtensionAreRejected() throws Exception {
         Path file = fixture(2, 1, 1);
         byte[] bytes = Files.readAllBytes(file);

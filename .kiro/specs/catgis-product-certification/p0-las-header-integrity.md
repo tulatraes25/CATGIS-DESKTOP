@@ -47,3 +47,14 @@ complete project vector layer.
 This intentionally trades large-LAS viewing availability for data
 integrity until the dedicated streaming/typed-PARTIAL_PREVIEW subgate
 is built. That full capability remains OPEN in #176.
+
+## Tranche C — decoded LAS scientific coordinate boundary
+
+Every decoded XYZ must be finite and lie within the header's finite
+3D declared envelope, using only source quantization / IEEE floating
+roundoff tolerance (NO implied EPSG:4326). A finite positive extreme
+scale can overflow on multiplication; a corrupt raw point can lie far
+outside the header. Both now trigger IOException rather than attach a
+made-up/invalid GIS feature. Regression tests exercise actual binary
+point reads with max-scale overflow and out-of-range XYZ. This does
+not supply the missing source CRS (#151) or efficient large-LAS reader.

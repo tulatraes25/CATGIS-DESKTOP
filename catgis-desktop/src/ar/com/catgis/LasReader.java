@@ -183,6 +183,15 @@ public final class LasReader {
                 double x = rawX * header.scaleX() + header.offsetX();
                 double y = rawY * header.scaleY() + header.offsetY();
                 double z = rawZ * header.scaleZ() + header.offsetZ();
+                if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+                    throw new IOException("LAS: coordenada no finita en punto " + i);
+                }
+                if (!insideDeclaredExtent(x, header.minX(), header.maxX(), header.scaleX())
+                        || !insideDeclaredExtent(y, header.minY(), header.maxY(), header.scaleY())
+                        || !insideDeclaredExtent(z, header.minZ(), header.maxZ(), header.scaleZ())) {
+                    throw new IOException("LAS: punto " + i
+                            + " fuera de la extensión geográfica declarada.");
+                }
 
                 int intensity = readUShort(raf);
                 raf.readUnsignedByte(); // packed return number/return count/flags
@@ -224,6 +233,16 @@ public final class LasReader {
     public static org.locationtech.jts.geom.Envelope getBounds(File file) throws IOException {
         LasHeader h = readHeader(file);
         return new org.locationtech.jts.geom.Envelope(h.minX(), h.maxX(), h.minY(), h.maxY());
+    }
+
+    private static boolean insideDeclaredExtent(double value, double min, double max,
+                                                 double scale) {
+        // Roundoff tolerance is bounded by the source coordinate resolution
+        // and floating-point representation, never by a guessed CRS.
+        double magnitude = Math.max(Math.abs(min), Math.abs(max));
+        double tolerance = Math.max(Math.ulp(magnitude) * 8.0, scale * 1e-6);
+        return Double.isFinite(tolerance)
+                && value >= min - tolerance && value <= max + tolerance;
     }
 
     private static int readUShort(RandomAccessFile raf) throws IOException {
