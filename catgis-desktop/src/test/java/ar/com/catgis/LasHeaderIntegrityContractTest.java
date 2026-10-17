@@ -16,6 +16,20 @@ class LasHeaderIntegrityContractTest {
     @TempDir Path folder;
 
     @Test
+    void largeLidarFileCannotBecomeSilentlyTruncatedVectorLayer() {
+        assertThrows(IOException.class,
+                () -> LayerVectorDataSupport.requireCompleteLasDataset(50_001));
+        assertThrows(IOException.class,
+                () -> LayerVectorDataSupport.requireCompleteLasDataset(Long.MAX_VALUE));
+        assertThrows(IOException.class,
+                () -> LayerVectorDataSupport.requireCompleteLasDataset(-1));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> LayerVectorDataSupport.requireCompleteLasDataset(50_000));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> LayerVectorDataSupport.requireCompleteLasDataset(0));
+    }
+
+    @Test
     void realVersion14MinimumHeaderAndExtendedCountAccepted() throws Exception {
         Path file = fixture(4, 1, 1);
         LasReader.LasHeader header = LasReader.readHeader(file.toFile());
