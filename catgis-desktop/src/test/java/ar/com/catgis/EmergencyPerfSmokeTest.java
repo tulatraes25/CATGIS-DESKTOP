@@ -100,13 +100,19 @@ class EmergencyPerfSmokeTest {
             assertTrue(result.width() > 0 && result.height() > 0);
 
             GeoTiffReader reader = new GeoTiffReader(tif.toFile());
+            org.geotools.coverage.grid.GridCoverage2D coverage = null;
             try {
-                var coverage = reader.read((org.geotools.api.parameter.GeneralParameterValue[]) null);
+                coverage = reader.read((org.geotools.api.parameter.GeneralParameterValue[]) null);
                 assertNotNull(coverage);
                 var raster = coverage.getRenderedImage().getData();
                 assertEquals(42.0, raster.getSampleDouble(0, 0, 0), 0.2,
                         "Actual TIFF pixel must preserve Terrarium elevation, not just metadata");
             } finally {
+                // GeoTools/JAI rendered images can keep Windows TIFF handles open.
+                // Releasing only the reader is insufficient after getData().
+                if (coverage != null) {
+                    coverage.dispose(true);
+                }
                 reader.dispose();
             }
 
