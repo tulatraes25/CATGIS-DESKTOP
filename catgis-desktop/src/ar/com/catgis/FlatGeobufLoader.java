@@ -128,7 +128,8 @@ public final class FlatGeobufLoader {
             HeaderPrefix prefix = readHeaderPrefix(channel);
             int headerSize = prefix.headerSize();
             int headerOffset = prefix.headerOffset();
-            HeaderMeta header = readFramedHeader(channel, prefix);
+            ParsedHeader parsed = readFramedHeaderDetails(channel, prefix);
+            HeaderMeta header = parsed.meta();
 
             CatgisLogger.debug("FlatGeobuf header: geometry="
                     + GeometryType.name((short) header.geometryType)
@@ -136,7 +137,8 @@ public final class FlatGeobufLoader {
                     + ", columns=" + (header.columns != null ? header.columns.size() : 0)
                     + ", indexNodeSize=" + header.indexNodeSize);
 
-            SimpleFeatureType schema = buildSchema(header, file.getName());
+            SimpleFeatureType schema =
+                    buildSchema(header, file.getName(), parsed.crs());
             SimpleFeatureBuilder builder = new SimpleFeatureBuilder(schema);
 
             long featuresCount = header.featuresCount;
@@ -249,10 +251,14 @@ public final class FlatGeobufLoader {
         return envelope;
     }
 
-    private static SimpleFeatureType buildSchema(HeaderMeta header, String sourceName) {
+    private static SimpleFeatureType buildSchema(HeaderMeta header, String sourceName,
+                                                     FlatGeobufCrsSupport.Resolution sourceCrs) {
         SimpleFeatureTypeBuilder typeBuilder = new SimpleFeatureTypeBuilder();
         String name = sourceName.replaceAll("[^a-zA-Z0-9_]", "_");
         typeBuilder.setName(name);
+        if (sourceCrs != null && sourceCrs.coordinateReferenceSystem() != null) {
+            typeBuilder.setCRS(sourceCrs.coordinateReferenceSystem());
+        }
         typeBuilder.add("the_geom", Geometry.class);
 
         List<ColumnMeta> columns = header.columns;
@@ -358,6 +364,13 @@ public final class FlatGeobufLoader {
      */
     static HeaderMeta readFramedHeader(FileChannel channel, HeaderPrefix prefix)
             throws IOException {
+        return readFramedHeaderDetails(channel, prefix).meta();
+    }
+
+    private record ParsedHeader(HeaderMeta meta, FlatGeobufCrsSupport.Resolution crs) {}
+
+    private static ParsedHeader readFramedHeaderDetails(FileChannel channel, HeaderPrefix prefix)
+            throws IOException {
         if (prefix == null || prefix.headerSize() <= 0
                 || prefix.headerSize() > MAX_HEADER_BYTES) {
             throw new IOException("FlatGeobuf: tamaño de encabezado no confiable.");
@@ -384,7 +397,9 @@ public final class FlatGeobufLoader {
                 org.wololo.flatgeobuf.generated.Header.getRootAsHeader(generatedView);
         HeaderMeta meta = HeaderMeta.read(framed);
         meta.name = generated.name();
-        return meta;
+        FlatGeobufCrsSupport.Resolution crs = FlatGeobufCrsSupport.resolve(
+                generatedView.slice().order(ByteOrder.LITTLE_ENDIAN));
+        return new ParsedHeader(meta, crs);
     }
 
     /**

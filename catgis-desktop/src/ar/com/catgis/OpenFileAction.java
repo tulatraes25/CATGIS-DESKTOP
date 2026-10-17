@@ -140,6 +140,24 @@ public class OpenFileAction extends AbstractAction {
                     return false;
                 }
                 data = FlatGeobufLoader.load(file);
+                sourceCRS = FlatGeobufCrsSupport.schemaCode(data.getSchema());
+                if (sourceCRS.isBlank()) {
+                    // Never treat a missing source CRS as the project CRS or WGS84.
+                    if (!showDialogs || java.awt.GraphicsEnvironment.isHeadless()) {
+                        CatgisLogger.warn(
+                                "FlatGeobuf sin CRS: importación no interactiva rechazada para "
+                                        + file.getAbsolutePath(), null);
+                        return false;
+                    }
+                    String chosen = CRSSelectorDialog.chooseBlocking(
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            "Seleccione explícitamente el CRS de origen FlatGeobuf",
+                            "");
+                    if (chosen == null || chosen.isBlank()) {
+                        return false;
+                    }
+                    sourceCRS = VectorCrsTransformSupport.canonicalText(chosen);
+                }
                 layerDisplayName = file.getName();
             } else if (lowerName.endsWith(".pmtiles")) {
                 // PMTiles: read metadata and show info (tiles are not directly displayable as vector/raster)
