@@ -147,14 +147,22 @@ final class LayerVectorDataSupport {
             return projectAndAttach(layer, data);
         }
         if (lowerPath.endsWith(".las") || lowerPath.endsWith(".laz")) {
+            // LAS/LAZ CRS VLR/EVLR metadata is not yet parsed by the reader.
+            // Reject before reading potentially large data, never invent WGS84.
+            requireDeclaredLasSourceCrs(layer.getSourceCRS());
             data = loadLasFile(path, layer);
-            if (isBlank(layer.getSourceCRS())) {
-                layer.setSourceCRS("EPSG:4326");
-            }
             return projectAndAttach(layer, data);
         }
 
         return null;
+    }
+
+    static void requireDeclaredLasSourceCrs(String sourceCrs) {
+        if (isBlank(sourceCrs)) {
+            throw new IllegalStateException(
+                    "LiDAR sin CRS de origen declarado: asigne explícitamente el CRS correcto antes de cargar. "
+                    + "CATGIS no supondrá EPSG:4326.");
+        }
     }
 
     static final int MAX_COMPLETE_LAS_FEATURES = 50_000;
