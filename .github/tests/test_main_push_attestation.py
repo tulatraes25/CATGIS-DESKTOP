@@ -95,6 +95,16 @@ class MainPushAttestationPolicyTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "DISPATCH_NOT_LIVE_MAIN"):
                     self.verify("workflow_dispatch", {}, MAIN, MAIN, None, None, ref, sha)
 
+    def test_metadata_edit_allows_evidence_only_fresh_pr_event(self):
+        source = (Path(__file__).resolve().parents[1] / "workflows"
+                  / "main-push-attestation.yml").read_text(encoding="utf-8")
+        self.assertIn("types: [opened, synchronize, reopened, edited]", source)
+        event, pr, ancestry = self.fixture()
+        self.assertEqual(self.check_pr(event, pr, ancestry)["head_sha"], HEAD)
+        event["pull_request"]["base"]["sha"] = OLD
+        with self.assertRaisesRegex(ValueError, "STALE_PR_BASE"):
+            self.check_pr(event, pr, ancestry)
+
     def test_only_full_exact_completed_successful_main_push_is_eligible(self):
         good = {"head_sha": MAIN, "event": "push", "head_branch": "main",
                 "status": "completed", "conclusion": "success"}

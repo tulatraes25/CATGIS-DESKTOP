@@ -30,3 +30,18 @@ scientific raster acceptance. PR branch heads that are updated after a workflow
 event require a new PR event/attempt. A green prior main has no transfer value
 to a new SHA. Full candidate CI/native and post-merge push evidence remain
 mandatory; A0.7 OPEN.
+
+## Evidence-only reattestation of unchanged branch head
+
+GitHub rerun-failed replays the original pull_request event JSON; its old
+base.sha stays stale after main moves. Passing all current main jobs cannot
+make that historical event current. Enable only the read-only attestation
+workflow's `pull_request.edited` event, preserving opened/synchronize/reopened.
+Editing PR description is an auditable no-source-change way to create fresh
+event payload and recheck live main, current PR base and exact current head.
+Other full native matrices keep their default events and do not re-run solely
+for an edited description; no new credentials or unsafe checkout.
+
+Acceptance: tests assert edited trigger exists while stale SHA snapshots remain
+fail-closed. Reverify actual edited event run on unchanged PR head AFTER native
+main certification, do not reuse original failed run. No merged/release claim.

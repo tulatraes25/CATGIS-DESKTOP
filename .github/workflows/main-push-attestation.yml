@@ -3,6 +3,7 @@ name: CATGIS Main Push Attestation
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
 
 permissions:
