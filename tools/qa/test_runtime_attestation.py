@@ -7,6 +7,7 @@ import copy
 import io
 import json
 import os
+import tempfile
 from pathlib import Path
 import re
 import unittest
@@ -50,6 +51,9 @@ class FakeApi:
         self.runs = {}
         self.jobs = {}
         self.seen = []
+        self.live_main = SHA
+        self.pr_base = SHA
+        self.pr_head = "b" * 40
         for index, (workflow, names) in enumerate(self.names.items(), 1):
             self.runs[workflow] = [{"id": index, "head_sha": SHA, "event": "push",
                                     "head_branch": "main", "status": "completed",
@@ -69,7 +73,15 @@ class FakeApi:
         self.seen.append(request.full_url)
         path = parsed.path[len(prefix):]
         query = parse_qs(parsed.query)
-        if path == "/contents/.github/workflows/certification.yml":
+        if path == "/git/ref/heads/main":
+            result = {"object": {"sha": self.live_main}}
+        elif path == "/pulls/7":
+            result = {"number": 7, "state": "open",
+                      "base": {"sha": self.pr_base, "ref": "main"},
+                      "head": {"sha": self.pr_head}}
+        elif path == f"/compare/{self.live_main}...{self.pr_head}":
+            result = {"ahead_by": 1, "behind_by": 0}
+        elif path == "/contents/.github/workflows/certification.yml":
             assert query == {"ref": [SHA]}
             source = "\n".join("  " + name + ":" for name in (
                 "linux-appimage-package", "windows-appimage-package", "macos-full-suite-appimage",
@@ -93,17 +105,30 @@ class FakeApi:
 
 
 def execute(api: FakeApi, sha: str = SHA) -> tuple[int, str]:
+    """Exercise shipped attestation against synthetic live-main and PR responses."""
     output = io.StringIO()
     code = compile(embedded_script(), "shipped-main-attestation", "exec")
     status = 0
-    with patch.dict(os.environ, {"GITHUB_TOKEN": "SYNTHETIC_ONLY", "REPOSITORY": "example/test",
-                                 "REQUIRED_MAIN_SHA": sha}, clear=True), \
-            patch("urllib.request.urlopen", side_effect=api.open), \
-            contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
-        try:
-            exec(code, {"__name__": "__main__"})
-        except SystemExit as failure:
-            status = failure.code if isinstance(failure.code, int) else 1
+    with tempfile.TemporaryDirectory(prefix="catgis-attest-fixture-") as folder:
+        event_path = Path(folder) / "event.json"
+        event_path.write_text(json.dumps({
+            "number": 7,
+            "pull_request": {
+                "base": {"sha": SHA, "ref": "main"},
+                "head": {"sha": "b" * 40},
+            },
+        }), encoding="utf-8")
+        env = {"GITHUB_TOKEN": "SYNTHETIC_ONLY", "REPOSITORY": "example/test",
+               "REQUIRED_MAIN_SHA": sha, "GITHUB_EVENT_PATH": str(event_path),
+               "GITHUB_EVENT_NAME": "pull_request", "GITHUB_REF": "refs/pull/7/merge",
+               "GITHUB_SHA": "b" * 40}
+        with patch.dict(os.environ, env, clear=True), \
+                patch("urllib.request.urlopen", side_effect=api.open), \
+                contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            try:
+                exec(code, {"__name__": "__main__"})
+            except SystemExit as failure:
+                status = failure.code if isinstance(failure.code, int) else 1
     return status, output.getvalue()
 
 
@@ -177,6 +202,25 @@ class RuntimeAttestationContractTest(unittest.TestCase):
                 api = FakeApi()
                 api.jobs[index]["jobs"].pop()
                 self.assertEqual(1, execute(api)[0])
+
+    def test_live_main_drift_is_rejected_before_old_green_attestation(self):
+        api = FakeApi()
+        api.live_main = "c" * 40
+        with self.assertRaisesRegex(ValueError, "STALE_MAIN_BASE"):
+            execute(api)
+        self.assertFalse(any("/actions/workflows/" in url for url in api.seen))
+
+    def test_live_pr_head_drift_blocks_stale_event(self):
+        api = FakeApi()
+        api.pr_head = "d" * 40
+        with self.assertRaisesRegex(ValueError, "STALE_PR_HEAD"):
+            execute(api)
+
+    def test_live_pr_base_drift_blocks_stale_event(self):
+        api = FakeApi()
+        api.pr_base = "d" * 40
+        with self.assertRaisesRegex(ValueError, "STALE_PR_BASE"):
+            execute(api)
 
     def test_invalid_sha_is_rejected_before_any_network_read(self):
         api = FakeApi()
