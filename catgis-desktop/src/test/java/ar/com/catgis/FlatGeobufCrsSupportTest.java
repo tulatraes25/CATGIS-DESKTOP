@@ -91,6 +91,21 @@ class FlatGeobufCrsSupportTest {
     }
 
     @Test
+    void cachedWgs84MustNotOverrideVerifiedUtmCoordinates() {
+        FlatGeobufCrsSupport.Resolution embedded =
+                FlatGeobufCrsSupport.resolveMetadata("EPSG", 32719, "", "");
+        assertThrows(IllegalArgumentException.class,
+                () -> FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(
+                        embedded, "EPSG:4326"));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(
+                        embedded, "EPSG:32719"));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(
+                        FlatGeobufCrsSupport.Resolution.unknown(), "EPSG:32719"));
+    }
+
+    @Test
     void framedHeaderWithoutCrsStaysUnknownInsteadOfAssumingWgs84() throws Exception {
         FlatBufferBuilder builder = new FlatBufferBuilder(128);
         Header.startHeader(builder);
