@@ -79,12 +79,7 @@ public final class FlatGeobufLoader {
              FileChannel channel = fis.getChannel()) {
 
             HeaderPrefix prefix = readHeaderPrefix(channel);
-            int headerSize = prefix.headerSize();
-            ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
-            readFully(channel, headerBuf, "encabezado FlatGeobuf");
-            headerBuf.flip();
-
-            HeaderMeta header = HeaderMeta.read(headerBuf);
+            HeaderMeta header = readFramedHeader(channel, prefix);
             if (header == null) {
                 return ValidationResult.invalid("No se pudo interpretar el encabezado FlatGeobuf.");
             }
@@ -133,11 +128,7 @@ public final class FlatGeobufLoader {
             HeaderPrefix prefix = readHeaderPrefix(channel);
             int headerSize = prefix.headerSize();
             int headerOffset = prefix.headerOffset();
-            ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
-            readFully(channel, headerBuf, "encabezado FlatGeobuf");
-            headerBuf.flip();
-
-            HeaderMeta header = HeaderMeta.read(headerBuf);
+            HeaderMeta header = readFramedHeader(channel, prefix);
 
             CatgisLogger.debug("FlatGeobuf header: geometry="
                     + GeometryType.name((short) header.geometryType)
@@ -358,6 +349,31 @@ public final class FlatGeobufLoader {
             throw new IOException("Encabezado FlatGeobuf inválido o excede 4 MiB.");
         }
         return new HeaderPrefix(size, headerOffset);
+    }
+
+    /**
+     * The wololo 3.26.2 HeaderMeta.read(ByteBuffer) API requires a complete
+     * 8-byte magic + LE size + FlatBuffer framing. The on-disk prefix was
+     * consumed for strict bounds checking, so restore it before decoding.
+     */
+    static HeaderMeta readFramedHeader(FileChannel channel, HeaderPrefix prefix)
+            throws IOException {
+        if (prefix == null || prefix.headerSize() <= 0
+                || prefix.headerSize() > MAX_HEADER_BYTES) {
+            throw new IOException("FlatGeobuf: tamaño de encabezado no confiable.");
+        }
+        ByteBuffer raw = ByteBuffer.allocate(prefix.headerSize())
+                .order(ByteOrder.LITTLE_ENDIAN);
+        readFully(channel, raw, "encabezado FlatGeobuf");
+        raw.flip();
+        ByteBuffer framed = ByteBuffer.allocate(
+                org.wololo.flatgeobuf.Constants.MAGIC_BYTES.length
+                + Integer.BYTES + prefix.headerSize()).order(ByteOrder.LITTLE_ENDIAN);
+        framed.put(org.wololo.flatgeobuf.Constants.MAGIC_BYTES);
+        framed.putInt(prefix.headerSize());
+        framed.put(raw);
+        framed.flip();
+        return HeaderMeta.read(framed);
     }
 
     static Geometry requireRealGeometry(Geometry geometry) {

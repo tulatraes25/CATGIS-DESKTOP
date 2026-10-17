@@ -89,3 +89,25 @@ accounting from 2 to 3 total, zero skip/failure/error across all three
 supported host OS architectures. If this reveals parser divergence,
 reject the PR and fix the real format—not waive/skip the test.
 Still no indexed gigabyte-scale reader or Windows native GUI claim.
+
+## G — real wololo 3.26.2 full-header framing
+
+Actual native Linux GDAL test 39042719748/job 117425329899 generated
+valid FlatGeobuf but CATGIS validation failed "This is not a
+flatgeobuf!". Verified EXACT pinned upstream release 3.26.2 source:
+`HeaderMeta.read(ByteBuffer)` requires 8-byte FGB magic, 4-byte
+LE size, THEN the FlatBuffer header, while CATGIS had already
+consumed magic/size and forwarded only raw body.
+
+`readFramedHeader` reconstructs a bounded canonical 8-byte magic +
+LE size prefix before calling pinned wololo parser, while retaining
+strict on-disk header framing/budgets and correct real index offsets.
+Synthetic valid header test uses library HeaderMeta.write and checks
+official and legacy prefix, with strict metadata readback.
+The genuine indexed/unindexed GDAL FGB tagged native integration
+STAYS mandatory on Linux/macOS Intel/ARM with zero skips.
+Upstream exact source:
+https://github.com/flatgeobuf/flatgeobuf/blob/3.26.2/src/java/src/main/java/org/wololo/flatgeobuf/HeaderMeta.java
+
+Remaining index/feature correctness or typed field failures must
+be fixed from native evidence, never waived. #175 OPEN.
