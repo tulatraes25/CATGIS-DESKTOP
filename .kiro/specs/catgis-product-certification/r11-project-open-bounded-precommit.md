@@ -53,3 +53,18 @@ Residual #144 still OPEN: this verifies existence, NOT full parse/readability,
 CRS integrity, database table presence or successful detached reconstruction.
 A file may disappear after preflight (TOCTOU). Remote states must eventually
 report DEFERRED rather than loaded. No transaction guarantee or merge claim.
+
+## Subgate C — reject silently dropped structural project records
+
+Legacy LoadProjectAction previously treated malformed CATMAP layout/legend
+records as null and ignored them, skipped incomplete declared layers and
+accepted non-finite VIEW values, sometimes marking a partial project clean.
+ProjectOpenRecordIntegrity now rejects those cases during the parse stage,
+before the current workspace is disposed. It also rejects incomplete
+PROJECT_META/PROJECT_CRS and nameless layer groups.
+
+Contracts exercise NaN/Infinity/negative/zero zoom, malformed layer/CATMAP
+and missing metadata, proving old dirty Project reference and CRS stay intact.
+Legacy valid records and UI activation remain unchanged. This is fail-closed
+text integrity, NOT full detached local raster/vector reconstruction.
+Full acceptance of #144 is still blocked.

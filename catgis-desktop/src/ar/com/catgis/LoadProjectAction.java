@@ -93,51 +93,35 @@ public class LoadProjectAction extends AbstractAction {
                 if (line.startsWith("PROJECT_CRS|")) {
                     hasProjectPayload = true;
                     String[] crsParts = line.split("\\|", -1);
-                    if (crsParts.length >= 2) {
-                        String code = crsParts[1].trim();
-                        if (!code.isEmpty()) {
-                            loadedProject.setProjectCRS(code);
-                        }
-                    }
+                    ProjectOpenRecordIntegrity.requireProjectCrs(crsParts);
+                    loadedProject.setProjectCRS(crsParts[1].trim());
                     continue;
                 }
 
                 if (line.startsWith("PROJECT_META|")) {
                     hasProjectPayload = true;
                     String[] metaParts = line.split("\\|", -1);
-                    if (metaParts.length >= 3) {
-                        applyProjectMetadata(loadedProject, metaParts[1].trim(), metaParts[2].trim());
-                    }
+                    ProjectOpenRecordIntegrity.requireMetadata(metaParts);
+                    applyProjectMetadata(loadedProject, metaParts[1].trim(), metaParts[2].trim());
                     continue;
                 }
 
                 if (line.startsWith("PROJECT_LAYOUT_ITEM|")) {
                     hasProjectPayload = true;
-                    String[] itemParts = line.split("\\|", 2);
-                    if (itemParts.length >= 2) {
-                        CatmapLayoutItem item = CatmapLayoutItem.decode(itemParts[1].trim());
-                        if (item != null) {
-                            loadedProject.addCatmapItem(item);
-                        }
-                    }
+                    loadedProject.addCatmapItem(ProjectOpenRecordIntegrity.parseLayoutItem(line));
                     continue;
                 }
 
                 if (line.startsWith("PROJECT_LEGEND_ITEM|")) {
                     hasProjectPayload = true;
-                    String[] itemParts = line.split("\\|", 2);
-                    if (itemParts.length >= 2) {
-                        CatmapLegendItem item = CatmapLegendItem.decode(itemParts[1].trim());
-                        if (item != null) {
-                            loadedProject.addCatmapLegendItem(item);
-                        }
-                    }
+                    loadedProject.addCatmapLegendItem(ProjectOpenRecordIntegrity.parseLegendItem(line));
                     continue;
                 }
 
                 if (line.startsWith("PROJECT_LAYER_GROUP|")) {
                     hasProjectPayload = true;
                     String[] groupParts = line.split("\\|", -1);
+                    ProjectOpenRecordIntegrity.requireGroup(groupParts);
                     if (groupParts.length >= 2) {
                         LayerGroup group = new LayerGroup(groupParts[1].trim());
                         if (groupParts.length >= 3) {
@@ -153,20 +137,17 @@ public class LoadProjectAction extends AbstractAction {
 
                 if (line.startsWith("VIEW|")) {
                     hasProjectPayload = true;
-                    String[] viewParts = line.split("\\|", -1);
-                    if (viewParts.length >= 4) {
-                        try {
-                            savedViewMinX = Double.parseDouble(viewParts[1]);
-                            savedViewMinY = Double.parseDouble(viewParts[2]);
-                            savedZoomFactor = Double.parseDouble(viewParts[3]);
-                            viewLoaded = true;
-                        } catch (Exception ignored) { CatgisLogger.warn("Error al interpretar vista guardada en proyecto CATGIS", ignored); }
-                    }
+                    double[] view = ProjectOpenRecordIntegrity.parseView(line);
+                    savedViewMinX = view[0];
+                    savedViewMinY = view[1];
+                    savedZoomFactor = view[2];
+                    viewLoaded = true;
                     continue;
                 }
 
                 Layer layer = parseLayer(line);
                 if (layer == null) {
+                    ProjectOpenRecordIntegrity.rejectMalformedLayerRecord(line);
                     continue;
                 }
                 hasProjectPayload = true;
