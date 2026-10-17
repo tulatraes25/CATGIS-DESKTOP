@@ -63,9 +63,9 @@ class FlatGeobufCrsSupportTest {
     @Test
     void realFramedFileHeaderIsVerifiedBeforeFeatureImport() throws Exception {
         FlatBufferBuilder builder = new FlatBufferBuilder(256);
-        int org = builder.createString("EPSG");
+        int authorityOrg = builder.createString("EPSG");
         Crs.startCrs(builder);
-        Crs.addOrg(builder, org);
+        Crs.addOrg(builder, authorityOrg);
         Crs.addCode(builder, 32719);
         int crs = Crs.endCrs(builder);
         Header.startHeader(builder);
