@@ -24,6 +24,35 @@ class FlatGeobufFrameSafetyContractTest {
     @TempDir Path tempDir;
 
     @Test
+    void officialEightByteSignatureWorksRegardlessOfLargeFileLength() throws Exception {
+        Path file = tempDir.resolve("official-signature.fgb");
+        try (RandomAccessFile bytes = new RandomAccessFile(file.toFile(), "rw")) {
+            bytes.write(new byte[]{0x66, 0x67, 0x62, 0x03,
+                                   0x66, 0x67, 0x62, 0x01,
+                                   0x10, 0x00, 0x00, 0x00});
+            bytes.setLength(32L * 1024 * 1024);
+        }
+        try (FileChannel channel = FileChannel.open(file)) {
+            FlatGeobufLoader.HeaderPrefix prefix =
+                    FlatGeobufLoader.readHeaderPrefix(channel);
+            assertEquals(12, prefix.headerOffset());
+            assertEquals(16, prefix.headerSize());
+        }
+    }
+
+    @Test
+    void malformedOfficialSecondSignatureMustFailRatherThanGuessHeaderSize() throws Exception {
+        Path file = tempDir.resolve("corrupt-official-signature.fgb");
+        Files.write(file, new byte[]{0x66, 0x67, 0x62, 0x03,
+                                     0x00, 0x00, 0x00, 0x01,
+                                     0x10, 0x00, 0x00, 0x00});
+        try (FileChannel channel = FileChannel.open(file)) {
+            assertThrows(IOException.class,
+                    () -> FlatGeobufLoader.readHeaderPrefix(channel));
+        }
+    }
+
+    @Test
     void oversizedHeaderIsRejectedBeforeAnyHeapAllocation() throws Exception {
         Path file = tempDir.resolve("declared-oversized-header.fgb");
         try (RandomAccessFile f = new RandomAccessFile(file.toFile(), "rw")) {

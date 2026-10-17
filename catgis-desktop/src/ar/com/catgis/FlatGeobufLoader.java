@@ -78,41 +78,8 @@ public final class FlatGeobufLoader {
         try (FileInputStream fis = new FileInputStream(file);
              FileChannel channel = fis.getChannel()) {
 
-            ByteBuffer magicBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-            if (channel.read(magicBuf) < 4) {
-                return ValidationResult.invalid("No se pudieron leer los bytes mágicos.");
-            }
-            magicBuf.flip();
-            int magic = magicBuf.getInt();
-            if (magic != FGB_MAGIC_LEGACY && magic != FGB_MAGIC_SPEC) {
-                return ValidationResult.invalid(
-                        "El archivo no es FlatGeobuf válido (magic incorrecto: 0x"
-                                + Integer.toHexString(magic) + ").");
-            }
-
-            ByteBuffer headerSizeBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-            if (channel.read(headerSizeBuf) < 4) {
-                return ValidationResult.invalid("No se pudo leer el tamaño del encabezado.");
-            }
-            headerSizeBuf.flip();
-            int headerSize = headerSizeBuf.getInt();
-            long fileSize = channel.size();
-
-            // GDAL >= 3.13 writes an extra 4-byte marker after magic.
-            // Detect: if headerSize is garbage, skip 4 bytes and re-read.
-            if (headerSize <= 0 || headerSize > fileSize - 8) {
-                headerSizeBuf.clear();
-                if (channel.read(headerSizeBuf) < 4
-                        || (headerSize = headerSizeBuf.flip().getInt()) <= 0
-                        || headerSize > fileSize - 12) {
-                    return ValidationResult.invalid(
-                            "Tamaño de encabezado inválido: " + headerSize + " bytes.");
-                }
-            }
-
-            if (headerSize > MAX_HEADER_BYTES) {
-                return ValidationResult.invalid("Encabezado FlatGeobuf excede 4 MiB.");
-            }
+            HeaderPrefix prefix = readHeaderPrefix(channel);
+            int headerSize = prefix.headerSize();
             ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
             readFully(channel, headerBuf, "encabezado FlatGeobuf");
             headerBuf.flip();
@@ -163,29 +130,9 @@ public final class FlatGeobufLoader {
 
             long fileSize = channel.size();
 
-            // Skip magic (already validated)
-            ByteBuffer magicBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-            channel.read(magicBuf);
-
-            // Read header size
-            ByteBuffer headerSizeBuf = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-            channel.read(headerSizeBuf);
-            headerSizeBuf.flip();
-            int headerSize = headerSizeBuf.getInt();
-            int headerOffset = 8; // magic(4) + headerSize(4)
-
-            // GDAL >= 3.13: skip extra 4-byte marker after magic
-            if (headerSize <= 0 || headerSize > fileSize - 8) {
-                headerSizeBuf.clear();
-                channel.read(headerSizeBuf);
-                headerSize = headerSizeBuf.flip().getInt();
-                headerOffset = 12; // magic(4) + marker(4) + headerSize(4)
-            }
-
-            if (headerSize <= 0 || headerSize > MAX_HEADER_BYTES
-                    || headerSize > fileSize - headerOffset) {
-                throw new IOException("Encabezado FlatGeobuf fuera del límite permitido.");
-            }
+            HeaderPrefix prefix = readHeaderPrefix(channel);
+            int headerSize = prefix.headerSize();
+            int headerOffset = prefix.headerOffset();
             ByteBuffer headerBuf = ByteBuffer.allocate(headerSize).order(ByteOrder.LITTLE_ENDIAN);
             readFully(channel, headerBuf, "encabezado FlatGeobuf");
             headerBuf.flip();
@@ -412,6 +359,39 @@ public final class FlatGeobufLoader {
                     + " (type=" + columnType + ")");
             return null;
         }
+    }
+
+    // The official FlatGeobuf magic is EIGHT bytes: fgb<major>fgb<patch>.
+    // A historical four-byte CATGIS legacy marker is kept only for compatibility.
+    record HeaderPrefix(int headerSize, int headerOffset) {}
+
+    static HeaderPrefix readHeaderPrefix(FileChannel channel) throws IOException {
+        ByteBuffer leading = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        readFully(channel, leading, "firma inicial");
+        leading.flip();
+        int magic = leading.getInt();
+        int headerOffset = 8;
+        if (magic == FGB_MAGIC_SPEC) {
+            ByteBuffer marker = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+            readFully(channel, marker, "firma extendida de ocho bytes");
+            marker.flip();
+            int trailing = marker.getInt();
+            // Low three bytes are 'f', 'g', 'b'; high byte is backward-compatible patch.
+            if ((trailing & 0x00ffffff) != 0x00626766) {
+                throw new IOException("FlatGeobuf: segunda mitad de firma inválida.");
+            }
+            headerOffset = 12;
+        } else if (magic != FGB_MAGIC_LEGACY) {
+            throw new IOException("FlatGeobuf: firma incorrecta.");
+        }
+        ByteBuffer length = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        readFully(channel, length, "tamaño de encabezado");
+        length.flip();
+        int size = length.getInt();
+        if (size <= 0 || size > MAX_HEADER_BYTES || size > channel.size() - headerOffset) {
+            throw new IOException("Encabezado FlatGeobuf inválido o excede 4 MiB.");
+        }
+        return new HeaderPrefix(size, headerOffset);
     }
 
     static Geometry requireRealGeometry(Geometry geometry) {

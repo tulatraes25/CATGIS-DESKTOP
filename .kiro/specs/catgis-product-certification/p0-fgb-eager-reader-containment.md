@@ -27,3 +27,14 @@ Typed property bytes are not independently decoded and validated; see issue #175
 FGB format 3.13 compatibility and full cross-platform genuine geometry and
 attribute fixtures remain required. Native/GUI scientific release claim barred.
 No user data, local PC, OpenCode or production GIS data touched.
+
+## B — official 8-byte magic, no filesize heuristics
+
+Independent FlatGeobuf spec confirms `fgb[major]fgb[patch]` is exactly 8
+signature bytes, not a version-specific 4-byte GDAL 3.13 addition. Previous
+code guessed whether to consume four extra bytes from file-size plausibility,
+so large official files could be misread as an enormous header. A strict
+HeaderPrefix reader now consumes the two halves for FGB major version 3,
+and accepts only the existing legacy CATGIS 4-byte magic separately. It never
+guesses from file size. Tests include a 32 MiB sparse official-signature
+file and malformed trailing magic to prevent silent ambiguity.
