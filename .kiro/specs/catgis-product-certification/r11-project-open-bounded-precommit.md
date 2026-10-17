@@ -68,3 +68,13 @@ and missing metadata, proving old dirty Project reference and CRS stay intact.
 Legacy valid records and UI activation remain unchanged. This is fail-closed
 text integrity, NOT full detached local raster/vector reconstruction.
 Full acceptance of #144 is still blocked.
+
+## Subgate D — chooser state only after successful open
+
+Previously `loadProject()` persisted `project-open` and `project-save`
+chooser directories before attempting `loadProjectFile(file)`. Malformed
+or incomplete projects could therefore change the user's future open/save
+directory preferences even though the current project was kept alive.
+The action now persists both hints only after a true result. A static
+architecture contract asserts the order and absence of unguarded writes
+before loading. Full stage-before-commit remains OPEN under #144.

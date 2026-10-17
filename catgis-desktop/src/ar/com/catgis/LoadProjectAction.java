@@ -43,9 +43,11 @@ public class LoadProjectAction extends AbstractAction {
         }
 
         File file = chooser.getSelectedFile();
-        FileChooserSupport.rememberSelection("project-open", chooser);
-        FileChooserSupport.rememberSelection("project-save", chooser);
-        loadProjectFile(file);
+        if (loadProjectFile(file)) {
+            // Failed opens must not move the user's previous open/save folders.
+            FileChooserSupport.rememberSelection("project-open", chooser);
+            FileChooserSupport.rememberSelection("project-save", chooser);
+        }
     }
 
     public static boolean loadProjectFile(File file) {
