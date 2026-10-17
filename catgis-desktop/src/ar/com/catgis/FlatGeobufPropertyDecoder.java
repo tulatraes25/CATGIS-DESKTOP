@@ -75,7 +75,7 @@ final class FlatGeobufPropertyDecoder {
         return values;
     }
 
-    static Class<?> bindingFor(byte type) {
+    static Class<?> bindingFor(int type) {
         return switch (type) {
             case ColumnType.Byte -> Byte.class;
             case ColumnType.UByte -> Short.class;
