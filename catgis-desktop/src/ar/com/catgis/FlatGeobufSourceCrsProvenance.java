@@ -17,6 +17,9 @@ final class FlatGeobufSourceCrsProvenance {
     private static final String SOURCE_FILE_CRS_KEY =
             "catgis.flatgeobuf.original-file-crs.v1";
 
+    private record Origin(String sourcePath, String sourceCrs) {
+    }
+
     private FlatGeobufSourceCrsProvenance() {
     }
 
@@ -24,9 +27,15 @@ final class FlatGeobufSourceCrsProvenance {
         if (!isFlatGeobuf(layer)) {
             return;
         }
+        Object existing = layer.getUserData(SOURCE_FILE_CRS_KEY);
+        if (existing instanceof Origin retained
+                && retained.sourcePath().equals(layer.getPath())) {
+            // A later projection must never replace the file CRS with a map CRS.
+            return;
+        }
         String source = layer.getSourceCRS();
         if (source != null && !source.isBlank()) {
-            layer.putUserData(SOURCE_FILE_CRS_KEY, source.trim());
+            layer.putUserData(SOURCE_FILE_CRS_KEY, new Origin(layer.getPath(), source.trim()));
         }
     }
 
@@ -36,8 +45,9 @@ final class FlatGeobufSourceCrsProvenance {
         }
         if (isFlatGeobuf(layer)) {
             Object saved = layer.getUserData(SOURCE_FILE_CRS_KEY);
-            if (saved instanceof String original && !original.isBlank()) {
-                return original;
+            if (saved instanceof Origin original
+                    && original.sourcePath().equals(layer.getPath())) {
+                return original.sourceCrs();
             }
         }
         return layer.getSourceCRS();
