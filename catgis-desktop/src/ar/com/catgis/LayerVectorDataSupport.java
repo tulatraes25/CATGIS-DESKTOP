@@ -140,20 +140,24 @@ final class LayerVectorDataSupport {
                 CatgisLogger.warn("FlatGeobuf validation failed: " + vr.message(), null);
                 return null;
             }
-            // Fail closed before reading any features if CRS cannot be verified.
-            // Explicitly assigned layer CRS remains supported for headerless data.
-            String discovered = "";
+            // Inspect verified file CRS even when saved layer metadata exists:
+            // stale EPSG:4326 defaults must not silently override true UTM data.
+            FlatGeobufCrsSupport.Resolution headerCrs =
+                    FlatGeobufLoader.inspectSourceCrs(fgbFile);
+            String discovered = headerCrs.sourceCode();
             if (isBlank(layer.getSourceCRS())) {
-                discovered = FlatGeobufLoader.inspectSourceCrs(fgbFile).sourceCode();
                 requireDeclaredFgbSourceCrs(discovered);
+            } else {
+                FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(
+                        headerCrs, layer.getSourceCRS());
             }
             data = FlatGeobufLoader.load(path);
+            String schemaCrs = FlatGeobufCrsSupport.schemaCode(data.getSchema());
+            if (!discovered.equals(schemaCrs)) {
+                throw new java.io.IOException(
+                        "FlatGeobuf: los metadatos CRS cambiaron durante la lectura.");
+            }
             if (isBlank(layer.getSourceCRS())) {
-                String schemaCrs = FlatGeobufCrsSupport.schemaCode(data.getSchema());
-                if (!discovered.equals(schemaCrs)) {
-                    throw new java.io.IOException(
-                            "FlatGeobuf: los metadatos CRS cambiaron durante la lectura.");
-                }
                 layer.setSourceCRS(schemaCrs);
             }
             return projectAndAttach(layer, data);
