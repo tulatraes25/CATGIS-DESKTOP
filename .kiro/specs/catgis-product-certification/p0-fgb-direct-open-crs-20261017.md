@@ -71,3 +71,16 @@ Minimal isolated fix:
 Residual: legacy projects previously persisted with an erroneous target
 sourceCRS can still fail closed; a separate explicit reconciliation UI/gate
 is required instead of silently overriding historical user assignments.
+
+
+## WKT-only CRS acceptance without invalid fallback
+
+Another verified source-code defect was in
+`FlatGeobufCrsSupport.requireConsistentWithAssignedCrs`: the saved
+FlatGeobuf `sourceCRS` can legitimately contain a WKT-only definition,
+but `CRSDefinitions.decode(...)` only supports authority identifiers.
+The consistency gate now uses `VectorCrsTransformSupport.resolve` for
+both an explicit authority and a WKT definition. This still rejects a
+semantically contradictory assignment; it does not use a WGS84 fallback.
+`FlatGeobufCrsSupportTest.wktOnlyHeaderRemainsReopenableAndContradictionsFailClosed`
+is the positive/negative executable contract.
