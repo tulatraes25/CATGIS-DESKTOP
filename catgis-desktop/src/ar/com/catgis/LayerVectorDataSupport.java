@@ -157,10 +157,28 @@ final class LayerVectorDataSupport {
         return null;
     }
 
+    static final int MAX_COMPLETE_LAS_FEATURES = 50_000;
+
+    // The current vector model has no typed PREVIEW status and exports/analyses
+    // would treat a prefix as complete. Reject larger sources, never lie.
+    static void requireCompleteLasDataset(long declaredCount) throws java.io.IOException {
+        if (declaredCount < 0 || declaredCount > MAX_COMPLETE_LAS_FEATURES) {
+            throw new java.io.IOException("LiDAR: el archivo declara " + declaredCount
+                    + " puntos y supera los " + MAX_COMPLETE_LAS_FEATURES
+                    + " admitidos para carga íntegra. CATGIS no presentará una"
+                    + " muestra parcial como datos completos. Se requiere lector indexado.");
+        }
+    }
+
     private static ShapefileData loadLasFile(String path, Layer layer) throws Exception {
         File file = new File(path);
         LasReader.LasHeader header = LasReader.readHeader(file);
-        List<LasReader.LasPoint> lasPoints = LasReader.readPoints(file, 50000);
+        requireCompleteLasDataset(header.pointCount());
+        List<LasReader.LasPoint> lasPoints =
+                LasReader.readPoints(file, MAX_COMPLETE_LAS_FEATURES, header);
+        if (lasPoints.size() != header.pointCount()) {
+            throw new java.io.IOException("LiDAR: lectura incompleta de puntos declarados.");
+        }
 
         org.geotools.feature.simple.SimpleFeatureTypeBuilder tb =
                 new org.geotools.feature.simple.SimpleFeatureTypeBuilder();
@@ -189,7 +207,7 @@ final class LayerVectorDataSupport {
                 header.minX(), header.maxX(), header.minY(), header.maxY());
 
         return new ShapefileData(features, envelope, layer.getName(), features.size(),
-                "LiDAR: " + features.size() + " puntos", schema);
+                "LiDAR verificado: " + features.size() + "/" + header.pointCount() + " puntos completos", schema);
     }
 
     static void showLoadFailure(Layer layer,
