@@ -140,10 +140,26 @@ final class LayerVectorDataSupport {
                 CatgisLogger.warn("FlatGeobuf validation failed: " + vr.message(), null);
                 return null;
             }
-            // Unknown source coordinates must not be silently assigned WGS84.
-            // A later gate will derive CRS from the verified FlatGeobuf header.
-            requireDeclaredFgbSourceCrs(layer.getSourceCRS());
+            // Inspect verified file CRS even when saved layer metadata exists:
+            // stale EPSG:4326 defaults must not silently override true UTM data.
+            FlatGeobufCrsSupport.Resolution headerCrs =
+                    FlatGeobufLoader.inspectSourceCrs(fgbFile);
+            String discovered = headerCrs.sourceCode();
+            if (isBlank(layer.getSourceCRS())) {
+                requireDeclaredFgbSourceCrs(discovered);
+            } else {
+                FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(
+                        headerCrs, layer.getSourceCRS());
+            }
             data = FlatGeobufLoader.load(path);
+            String schemaCrs = FlatGeobufCrsSupport.schemaCode(data.getSchema());
+            if (!discovered.equals(schemaCrs)) {
+                throw new java.io.IOException(
+                        "FlatGeobuf: los metadatos CRS cambiaron durante la lectura.");
+            }
+            if (isBlank(layer.getSourceCRS())) {
+                layer.setSourceCRS(schemaCrs);
+            }
             return projectAndAttach(layer, data);
         }
         if (lowerPath.endsWith(".las") || lowerPath.endsWith(".laz")) {
