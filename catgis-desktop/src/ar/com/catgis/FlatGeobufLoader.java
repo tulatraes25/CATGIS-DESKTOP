@@ -100,6 +100,21 @@ public final class FlatGeobufLoader {
     }
 
     /**
+     * Read only a structurally validated, bounded header to discover source CRS
+     * before allocating geometry/attributes. Never infer EPSG:4326 from coordinates.
+     */
+    static FlatGeobufCrsSupport.Resolution inspectSourceCrs(File file) throws IOException {
+        if (file == null || !file.isFile()) {
+            throw new IOException("FlatGeobuf: archivo ausente.");
+        }
+        try (FileInputStream stream = new FileInputStream(file);
+             FileChannel channel = stream.getChannel()) {
+            HeaderPrefix prefix = readHeaderPrefix(channel);
+            return readFramedHeaderWithCrs(channel, prefix).sourceCrs();
+        }
+    }
+
+    /**
      * Load a FlatGeobuf file and return ShapefileData.
      *
      * @param file the .fgb file
