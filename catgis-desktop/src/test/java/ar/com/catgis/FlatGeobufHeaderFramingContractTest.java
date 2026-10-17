@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FlatGeobufHeaderFramingContractTest {
@@ -55,5 +57,23 @@ class FlatGeobufHeaderFramingContractTest {
             ValidationResult result = FlatGeobufLoader.validateFile(file.toFile());
             assertTrue(result.isValid(), result.message());
         }
+    }
+
+    @Test
+    void invalidZeroFilledHeaderCannotBeMisreadAsAnEmptyDataset() throws Exception {
+        Path file = directory.resolve("invalid-zero-header.fgb");
+        byte[] bytes = new byte[8 + 16];
+        bytes[0] = 0x67; bytes[1] = 0x62; bytes[2] = 0x66; bytes[3] = 0x67;
+        bytes[4] = 0x10;
+        Files.write(file, bytes);
+        try (FileChannel channel = FileChannel.open(file)) {
+            FlatGeobufLoader.HeaderPrefix prefix =
+                    FlatGeobufLoader.readHeaderPrefix(channel);
+            assertThrows(java.io.IOException.class,
+                    () -> FlatGeobufLoader.readFramedHeader(channel, prefix));
+        }
+        assertFalse(FlatGeobufLoader.validateFile(file.toFile()).isValid());
+        assertThrows(UnsupportedFormatException.class,
+                () -> FlatGeobufLoader.load(file.toFile()));
     }
 }

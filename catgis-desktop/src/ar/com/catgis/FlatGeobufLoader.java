@@ -366,6 +366,7 @@ public final class FlatGeobufLoader {
                 .order(ByteOrder.LITTLE_ENDIAN);
         readFully(channel, raw, "encabezado FlatGeobuf");
         raw.flip();
+        validateHeaderTable(raw);
         ByteBuffer framed = ByteBuffer.allocate(
                 org.wololo.flatgeobuf.Constants.MAGIC_BYTES.length
                 + Integer.BYTES + prefix.headerSize()).order(ByteOrder.LITTLE_ENDIAN);
@@ -373,7 +374,57 @@ public final class FlatGeobufLoader {
         framed.putInt(prefix.headerSize());
         framed.put(raw);
         framed.flip();
-        return HeaderMeta.read(framed);
+        // The pinned wololo 3.26.2 HeaderMeta.read() omits header.name,
+        // even though its writer and generated Header include it.
+        // Decode that field from the same already bounds-checked frame.
+        ByteBuffer generatedView = framed.asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN);
+        generatedView.position(org.wololo.flatgeobuf.Constants.MAGIC_BYTES.length
+                + Integer.BYTES);
+        org.wololo.flatgeobuf.generated.Header generated =
+                org.wololo.flatgeobuf.generated.Header.getRootAsHeader(generatedView);
+        HeaderMeta meta = HeaderMeta.read(framed);
+        meta.name = generated.name();
+        return meta;
+    }
+
+    /**
+     * A size-prefixed FlatBuffer begins with a relative root-table pointer,
+     * followed by the table's vtable reference. Zero-filled/truncated headers
+     * must never be accepted merely because generated accessors default to zero.
+     * Do not assume vtables are always before the table: reuse can put one
+     * after it (signed relative vtable offset).
+     */
+    static void validateHeaderTable(ByteBuffer data) throws IOException {
+        ByteBuffer buf = data.asReadOnlyBuffer().order(ByteOrder.LITTLE_ENDIAN);
+        int length = buf.remaining();
+        if (length < 12) {
+            throw new IOException("FlatGeobuf: encabezado FlatBuffer incompleto.");
+        }
+        int rootOffset = buf.getInt(0);
+        if (rootOffset < Integer.BYTES || (rootOffset & 3) != 0
+                || rootOffset > length - Integer.BYTES) {
+            throw new IOException("FlatGeobuf: puntero raíz FlatBuffer fuera de rango.");
+        }
+        int vtableRelative = buf.getInt(rootOffset);
+        long vtablePosition = (long) rootOffset - vtableRelative;
+        if (vtableRelative == 0 || vtablePosition < 0
+                || vtablePosition > length - 4L) {
+            throw new IOException("FlatGeobuf: tabla de campos FlatBuffer inválida.");
+        }
+        int vt = (int) vtablePosition;
+        int vtableSize = Short.toUnsignedInt(buf.getShort(vt));
+        int objectSize = Short.toUnsignedInt(buf.getShort(vt + 2));
+        if (vtableSize < 4 || (vtableSize & 1) != 0
+                || vtableSize > length - vt || objectSize < 4
+                || objectSize > length - rootOffset) {
+            throw new IOException("FlatGeobuf: tamaños internos de encabezado inválidos.");
+        }
+        for (int position = vt + 4; position < vt + vtableSize; position += 2) {
+            int offset = Short.toUnsignedInt(buf.getShort(position));
+            if (offset != 0 && (offset < 4 || offset >= objectSize)) {
+                throw new IOException("FlatGeobuf: posición de campo fuera de la tabla.");
+            }
+        }
     }
 
     static Geometry requireRealGeometry(Geometry geometry) {

@@ -111,3 +111,24 @@ https://github.com/flatgeobuf/flatgeobuf/blob/3.26.2/src/java/src/main/java/org/
 
 Remaining index/feature correctness or typed field failures must
 be fixed from native evidence, never waived. #175 OPEN.
+
+## H — fail-closed FlatBuffers structural validation + pinned metadata bug
+
+Candidate `cc7400cd575cca30381dc3b7352f3ba90ef5ef45` failed
+two valid unit gates on Linux, Windows and macOS:
+1. Our own tiny framed FlatGeobuf header returned `name=null`
+   (expected `tiny`). Exact pinned upstream `HeaderMeta.read`
+   release 3.26.2 does NOT populate `HeaderMeta.name` even
+   though `HeaderMeta.write` includes name. Fix reads the generated
+   `Header.name()` directly from the same validated framed buffer.
+2. A sixteen-byte all-zero fake header passed generated FlatBuffers
+   default accessors and was falsely reported as a legitimate empty
+   dataset. Fix validates the root relative offset, signed vtable
+   position, vtable/object sizes and declared field offsets before
+   calling the library, refusing malformed pointers and zero garbage.
+
+Adversarial test explicitly demands invalid header reject via both
+validateFile and load; existing invalid-header contract also remains.
+Real OS-installed GDAL indexed/unindexed attributes test stays a
+mandatory 3rd native-GDAL assertion. Further authentic failures
+must be root-caused, not suppressed. No certification claimed.
