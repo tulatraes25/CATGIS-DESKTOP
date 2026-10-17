@@ -22,7 +22,7 @@ class FlatGeobufCrsImportContractTest {
 
     @Test
     void actualFramedProjectedHeaderCarriesProjectedCrsIntoGeoToolsSchema() throws Exception {
-        ShapefileData loaded = FlatGeobufLoader.load(makeFile("projected", 32719));
+        ShapefileData loaded = FlatGeobufLoader.load(makeFile("projected", 32719).toFile());
         assertEquals("EPSG:32719",
                 FlatGeobufCrsSupport.schemaCode(loaded.getSchema()));
         assertEquals(0, loaded.getFeatureCount());
