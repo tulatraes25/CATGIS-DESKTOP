@@ -140,10 +140,10 @@ final class LayerVectorDataSupport {
                 CatgisLogger.warn("FlatGeobuf validation failed: " + vr.message(), null);
                 return null;
             }
+            // Until FlatGeobuf header CRS is decoded and independently verified,
+            // unknown source coordinates must not be assigned project/WGS84 CRS.
+            requireDeclaredFgbSourceCrs(layer.getSourceCRS());
             data = FlatGeobufLoader.load(path);
-            if (isBlank(layer.getSourceCRS())) {
-                layer.setSourceCRS("EPSG:4326");
-            }
             return projectAndAttach(layer, data);
         }
         if (lowerPath.endsWith(".las") || lowerPath.endsWith(".laz")) {
@@ -155,6 +155,14 @@ final class LayerVectorDataSupport {
         }
 
         return null;
+    }
+
+    static void requireDeclaredFgbSourceCrs(String sourceCrs) {
+        if (isBlank(sourceCrs)) {
+            throw new IllegalStateException(
+                    "FlatGeobuf sin CRS de origen verificado: asigne explícitamente el CRS antes de cargar. "
+                    + "CATGIS no supondrá EPSG:4326.");
+        }
     }
 
     static final int MAX_COMPLETE_LAS_FEATURES = 50_000;
