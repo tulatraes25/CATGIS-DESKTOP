@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FlatGeobufCrsSupportTest {
     @TempDir Path tempDir;
@@ -87,6 +88,32 @@ class FlatGeobufCrsSupportTest {
                 FlatGeobufLoader.inspectSourceCrs(source.toFile());
         assertEquals("EPSG:32719", detected.sourceCode());
         assertEquals("AUTHORITY", detected.provenance());
+    }
+
+    @Test
+    void framedHeaderWithoutCrsStaysUnknownInsteadOfAssumingWgs84() throws Exception {
+        FlatBufferBuilder builder = new FlatBufferBuilder(128);
+        Header.startHeader(builder);
+        int header = Header.endHeader(builder);
+        builder.finish(header);
+        ByteBuffer raw = builder.dataBuffer();
+        ByteBuffer framed = ByteBuffer.allocate(
+                org.wololo.flatgeobuf.Constants.MAGIC_BYTES.length
+                        + Integer.BYTES + raw.remaining()).order(ByteOrder.LITTLE_ENDIAN);
+        framed.put(org.wololo.flatgeobuf.Constants.MAGIC_BYTES);
+        framed.putInt(raw.remaining());
+        framed.put(raw);
+        Path file = tempDir.resolve("unknown.fgb");
+        Files.write(file, framed.array());
+        assertTrue(FlatGeobufLoader.inspectSourceCrs(file.toFile()).sourceCode().isBlank());
+    }
+
+    @Test
+    void corruptFramedHeaderCannotYieldPlausibleCrs() throws Exception {
+        Path file = tempDir.resolve("truncated.fgb");
+        Files.write(file, new byte[] {0x66, 0x67, 0x62});
+        assertThrows(java.io.IOException.class,
+                () -> FlatGeobufLoader.inspectSourceCrs(file.toFile()));
     }
 
     @Test
