@@ -40,14 +40,8 @@ public final class DxfExportEngine {
     public static void export(File file, SimpleFeatureCollection features,
                               String layerName,
                               Color lineColor, Color fillColor, Color pointColor) throws Exception {
-        try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
-                new FileOutputStream(file), "ISO-8859-1"))) {
-
-            writeHeader(pw);
-            writeTables(pw, layerName);
-            writeEntities(pw, features, layerName, lineColor, fillColor, pointColor);
-            writeFooter(pw);
-        }
+        publishSafely(file, features, layerName,
+                lineColor, fillColor, pointColor, null);
     }
 
     /**
@@ -60,14 +54,49 @@ public final class DxfExportEngine {
                                                 Color defaultFillColor,
                                                 Color defaultPointColor,
                                                 java.util.function.Function<SimpleFeature, Color> colorExtractor) throws Exception {
+        publishSafely(file, features, layerName,
+                defaultLineColor, defaultFillColor, defaultPointColor, colorExtractor);
+    }
+
+    private static void publishSafely(File file,
+                                      SimpleFeatureCollection features,
+                                      String layerName,
+                                      Color lineColor,
+                                      Color fillColor,
+                                      Color pointColor,
+                                      java.util.function.Function<SimpleFeature, Color> colorExtractor) throws Exception {
+        if (file == null || features == null) {
+            throw new IllegalArgumentException("El DXF requiere destino y entidades.");
+        }
+        int expectedFeatures = features.size();
+        VectorSingleFilePublisher.publish(
+                file,
+                ".dxf",
+                staging -> writeRaw(
+                        staging.toFile(), features, layerName,
+                        lineColor, fillColor, pointColor, colorExtractor),
+                staging -> SingleFileVectorStageValidator.validate(
+                        staging.toFile(), expectedFeatures));
+    }
+
+    private static void writeRaw(File file,
+                                 SimpleFeatureCollection features,
+                                 String layerName,
+                                 Color lineColor,
+                                 Color fillColor,
+                                 Color pointColor,
+                                 java.util.function.Function<SimpleFeature, Color> colorExtractor) throws Exception {
         try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
                 new FileOutputStream(file), "ISO-8859-1"))) {
-
             writeHeader(pw);
             writeTables(pw, layerName);
-            writeEntitiesWithFeatureColors(pw, features, layerName,
-                    defaultLineColor, defaultFillColor, defaultPointColor, colorExtractor);
+            writeEntitiesWithFeatureColors(
+                    pw, features, layerName,
+                    lineColor, fillColor, pointColor, colorExtractor);
             writeFooter(pw);
+            if (pw.checkError()) {
+                throw new IOException("No se pudo completar la escritura del DXF temporal.");
+            }
         }
     }
 
