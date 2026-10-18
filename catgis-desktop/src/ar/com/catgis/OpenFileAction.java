@@ -66,6 +66,7 @@ public class OpenFileAction extends AbstractAction {
         try {
             String lowerName = file.getName().toLowerCase();
             ShapefileData data = null;
+            SpatiaLiteLayer spatialiteLayer = null;
             DwgImportSupport.ResolvedCadReference resolvedCad = null;
             String sourceCRS = "";
             String vectorDialogMessage = null;
@@ -98,6 +99,8 @@ public class OpenFileAction extends AbstractAction {
                     ShapefileData slData = SpatiaLiteLoader.loadLayerData(slLayer);
                     if (slData != null) {
                         data = slData;
+                        spatialiteLayer = slLayer;
+                        sourceCRS = slLayer.getSourceCRS();
                         layerDisplayName = file.getName();
                     }
                 } catch (Exception ex) {
@@ -177,7 +180,9 @@ public class OpenFileAction extends AbstractAction {
             }
 
             if (data != null) {
-                Layer layer = new VectorLayer(layerDisplayName, layerStorageFile.getAbsolutePath());
+                Layer layer = spatialiteLayer != null
+                        ? spatialiteLayer
+                        : new VectorLayer(layerDisplayName, layerStorageFile.getAbsolutePath());
                 layer.setVisible(true);
                 if (CadLayerSupport.isCadFile(layerStorageFile)) {
                     CadCrsAssignmentDialog.Result cadCrsResult = CadCrsAssignmentDialog.chooseForImport(parent, layerStorageFile, sourceCRS);
