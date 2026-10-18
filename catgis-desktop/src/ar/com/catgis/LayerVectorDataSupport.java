@@ -179,6 +179,9 @@ final class LayerVectorDataSupport {
                     "LiDAR sin CRS de origen declarado: asigne explícitamente el CRS correcto antes de cargar. "
                     + "CATGIS no supondrá EPSG:4326.");
         }
+        // A nonblank but nonexistent authority/WKT would otherwise be saved
+        // and reopened as if it were a real spatial reference.
+        VectorCrsTransformSupport.resolve(sourceCrs);
     }
 
     static void requireDeclaredFgbSourceCrs(String sourceCrs) {
