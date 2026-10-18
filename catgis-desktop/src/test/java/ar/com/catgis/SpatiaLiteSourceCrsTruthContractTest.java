@@ -19,6 +19,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SpatiaLiteSourceCrsTruthContractTest {
 
     @Test
+    void selectedTableMustExistAndCannotBeSubstitutedByFirstAvailable() throws Exception {
+        String[] tables = {"roads", "survey_utm", "streams"};
+        assertEquals("survey_utm", SpatiaLiteLoader.requireRequestedTable(tables, "SURVEY_UTM"));
+        assertThrows(UnsupportedFormatException.class, () ->
+                SpatiaLiteLoader.requireRequestedTable(tables, "missing_table"));
+        assertThrows(UnsupportedFormatException.class, () ->
+                SpatiaLiteLoader.requireRequestedTable(tables, ""));
+        assertThrows(UnsupportedFormatException.class, () ->
+                SpatiaLiteLoader.requireRequestedTable(new String[0], "survey_utm"));
+    }
+
+    @Test
     void projectedTableSourceCrsComesFromActualFeatureSchema() throws Exception {
         String detected = SpatiaLiteLoader.requireSourceCrs(schema("EPSG:32719"), "");
         assertTrue(VectorCrsTransformSupport.equivalent("EPSG:32719", detected));
