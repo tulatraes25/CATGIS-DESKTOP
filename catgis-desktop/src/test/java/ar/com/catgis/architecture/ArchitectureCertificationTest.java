@@ -121,6 +121,17 @@ class ArchitectureCertificationTest {
     }
 
     @Test
+    void projectSaveEntrypointCannotRegressToDirectFileTruncation() throws Exception {
+        String saver = Files.readString(PROD_ROOT.resolve("SaveProjectAction.java"), StandardCharsets.UTF_8);
+        assertTrue(saver.contains("ProjectFilePublisher.publish(file, staging ->"),
+                "Project save must publish through the certified atomic, validated staging gate.");
+        assertTrue(saver.contains("Files.newBufferedWriter("),
+                "The actual project serializer must write to a staging file, not the final target.");
+        assertTrue(!saver.contains("new FileWriter("),
+                "Direct FileWriter on the canonical project can truncate user work before validation.");
+    }
+
+    @Test
     void junitDisabledAnnotationsAreForbidden() throws Exception {
         assertTrue(filesContaining(TEST_ROOT, "@Disabled").isEmpty(),
                 "Do not hide certification gaps with @Disabled.");
