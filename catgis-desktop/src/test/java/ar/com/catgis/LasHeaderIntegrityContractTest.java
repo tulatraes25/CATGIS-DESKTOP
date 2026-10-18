@@ -16,13 +16,20 @@ class LasHeaderIntegrityContractTest {
     @TempDir Path folder;
 
     @Test
-    void unknownLasCrsMustFailClosedBeforeAnyDatasetRead() {
+    void unknownLasCrsMustFailClosedBeforeAnyDatasetRead() throws Exception {
         assertThrows(IllegalStateException.class,
                 () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs(null));
         assertThrows(IllegalStateException.class,
                 () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs("  "));
         org.junit.jupiter.api.Assertions.assertDoesNotThrow(
                 () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs("EPSG:32719"));
+        assertThrows(IllegalArgumentException.class,
+                () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs("EPSG:NOT_A_CRS"));
+        assertThrows(IllegalArgumentException.class,
+                () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs("not-a-reference"));
+        String wkt = org.geotools.referencing.CRS.decode("EPSG:32719", true).toWKT();
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs(wkt));
     }
 
     @Test
