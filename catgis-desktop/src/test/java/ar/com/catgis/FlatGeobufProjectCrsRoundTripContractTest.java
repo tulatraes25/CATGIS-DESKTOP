@@ -16,14 +16,14 @@ class FlatGeobufProjectCrsRoundTripContractTest {
     void projectedMemoryCrsDoesNotOverwriteOriginalOnDiskCrs() {
         Layer original = new VectorLayer("UTM source", "/tmp/field data.fgb");
         original.setSourceCRS("EPSG:32719");
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(original);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(original);
 
         // The production projection service sets the in-memory layer CRS
         // to the project CRS once the geometry is transformed.
         original.setSourceCRS("EPSG:4326");
         assertEquals("EPSG:4326", original.getSourceCRS());
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(original);
-        assertEquals("EPSG:32719", FlatGeobufSourceCrsProvenance.crsForProjectFile(original),
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(original);
+        assertEquals("EPSG:32719", LocalVectorSourceCrsProvenance.crsForProjectFile(original),
                 "A second projection must never erase original source provenance");
 
         String line = SaveProjectAction.buildLayerLine(original);
@@ -33,7 +33,7 @@ class FlatGeobufProjectCrsRoundTripContractTest {
         assertEquals("EPSG:32719", reopened.getSourceCRS());
 
         // Reopening reloads the source file, then projects again for display.
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(reopened);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(reopened);
         reopened.setSourceCRS("EPSG:4326");
         assertEquals("EPSG:32719",
                 serializedSourceCrs(SaveProjectAction.buildLayerLine(reopened)));
@@ -43,7 +43,7 @@ class FlatGeobufProjectCrsRoundTripContractTest {
     void nonFlatGeobufLayersKeepExistingProjectSerialization() {
         Layer shape = new VectorLayer("ordinary", "/tmp/source.shp");
         shape.setSourceCRS("EPSG:32719");
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(shape);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(shape);
         shape.setSourceCRS("EPSG:4326");
         assertEquals("EPSG:4326",
                 serializedSourceCrs(SaveProjectAction.buildLayerLine(shape)));
@@ -53,7 +53,7 @@ class FlatGeobufProjectCrsRoundTripContractTest {
     void explicitManualSourceForCrsFreeFlatGeobufSurvivesSaveAndReopen() {
         Layer manual = new VectorLayer("manually-referenced", "/tmp/crs-free.fgb");
         manual.setSourceCRS("EPSG:22182");
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(manual);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(manual);
         manual.setSourceCRS("EPSG:4326");
         Layer reopened = LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(manual));
         assertNotNull(reopened);
