@@ -788,11 +788,11 @@ class WcsAtomicStreamDownloadContractTest {
             exchange.getResponseHeaders().set("Content-Type", "image/tiff");
             exchange.sendResponseHeaders(200, 0L); // Chunked response, no length.
             try (var output = exchange.getResponseBody()) {
-                for (int i = 0; i < 24; i++) {
+                for (int i = 0; i < 30; i++) {
                     output.write(i == 0 ? 'I' : 'X');
                     output.flush();
                     try {
-                        Thread.sleep(70L); // Each read is fast, but total duration is not.
+                        Thread.sleep(100L); // Each read is fast, total stream lasts 3s: longer than budget.
                     } catch (InterruptedException cancelled) {
                         Thread.currentThread().interrupt();
                         break;
@@ -810,7 +810,7 @@ class WcsAtomicStreamDownloadContractTest {
         InterruptedIOException timeout = assertThrows(InterruptedIOException.class, () ->
                 WcsClient.downloadCoverageToFile(origin, "dem",
                         "-70,-46,-69,-45", "EPSG:4326",
-                        16, 16, null, destination.toFile(), 65536L, 350L));
+                        16, 16, null, destination.toFile(), 65536L, 1500L));
         assertTrue(timeout.getMessage().contains("time budget"));
         assertTrue(System.nanoTime() - began < TimeUnit.SECONDS.toNanos(7L));
         assertEquals(1, requests.get(), "Deadline abort must never retry WCS 1.0.");
