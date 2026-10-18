@@ -39,8 +39,11 @@ the original provenance is restored by the same seam.
 - No new geospatial libraries or untrusted EPSG defaults.
 - FGB behavior and existing roundtrip contracts are preserved.
 - If the layer path is changed, stale path-keyed provenance is not reused.
-- Keep explicit source CRS validation, LAS limits, native tests and
-  previously certified real FGB header consistency gates unchanged.
+- Strengthen LAS's declared-source gate to reject unresolved EPSG/WKT
+  immediately (before file read) while accepting valid WKT-only CRS; a
+  nonblank string alone is not adequate evidence of georeferencing.
+- Keep LAS limits, native tests and previously certified real FGB header
+  consistency gates unchanged.
 
 ## Executable regression contract
 
