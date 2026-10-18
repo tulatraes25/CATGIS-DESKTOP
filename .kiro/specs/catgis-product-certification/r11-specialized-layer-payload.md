@@ -65,3 +65,33 @@ CANDIDATE / NOT_CERTIFIED until full exact-head and post-main workflow evidence.
 The historical draft PR #147 was NOT merged because its old whole-file SaveProjectAction snapshot could have dropped certified atomic publication and newly merged original-file CRS persistence. This port is selective: `ProjectLayerPayloadCodec` and its original regression tests were copied by verified SHA, `LoadProjectAction` received only SPATIALITE subtype construction and a replacement of the legacy 8KB payload parser, while `SaveProjectAction` received only the keyed payload emission replacing its prior subtype suffix builder. Its `ProjectFilePublisher.publish` and `LocalVectorSourceCrsProvenance.crsForProjectFile` call sites remain intact. SpatiaLite model receives real physical path/table split; loader refuses missing table. The architecture test guards against FileWriter regression.
 
 This tranche does not certify data staging for remote or SpatiaLite sources, GUI behavior, or the restoration of already incorrectly persisted legacy metadata without user review. Require full current-head 15/15 native certification, 8/8 Runtime Identity, CI, GeoParquet and authenticated predecessor-main push attestation before merge, then post-main evidence. Source changes deliberately avoid #200 SHP/GeoJSON/KML and #201 MapPanel overlaps; further recombination required if main moves.
+
+
+## P0 SpatiaLite scientific CRS and direct-open truth
+
+A deeper source audit during this same candidate confirmed two additional data-integrity bugs:
+- `SpatiaLiteLoader.loadFromStore` silently assigned `EPSG:4326` to ALL spatial
+  tables, regardless of their true CRS. Real projected metre coordinates could
+  then be displayed as degrees. The loader must resolve CRS from the actual
+  GeoTools feature schema, verify any previously/manual declared CRS against
+  it, support explicitly assigned CRS when schema lacks reference, and reject
+  absent or contradictory CRS instead of using WGS84.
+- `OpenFileAction.openSelectedFile` constructed a `SpatiaLiteLayer`, then
+  threw it away and attached a generic `VectorLayer`. That loses the selected
+  table and all subtype identity before project save. The corrected direct
+  import keeps the actual `SpatiaLiteLayer` with physical SQLite path,
+  explicit table and schema-verified CRS. The shared original-file provenance
+  also supports SpatiaLite layers across map-target projection and save/reopen.
+
+`SpatiaLiteSourceCrsTruthContractTest` checks projected EPSG:32719 schema
+truth, positive manual/WKT assignment, mismatch and missing-source failure,
+and actual project-line serialize/parse/reopen with a SpatiaLite subtype and
+repeated CRS preservation. No standalone SQLite binary is committed.
+Existing real dependency-gated SpatiaLite and GeoPackage tests remain required
+in CI; passing Java tests is NOT evidence of an interactive GUI run.
+
+Residual: choosing from *all* available SpatiaLite tables, independently
+staging their feature data before replacing the currently open project,
+nonblocking EDT rehydration of saved local/remote specialized sources, and
+native database integration remain separate #144/#146 acceptance gates.
+Do not claim full reopen runtime until those independent requirements pass.
