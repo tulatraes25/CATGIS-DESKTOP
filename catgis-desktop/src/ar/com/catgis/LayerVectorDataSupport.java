@@ -265,7 +265,7 @@ final class LayerVectorDataSupport {
         if (layer == null || data == null) {
             return data;
         }
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(layer);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(layer);
         ShapefileData projected = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
         layer.setSourceName(projected.getSourceName());
         layer.setFeatureCount(projected.getFeatureCount());
