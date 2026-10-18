@@ -53,11 +53,8 @@ public final class WfsFeatureLoader {
             }
 
             SimpleFeatureSource source = store.getFeatureSource(typeName);
-            Query query = new Query(typeName);
-            String requestCrs = CRSDefinitions.normalizeCode(layer.getRequestCrs());
-            if (!requestCrs.isBlank()) {
-                query.setCoordinateSystemReproject(CRSDefinitions.decode(requestCrs, true));
-            }
+            String requestCrs = normalizeExplicitRequestCrs(layer.getRequestCrs());
+            Query query = createFeatureQuery(typeName, requestCrs);
 
             org.geotools.data.simple.SimpleFeatureCollection featureCollection = source.getFeatures(query);
             SimpleFeatureType schema = featureCollection.getSchema();
@@ -101,7 +98,23 @@ public final class WfsFeatureLoader {
         }
     }
 
-    private static String resolveLayerCrs(String requested, SimpleFeatureType schema) {
+    /**
+     * An unspecified request CRS is not WGS84; the WFS service schema is authoritative.
+     */
+    static String normalizeExplicitRequestCrs(String code) {
+        return code == null || code.isBlank() ? "" : CRSDefinitions.normalizeCode(code);
+    }
+
+    static Query createFeatureQuery(String typeName, String requestedCode) throws Exception {
+        Query query = new Query(typeName);
+        String explicit = normalizeExplicitRequestCrs(requestedCode);
+        if (!explicit.isBlank()) {
+            query.setCoordinateSystemReproject(CRSDefinitions.decode(explicit, true));
+        }
+        return query;
+    }
+
+    static String resolveLayerCrs(String requested, SimpleFeatureType schema) {
         if (requested != null && !requested.isBlank()) {
             return requested;
         }
@@ -109,7 +122,9 @@ public final class WfsFeatureLoader {
             return "";
         }
         try {
-            return CRSDefinitions.normalizeCode(CRS.toSRS(schema.getCoordinateReferenceSystem(), true));
+            String schemaCode = CRS.toSRS(schema.getCoordinateReferenceSystem(), true);
+            return schemaCode == null || schemaCode.isBlank()
+                    ? "" : CRSDefinitions.normalizeCode(schemaCode);
         } catch (Exception ignored) {
             return "";
         }
