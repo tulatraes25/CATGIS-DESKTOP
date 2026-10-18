@@ -302,7 +302,14 @@ public final class SpatiaLiteLoader {
 
             SimpleFeatureType schema = collection.getSchema();
 
-            layer.setSourceCRS("EPSG:4326");
+            String declaredCrs = layer.getSourceCRS();
+            if ((declaredCrs == null || declaredCrs.isBlank())
+                    && layer.getResolvedCrs() != null && !layer.getResolvedCrs().isBlank()) {
+                declaredCrs = layer.getResolvedCrs();
+            }
+            String verifiedSource = requireSourceCrs(schema, declaredCrs);
+            layer.setSourceCRS(verifiedSource);
+            layer.setResolvedCrs(verifiedSource);
             if (schema.getGeometryDescriptor() != null) {
                 layer.setGeometryTypeLabel(
                         schema.getGeometryDescriptor().getType().getBinding().getSimpleName());
@@ -327,6 +334,40 @@ public final class SpatiaLiteLoader {
             throw new UnsupportedFormatException(
                     "Error al cargar la capa SpatiaLite: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * SpatiaLite/GeoPackage feature schemas are authoritative about raw geometry
+     * coordinates. Never relabel projected metre coordinates as EPSG:4326.
+     */
+    static String requireSourceCrs(SimpleFeatureType schema, String declared)
+            throws UnsupportedFormatException {
+        String detected = VectorCrsTransformSupport.schemaText(schema);
+        String explicit = declared == null ? "" : declared.trim();
+        if (!detected.isBlank()) {
+            if (!explicit.isBlank()) {
+                try {
+                    if (!VectorCrsTransformSupport.equivalent(explicit, detected)) {
+                        throw new UnsupportedFormatException(
+                                "SpatiaLite: CRS declarado incompatible con el esquema de la tabla.");
+                    }
+                } catch (IllegalArgumentException ex) {
+                    throw new UnsupportedFormatException(
+                            "SpatiaLite: el CRS declarado no es válido.", ex);
+                }
+            }
+            return detected;
+        }
+        if (!explicit.isBlank()) {
+            try {
+                return VectorCrsTransformSupport.canonicalText(explicit);
+            } catch (IllegalArgumentException ex) {
+                throw new UnsupportedFormatException(
+                        "SpatiaLite: el CRS manual no es válido.", ex);
+            }
+        }
+        throw new UnsupportedFormatException(
+                "SpatiaLite: la tabla no declara CRS; asigne explícitamente el CRS de origen.");
     }
 
     // --- SQLite header validation ---
