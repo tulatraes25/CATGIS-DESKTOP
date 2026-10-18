@@ -1440,7 +1440,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     @Override public void setActiveEditVertexIndex(int index) { activeEditVertexIndex = index; }
     @Override public void setJoinTargetVertexIndex(int index) { joinTargetVertexIndex = index; }
     @Override public void setFeatureEditOperation(String operation) { featureEditOperation = operation; }
-    @Override public void markProjectDirty() { AppContext.get().markProjectDirty(); }
+    @Override public void markProjectDirty() { CatgisDesktopApp.markProjectDirty(); }
     @Override public void updateTableSelectionIds(Layer layerKey, List<String> featureIds) { tableSelectionIds.put(layerKey, new ArrayList<>(featureIds)); }
     @Override public void clearTableSelectionIds(Layer layerKey) { tableSelectionIds.remove(layerKey); }
 
