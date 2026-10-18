@@ -104,7 +104,7 @@ final class FlatGeobufCrsSupport {
             return;
         }
         try {
-            CoordinateReferenceSystem declared = CRSDefinitions.decode(assigned, true);
+            CoordinateReferenceSystem declared = VectorCrsTransformSupport.resolve(assigned);
             if (!CRS.equalsIgnoreMetadata(header.coordinateReferenceSystem(), declared)) {
                 throw new IllegalArgumentException(
                         "FlatGeobuf: el CRS de la capa (" + assigned

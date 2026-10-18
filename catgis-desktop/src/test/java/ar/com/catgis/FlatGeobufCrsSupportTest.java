@@ -91,6 +91,20 @@ class FlatGeobufCrsSupportTest {
     }
 
     @Test
+    void wktOnlyHeaderRemainsReopenableAndContradictionsFailClosed() throws Exception {
+        String wkt = org.geotools.referencing.CRS.decode("EPSG:32719", true).toWKT();
+        org.geotools.api.referencing.crs.CoordinateReferenceSystem projected =
+                org.geotools.referencing.CRS.parseWKT(wkt);
+        FlatGeobufCrsSupport.Resolution embedded =
+                new FlatGeobufCrsSupport.Resolution(projected, wkt, "WKT");
+
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+                FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(embedded, wkt));
+        assertThrows(IllegalArgumentException.class, () ->
+                FlatGeobufCrsSupport.requireConsistentWithAssignedCrs(embedded, "EPSG:4326"));
+    }
+
+    @Test
     void cachedWgs84MustNotOverrideVerifiedUtmCoordinates() {
         FlatGeobufCrsSupport.Resolution embedded =
                 FlatGeobufCrsSupport.resolveMetadata("EPSG", 32719, "", "");

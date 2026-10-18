@@ -140,6 +140,25 @@ public class OpenFileAction extends AbstractAction {
                     return false;
                 }
                 data = FlatGeobufLoader.load(file);
+                sourceCRS = sourceCrsFromFlatGeobufData(data);
+                if (sourceCRS.isBlank()) {
+                    // An absent CRS cannot be silently treated as the project CRS.
+                    // Without interactive source assignment, never attach a misplaced layer.
+                    if (!showDialogs || java.awt.GraphicsEnvironment.isHeadless()) {
+                        CatgisLogger.warn(
+                                "FlatGeobuf sin CRS: importación no interactiva rechazada: "
+                                        + file.getAbsolutePath(), null);
+                        return false;
+                    }
+                    String selectedCrs = CRSSelectorDialog.chooseBlocking(
+                            CatgisDesktopApp.getMainFrameSafe(),
+                            "FlatGeobuf sin CRS: seleccione el CRS real de origen",
+                            "");
+                    if (selectedCrs == null || selectedCrs.isBlank()) {
+                        return false;
+                    }
+                    sourceCRS = selectedCrs;
+                }
                 layerDisplayName = file.getName();
             } else if (lowerName.endsWith(".pmtiles")) {
                 // PMTiles: read metadata and show info (tiles are not directly displayable as vector/raster)
@@ -392,6 +411,7 @@ public class OpenFileAction extends AbstractAction {
             return;
         }
         ensureProject();
+        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(layer);
         data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
         layer.setSourceName(data.getSourceName());
         layer.setFeatureCount(data.getFeatureCount());
@@ -787,6 +807,14 @@ public class OpenFileAction extends AbstractAction {
                              File rasterFile,
                              LocalRasterData rasterData,
                              String projectCRS) {
+    }
+
+    /**
+     * Preserve the CRS validated from the FlatGeobuf file header. Never infer it
+     * from the active project's target CRS or from a generic WGS84 fallback.
+     */
+    static String sourceCrsFromFlatGeobufData(ShapefileData data) {
+        return data == null ? "" : FlatGeobufCrsSupport.schemaCode(data.getSchema());
     }
 
     private static String buildVectorLoadMessage(Layer layer) {
