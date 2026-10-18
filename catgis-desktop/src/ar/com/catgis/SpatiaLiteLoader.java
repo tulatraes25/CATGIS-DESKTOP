@@ -261,26 +261,7 @@ public final class SpatiaLiteLoader {
     private static ShapefileData loadFromStore(DataStore store, SpatiaLiteLayer layer)
             throws UnsupportedFormatException, IOException {
         try {
-            String typeName = layer.getTableName();
-            String[] names = store.getTypeNames();
-            if (names == null || names.length == 0) {
-                store.dispose();
-                throw new UnsupportedFormatException(
-                        "No se encontraron tablas en la base de datos.");
-            }
-
-            boolean found = false;
-            for (String n : names) {
-                if (n.equalsIgnoreCase(typeName)) {
-                    typeName = n;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                throw new UnsupportedFormatException(
-                        "La tabla SpatiaLite solicitada no existe: " + layer.getTableName());
-            }
+            String typeName = requireRequestedTable(store.getTypeNames(), layer.getTableName());
 
             CatgisLogger.debug("SpatiaLite: loading features from table '" + typeName + "'");
 
@@ -334,6 +315,24 @@ public final class SpatiaLiteLoader {
             throw new UnsupportedFormatException(
                     "Error al cargar la capa SpatiaLite: " + e.getMessage(), e);
         }
+    }
+
+    /** Select the named table only. Never silently substitute another source. */
+    static String requireRequestedTable(String[] tableNames, String requested)
+            throws UnsupportedFormatException {
+        if (tableNames == null || tableNames.length == 0) {
+            throw new UnsupportedFormatException("No se encontraron tablas en la base de datos.");
+        }
+        if (requested == null || requested.isBlank()) {
+            throw new UnsupportedFormatException("SpatiaLite: seleccione una tabla espacial.");
+        }
+        for (String actual : tableNames) {
+            if (actual != null && actual.equalsIgnoreCase(requested.trim())) {
+                return actual;
+            }
+        }
+        throw new UnsupportedFormatException(
+                "La tabla SpatiaLite solicitada no existe: " + requested);
     }
 
     /**
