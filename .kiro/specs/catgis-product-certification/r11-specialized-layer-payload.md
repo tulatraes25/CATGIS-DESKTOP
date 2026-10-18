@@ -95,3 +95,7 @@ staging their feature data before replacing the currently open project,
 nonblocking EDT rehydration of saved local/remote specialized sources, and
 native database integration remain separate #144/#146 acceptance gates.
 Do not claim full reopen runtime until those independent requirements pass.
+
+## Regression protection: requested table vs first available
+
+The loader now routes the real DataStore table-name inventory through the pure `requireRequestedTable` seam. It selects only the requested table (case-insensitively preserving actual name) and rejects absent or blank names, empty inventory and all table substitution. `SpatiaLiteSourceCrsTruthContractTest.selectedTableMustExistAndCannotBeSubstitutedByFirstAvailable` locks positive and negative cases. This protects against silently analyzing features from an unrelated table without requiring an external database just to prove the selector; native integration remains a separate gate.
