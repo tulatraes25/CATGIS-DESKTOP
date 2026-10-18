@@ -16,7 +16,7 @@ class LasHeaderIntegrityContractTest {
     @TempDir Path folder;
 
     @Test
-    void unknownLasCrsMustFailClosedBeforeAnyDatasetRead() {
+    void unknownLasCrsMustFailClosedBeforeAnyDatasetRead() throws Exception {
         assertThrows(IllegalStateException.class,
                 () -> LayerVectorDataSupport.requireDeclaredLasSourceCrs(null));
         assertThrows(IllegalStateException.class,
