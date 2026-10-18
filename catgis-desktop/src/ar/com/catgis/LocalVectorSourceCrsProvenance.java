@@ -58,6 +58,7 @@ final class LocalVectorSourceCrsProvenance {
             return false;
         }
         String path = layer.getPath().toLowerCase(Locale.ROOT);
-        return path.endsWith(".fgb") || path.endsWith(".las") || path.endsWith(".laz");
+        return layer instanceof SpatiaLiteLayer
+                || path.endsWith(".fgb") || path.endsWith(".las") || path.endsWith(".laz");
     }
 }
