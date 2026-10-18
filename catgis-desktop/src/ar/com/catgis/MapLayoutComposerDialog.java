@@ -681,7 +681,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         form.add(new JLabel("Max X:")); form.add(maxXField);
         form.add(new JLabel("Max Y:")); form.add(maxYField);
 
-        JButton applyExtentBtn = new JButton("Aplicar extensiÃ³n");
+        JButton applyExtentBtn = new JButton("Aplicar extensión");
         applyExtentBtn.addActionListener(e -> {
             try {
                 double mnX = Double.parseDouble(minXField.getText());
@@ -764,7 +764,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
                 BorderFactory.createLineBorder(new Color(205, 212, 222)),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        JTextArea help = new JTextArea("ElegÃ­ una plantilla curada. La vista previa muestra el encuadre general, la ubicaciÃ³n de leyenda, cartucho, escala y norte antes de aplicarla.");
+        JTextArea help = new JTextArea("Elegí una plantilla curada. La vista previa muestra el encuadre general, la ubicación de leyenda, cartucho, escala y norte antes de aplicarla.");
         help.setLineWrap(true);
         help.setWrapStyleWord(true);
         help.setEditable(false);
@@ -954,11 +954,11 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         // Show quick-pick menu with variants
         JPopupMenu menu = new JPopupMenu("Auto-componer");
         String[][] opts = {
-            {"A4_REFERENCIA", "Infraestructura Â· UbicaciÃ³n general", "Mapa + leyenda lateral + cartucho"},
-            {"A4_EMPLAZAMIENTO", "Infraestructura Â· Emplazamiento", "Mapa dominante + cartucho inferior"},
-            {"A4_TECNICO", "TÃ©cnica Â· Leyenda derecha", "Mapa + leyenda lateral compacta"},
-            {"A4_AMBIENTAL", "Ambiental Â· EstÃ¡ndar", "Mapa + leyenda inferior"},
-            {"A4_PERFIL", "Perfil Â· AltimetrÃ­a", "Mapa de traza + tabla progresivas"},
+            {"A4_REFERENCIA", "Infraestructura · Ubicación general", "Mapa + leyenda lateral + cartucho"},
+            {"A4_EMPLAZAMIENTO", "Infraestructura · Emplazamiento", "Mapa dominante + cartucho inferior"},
+            {"A4_TECNICO", "Técnica · Leyenda derecha", "Mapa + leyenda lateral compacta"},
+            {"A4_AMBIENTAL", "Ambiental · Estándar", "Mapa + leyenda inferior"},
+            {"A4_PERFIL", "Perfil · Altimetría", "Mapa de traza + tabla progresivas"},
         };
         for (String[] opt : opts) {
             JMenuItem mi = new JMenuItem(opt[1]);
@@ -2342,7 +2342,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         gc.gridy++;
         gc.weighty = 0;
         gc.fill = GridBagConstraints.HORIZONTAL;
-        JLabel hint = new JLabel("<html>DespuÃ©s podÃ©s mover y redimensionar el norte directamente desde el layout CATMAP.</html>");
+        JLabel hint = new JLabel("<html>Después podés mover y redimensionar el norte directamente desde el layout CATMAP.</html>");
         hint.setForeground(new Color(88, 98, 112));
         panel.add(hint, gc);
 
@@ -2361,7 +2361,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         pushCatmapNorthSettingsToProject();
         if (northCheck.isSelected()) {
             interactionState.select(LayoutElementType.NORTH);
-            statusLabel.setText("Norte CATMAP actualizado. PodÃ©s moverlo o redimensionarlo desde el layout.");
+            statusLabel.setText("Norte CATMAP actualizado. Podés moverlo o redimensionarlo desde el layout.");
         } else {
             interactionState.select(null);
             statusLabel.setText("Norte CATMAP oculto en la composicion.");
@@ -2513,7 +2513,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
             refreshLayoutStructureTree();
             syncLayoutStructureSelection();
             previewPanel.repaint();
-            statusLabel.setText(layoutElementLabel(selected) + " eliminado visualmente del layout. PodÃ©s restaurarlo desde 'Restaurar por defecto'.");
+            statusLabel.setText(layoutElementLabel(selected) + " eliminado visualmente del layout. Podés restaurarlo desde 'Restaurar por defecto'.");
         }
     }
 
@@ -3719,7 +3719,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
                 g2.dispose();
             }
             ImageIO.write(output, format, file);
-            announceExport("ComposiciÃ³n exportada", file);
+            announceExport("Composición exportada", file);
         } catch (Exception ex) {
             AppErrorSupport.logFailure("No se pudo exportar la composicion a imagen", ex);
             showCompositionError("No se pudo exportar la composicion.", ex);
@@ -3766,7 +3766,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
                     } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); }
                 }
             }
-            announceExport("ComposiciÃ³n PDF exportada", file);
+            announceExport("Composición PDF exportada", file);
         } catch (Exception ex) {
             AppErrorSupport.logFailure("No se pudo exportar la composicion a PDF", ex);
             showCompositionError("No se pudo exportar el PDF.", ex);
@@ -3779,7 +3779,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
             BufferedImage image = renderLayout(settings, settings.pageSize().pixelSize(settings.orientation(), Math.min(settings.dpi(), 200)));
 
             PrinterJob job = PrinterJob.getPrinterJob();
-            job.setJobName("CATGIS - ComposiciÃ³n cartogrÃ¡fica");
+            job.setJobName("CATGIS - Composición cartográfica");
             PageFormat format = job.defaultPage();
             format.setOrientation(settings.orientation() == PageOrientation.LANDSCAPE ? PageFormat.LANDSCAPE : PageFormat.PORTRAIT);
             format = job.pageDialog(format);
@@ -3788,7 +3788,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
                 return;
             }
             job.print();
-            statusLabel.setText("ComposiciÃ³n enviada a impresiÃ³n.");
+            statusLabel.setText("Composición enviada a impresión.");
         } catch (PrinterException ex) {
             AppErrorSupport.logFailure("No se pudo imprimir la composicion", ex);
             showCompositionError("No se pudo imprimir la composicion.", ex);
@@ -3840,7 +3840,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
     }
 
     private void showCompositionError(String intro, Throwable ex) {
-        AppErrorSupport.showErrorDialog(this, "ComposiciÃ³n", intro, ex);
+        AppErrorSupport.showErrorDialog(this, "Composición", intro, ex);
     }
 
     public LayoutSettings buildSettings() {
@@ -4857,7 +4857,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         JTextField titleField = field(form, g, y, "Titulo:", legend.getTitle() != null ? legend.getTitle() : "Leyenda");
         titleField.addActionListener(e -> { legend.setTitle(titleField.getText().trim()); previewPanel.repaint(); });
         y++;
-        JTextField titleSizeField = field(form, g, y, "Tamano tÃ­tulo:", String.valueOf(legend.getTitleFont().getSize()));
+        JTextField titleSizeField = field(form, g, y, "Tamano título:", String.valueOf(legend.getTitleFont().getSize()));
         titleSizeField.addActionListener(e -> { try { legend.setTitleFont(legend.getTitleFont().deriveFont((float)Integer.parseInt(titleSizeField.getText()))); previewPanel.repaint(); } catch (Exception ignored) { CatgisLogger.warn("MapLayoutComposerDialog: operation failed", ignored); } });
         y++;
         JTextField itemSizeField = field(form, g, y, "Tamano items:", String.valueOf(legend.getItemFont().getSize()));
