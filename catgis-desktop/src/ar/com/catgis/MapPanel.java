@@ -306,7 +306,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
     private void zoomToSelectedLayer() {
         Layer layer = (CatgisDesktopApp.layersPanel != null) ? AppContext.getSelectedLayer() : null;
         if (layer == null) {
-            NotificationManager.warn(this, null, "Primero seleccionÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ una capa en el panel de capas.");
+            NotificationManager.warn(this, null, "Primero seleccioná una capa en el panel de capas.");
             return;
         }
         zoomToLayer(layer);
@@ -737,7 +737,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         cancelCurrentDrawing();
         measurementTool.startDistanceMeasurement();
         setTool("MEASURE");
-        showCopiedMessage("Modo medir distancia activo. Clic para vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
+        showCopiedMessage("Modo medir distancia activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
@@ -745,7 +745,7 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         cancelCurrentDrawing();
         measurementTool.startAreaMeasurement();
         setTool("MEASURE");
-        showCopiedMessage("Modo medir ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rea activo. Clic para vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rtices. Doble clic o clic derecho para terminar. Escape para cancelar.");
+        showCopiedMessage("Modo medir área activo. Clic para vértices. Doble clic o clic derecho para terminar. Escape para cancelar.");
         repaint();
     }
 
@@ -1597,18 +1597,18 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         sb.append("Nombre: ").append(layer.getName()).append("\n");
         sb.append("Ruta: ").append(layer.getPath()).append("\n");
         sb.append("Tipo: ").append(layer.getType()).append("\n");
-        sb.append("Visible: ").append(layer.isVisible() ? "SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­" : "No").append("\n");
+        sb.append("Visible: ").append(layer.isVisible() ? "Sí" : "No").append("\n");
         sb.append("SourceName: ").append(layer.getSourceName() != null ? layer.getSourceName() : "-").append("\n");
         sb.append("FeatureCount: ").append(layer.getFeatureCount()).append("\n");
         sb.append("CRS origen: ").append(layer.getSourceCRS() != null && !layer.getSourceCRS().isBlank() ? layer.getSourceCRS() : "desconocido").append("\n");
         sb.append("CRS proyecto: ").append(AppContext.project() != null ? AppContext.project().getProjectCRS() : "-").append("\n");
         LocalRasterData rasterDataInfo = rasterLayers.get(layer);
         if (rasterDataInfo != null) {
-            sb.append("Raster: SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­\n");
+            sb.append("Raster: Sí\n");
             sb.append("Bandas: ").append(rasterDataInfo.getBandCount()).append("\n");
-            sb.append("Georreferenciado: ").append(rasterDataInfo.isGeoreferenced() ? "SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­" : "No").append("\n");
+            sb.append("Georreferenciado: ").append(rasterDataInfo.isGeoreferenced() ? "Sí" : "No").append("\n");
         }
-        sb.append("Etiquetas: ").append(layer.isLabelsVisible() ? "SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­" : "No").append("\n");
+        sb.append("Etiquetas: ").append(layer.isLabelsVisible() ? "Sí" : "No").append("\n");
         sb.append("Campo etiqueta: ").append(layer.getLabelField() != null ? layer.getLabelField() : "-").append("\n");
 
         NotificationManager.info(this, "Información de capa", sb.toString());
@@ -2733,11 +2733,11 @@ public class MapPanel extends JPanel implements SnapContext, MapViewportContext,
         Coordinate sourceCoordinate = toSourceCoordinate(targetCoordinate.x, targetCoordinate.y, selectedLayer);
         Geometry updated = buildCutGeometryAtPoint((Geometry) geomObj, sourceCoordinate);
         if (updated == null) {
-            showCopiedMessage("No se pudo cortar la lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nea en ese punto.");
+            showCopiedMessage("No se pudo cortar la línea en ese punto.");
             return true;
         }
 
-        updateSelectedFeatureGeometry(updated, "GeometrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a cortada.");
+        updateSelectedFeatureGeometry(updated, "Geometría cortada.");
         return true;
     }
 

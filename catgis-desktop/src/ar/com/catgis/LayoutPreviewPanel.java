@@ -393,7 +393,7 @@ public class LayoutPreviewPanel extends JPanel {
                         activeResizeCustomItemId = null;
                         lastDragPagePoint = null;
                         setCursor(Cursor.getDefaultCursor());
-                        ctx.setStatusMessage("Elemento CATMAP bloqueado. PodÃ©s editarlo desde el inspector, pero no moverlo.");
+                        ctx.setStatusMessage("Elemento CATMAP bloqueado. Podés editarlo desde el inspector, pero no moverlo.");
                         repaint();
                         return;
                     }
@@ -406,7 +406,7 @@ public class LayoutPreviewPanel extends JPanel {
                         activeResizeCustomItemId = null;
                         lastDragPagePoint = null;
                         setCursor(Cursor.getDefaultCursor());
-                        ctx.setStatusMessage(ctx.elementLabel(hit) + " bloqueado. PodÃ©s seleccionarlo, pero no moverlo.");
+                        ctx.setStatusMessage(ctx.elementLabel(hit) + " bloqueado. Podés seleccionarlo, pero no moverlo.");
                         repaint();
                         return;
                     }
@@ -1105,7 +1105,7 @@ public class LayoutPreviewPanel extends JPanel {
         JComboBox<Integer> sizeCombo = new JComboBox<>(sizes);
         sizeCombo.setEditable(true);
         sizeCombo.setSelectedItem(originalFont.getSize());
-        addPopupRow(form, g, row++, "TamaÃ±o", sizeCombo);
+        addPopupRow(form, g, row++, "Tamaño", sizeCombo);
 
         JPanel styleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         styleRow.setOpaque(false);
@@ -1222,33 +1222,33 @@ public class LayoutPreviewPanel extends JPanel {
         int row = 0;
 
         JTextField titleField = new JTextField(legend.getTitle() != null ? legend.getTitle() : "", 22);
-        addPopupRow(form, g, row++, "TÃ­tulo", titleField);
+        addPopupRow(form, g, row++, "Título", titleField);
 
         JComboBox<String> titleFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
         titleFontCombo.setSelectedItem(legend.getTitleFont().getFamily());
-        addPopupRow(form, g, row++, "Fuente tÃ­tulo", titleFontCombo);
+        addPopupRow(form, g, row++, "Fuente título", titleFontCombo);
 
         Integer[] titleSizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36};
         JComboBox<Integer> titleSize = new JComboBox<>(titleSizes);
         titleSize.setEditable(true);
         titleSize.setSelectedItem(legend.getTitleFont().getSize());
-        addPopupRow(form, g, row++, "Tam. tÃ­tulo", titleSize);
+        addPopupRow(form, g, row++, "Tam. título", titleSize);
 
         JComboBox<String> itemFontCombo = new JComboBox<>(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
         itemFontCombo.setSelectedItem(legend.getItemFont().getFamily());
-        addPopupRow(form, g, row++, "Fuente Ã­tems", itemFontCombo);
+        addPopupRow(form, g, row++, "Fuente ítems", itemFontCombo);
 
         Integer[] itemSizes = {6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20};
         JComboBox<Integer> itemSize = new JComboBox<>(itemSizes);
         itemSize.setEditable(true);
         itemSize.setSelectedItem(legend.getItemFont().getSize());
-        addPopupRow(form, g, row++, "Tam. Ã­tems", itemSize);
+        addPopupRow(form, g, row++, "Tam. ítems", itemSize);
 
         JButton titleColorBtn = colorSwatchButton(legend.getTitleColor(), null);
-        addPopupRow(form, g, row++, "Color tÃ­tulo", titleColorBtn);
+        addPopupRow(form, g, row++, "Color título", titleColorBtn);
 
         JButton itemColorBtn = colorSwatchButton(legend.getItemColor(), null);
-        addPopupRow(form, g, row++, "Color Ã­tems", itemColorBtn);
+        addPopupRow(form, g, row++, "Color ítems", itemColorBtn);
 
         JCheckBox bgCheck = new JCheckBox("Mostrar fondo", legend.isShowBackground());
         bgCheck.setOpaque(false);
