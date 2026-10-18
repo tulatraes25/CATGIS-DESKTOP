@@ -310,17 +310,13 @@ public class ExportVectorLayerAction {
                 return false;
             }
 
+            String resolvedTargetCode = resolveTargetCode(layer, option, targetCode);
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
-                exportToShapefile(layer, data, file, resolveTargetCode(layer, option, targetCode));
-            } else if (DXF_OPTION.equals(option)) {
-                exportToDxf(layer, data, file, resolveTargetCode(layer, option, targetCode));
-            } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolveTargetCode(layer, option, targetCode));
-            } else if (GPX_OPTION.equals(option)) {
-                exportToGpx(layer, data, file);
+                exportToShapefile(layer, data, file, resolvedTargetCode);
             } else {
-                exportToKml(layer, data, file, kmlOptions);
+                exportSingleFileSafely(
+                        layer, data, file, option, resolvedTargetCode, kmlOptions);
             }
 
             if (showSuccessMessage) {
@@ -386,14 +382,9 @@ public class ExportVectorLayerAction {
             if (SHAPEFILE_OPTION.equals(option)) {
                 deleteShapefileSidecars(file);
                 exportToShapefile(layer, data, file, resolvedTargetCode);
-            } else if (DXF_OPTION.equals(option)) {
-                exportToDxf(layer, data, file, resolvedTargetCode);
-            } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolvedTargetCode);
-            } else if (GPX_OPTION.equals(option)) {
-                exportToGpx(layer, data, file);
             } else {
-                exportToKml(layer, data, file, kmlOptions);
+                exportSingleFileSafely(
+                        layer, data, file, option, resolvedTargetCode, kmlOptions);
             }
 
             if (!GPX_OPTION.equals(option)) {
@@ -410,6 +401,36 @@ public class ExportVectorLayerAction {
             return false;
         }
     }
+
+    private static void exportSingleFileSafely(Layer layer, ShapefileData data, File file,
+                                               String option, String resolvedTargetCode,
+                                               KmlExportOptions kmlOptions) throws Exception {
+        int expectedFeatures = data != null && data.getFeatures() != null
+                ? data.getFeatures().size()
+                : 0;
+        String suffix = extensionForOption(option);
+        VectorSingleFilePublisher.publish(
+                file,
+                suffix,
+                staging -> {
+                    File stagedFile = staging.toFile();
+                    if (DXF_OPTION.equals(option)) {
+                        exportToDxf(layer, data, stagedFile, resolvedTargetCode);
+                    } else if (GEOJSON_OPTION.equals(option)) {
+                        exportToGeoJson(layer, data, stagedFile, resolvedTargetCode);
+                    } else if (GPX_OPTION.equals(option)) {
+                        exportToGpx(layer, data, stagedFile);
+                    } else if (KML_OPTION.equals(option) || KMZ_OPTION.equals(option)) {
+                        exportToKml(layer, data, stagedFile, kmlOptions);
+                    } else {
+                        throw new IllegalArgumentException(
+                                "Formato vectorial de archivo unico no soportado: " + option);
+                    }
+                },
+                staging -> SingleFileVectorStageValidator.validate(
+                        staging.toFile(), expectedFeatures));
+    }
+
 
     private static void exportToShapefile(Layer layer, ShapefileData data, File file, String targetCode) throws Exception {
         TransformResult transformResult = transformFeaturesToTarget(layer, data, targetCode, SHAPEFILE_OPTION);
