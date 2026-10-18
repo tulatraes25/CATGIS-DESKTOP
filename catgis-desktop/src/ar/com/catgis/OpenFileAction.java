@@ -411,7 +411,7 @@ public class OpenFileAction extends AbstractAction {
             return;
         }
         ensureProject();
-        FlatGeobufSourceCrsProvenance.rememberBeforeProjection(layer);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(layer);
         data = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
         layer.setSourceName(data.getSourceName());
         layer.setFeatureCount(data.getFeatureCount());
