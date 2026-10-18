@@ -65,3 +65,7 @@ This fixes new saves and reloads only. Existing project files written with
 wrong historic CRS remain a separate user-mediated reconciliation task;
 do not silently rewrite them. GPX, unknown CAD/rasters, GIS GUI physical
 acceptance and A0.2–A0.7 remain independently open.
+
+## Verified legacy contract migration
+
+The first candidate CI `39085823444` compiled and executed 1,312 tests, with one failure: the old FlatGeobuf-only test `nonFlatGeobufLayersKeepExistingProjectSerialization` asserted a .shp project line must retain the *displayed* EPSG:4326 after source EPSG:32719 was projected. That assertion explicitly encoded the P0 defect now being fixed. Replaced it with a .shp source-provenance assertion (EPSG:32719) and added an independent real raster .tif non-regression asserting its existing source serialization behavior is unchanged. This is a causal test change, not disabling or skipping tests. The full candidate must pass again on the new SHA.
