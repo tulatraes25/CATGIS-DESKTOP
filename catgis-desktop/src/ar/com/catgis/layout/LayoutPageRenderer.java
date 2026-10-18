@@ -998,7 +998,7 @@ public class LayoutPageRenderer {
                 double exactDenominator = estimateScaleDenominator(mapFrame, renderDpi);
                 String scaleText = settings.showScale()
                         ? "Escala: " + (exactDenominator > 0 ? MapLayoutComposerDialog.formatScaleDenominator(exactDenominator) : snapshot.scaleLabel())
-                        : "Escala: â€”";
+                        : "Escala: —";
                 drawCompactFooterRow(g2, scaleText, "", col3x, rowY, colW3 - 6);
                 rowY += lineHeight + 2;
 
