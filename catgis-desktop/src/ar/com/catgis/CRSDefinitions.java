@@ -232,31 +232,6 @@ public class CRSDefinitions {
                 || trimmed.startsWith("urn:") || trimmed.startsWith("AUTO:");
     }
 
-    public static boolean isLatLonAxisOrder(CoordinateReferenceSystem crs) {
-        if (crs == null) {
-            return false;
-        }
-        try {
-            org.geotools.api.referencing.cs.CoordinateSystem cs = crs.getCoordinateSystem();
-            if (cs != null && cs.getDimension() >= 2) {
-                String first = cs.getAxis(0).getDirection().name();
-                return first.contains("NORTH") || first.contains("SOUTH");
-            }
-        } catch (Exception ignored) {
-        }
-        return false;
-    }
-
-    public static org.locationtech.jts.geom.Envelope normalizeEnvelopeAxisOrder(
-            org.locationtech.jts.geom.Envelope envelope, CoordinateReferenceSystem crs) {
-        if (envelope == null || envelope.isNull() || !isLatLonAxisOrder(crs)) {
-            return envelope;
-        }
-        return new org.locationtech.jts.geom.Envelope(
-                envelope.getMinY(), envelope.getMaxY(),
-                envelope.getMinX(), envelope.getMaxX());
-    }
-
     public static String buildManualDefinitionValue(String raw) {
         if (raw == null || raw.isBlank()) {
             return "";

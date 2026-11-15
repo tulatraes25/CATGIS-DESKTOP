@@ -1,10 +1,8 @@
 package ar.com.catgis.data.vector;
 
 import ar.com.catgis.AppErrorSupport;
-import ar.com.catgis.CRSDefinitions;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
-import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.feature.DefaultFeatureCollection;
@@ -33,7 +31,9 @@ public class ShapefileData {
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
         Envelope rawEnvelope = featureCollection != null ? featureCollection.getBounds() : null;
-        this.envelope = normalizeEnvelope(rawEnvelope, this.schema);
+        // JTS envelopes are the (x, y) bounds of the stored coordinates; a CRS
+        // declared with latitude-first axis order must not swap them (DC-2).
+        this.envelope = rawEnvelope;
         this.features = new ArrayList<>();
 
         if (featureCollection != null) {
@@ -63,16 +63,10 @@ public class ShapefileData {
         this.featureCount = featureCount;
         this.message = message != null ? message : "";
         this.schema = schema != null ? schema : inferSchemaStatic(this.features);
-        this.envelope = normalizeEnvelope(envelope, this.schema);
+        // Keep the (x, y) bounds untouched: swapping by declared axis order would
+        // make the layer envelope disagree with its own geometries (DC-2).
+        this.envelope = envelope;
         this.featureCollection = buildFeatureCollection(this.features, this.schema);
-    }
-
-    private static Envelope normalizeEnvelope(Envelope envelope, SimpleFeatureType schema) {
-        if (schema == null) {
-            return envelope;
-        }
-        CoordinateReferenceSystem crs = schema.getCoordinateReferenceSystem();
-        return CRSDefinitions.normalizeEnvelopeAxisOrder(envelope, crs);
     }
 
     public ShapefileData(List<?> rawFeatures, Object envelopeObj, String sourceName, int featureCount, String message) {
