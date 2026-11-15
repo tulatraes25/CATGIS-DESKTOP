@@ -2,6 +2,16 @@
 
 Este documento registra el estado final de refs públicas después de la reescritura histórica y la limpieza administrativa T10A.
 
+## Nota de vigencia (auditoría 2026-11-15)
+
+Este documento es un registro de certificación fechado (T10A, 2026-10-04). El remoto ya no coincide con el estado certificado:
+
+- `git ls-remote origin` (2026-11-15) devuelve **150 `refs/heads`** y **0 tags**, con `refs/heads/main` = `aecb4d20…`;
+- el clon local `C:\CATGIS`, tras `git fetch --prune` (2026-11-15), tiene `origin/main` alineado en `aecb4d20…` y sólo un subconjunto de ramas remotas como refs locales;
+- por lo tanto `main` sigue siendo la rama canónica, pero **no** es la única rama remota existente.
+
+La afirmación de "1 rama remota" corresponde al cierre T10A y no debe citarse como estado actual.
+
 ## Fuente canónica
 
 ### `main`
@@ -51,7 +61,7 @@ La reescritura publicada eliminó de las ramas/tags activos:
 - inventarios operativos `CATSERVER/inventory/*.csv`;
 - rutas privadas de workstation incluidas en el alcance.
 
-Sin embargo, GitHub todavía puede servir algunos objetos pre-rewrite por SHA o vistas cacheadas. La remoción server-side de esos objetos/vistas permanece pendiente de GitHub Support.
+Sin embargo, GitHub todavía puede servir algunos objetos pre-rewrite por SHA o vistas cacheadas. El cierre posterior se resolvió por aislamiento de repositorio (T10C/T10D): el repositorio original y la primera réplica pública quedaron privados y la línea pública final se publicó desde un único root commit saneado. GitHub Support resultó innecesario para el cierre (`SUPPORT_NOT_REQUIRED`); ver `.kiro/specs/repository-sanitization/t10c-support-handoff.md` y AC-10.3 en `.kiro/specs/repository-sanitization/requirements.md`.
 
 ## Clones locales
 
@@ -69,11 +79,13 @@ Los restos pre-rewrite se conservan únicamente como evidencia forense fuera del
 - Borrar la rama temporal después de integrar.
 - Nunca empujar desde material pre-rewrite.
 
-## Pendientes de cierre T10
+## Pendientes de cierre T10 (histórico — resueltos)
 
-1. rotar/revocar las credenciales CATSERVER históricamente expuestas;
-2. obtener la disposición de purge/caché de GitHub Support;
-3. confirmar privacidad/noreply a nivel de cuenta GitHub;
-4. cerrar issue #28 y pasar el spec a `CLOSED_CERTIFIED`.
+Los pendientes registrados en esta sección quedaron cerrados en T10B–T10E (ver `.kiro/specs/repository-sanitization/tasks.md`):
+
+1. rotar/revocar las credenciales CATSERVER históricamente expuestas — `T10B = CLOSED_CERTIFIED`;
+2. disposición de purge/caché de GitHub Support — no requerida: cerrado por aislamiento de repositorio (`T10C = CLOSED_CERTIFIED_BY_REPOSITORY_ISOLATION`);
+3. privacidad/noreply a nivel de cuenta GitHub — `ACCOUNT_PRIMARY_EMAIL_VISIBILITY=PRIVATE` (`T10D`);
+4. cierre de issue #28 y paso del spec a `CLOSED_CERTIFIED` — `T10E = CLOSED_CERTIFIED`; `SANITATION_PROGRAM=CLOSED_CERTIFIED`.
 
 La licencia del repositorio fue decidida como **propietaria** y se documenta en `LICENSE`.

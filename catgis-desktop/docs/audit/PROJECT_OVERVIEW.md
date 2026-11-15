@@ -172,7 +172,7 @@ CATGIS Desktop is a **Java Swing desktop GIS application** built on **GeoTools 3
 | OSGeo4W (GDAL, WhiteboxTools, gdal2tiles.py) | Raster processing, external tools | GdalSupport.resolve() -- checks specific install paths + CATGIS_OSGEO4W env var, **never PATH fallback** |
 | AutoCAD ODA libraries | DWG import | DwgImportSupport -- external process with validated paths |
 | PostgreSQL/PostGIS | Optional, PostGIS layers + pgRouting | JDBC 42.7.5 driver |
-| Java 17+ | Runtime | Verified in build.gradle |
+| Java 21 | Runtime | Verified in build.gradle (toolchain 21) |
 | GeoTools 34.0 | GIS framework | DataStore, rendering, CRS, symbology |
 | JTS | Geometry engine | Overlay operations, spatial predicates |
 | PDFBox 3.0.3 | PDF export | Layout export, metadata/watermark support |

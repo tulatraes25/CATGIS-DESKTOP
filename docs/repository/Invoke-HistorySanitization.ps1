@@ -13,10 +13,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Run-Git {
-    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Args)
-    & git @Args
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$GitArgs)
+    & git @GitArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "git command failed: $($Args -join ' ')"
+        throw "git command failed: $($GitArgs -join ' ')"
     }
 }
 
