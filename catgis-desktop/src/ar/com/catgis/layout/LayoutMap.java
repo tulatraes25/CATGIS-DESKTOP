@@ -256,7 +256,8 @@ public class LayoutMap implements LayoutElement {
         return String.format("%.2f m", value);
     }
 
-    private String formatDMS(double decimalDegrees, boolean isLongitude) {
+    // Package-private for the layout graticule direction contract test.
+    String formatDMS(double decimalDegrees, boolean isLongitude) {
         boolean negative = decimalDegrees < 0;
         double abs = Math.abs(decimalDegrees);
         int degrees = (int) abs;
