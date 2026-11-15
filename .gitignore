@@ -23,6 +23,11 @@ dist/
 *.log
 logs/
 
+# Python (herramientas de QA en tools/qa y .github/tests)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 # OS
 Thumbs.db
 .DS_Store
