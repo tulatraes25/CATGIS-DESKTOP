@@ -1,9 +1,10 @@
 # Repository Audit Remediation — Tasks
 
-Status: TRANCHES 1 AND 2 CERTIFIED — tranche 3 awaiting GitHub certification
-Baseline: `ca980eeb1754abd1b036a57ebe3673a5267a6ce5` (main after PR #207)
+Status: TRANCHES 1–3 CERTIFIED — tranche 4 awaiting GitHub certification
+Baseline: `84553751eb404e0662cf3ce8892371ffaa7ca7a6` (main after PR #208)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
-(merged, PR #207) · `fix/vector-axis-order-single-normalization` (tranche 3)
+(merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
+`fix/catmap-atlas-edt-render` (tranche 4)
 
 Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 (Win11 + JDK 21.0.10 + Gradle 8.10.2 + Node 26 + Python 3.14) · Manual admin
@@ -236,12 +237,50 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     failures, 15 pre-existing skips (217 suites).
   - Executor: Local → GitHub pending (T25)
 
-- [ ] **T25 — GitHub certification of tranche 3 (BLOCKING for closure)**
+- [x] **T25 — GitHub certification of tranche 3 (PR #208)**
   - Requirements: REQ-AR-12, program rule GITHUB-first
-  - Required evidence: PR from `fix/vector-axis-order-single-normalization`
-    against `main` with exact base `ca980eeb`; PR-head CI + Certification +
-    Runtime Identity + GeoParquet SUCCESS; merge with expected head SHA;
-    post-main runs SUCCESS and post-main attestation PASS.
+  - Evidence: PR [#208](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/208)
+    from `fix/vector-axis-order-single-normalization` against `main` `ca980eeb`;
+    PR head `9b3432e644ac44f497cff39c3a8d493c86e8b1cb` with **30/30 checks PASS**
+    (CI 43738305867, Certification 43738305868, Runtime Identity 43738305854
+    8/8, GeoParquet 43738305907, PR attestation 43738305864); merged with
+    `--match-head-commit` as `84553751eb404e0662cf3ce8892371ffaa7ca7a6`;
+    post-main CI 43739450407, Certification 43739450323, Runtime Identity
+    43739450324 and GeoParquet 43739450296 all SUCCESS; post-main attestation
+    run 43740579263 SUCCESS with `ATTEST_BINDING_PASS` and 26 attested PASS jobs.
+  - Executor: GitHub + local follow-up (completed)
+
+## Tranche 4 — DC-3 EDT serialization of export renders
+
+- [x] **T26 — Serialize export renders on the EDT (DC-3)**
+  - Requirements: REQ-AR-13, AC-AR-13.1…13.4
+  - Evidence: new `EdtRenderSupport` marshals render work to the EDT and runs
+    inline when already there; the three export seams now use it
+    (`LayoutMap.captureMapImage`, `MapFrameRenderer.render` delegation to the
+    live panel, `LayoutPageRenderer` page render). `MapPanel` was left at its
+    certified size (3489 lines, ceiling 3500) because the architecture ratchet
+    forbids growing it. RED evidence: disabling the dispatch left the export
+    render painting off the EDT and the contract failed with
+    `expected: <true> but was: <false>`.
+  - Executor: Local → GitHub pending (T28)
+
+- [x] **T27 — EDT render contracts**
+  - Requirements: AC-AR-13.1…13.5
+  - Evidence: `EdtRenderSupportContractTest` 4/4 (background marshal, inline on
+    EDT, unchanged failure propagation, null-task rejection) and
+    `ExportRenderEdtContractTest` 1/1 (a `MapFrameRenderer` export render issued
+    from a background worker paints on the EDT and never off it). Existing
+    `MapPanelRenderMapViewImageTest`, `MapPanelRenderStateCharacterizationTest`
+    and `MapPanelPanFramePreviewContractTest` stay green. Full suite: 1337 tests,
+    0 failures, 15 pre-existing skips (219 suites).
+  - Executor: Local → GitHub pending (T28)
+
+- [ ] **T28 — GitHub certification of tranche 4 (BLOCKING for closure)**
+  - Requirements: REQ-AR-13, program rule GITHUB-first
+  - Required evidence: PR from `fix/catmap-atlas-edt-render` against `main` with
+    exact base `8455375`; PR-head CI + Certification + Runtime Identity +
+    GeoParquet SUCCESS; merge with expected head SHA; post-main runs SUCCESS and
+    post-main attestation PASS.
   - Executor: GitHub (credentialed account) + local follow-up
 
 ## Deferred defect register
@@ -250,7 +289,7 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 |---|---|---|---|
 | DC-1 | ~~HIGH~~ RESOLVED | `ExportVectorLayerAction.saveLayerToFile` deleted shapefile sidecars (`.shp/.shx/.dbf/.prj…`) **before** exporting; a failed export destroyed the user's source file | Resolved by T20/T21 (PR pending in T22): same-volume staging, backup/restore publication and 8 deterministic contracts |
 | DC-2 | ~~MEDIUM~~ RESOLVED | Double axis-order normalization: `ShapefileLoader`/`GeoPackageLoader` normalized the envelope and `ShapefileData` normalized again, cancelling the swap for some CRS; with latitude-first CRS metadata other constructors stored a swapped envelope | Resolved by T23/T24 (PR pending in T25): envelope is always the stored (x, y) bounds and 5 deterministic cases lock it |
-| DC-3 | MEDIUM | CATMAP atlas generation calls `MapPanel.renderMapViewImage` and mutates live Swing state/unsynchronized caches from a background thread | Architectural: serialize renders or take immutable viewport snapshots |
+| DC-3 | ~~MEDIUM~~ RESOLVED | CATMAP atlas generation called `MapPanel.renderMapViewImage` from a background thread, mutating live Swing state/unsynchronized caches | Resolved by T26/T27 (PR pending in T28): export seams marshal renders to the EDT with `EdtRenderSupport` without growing `MapPanel` |
 | DC-4 | HIGH | CATSERVER: `sql/12–21` `\connect catserver` while the bootstrap creates `"CATSERVER"`; a fresh install aborts at script 12 | Data-model/naming migration decision documented in `docs/11`; renaming an existing install is explicitly out of scope |
 | DC-5 | HIGH | CATSERVER: `catastro.ejido_urbano_mask`, required by `sql/10/11/18`, is created by no SQL or script | Requires a data-source decision and a documented import step |
 | DC-6 | MEDIUM | CATSERVER: table/vista name collision `catastro.circunscripcion_sector` (04 table vs 18 view) | Model decision |
@@ -263,9 +302,9 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Blocker / dependency notes
 
-- Tranches 1 (T14) and 2 (T22) are certified on GitHub. Tranche 3 still needs its
-  own exact-PR and post-main certification cycle (T25); local runs do not
-  certify it.
+- Tranches 1 (T14), 2 (T22) and 3 (T25) are certified on GitHub. Tranche 4 still
+  needs its own exact-PR and post-main certification cycle (T28); local runs do
+  not certify it.
 - No PostgreSQL/PostGIS instance locally: SQL changes are dependency-analysis
   verified, not executed. The certified PostGIS job exercises the tranche-1
   `sql/21` ordering change.
@@ -275,8 +314,8 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Current next action
 
-Certify tranche 3 on GitHub (T25: PR `fix/vector-axis-order-single-normalization`
-against `main` `ca980eeb`, exact PR CI/Certification, merge with
-`expected_head_sha`, post-main runs and attestation). After that, the only
-remaining deferred high-severity items are CATSERVER DC-4/DC-5, which need a
-data-model/source decision before any code change.
+Certify tranche 4 on GitHub (T28: PR `fix/catmap-atlas-edt-render` against `main`
+`8455375`, exact PR CI/Certification, merge with `expected_head_sha`, post-main
+runs and attestation). After that, the remaining deferred high-severity items are
+CATSERVER DC-4/DC-5, which need a data-model/source decision before any code
+change.

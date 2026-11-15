@@ -106,10 +106,14 @@ public class MapFrameRenderer {
             ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
             if (map != null) {
                 double vpWidth = Math.max(viewport.getWidth(), 1);
-                double zoomFactor = (double) widthPx / vpWidth;
-                BufferedImage mapImage = map.renderMapViewImage(
-                    viewport.getMinX(), viewport.getMinY(), zoomFactor,
-                    widthPx, heightPx, false, orderedProjectLayers(project));
+                final double zoomFactor = (double) widthPx / vpWidth;
+                // DC-3: the live MapPanel mutates Swing state and paints, so the
+                // export render must be serialized on the EDT.
+                BufferedImage mapImage = ar.com.catgis.EdtRenderSupport.call(
+                        () -> map.renderMapViewImage(
+                                viewport.getMinX(), viewport.getMinY(), zoomFactor,
+                                widthPx, heightPx, false, orderedProjectLayers(project)),
+                        "el render del mapa del marco");
                 if (mapImage != null) return mapImage;
             }
             // Fallback: render just the vectors we can handle

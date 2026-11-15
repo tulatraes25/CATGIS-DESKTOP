@@ -2,12 +2,14 @@
 
 Status: ACTIVE
 Owner: CATGIS
-Baseline: `ca980eeb1754abd1b036a57ebe3673a5267a6ce5` (main after PR #207)
+Baseline: `84553751eb404e0662cf3ce8892371ffaa7ca7a6` (main after PR #208)
 Baseline history: tranche 1 started at `aecb4d2` (PR #199) and merged as
 `b2b52ff`; tranche 2 (DC-1 atomic vector export) merged as `ca980eeb`;
-tranche 3 (DC-2 envelope axis order) starts at `ca980eeb`.
+tranche 3 (DC-2 envelope axis order) merged as `8455375`; tranche 4
+(DC-3 EDT render serialization) starts at `8455375`.
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
-(merged, PR #207) · `fix/vector-axis-order-single-normalization` (tranche 3)
+(merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
+`fix/catmap-atlas-edt-render` (tranche 4)
 Program: BUGFIX_ONLY — feature freeze respected (no new features, no dependency upgrades, no GUI/OpenCode validation)
 
 ## Goal
@@ -208,6 +210,24 @@ Acceptance:
 - AC-AR-12.4: No redundant axis normalization remains in the shapefile or
   GeoPackage loaders, and the misleading envelope-swap helper is removed.
 - AC-AR-12.5: A deterministic headless contract covers the three points above.
+
+## REQ-AR-13 — Map export renders must run on the EDT
+
+WHEN atlas, layout or preview export code requests a map render from a
+background worker, THE SYSTEM SHALL execute the whole render (view-state
+mutation plus painting) on the Event Dispatch Thread and restore the panel state
+afterwards.
+
+Acceptance:
+- AC-AR-13.1: A render requested from a non-EDT thread paints on the EDT; no
+  export step paints off the EDT.
+- AC-AR-13.2: A render requested on the EDT runs inline (no deadlock, no extra
+  round-trip).
+- AC-AR-13.3: Task failures reach the caller unchanged; interruption restores
+  the interrupt flag and reports a clear failure.
+- AC-AR-13.4: The panel view (`viewMinX`, `viewMinY`, zoom) and size are restored
+  after an off-EDT export render.
+- AC-AR-13.5: Existing render contracts and atlas page isolation remain green.
 
 ## Constraints
 

@@ -447,7 +447,15 @@ public class LayoutMap implements LayoutElement {
                 zf = zf * fitScale;
             }
 
-            return map.renderMapViewImage(vx, vy, zf, w, h, false, resolveRenderLayers());
+            final double renderViewMinX = vx;
+            final double renderViewMinY = vy;
+            final double renderZoomFactor = zf;
+            // DC-3: MapPanel owns live Swing state; export renders from background
+            // atlas/layout workers must be serialized on the EDT.
+            return ar.com.catgis.EdtRenderSupport.call(
+                    () -> map.renderMapViewImage(renderViewMinX, renderViewMinY, renderZoomFactor,
+                            w, h, false, resolveRenderLayers()),
+                    "el render del mapa del layout");
         } catch (Exception ex) {
             return null;
         }
