@@ -1,8 +1,8 @@
 # Repository Audit Remediation — Tasks
 
-Status: LOCAL_VERIFIED_ENGINEERING / GITHUB_PENDING (NOT_CERTIFIED)
-Baseline: `aecb4d20621bb5065f8acb388813eefe594f3a27` (main, PR #199)
-Branch: `fix/main-audit`
+Status: TRANCHES 1 AND 2 IMPLEMENTED — tranche 2 awaiting GitHub certification
+Baseline: `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819` (main after PR #206)
+Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication` (tranche 2)
 
 Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 (Win11 + JDK 21.0.10 + Gradle 8.10.2 + Node 26 + Python 3.14) · Manual admin
@@ -115,14 +115,23 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     sha256 matches the official Gradle 8.10.2 checksum.
   - Executor: Local
 
-- [ ] **T14 — GitHub certification of this fix set (BLOCKING for closure)**
+- [x] **T14 — GitHub certification of tranche 1 (PR #206)**
   - Requirements: REQ-AR-10, program rule GITHUB-first
-  - Required evidence: PR from `fix/main-audit` against `main` with exact base
-    `aecb4d2`; PR-head CI + Certification SUCCESS; merge with expected head SHA;
-    post-main CI + Certification SUCCESS; post-merge attestation. Real PostGIS
-    execution of `sql/21` and installer generation also remain NOT_VERIFIED here.
-  - Executor: GitHub (credentialed account) + Manual admin
-  - Status: **PENDING — no push credentials/authorization in this session.**
+  - Evidence: PR [#206](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/206)
+    from `fix/main-audit` against `main` with exact base `aecb4d2`; PR head
+    `9e1f24ca8112296e71328d1b47493ff69029c7fc` with **30/30 checks PASS**
+    (CI 43726623191, Certification 43726623257 — Linux/Windows/macOS suites,
+    PostGIS real, architecture guardrails, inventories, app images, native GDAL —
+    Runtime Identity 43726623184 8/8, GeoParquet 43726623210, PR attestation
+    43726623317); merged with `--match-head-commit` as
+    `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819`; post-main CI 43727739019,
+    Certification 43727739034, Runtime Identity 43727739033 and GeoParquet
+    43727739108 all SUCCESS; post-main attestation run 43728666255 SUCCESS with
+    `ATTEST_BINDING_PASS` and 26 attested PASS jobs.
+  - Executor: GitHub + local follow-up (completed)
+  - This closed the only blocking gate of tranche 1; real PostGIS execution of
+    `sql/21` was exercised by the certified PostGIS job, installer generation
+    remains NOT_VERIFIED.
 
 - [x] **T15 — RED→GREEN regression evidence recorded**
   - Requirements: AC-AR-5.3, program rule "no fabricated PASS"
@@ -154,17 +163,57 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 - [x] **T19 — Spec self-review (autonomous phase progression)**
   - Requirements: `spec-kiro.md` autonomous progression
-  - Checklist: requirements complete and non-contradictory (yes, 10 REQs with
+  - Checklist: requirements complete and non-contradictory (yes, 11 REQs with
     acceptance); design covers every REQ (traceability table); every task maps to
     a requirement; rollback and security addressed; no destructive operation
     added; evidence exists for every `[x]`.
   - Executor: Local
 
+- [x] **T20 — Atomic vector export publisher (DC-1)**
+  - Requirements: REQ-AR-11, AC-AR-11.1…11.4
+  - Evidence: `VectorExportPublisher` implements same-volume staging; single
+    files are published with `ATOMIC_MOVE` (fallback `REPLACE_EXISTING`);
+    shapefiles require `.shp/.shx`, back up existing parts, restore on failure and
+    delete backups on success. `deleteShapefileSidecars` was removed and both
+    export branches of `ExportVectorLayerAction` now publish through the staging
+    path. `VectorExportPublisherContractTest` 7/7 GREEN: single-file failure keeps
+    the previous file byte-identical, success replaces it, shapefile failure keeps
+    the whole previous set, success replaces it and drops stale parts, missing
+    mandatory parts are rejected, new datasets are created, and no `.catgis-*`
+    temporaries remain. RED evidence: reproducing the baseline
+    `deleteShapefileSidecars(file); exportToShapefile(...)` sequence with a
+    failing writer left no `.shp/.shx/.dbf` (data loss confirmed).
+  - Executor: Local → GitHub pending (T22)
+
+- [x] **T21 — Real shapefile republish contract and certification locks**
+  - Requirements: REQ-AR-11.5, AC-AR-11.6
+  - Evidence: `VectorExportRepublishContractTest` 1/1 GREEN — a real GeoTools
+    export over an existing dataset publishes the second version (feature
+    attribute `Pozo B`/`9`), the schema keeps its attributes and no temporaries
+    remain. Existing export suites (`ReleaseVectorInteropTest`,
+    `ReleaseProjectRoundTripTest`, `ProjectOperationalCrsRoundTripTest`,
+    `ReleaseFormatCompatibilityTest`) stay green through the staging path. The new
+    surface is registered in `docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv`
+    and `docs/quality/SURFACE_SEMANTIC_MAP.tsv`
+    (`SEM-SURFACE-EXPORTVECTORLAYERACTION`, CORE), so
+    `FeatureSurfaceInventoryCertificationTest` and
+    `SemanticFeatureMatrixCertificationTest` pass. Full suite: 1327 tests, 0
+    failures, 15 pre-existing skips.
+  - Executor: Local → GitHub pending (T22)
+
+- [ ] **T22 — GitHub certification of tranche 2 (BLOCKING for closure)**
+  - Requirements: REQ-AR-11, program rule GITHUB-first
+  - Required evidence: PR from `fix/vector-export-atomic-publication` against
+    `main` with exact base `b2b52ff`; PR-head CI + Certification + Runtime
+    Identity + GeoParquet SUCCESS; merge with expected head SHA; post-main runs
+    SUCCESS and post-main attestation PASS.
+  - Executor: GitHub (credentialed account) + local follow-up
+
 ## Deferred defect register
 
 | ID | Severity | Defect | Why deferred |
 |---|---|---|---|
-| DC-1 | HIGH | `ExportVectorLayerAction.saveLayerToFile` deletes shapefile sidecars (`.shp/.shx/.dbf/.prj…`) **before** exporting; a failed export destroys the user's source file and there is no rollback | Requires multi-file atomic publication (temp directory + atomic replace) and export tests; not a one-line fix |
+| DC-1 | ~~HIGH~~ RESOLVED | `ExportVectorLayerAction.saveLayerToFile` deleted shapefile sidecars (`.shp/.shx/.dbf/.prj…`) **before** exporting; a failed export destroyed the user's source file | Resolved by T20/T21 (PR pending in T22): same-volume staging, backup/restore publication and 8 deterministic contracts |
 | DC-2 | MEDIUM | Double axis-order normalization: `ShapefileLoader`/`GeoPackageLoader` normalize the envelope and `ShapefileData` normalizes again, cancelling the swap for some CRS | Needs empirical axis-order proof with real datasets before changing; a wrong fix breaks `zoomToLayer` |
 | DC-3 | MEDIUM | CATMAP atlas generation calls `MapPanel.renderMapViewImage` and mutates live Swing state/unsynchronized caches from a background thread | Architectural: serialize renders or take immutable viewport snapshots |
 | DC-4 | HIGH | CATSERVER: `sql/12–21` `\connect catserver` while the bootstrap creates `"CATSERVER"`; a fresh install aborts at script 12 | Data-model/naming migration decision documented in `docs/11`; renaming an existing install is explicitly out of scope |
@@ -179,18 +228,19 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Blocker / dependency notes
 
-- No GitHub credentials in this session: push, PR, CI, Certification, merge and
-  post-main attestation cannot be executed here; they are the only remaining
-  blocking gate for closure (T14).
-- No PostgreSQL/PostGIS instance: SQL changes are dependency-analysis verified,
-  not executed.
+- Tranche 1 is certified on GitHub (T14). Tranche 2 still needs its own exact-PR
+  and post-main certification cycle (T22); local runs do not certify it.
+- No PostgreSQL/PostGIS instance locally: SQL changes are dependency-analysis
+  verified, not executed. The certified PostGIS job exercises the tranche-1
+  `sql/21` ordering change.
 - GUI/native runtime, installer generation and Windows script execution require
   the authorized local phase after A0.7 and are explicitly NOT_VERIFIED.
 - A0.7 remains **NOT_CERTIFIED**; this spec does not claim otherwise.
 
 ## Current next action
 
-Publish `fix/main-audit` (8 commits + this spec) as a draft PR against `main`
-`aecb4d2`, obtain exact PR CI/Certification and post-merge attestation (T14),
-then schedule DC-1 (destructive shapefile export) as its own GitHub-first spec,
-followed by CATSERVER DC-4/DC-5 before any fresh-install certification claim.
+Certify tranche 2 on GitHub (T22: PR `fix/vector-export-atomic-publication`
+against `main` `b2b52ff`, exact PR CI/Certification, merge with
+`expected_head_sha`, post-main runs and attestation). After that, the only
+remaining deferred high-severity items are CATSERVER DC-4/DC-5, which need a
+data-model/source decision before any code change.

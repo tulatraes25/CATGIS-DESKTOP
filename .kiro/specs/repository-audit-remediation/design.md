@@ -1,11 +1,13 @@
 # Repository Audit Remediation — Design
 
 Status: ACTIVE
-Baseline: `aecb4d20621bb5065f8acb388813eefe594f3a27` (main, PR #199)
-Branch: `fix/main-audit`
+Baseline: `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819` (main after PR #206)
+Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication` (tranche 2)
 Commits: `0bb839a` (web), `7c4b4d8` (catserver), `8474980` (desktop), `aca48da`
 (launchers), `3c7d9d8` (docs), `5d126d5` (gitignore), `d7e4e7f` (encoding),
-`d9da0e5` (verified test count), plus the contract-test commit of this spec.
+`d9da0e5` (verified test count), `0c335ef` + `9e1f24c` (contracts and spec) —
+merged as `b2b52ff`; tranche 2 adds the atomic vector export publisher and its
+contracts on top of `b2b52ff`.
 
 ## Current state
 
@@ -21,9 +23,10 @@ finding was re-validated before being fixed. Three classes of outcome resulted:
    (`visitedPages` + cap), atomic project save (`ProjectFilePublisher`),
    bounded project open (`ProjectOpenRecordIntegrity`), pan-preview rework,
    `GeoParquetReader` resource handling.
-3. **Documented but intentionally not patched** (see Deferred): destructive
-   shapefile sidecar deletion before export, double envelope axis
-   normalization, atlas rendering off the EDT, CATSERVER data-model gaps.
+3. **Documented but intentionally not patched** (see Deferred): double envelope
+   axis normalization, atlas rendering off the EDT, CATSERVER data-model gaps.
+   The destructive shapefile export (former DC-1) was fixed in tranche 2; see
+   *Atomic vector export* below.
 
 ## Target state
 
@@ -80,6 +83,32 @@ were emitted as E/W. The axis is now propagated explicitly as `isLongitude`
 (X → E/W, Y → N/S). `formatDMS` is package-private only to allow the contract
 test; behavior is unchanged.
 
+### Atomic vector export (DC-1)
+
+`ExportVectorLayerAction.saveLayerToFile` and `saveLayerToFileWithTarget` used to
+call `deleteShapefileSidecars(file)` **before** exporting. A failure after that
+point destroyed the user's dataset; the RED reproduction with a failing writer
+shows the previous `.shp/.shx/.dbf` already gone.
+
+Every export now goes through `VectorExportPublisher`:
+
+- single-file formats (dxf/geojson/kml/kmz/gpx) write into a temporary file in
+  the destination directory and are moved into place with `ATOMIC_MOVE`
+  (fallback `REPLACE_EXISTING`); the temporary file is always removed;
+- shapefiles write into a temporary directory on the same volume, require at
+  least `.shp`/`.shx`, back up the existing parts to `.catgis-old-<token><ext>`,
+  move the staged parts into place, restore the backup on any publication
+  failure, and delete backups plus staging on success;
+- `deleteShapefileSidecars` was removed; both export branches share the same
+  publisher so the `Ctrl+S` project-save path and the explicit export path are
+  protected identically;
+- `VectorExportPublisher` is registered in
+  `docs/quality/SOURCE_FEATURE_SURFACE_INVENTORY.tsv` and mapped to the parent
+  `SEM-SURFACE-EXPORTVECTORLAYERACTION` feature in
+  `docs/quality/SURFACE_SEMANTIC_MAP.tsv`, following the existing
+  `CatmapAtomicExport -> LayoutExportEngine` precedent, so the architecture
+  certification locks stay green.
+
 ## Sequence
 
 1. Synchronize the clone to the exact main SHA and re-validate each finding.
@@ -111,15 +140,19 @@ test; behavior is unchanged.
 
 | Gate | Evidence |
 |---|---|
-| Java build + suite | BUILD SUCCESSFUL, 1319 tests (1314 baseline + 5 new contract cases), 0 failures, 15 pre-existing skips |
-| New contracts | `ScaleApplyPanSyncContractTest` 2/2, `LayoutDmsDirectionContractTest` 3/3 |
+| Java build + suite (tranche 1) | BUILD SUCCESSFUL, 1319 tests (1314 baseline + 5 new contract cases), 0 failures, 15 pre-existing skips |
+| Java build + suite (tranche 2) | BUILD SUCCESSFUL, 1327 tests (1319 + 8 DC-1 contract cases), 0 failures, 15 pre-existing skips |
+| New contracts | `ScaleApplyPanSyncContractTest` 2/2, `LayoutDmsDirectionContractTest` 3/3, `VectorExportPublisherContractTest` 7/7, `VectorExportRepublishContractTest` 1/1 |
 | RED proof (scale/pan) | Removing the delegation failed both tests: mirror `10.0` vs `49.995`, zoom after pan `2.0` vs `3.9995` |
 | RED proof (graticule) | Restoring the identical-branch expression failed the latitude test (1 of 3) |
+| RED proof (DC-1) | Reproducing the baseline `deleteShapefileSidecars(file); exportToShapefile(...)` sequence with a failing writer left no `.shp/.shx/.dbf` for the previous dataset (data loss confirmed) |
+| Certification locks | `FeatureSurfaceInventoryCertificationTest` and `SemanticFeatureMatrixCertificationTest` updated and green with the new export surface registered |
+| Existing export contracts | `ReleaseVectorInteropTest`, `ReleaseProjectRoundTripTest`, `ReleaseProjectRoundTripTest`, `ProjectOperationalCrsRoundTripTest`, `ReleaseFormatCompatibilityTest` green through the staging path |
 | Web | `npm run lint` clean; `npm test` 31/31 |
-| LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=747` |
+| LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=750` |
 | Repo policy | `.github/tests` 11/11; `tools/qa` integrity tests 8/8; PowerShell parser 9/9; repository-safety strings 5/5 |
 | Wrapper | gradle-wrapper.jar sha256 matches services.gradle.org for 8.10.2 |
-| NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation, GUI/native runtime, PostgreSQL execution, installer generation |
+| NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation for tranche 2, GUI/native runtime, PostgreSQL execution, installer generation |
 
 ## Rollback
 
@@ -127,7 +160,10 @@ Each commit is atomic and revertible in isolation (`git revert <sha>` on the
 branch). The branch never mutates `main`, performs no force-push and adds no
 irreversible migration: the CATSERVER change moves a view creation to the script
 that owns its base table (a re-run creates the same object), and the web server
-keeps its public routes and response shapes.
+keeps its public routes and response shapes. The atomic export publisher is
+additive: reverting it restores the previous export behavior and leaves no
+staged state behind, because every publication cleans up its own staging and
+backup files.
 
 ## Risks / alternatives
 
@@ -145,6 +181,16 @@ keeps its public routes and response shapes.
 - **Deferred defects** carry higher residual risk than the ones fixed here; they
   need their own spec/issue because they require multi-file atomic publication
   or user-model decisions (see tasks `T18`).
+- **Atomic export limitation**: staging and backups use hidden
+  `.catgis-*` names inside the destination directory. A hard crash between the
+  backup and the final move can leave inert `.catgis-old-*` files next to the
+  dataset; loaders never read them and the next successful export ignores them,
+  but a future cleanup task may sweep them. Cross-volume or network-share
+  renames may degrade to `REPLACE_EXISTING`, which is still a single-file
+  replace but not guaranteed atomic by the filesystem.
+- **GeoTools regenerates index/`.cpg` parts when reading** a shapefile, so the
+  integration contract asserts the published content and the absence of
+  `.catgis-*` temporaries instead of pinning a specific regenerated sidecar.
 
 ## Traceability
 
@@ -160,3 +206,4 @@ keeps its public routes and response shapes.
 | REQ-AR-8 | Launchers | T11 |
 | REQ-AR-9 | Governing docs / Sequence step 7 | T12, T16, T17 |
 | REQ-AR-10 | Validation | T13, T14, T19 |
+| REQ-AR-11 | Atomic vector export (DC-1) | T20, T21, T22 |

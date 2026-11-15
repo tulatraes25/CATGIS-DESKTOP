@@ -2,8 +2,10 @@
 
 Status: ACTIVE
 Owner: CATGIS
-Baseline: `aecb4d20621bb5065f8acb388813eefe594f3a27` (main, PR #199)
-Branch: `fix/main-audit`
+Baseline: `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819` (main after PR #206)
+Baseline history: tranche 1 started at `aecb4d2` (PR #199) and merged as
+`b2b52ff`; tranche 2 (DC-1 atomic vector export) starts at `b2b52ff`.
+Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication` (tranche 2)
 Program: BUGFIX_ONLY — feature freeze respected (no new features, no dependency upgrades, no GUI/OpenCode validation)
 
 ## Goal
@@ -166,6 +168,26 @@ Acceptance:
 - AC-AR-10.4: The pre-existing skip inventory does not grow because of this
   change set.
 
+## REQ-AR-11 — Vector export must be atomic over existing datasets
+
+WHEN a vector layer is exported or re-saved over an existing file or dataset,
+THE SYSTEM SHALL publish the new result only after it was fully written, and
+SHALL keep the previous dataset intact when the export fails.
+
+Acceptance:
+- AC-AR-11.1: A failing single-file export (dxf/geojson/kml/kmz/gpx) leaves the
+  previous file byte-identical and leaves no staging file behind.
+- AC-AR-11.2: A failing shapefile export leaves every previous part
+  (`.shp/.shx/.dbf/.prj/.fix/.qix/.cpg`) intact.
+- AC-AR-11.3: A successful shapefile export replaces the whole set, removes
+  stale parts from the previous dataset, and leaves no staging/backup files.
+- AC-AR-11.4: A staged shapefile missing mandatory parts (`.shp`/`.shx`) is
+  rejected without touching the previous dataset, and the error is explicit.
+- AC-AR-11.5: Re-exporting a real shapefile over an existing dataset publishes
+  the new content and the result stays readable.
+- AC-AR-11.6: The new export publisher is registered in the checked-in
+  certification surface inventory and semantic map in the same change set.
+
 ## Constraints
 
 - GitHub `main` plus exact-SHA CI remains the implementation truth; this branch
@@ -174,3 +196,6 @@ Acceptance:
   paths.
 - No secrets, personal paths, proprietary data or heavy binaries are added.
 - Evidence is recorded per task; a task with no evidence stays open.
+- Atomic publication relies on same-volume staging inside the destination
+  directory; it does not add cross-volume transactional guarantees and does not
+  change the PostGIS export path.
