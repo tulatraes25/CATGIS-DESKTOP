@@ -404,15 +404,23 @@ public class LayoutPageRenderer {
                 double viewCenterY = baseCenterY + offsetWorldY;
                 double viewMinX = viewCenterX - (currentWorldWidth / 2d);
                 double viewMinY = viewCenterY - (currentWorldHeight / 2d);
-                BufferedImage rendered = MapLayoutComposerDialog.ctxMapPanel().renderMapViewImage(
-                        viewMinX,
-                        viewMinY,
-                        targetZoom,
-                        contentW,
-                        contentH,
-                        false,
-                        MapLayoutComposerDialog.resolvePrimaryMapRenderLayers()
-                );
+                final double renderViewMinX = viewMinX;
+                final double renderViewMinY = viewMinY;
+                final double renderZoom = targetZoom;
+                final int renderWidth = contentW;
+                final int renderHeight = contentH;
+                // DC-3: live MapPanel state can only be touched on the EDT.
+                BufferedImage rendered = ar.com.catgis.EdtRenderSupport.call(
+                        () -> MapLayoutComposerDialog.ctxMapPanel().renderMapViewImage(
+                                renderViewMinX,
+                                renderViewMinY,
+                                renderZoom,
+                                renderWidth,
+                                renderHeight,
+                                false,
+                                MapLayoutComposerDialog.resolvePrimaryMapRenderLayers()
+                        ),
+                        "el render del mapa de la pagina de layout");
                 if (rendered != null) {
                     mapImage = rendered;
                 }
