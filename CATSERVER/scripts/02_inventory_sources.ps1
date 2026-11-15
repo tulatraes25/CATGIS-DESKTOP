@@ -17,12 +17,22 @@ function Get-SignatureText {
     )
 
     try {
-        $bytes = Get-Content -LiteralPath $Path -Encoding Byte -TotalCount $MaxBytes -ErrorAction Stop
-        if (-not $bytes) {
+        # Get-Content -Encoding Byte no existe en PowerShell 7 (solo en 5.1);
+        # se lee con .NET para que la firma funcione en ambas versiones.
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $buffer = New-Object byte[] $MaxBytes
+            $read = $stream.Read($buffer, 0, $MaxBytes)
+        }
+        finally {
+            $stream.Dispose()
+        }
+
+        if ($read -le 0) {
             return ""
         }
 
-        $chars = foreach ($byte in $bytes) {
+        $chars = foreach ($byte in $buffer[0..($read - 1)]) {
             if ($byte -ge 32 -and $byte -le 126) {
                 [char]$byte
             } else {

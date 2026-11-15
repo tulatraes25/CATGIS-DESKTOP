@@ -36,11 +36,12 @@ foreach ($file in $files) {
 
     try {
         $output = powershell -ExecutionPolicy Bypass -File $ExporterScript -SourceDxf $file.FullName -OutputDir $targetDir 2>&1
+        $childExitCode = $LASTEXITCODE
         $text = ($output | Out-String).Trim()
         $results.Add([PSCustomObject]@{
             SourceName = $file.Name
             SourcePath = $file.FullName
-            Status     = "OK"
+            Status     = if ($childExitCode -ne 0) { "ERROR" } else { "OK" }
             OutputDir  = $targetDir
             Message    = $text
         })

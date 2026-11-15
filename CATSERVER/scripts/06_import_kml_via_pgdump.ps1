@@ -51,9 +51,15 @@ if ($LASTEXITCODE -ne 0) {
     throw "Fallo ogr2ogr al generar el PGDump de $SourcePath"
 }
 
-Get-Content -LiteralPath $sqlPath |
-    Where-Object { $_ -notmatch '^CREATE SCHEMA ' } |
-    Set-Content -LiteralPath $cleanPath -Encoding ascii
+$sqlLines = Get-Content -LiteralPath $sqlPath -Encoding UTF8 |
+    Where-Object { $_ -notmatch '^CREATE SCHEMA ' }
+if ($null -eq $sqlLines) {
+    $sqlLines = @()
+}
+# El dump de ogr2ogr esta en UTF8; escribirlo como ascii corrompia los
+# atributos con acentos. Se escribe UTF8 sin BOM, que psql interpreta bien.
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllLines($cleanPath, [string[]]$sqlLines, $utf8NoBom)
 
 $previousPassword = $env:PGPASSWORD
 if ($Password) {

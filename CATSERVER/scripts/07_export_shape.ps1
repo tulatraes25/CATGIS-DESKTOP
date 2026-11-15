@@ -38,7 +38,7 @@ if ($Password) {
 }
 
 try {
-    $args = @(
+    $pgsql2shpArgs = @(
         "-f", $OutputPath,
         "-h", $DbHost,
         "-p", $Port,
@@ -50,13 +50,13 @@ try {
     )
 
     if (-not [string]::IsNullOrWhiteSpace($Table)) {
-        $args += $Table
+        $pgsql2shpArgs += $Table
     }
     else {
-        $args += $Query
+        $pgsql2shpArgs += $Query
     }
 
-    & $Pgsql2ShpPath @args
+    & $Pgsql2ShpPath @pgsql2shpArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "Fallo pgsql2shp al exportar a $OutputPath"

@@ -32,6 +32,12 @@ $escapedUserName = $UserName.Replace("'", "''")
 $escapedPassword = $Password.Replace("'", "''")
 $escapedSearchPath = $searchPath.Replace("'", "''")
 
+# Identificadores SQL: se citan siempre y se duplican las comillas internas.
+# Esto evita romper el SQL si el nombre de usuario o de base trae comillas y
+# permite apuntar a bases como "CATSERVER" (creada con mayusculas).
+$quotedUserName = '"' + $UserName.Replace('"', '""') + '"'
+$quotedDatabase = '"' + $Database.Replace('"', '""') + '"'
+
 $sql = @"
 DO `$do`$
 BEGIN
@@ -51,27 +57,27 @@ BEGIN
 END
 `$do`$;
 
-REVOKE ALL PRIVILEGES ON DATABASE $Database FROM "$escapedUserName";
-GRANT CONNECT ON DATABASE $Database TO "$escapedUserName";
-GRANT $groupRole TO "$escapedUserName";
+REVOKE ALL PRIVILEGES ON DATABASE $quotedDatabase FROM $quotedUserName;
+GRANT CONNECT ON DATABASE $quotedDatabase TO $quotedUserName;
+GRANT $groupRole TO $quotedUserName;
 
-ALTER ROLE "$escapedUserName" IN DATABASE $Database SET search_path = $escapedSearchPath;
-ALTER ROLE "$escapedUserName" IN DATABASE $Database SET default_transaction_read_only = $readOnlySql;
+ALTER ROLE $quotedUserName IN DATABASE $quotedDatabase SET search_path = $escapedSearchPath;
+ALTER ROLE $quotedUserName IN DATABASE $quotedDatabase SET default_transaction_read_only = $readOnlySql;
 
 "@
 
 if ($RoleType -eq "admin") {
     $sql += @"
-ALTER DEFAULT PRIVILEGES FOR ROLE "$escapedUserName" IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR ROLE $quotedUserName IN SCHEMA public
     GRANT SELECT ON TABLES TO catserver_admin, catserver_read, catserver_publish;
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "$escapedUserName" IN SCHEMA admin, raw, staging, catastro, infraestructura, planeamiento, hidrologia
+ALTER DEFAULT PRIVILEGES FOR ROLE $quotedUserName IN SCHEMA admin, raw, staging, catastro, infraestructura, planeamiento, hidrologia
     GRANT ALL PRIVILEGES ON TABLES TO catserver_admin;
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "$escapedUserName" IN SCHEMA admin, raw, staging, catastro, infraestructura, planeamiento, hidrologia
+ALTER DEFAULT PRIVILEGES FOR ROLE $quotedUserName IN SCHEMA admin, raw, staging, catastro, infraestructura, planeamiento, hidrologia
     GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO catserver_admin;
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "$escapedUserName" IN SCHEMA catastro, infraestructura, planeamiento, hidrologia
+ALTER DEFAULT PRIVILEGES FOR ROLE $quotedUserName IN SCHEMA catastro, infraestructura, planeamiento, hidrologia
     GRANT SELECT ON TABLES TO catserver_read, catserver_publish;
 "@
 }

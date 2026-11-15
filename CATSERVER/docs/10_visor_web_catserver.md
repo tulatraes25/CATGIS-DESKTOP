@@ -113,6 +113,7 @@ En `CATSERVER` ya quedaron listas estas piezas para el futuro visor:
   - `portal_web.buscar_barrios(q, limit_rows)`
   - `portal_web.buscar_parcelas(q, limit_rows)`
   - `portal_web.buscar_zonificacion(q, limit_rows)`
+  - `portal_web.buscar_pozos_petroleros(q, limit_rows)`
   - `portal_web.buscar_general(q, limit_rows)`
 
 Estas funciones ya devuelven:

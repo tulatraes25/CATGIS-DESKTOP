@@ -103,3 +103,5 @@ Quedan fuera de Git:
 El repositorio conserva material de distintas etapas: algunos scripts históricos usan la base quoted `"CATSERVER"` y componentes posteriores usan `catserver`.
 
 No renombrar una instalación existente como parte de la sanitización documental. Cualquier normalización del nombre físico de la base debe tratarse como una migración separada y verificada.
+
+El detalle de qué script usa cada nombre, el orden completo del pipeline y los prerrequisitos que no provee ningún SQL están en [11_orden_de_ejecucion_y_prerrequisitos.md](11_orden_de_ejecucion_y_prerrequisitos.md).

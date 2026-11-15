@@ -43,6 +43,7 @@ Este paquete deja preparado:
 - [docs/03_pipeline_etl.md](docs/03_pipeline_etl.md)
 - [docs/04_instalacion_paso_a_paso_windows.md](docs/04_instalacion_paso_a_paso_windows.md)
 - [docs/05_flujo_catgis_first.md](docs/05_flujo_catgis_first.md)
+- [docs/11_orden_de_ejecucion_y_prerrequisitos.md](docs/11_orden_de_ejecucion_y_prerrequisitos.md)
 - [sql/00_cluster_bootstrap.sql](sql/00_cluster_bootstrap.sql)
 - [sql/01_extensions_and_schemas.sql](sql/01_extensions_and_schemas.sql)
 - [sql/02_roles_and_privileges.sql](sql/02_roles_and_privileges.sql)
@@ -66,6 +67,7 @@ Este paquete deja preparado:
 6. Ejecutar `05_seed_source_assets.sql` si se desea cargar el catálogo temático genérico. Este archivo no registra rutas ni metadatos de una estación de trabajo.
 7. Generar inventarios locales fuera de Git cuando sea necesario para ETL/control.
 8. Importar primero KML/KMZ y luego resolver el flujo CAD con CRS validado.
+9. Para las etapas posteriores (KMZ a `raw`, CAD, limpieza de líneas, vistas temáticas/municipales, visor y entrega shape), seguir el orden y los prerrequisitos de [docs/11_orden_de_ejecucion_y_prerrequisitos.md](docs/11_orden_de_ejecucion_y_prerrequisitos.md).
 
 ## Primer objetivo operativo
 

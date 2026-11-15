@@ -2,6 +2,8 @@ param(
     [string]$RootPath = "C:\CATSERVER"
 )
 
+$ErrorActionPreference = "Stop"
+
 $directories = @(
     $RootPath,
     (Join-Path $RootPath "incoming"),

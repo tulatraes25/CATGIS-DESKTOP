@@ -33,10 +33,12 @@ foreach ($file in $files) {
     $target = Join-Path $file.DirectoryName ($baseName -replace '_4326$', '_ejido_4326').ToString() + '.shp'
     try {
         $output = powershell -ExecutionPolicy Bypass -File $ClipperScript -SourceShape $file.FullName -MaskShape $MaskShape -OutputShape $target 2>&1
+        $childExitCode = $LASTEXITCODE
+        $status = if ($childExitCode -ne 0) { 'ERROR' } elseif (($output | Out-String) -match 'EMPTY') { 'EMPTY' } else { 'OK' }
         $results.Add([PSCustomObject]@{
             SourceShape = $file.FullName
             OutputShape = $target
-            Status      = if (($output | Out-String) -match 'EMPTY') { 'EMPTY' } else { 'OK' }
+            Status      = $status
             Message     = ($output | Out-String).Trim()
         })
     }
