@@ -1,6 +1,14 @@
 \set ON_ERROR_STOP on
 \connect catserver
 
+-- Prerrequisitos: 12_security_roles_current.sql (roles) y
+-- 19_municipal_structure_layers.sql (esquema ordenamiento_territorial y vista
+-- ordenamiento_territorial.planeamiento_ejido_urbano, usada en el JOIN de abajo).
+-- Los esquemas se aseguran aqui para que el script falle por el dato que falta
+-- y no por un esquema ausente.
+CREATE SCHEMA IF NOT EXISTS control_urbano_operativo;
+CREATE SCHEMA IF NOT EXISTS ordenamiento_territorial;
+
 CREATE TABLE IF NOT EXISTS control_urbano_operativo.pozos_petroleros_ejido (
     gid bigint PRIMARY KEY,
     gid_fuente bigint,
@@ -123,4 +131,16 @@ COMMENT ON COLUMN control_urbano_operativo.pozos_petroleros_ejido.gid_fuente IS
     'Identificador original informado en la fuente KML.';
 
 GRANT SELECT ON control_urbano_operativo.pozos_petroleros_ejido
+TO catserver_read, catserver_admin, catserver_publish, catserver_edit;
+
+-- La vista se crea aqui (y no en 19_municipal_structure_layers.sql) porque
+-- depende de la tabla recien creada; en 19 se definia antes de existir la
+-- tabla destino y el script fallaba con "relation does not exist".
+CREATE OR REPLACE VIEW ordenamiento_territorial.ambiente_pozos_petroleros AS
+SELECT *
+FROM control_urbano_operativo.pozos_petroleros_ejido;
+
+COMMENT ON VIEW ordenamiento_territorial.ambiente_pozos_petroleros IS 'Pozos petroleros bajo Secretaria de Ordenamiento Territorial / Subsecretaria de Ambiente / Direccion General de Minas e Hidrocarburos.';
+
+GRANT SELECT ON ordenamiento_territorial.ambiente_pozos_petroleros
 TO catserver_read, catserver_admin, catserver_publish, catserver_edit;

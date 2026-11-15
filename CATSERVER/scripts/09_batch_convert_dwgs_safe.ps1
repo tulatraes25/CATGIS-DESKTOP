@@ -30,13 +30,14 @@ $results = New-Object System.Collections.Generic.List[object]
 foreach ($file in $files) {
     try {
         $output = powershell -ExecutionPolicy Bypass -File $ConverterScript -SourceDwg $file.FullName -OutputDir $OutputDir 2>&1
+        $childExitCode = $LASTEXITCODE
         $generatedPath = $output | Select-Object -Last 1
         $generated = if ($generatedPath -and (Test-Path -LiteralPath $generatedPath)) { Get-Item -LiteralPath $generatedPath } else { $null }
 
         $results.Add([PSCustomObject]@{
             SourceName    = $file.Name
             SourcePath    = $file.FullName
-            Status        = if ($generated) { "OK" } else { "UNKNOWN" }
+            Status        = if ($childExitCode -ne 0) { "ERROR" } elseif ($generated) { "OK" } else { "UNKNOWN" }
             OutputName    = if ($generated) { $generated.Name } else { "" }
             OutputPath    = if ($generated) { $generated.FullName } else { "" }
             OutputBytes   = if ($generated) { $generated.Length } else { $null }

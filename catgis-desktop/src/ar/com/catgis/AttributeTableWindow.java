@@ -1059,8 +1059,8 @@ public class AttributeTableWindow extends JFrame {
         if (result != JFileChooser.APPROVE_OPTION) return;
         java.io.File file = chooser.getSelectedFile();
         if (!file.getName().toLowerCase().endsWith(".csv")) file = new java.io.File(file.getAbsolutePath() + ".csv");
-        try {
-            java.io.PrintWriter pw = new java.io.PrintWriter(file, "UTF-8");
+        boolean exported = false;
+        try (java.io.PrintWriter pw = new java.io.PrintWriter(file, "UTF-8")) {
             // Header
             for (int i = 0; i < rawColumnNames.size(); i++) {
                 if (i > 0) pw.print(",");
@@ -1077,11 +1077,13 @@ public class AttributeTableWindow extends JFrame {
                 }
                 pw.println();
             }
-            pw.close();
-            statusLabel.setText("Exportado: " + file.getName());
-            NotificationManager.info(this, "Exportar CSV", "CSV exportado:\n" + file.getAbsolutePath());
+            exported = true;
         } catch (Exception ex) {
             NotificationManager.error(this, "Error", "Error al exportar:\n" + ex.getMessage());
+        }
+        if (exported) {
+            statusLabel.setText("Exportado: " + file.getName());
+            NotificationManager.info(this, "Exportar CSV", "CSV exportado:\n" + file.getAbsolutePath());
         }
     }
 

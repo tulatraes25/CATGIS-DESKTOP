@@ -5,14 +5,11 @@ cd /d "%~dp0"
 if not exist reportes mkdir reportes
 set LOG_FILE=reportes\prueba-build.log
 
-:: Add OSGeo4W GDAL to library path
-set GDAL_BIN=C:\OSGeo4W64\bin
-if exist "%GDAL_BIN%\gdalalljni.dll" (
-    set JAVA_LIBRARY_PATH=%GDAL_BIN%
-) else (
-    set GDAL_BIN=C:\OSGeo4W\bin
-    if exist "%GDAL_BIN%\gdalalljni.dll" set JAVA_LIBRARY_PATH=%GDAL_BIN%
-)
+:: Add OSGeo4W GDAL to library path (respeta CATGIS_OSGEO4W)
+set JAVA_LIBRARY_PATH=
+if defined CATGIS_OSGEO4W if exist "%CATGIS_OSGEO4W%\bin\gdalalljni.dll" set JAVA_LIBRARY_PATH=%CATGIS_OSGEO4W%\bin
+if not defined JAVA_LIBRARY_PATH if exist "C:\OSGeo4W64\bin\gdalalljni.dll" set JAVA_LIBRARY_PATH=C:\OSGeo4W64\bin
+if not defined JAVA_LIBRARY_PATH if exist "C:\OSGeo4W\bin\gdalalljni.dll" set JAVA_LIBRARY_PATH=C:\OSGeo4W\bin
 
 echo [CATGIS] Iniciando validacion completa...
 echo [CATGIS] Iniciando validacion completa... > "%LOG_FILE%"

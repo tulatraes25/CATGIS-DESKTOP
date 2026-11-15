@@ -255,7 +255,7 @@ public final class DwgImportSupport {
 
     private static String buildCacheFolderName(File file) {
         String baseName = stripExtension(file.getName()).replaceAll("[^A-Za-z0-9._-]+", "_");
-        return baseName + "_" + Math.abs(file.getAbsolutePath().toLowerCase(Locale.ROOT).hashCode());
+        return baseName + "_" + Integer.toUnsignedString(file.getAbsolutePath().toLowerCase(Locale.ROOT).hashCode());
     }
 
     private static String buildResolutionMessage(File dwgFile, File dxfFile, boolean sidecar, boolean autoConverted, File converter) {

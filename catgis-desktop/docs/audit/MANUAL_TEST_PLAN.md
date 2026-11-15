@@ -8,7 +8,7 @@
 ## Prerequisites
 
 ### Required Software
-- **Java 17+** (verify: `java -version`)
+- **Java 21** (verify: `java -version`)
 - **OSGeo4W** installed at `C:\OSGeo4W` or `C:\OSGeo4W64` (verify: `C:\OSGeo4W\bin\gdalinfo.exe --version`)
 - **CATGIS Desktop** built and launchable (verify: `.\probar-catgis.bat` launches the app)
 

@@ -673,6 +673,7 @@ function clearLayerFromMap(layer) {
     const ids = getLayerIds(layer);
 
     [ids.fill, ids.outline, ids.line, ids.point].forEach((id) => {
+        detachLayerInteractions(id);
         if (appState.map.getLayer(id)) {
             appState.map.removeLayer(id);
         }
@@ -688,6 +689,18 @@ function clearLayerFromMap(layer) {
         appState.pozosVisibleCount = 0;
         updatePozosFiltersStatus();
     }
+}
+
+function detachLayerInteractions(layerId) {
+    if (!appState.interactiveLayers.has(layerId)) {
+        return;
+    }
+    if (appState.map) {
+        appState.map.off('click', layerId);
+        appState.map.off('mouseenter', layerId);
+        appState.map.off('mouseleave', layerId);
+    }
+    appState.interactiveLayers.delete(layerId);
 }
 
 function ensureMapLayer(layer, geojson) {
@@ -768,8 +781,8 @@ function ensurePointLayer(layer, ids, style) {
     const existingLayer = appState.map.getLayer(ids.point);
 
     if (existingLayer && existingLayer.type !== (wantsIcon ? 'symbol' : 'circle')) {
+        detachLayerInteractions(ids.point);
         appState.map.removeLayer(ids.point);
-        appState.interactiveLayers.delete(ids.point);
     }
 
     if (!appState.map.getLayer(ids.point)) {
@@ -1405,7 +1418,14 @@ function formatValue(value) {
         return '-';
     }
     if (typeof value === 'number') {
-        return Number.isInteger(value) ? String(value) : value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+        if (!Number.isFinite(value)) {
+            return String(value);
+        }
+        if (Number.isInteger(value)) {
+            return String(value);
+        }
+        const rounded = Math.round(value * 1e6) / 1e6;
+        return String(Number.isInteger(rounded) ? rounded : Number(rounded.toFixed(6)));
     }
     if (Array.isArray(value)) {
         return value.join(', ');

@@ -5,7 +5,7 @@
   "description": "Visor web base para CATSERVER",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"No tests configured yet. Add unit tests for server.js and public/app.js\" && exit 0",
+    "test": "node --test",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

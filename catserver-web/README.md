@@ -21,6 +21,8 @@ Visor web base para `CATSERVER`, sin PHP ni frameworks pesados.
 
 La configuración local se realiza mediante **variables de entorno**. No se deben versionar credenciales reales.
 
+El servidor lee automáticamente un archivo `.env` si existe en `catserver-web/` (las variables ya definidas en el sistema tienen prioridad). También admite, de forma opcional, un archivo `config/local.json` con la misma estructura; ambos están excluidos por `.gitignore`.
+
 Plantilla pública:
 
 `.env.example`
@@ -34,6 +36,7 @@ Variables admitidas:
 - `CATSERVER_DB_USER`
 - `CATSERVER_DB_PASSWORD`
 - `CATSERVER_WEB_API_KEY`
+- `CATSERVER_WEB_TRUST_PROXY`
 
 El archivo `.env.example` contiene sólo valores de ejemplo. Las contraseñas, tokens y configuraciones específicas de una máquina deben permanecer fuera de Git.
 
@@ -65,7 +68,9 @@ El launcher usa rutas relativas al propio proyecto y no depende de `C:\CATGIS`.
 
 ## Seguridad
 
-Para entornos compartidos o accesibles desde otras máquinas se recomienda definir `CATSERVER_WEB_API_KEY` y desplegar detrás de un reverse proxy con TLS.
+Para entornos compartidos o accesibles desde otras máquinas se recomienda definir `CATSERVER_WEB_API_KEY` y desplegar detrás de un reverse proxy con TLS. El visor aplica cabeceras de seguridad (CSP, `X-Frame-Options`, `nosniff`), límite de tasa por IP y validación de capas publicadas antes de consultar la base.
+
+`CATSERVER_WEB_TRUST_PROXY` debe activarse **sólo** si el visor está detrás de un reverse proxy propio: habilita el uso de `X-Forwarded-For` para el límite de tasa. Si está desactivado (valor por defecto), esa cabecera se ignora.
 
 No publicar directamente archivos `.env`, dumps PostgreSQL ni credenciales de CATSERVER.
 
@@ -79,4 +84,4 @@ npm run lint
 npm test
 ```
 
-Actualmente `npm test` es un placeholder y todavía no constituye una suite real de tests. El lint sí forma parte del CI del repositorio.
+`npm test` ejecuta una suite real con el runner integrado de Node.js (`node --test`) sobre `test/server.test.js`: cubre configuración, validación de parámetros, catálogo, capas, búsqueda, límites, API key, rate limit, archivos estáticos y rutas de error. Lint y tests forman parte del CI del repositorio.

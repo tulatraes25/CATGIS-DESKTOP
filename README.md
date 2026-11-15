@@ -10,7 +10,7 @@ CATGIS es un sistema GIS de escritorio orientado a trabajo técnico, municipal y
 
 La única rama de desarrollo activa y canónica es **`main`**.
 
-Después del cierre de saneamiento, `main` es la **única rama remota persistente**. Las ramas históricas y de saneamiento fueron auditadas y eliminadas administrativamente; los desarrollos futuros deben usar ramas cortas creadas desde el HEAD vigente de `main`.
+`main` es la **rama canónica y única fuente de desarrollo activa**. El remoto conserva además ramas de trabajo y heredadas del saneamiento (al 2026-11-15: 150 ramas y 0 tags en `git ls-remote`); no son fuentes persistentes, no deben usarse como base de desarrollo y se eliminan tras integrar. Los desarrollos futuros deben usar ramas cortas creadas desde el HEAD vigente de `main`.
 
 Ver: [inventario y cierre de ramas](docs/repository/BRANCH_INVENTORY_2026-10-04.md).
 
@@ -103,7 +103,7 @@ La fase de saneamiento del **árbol activo** quedó completada en octubre de 202
 Estado administrativo/histórico final (`SANITATION_PROGRAM=CLOSED_CERTIFIED`):
 
 - reescritura histórica publicada y certificada;
-- `main` protegido por ruleset y única rama remota persistente;
+- `main` protegido por ruleset y rama canónica del repositorio (estado de refs en [inventario y cierre de ramas](docs/repository/BRANCH_INVENTORY_2026-10-04.md));
 - aislamiento de repositorio completado: los repositorios históricos se preservan como archivos privados y la línea pública final se publicó desde un único root commit saneado, sin metadata de email personal;
 - checkout Windows activo reemplazado por un clon final certificado;
 - licencia propietaria declarada;

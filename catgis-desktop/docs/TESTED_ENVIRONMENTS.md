@@ -1,6 +1,6 @@
 # CATGIS Desktop — Tested Environments
 
-**Fecha**: 2026-06-14 | **HEAD**: `d0934b7`
+**Fecha**: 2026-11-15 | **Rama**: `fix/main-audit` (base `aecb4d2`)
 
 ---
 
@@ -8,9 +8,9 @@
 
 | Windows | Java | OSGeo4W / GDAL | PostgreSQL / PostGIS | Pantalla | Resultado | Notas |
 |---|---|---|---|---|---|---|
-| Windows 11 23H2 | OpenJDK 17.0.9 | OSGeo4W64 (GDAL 3.8.4) | — | 1920x1080 (100% scaling) | ✅ BUILD SUCCESSFUL, 647 tests | Entorno de desarrollo principal |
+| Windows 11 Pro (build 26200) | OpenJDK 21.0.10 | No instalado | No disponible | — | ✅ BUILD SUCCESSFUL, 1314 tests (0 fallos, 15 omitidos) | Verificación de auditoría 2026-11-15 sobre `aecb4d2` + parche de auditoría |
+| Windows 11 23H2 | OpenJDK 17.0.9 | OSGeo4W64 (GDAL 3.8.4) | — | 1920x1080 (100% scaling) | ✅ BUILD SUCCESSFUL, 647 tests | Registro histórico (`d0934b7`) |
 | *(pendiente)* | | | | | ⬜ No verificado | Testear en Windows 10 |
-| *(pendiente)* | | | | | ⬜ No verificado | Testear con Java 21 |
 | *(pendiente)* | | | | | ⬜ No verificado | Testear con HiDPI (150% scaling) |
 | *(pendiente)* | | | | | ⬜ No verificado | Testear con PostgreSQL 14 + PostGIS 3.4 |
 
@@ -23,13 +23,13 @@
 | GeoTools | 34.0 | `org.geotools:gt-main:34.0` |
 | JTS | 1.20.0 | `org.locationtech.jts:jts-core:1.20.0` |
 | PDFBox | 3.0.3 | `org.apache.pdfbox:pdfbox:3.0.3` |
-| FlatLaf | 3.4.1 | `com.formdev:flatlaf:3.4.1` |
-| Log4j2 | 2.23.1 | `org.apache.logging.log4j:log4j-core:2.23.1` |
+| FlatLaf | 3.7 | `com.formdev:flatlaf:3.7` |
+| Log4j2 | 2.24.3 | `org.apache.logging.log4j:log4j-core:2.24.3` |
 | JUnit Jupiter | 5.10.2 | `org.junit.jupiter:junit-jupiter:5.10.2` |
 | HikariCP | 5.1.0 | `com.zaxxer:HikariCP:5.1.0` |
 | FlatGeobuf (wololo) | 3.26.2 | `org.wololo:flatgeobuf:3.26.2` |
 | H3 (Uber) | 4.1.1 | `com.uber:h3:4.1.1` |
-| Jackson | 2.17.2 | `com.fasterxml.jackson.core:jackson-databind:2.17.2` |
+| Jackson | 2.19.0 | transitiva (no declarada en build.gradle) |
 | Checkstyle | 10.18.0 | `com.puppycrawl.tools:checkstyle:10.18.0` |
 | JaCoCo | 0.8.12 | `org.jacoco:org.jacoco.agent:0.8.12` |
 
@@ -39,11 +39,11 @@
 
 | Componente | Versión / Config |
 |---|---|
-| Gradle | 8.7 (wrapper) |
-| Java target | 17 |
+| Gradle | 8.10.2 (wrapper) |
+| Java target | 21 (`catgisJavaVersion` en `gradle.properties`) |
 | Encoding | UTF-8 |
 | Headless tests | `java.awt.headless=true` |
-| OS | Windows 11 23H2 (amd64) |
+| OS | Windows 11 Pro (build 26200, amd64) |
 
 ---
 

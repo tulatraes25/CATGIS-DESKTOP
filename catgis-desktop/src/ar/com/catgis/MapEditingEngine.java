@@ -2337,9 +2337,10 @@ class MapEditingEngine {
     }
 
     private void applyZoom(double factor, int anchorX, int anchorY) {
-        map.getViewController().applyZoom(factor,
-                map.getViewController().screenToWorldX(anchorX),
-                map.getViewController().screenToWorldY(anchorY));
+        // Delegar en MapPanel: ademas de mover el controlador, sincroniza el espejo
+        // legacy (viewMinX/zoomFactor) que usan los handlers de paneo; sin esto un
+        // paneo posterior revierte la escala recien aplicada desde la barra de estado.
+        map.applyZoom(factor, anchorX, anchorY);
     }
 
     private String formatScaleDenominator(double denominator) {

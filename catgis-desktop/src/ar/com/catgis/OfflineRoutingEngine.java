@@ -249,7 +249,7 @@ public final class OfflineRoutingEngine {
                     if (visited[v] || adj[u][v] >= Double.MAX_VALUE) continue;
                     double alt = dist[u] + adj[u][v];
                     if (alt < dist[v]) { dist[v] = alt; prev[v] = u; sigma[v] = sigma[u]; }
-                    else if (alt == dist[v]) { sigma[v] += sigma[u]; }
+                    else if (Math.abs(alt - dist[v]) <= 1e-9 * Math.max(1.0, Math.abs(dist[v]))) { sigma[v] += sigma[u]; }
                 }
             }
 

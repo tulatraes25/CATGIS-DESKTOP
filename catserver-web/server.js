@@ -1,13 +1,14 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { URL } = require('url');
 const { Pool } = require('pg');
 
 const rootDir = __dirname;
 const publicDir = path.join(rootDir, 'public');
 
-const defaultConfig = {
+const DEFAULT_CONFIG = {
   port: 3080,
   db: {
     host: 'localhost',
@@ -18,7 +19,7 @@ const defaultConfig = {
   }
 };
 
-const staticMime = {
+const STATIC_MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -28,22 +29,21 @@ const staticMime = {
   '.ico': 'image/x-icon'
 };
 
-const API_KEY = process.env.CATSERVER_WEB_API_KEY || '';
-
-function checkApiKey(req, res) {
-  if (!API_KEY) {
-    return true;
-  }
-  const provided = (req.headers['x-api-key'] || '').trim();
-  if (provided !== API_KEY) {
-    json(res, 401, { error: 'Token de API invalido.' });
-    return false;
-  }
-  return true;
-}
-
+// MapLibre se sirve desde unpkg y crea su worker a partir de un blob local,
+// por eso worker-src necesita blob: ademas de 'self'.
 const SECURITY_HEADERS = {
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'",
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' https://unpkg.com",
+    "style-src 'self' https://unpkg.com",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://unpkg.com",
+    "connect-src 'self'",
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'"
+  ].join('; '),
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
@@ -55,62 +55,27 @@ const POZOS_LAYERS = [
   { schema: 'control_urbano_operativo', table: 'pozos_petroleros_ejido' }
 ];
 
-const RATE_LIMIT_WINDOW_MS = 60000;
-const RATE_LIMIT_MAX_REQUESTS = 120;
-const rateLimitStore = new Map();
-
-const cacheState = {
-  catalog: {
-    municipal: { expiresAt: 0, value: null },
-    thematic: { expiresAt: 0, value: null }
-  },
-  allowedLayers: { expiresAt: 0, value: null },
-  pozosFilterOptions: { expiresAt: 0, value: null }
+const DEFAULT_RATE_LIMIT = {
+  windowMs: 60000,
+  maxRequests: 120,
+  maxEntries: 10000
 };
 
-const config = loadConfig();
+const CACHE_TTL_MS = {
+  catalog: 15000,
+  allowedLayers: 15000,
+  pozosFilterOptions: 30000
+};
 
-if (!config.db.password) {
-  console.error('CATSERVER_DB_PASSWORD no configurada. Definila como variable de entorno o en config/local.json.');
-  process.exit(1);
-}
+const MAX_SEARCH_QUERY_LENGTH = 200;
+const MAX_SEARCH_RESULTS = 50;
 
-const pool = new Pool({
-  host: config.db.host,
-  port: config.db.port,
-  database: config.db.database,
-  user: config.db.user,
-  password: config.db.password,
-  max: 8,
-  idleTimeoutMillis: 15000
-});
-
-function loadConfig() {
-  const configPath = path.join(rootDir, 'config', 'local.json');
-  let fileConfig = {};
-  if (fs.existsSync(configPath)) {
-    fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = 'HttpError';
+    this.status = status;
   }
-
-  const merged = {
-    ...defaultConfig,
-    ...fileConfig,
-    db: {
-      ...defaultConfig.db,
-      ...(fileConfig.db || {})
-    }
-  };
-
-  if (process.env.CATSERVER_WEB_PORT) {
-    merged.port = Number(process.env.CATSERVER_WEB_PORT) || merged.port;
-  }
-  merged.db.host = process.env.CATSERVER_DB_HOST || merged.db.host;
-  merged.db.port = validatePort(process.env.CATSERVER_DB_PORT, merged.db.port);
-  merged.db.database = process.env.CATSERVER_DB_NAME || merged.db.database;
-  merged.db.user = process.env.CATSERVER_DB_USER || merged.db.user;
-  merged.db.password = process.env.CATSERVER_DB_PASSWORD || merged.db.password;
-
-  return merged;
 }
 
 function validatePort(raw, fallback) {
@@ -124,10 +89,106 @@ function validatePort(raw, fallback) {
   return fallback;
 }
 
-function json(res, status, payload) {
-  const headers = { ...SECURITY_HEADERS, 'Content-Type': 'application/json; charset=utf-8' };
+function parseEnvContents(contents) {
+  const parsed = {};
+  String(contents).split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      return;
+    }
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) {
+      return;
+    }
+    const key = trimmed.slice(0, separatorIndex).trim();
+    if (!key) {
+      return;
+    }
+    let value = trimmed.slice(separatorIndex + 1).trim();
+    if (value.length >= 2) {
+      const first = value[0];
+      const last = value[value.length - 1];
+      if ((first === '"' && last === '"') || (first === '\'' && last === '\'')) {
+        value = value.slice(1, -1);
+      }
+    }
+    parsed[key] = value;
+  });
+  return parsed;
+}
+
+function loadEnvFile(filePath, target = process.env) {
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+  const parsed = parseEnvContents(fs.readFileSync(filePath, 'utf8'));
+  Object.keys(parsed).forEach((key) => {
+    if (target[key] === undefined || target[key] === '') {
+      target[key] = parsed[key];
+    }
+  });
+  return parsed;
+}
+
+function loadConfig(options = {}) {
+  const env = options.env || process.env;
+  const configPath = options.configPath || path.join(rootDir, 'config', 'local.json');
+
+  let fileConfig = {};
+  if (fs.existsSync(configPath)) {
+    try {
+      fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch (error) {
+      throw new Error(`No se pudo leer la configuracion local en ${configPath}: ${error.message}`, { cause: error });
+    }
+    if (!fileConfig || typeof fileConfig !== 'object' || Array.isArray(fileConfig)) {
+      throw new Error(`La configuracion local en ${configPath} debe ser un objeto JSON.`);
+    }
+  }
+
+  const merged = {
+    ...DEFAULT_CONFIG,
+    ...fileConfig,
+    db: {
+      ...DEFAULT_CONFIG.db,
+      ...(fileConfig.db || {})
+    }
+  };
+
+  merged.port = validatePort(env.CATSERVER_WEB_PORT, merged.port);
+  merged.db.host = env.CATSERVER_DB_HOST || merged.db.host;
+  merged.db.port = validatePort(env.CATSERVER_DB_PORT, merged.db.port);
+  merged.db.database = env.CATSERVER_DB_NAME || merged.db.database;
+  merged.db.user = env.CATSERVER_DB_USER || merged.db.user;
+  merged.db.password = env.CATSERVER_DB_PASSWORD || merged.db.password;
+
+  return merged;
+}
+
+function parseTrustProxy(raw) {
+  if (raw === undefined || raw === null) {
+    return false;
+  }
+  const value = String(raw).trim().toLowerCase();
+  return ['1', 'true', 'yes', 'si', 'sí'].includes(value);
+}
+
+function sendJson(res, status, payload, options = {}) {
+  const method = options.method || 'GET';
+  const body = Buffer.from(JSON.stringify(payload), 'utf8');
+  const headers = {
+    ...SECURITY_HEADERS,
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': String(body.length),
+    'Cache-Control': 'no-store',
+    ...(options.headers || {})
+  };
   res.writeHead(status, headers);
-  res.end(JSON.stringify(payload));
+  if (method === 'HEAD') {
+    res.end();
+    return;
+  }
+  res.end(body);
 }
 
 function quoteIdent(value) {
@@ -154,28 +215,118 @@ function parseFilterList(raw) {
   ));
 }
 
-async function runJsonQuery(sql, params, fallback) {
-  const result = await pool.query(sql, params);
-  if (!result.rows.length) {
-    return fallback;
+function parseBbox(raw) {
+  if (!raw) {
+    return null;
   }
-
-  const firstRow = result.rows[0];
-  const firstKey = Object.keys(firstRow)[0];
-  const payload = firstRow[firstKey];
-  return payload === null || payload === undefined ? fallback : payload;
+  const parts = String(raw).split(',').map(Number);
+  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value))) {
+    return null;
+  }
+  return {
+    minx: Math.min(parts[0], parts[2]),
+    miny: Math.min(parts[1], parts[3]),
+    maxx: Math.max(parts[0], parts[2]),
+    maxy: Math.max(parts[1], parts[3])
+  };
 }
 
-async function getCatalog(mode) {
-  const resolvedMode = mode === 'thematic' ? 'thematic' : 'municipal';
-  const cache = cacheState.catalog[resolvedMode];
-  const now = Date.now();
-  if (cache.value && cache.expiresAt > now) {
-    return cache.value;
+function layerLimit(schema, table, requestedLimit) {
+  const upperBound = isPozosLayer(schema, table) ? 10000 : 2500;
+  const safeRequested = Math.max(50, Math.min(Number(requestedLimit) || 800, upperBound));
+  if (schema === 'ordenamiento_territorial' && table === 'tierras_parcelas') {
+    return Math.min(safeRequested, 1500);
+  }
+  return safeRequested;
+}
+
+function searchLimit(raw) {
+  const requested = Number(raw);
+  if (!Number.isFinite(requested)) {
+    return 15;
+  }
+  return Math.max(1, Math.min(Math.trunc(requested), MAX_SEARCH_RESULTS));
+}
+
+function timingSafeEquals(provided, expected) {
+  const providedDigest = crypto.createHash('sha256').update(String(provided), 'utf8').digest();
+  const expectedDigest = crypto.createHash('sha256').update(String(expected), 'utf8').digest();
+  return crypto.timingSafeEqual(providedDigest, expectedDigest);
+}
+
+function resolveStaticPath(rawPath) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(rawPath);
+  } catch {
+    throw new HttpError(400, 'Ruta invalida.');
+  }
+  if (decoded.includes('\0')) {
+    throw new HttpError(400, 'Ruta invalida.');
+  }
+  const normalized = path.posix.normalize(decoded.startsWith('/') ? decoded : `/${decoded}`);
+  const candidate = path.resolve(publicDir, `.${normalized}`);
+  const relative = path.relative(publicDir, candidate);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new HttpError(404, 'No encontrado');
+  }
+  return candidate;
+}
+
+function createApp(options = {}) {
+  const pool = options.pool;
+  if (!pool || typeof pool.query !== 'function') {
+    throw new Error('createApp requiere un pool con query(sql, params).');
+  }
+  const logger = options.logger || console;
+  const config = options.config || DEFAULT_CONFIG;
+  const apiKey = options.apiKey === undefined ? '' : String(options.apiKey);
+  const trustProxy = Boolean(options.trustProxy);
+  const rateLimit = { ...DEFAULT_RATE_LIMIT, ...(options.rateLimit || {}) };
+
+  const rateLimitStore = new Map();
+  const cacheState = {
+    catalog: {
+      municipal: { expiresAt: 0, value: null },
+      thematic: { expiresAt: 0, value: null }
+    },
+    allowedLayers: { expiresAt: 0, value: null },
+    pozosFilterOptions: { expiresAt: 0, value: null }
+  };
+
+  function checkApiKey(req, res, method) {
+    if (!apiKey) {
+      return true;
+    }
+    const provided = String(req.headers['x-api-key'] || '').trim();
+    if (!provided || !timingSafeEquals(provided, apiKey)) {
+      sendJson(res, 401, { error: 'Token de API invalido.' }, { method });
+      return false;
+    }
+    return true;
   }
 
-  const sql = resolvedMode === 'thematic'
-    ? `
+  async function runJsonQuery(sql, params, fallback) {
+    const result = await pool.query(sql, params);
+    if (!result.rows || !result.rows.length) {
+      return fallback;
+    }
+    const firstRow = result.rows[0];
+    const firstKey = Object.keys(firstRow)[0];
+    const payload = firstRow[firstKey];
+    return payload === null || payload === undefined ? fallback : payload;
+  }
+
+  async function getCatalog(mode) {
+    const resolvedMode = mode === 'thematic' ? 'thematic' : 'municipal';
+    const cache = cacheState.catalog[resolvedMode];
+    const now = Date.now();
+    if (cache.value && cache.expiresAt > now) {
+      return cache.value;
+    }
+
+    const sql = resolvedMode === 'thematic'
+      ? `
       SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS payload
       FROM (
         SELECT
@@ -194,7 +345,7 @@ async function getCatalog(mode) {
         ORDER BY load_order, schema_name, table_name
       ) t;
     `
-    : `
+      : `
       SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS payload
       FROM (
         SELECT
@@ -214,19 +365,19 @@ async function getCatalog(mode) {
       ) t;
     `;
 
-  const value = await runJsonQuery(sql, [], []);
-  cache.value = value;
-  cache.expiresAt = now + 15000;
-  return value;
-}
-
-async function getAllowedLayers() {
-  const now = Date.now();
-  if (cacheState.allowedLayers.value && cacheState.allowedLayers.expiresAt > now) {
-    return cacheState.allowedLayers.value;
+    const value = await runJsonQuery(sql, [], []);
+    cache.value = value;
+    cache.expiresAt = now + CACHE_TTL_MS.catalog;
+    return value;
   }
 
-  const sql = `
+  async function getAllowedLayers() {
+    const now = Date.now();
+    if (cacheState.allowedLayers.value && cacheState.allowedLayers.expiresAt > now) {
+      return cacheState.allowedLayers.value;
+    }
+
+    const sql = `
     SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS payload
     FROM (
       SELECT DISTINCT schema_name, table_name
@@ -239,53 +390,26 @@ async function getAllowedLayers() {
     ) t;
   `;
 
-  const value = await runJsonQuery(sql, [], []);
-  cacheState.allowedLayers.value = value;
-  cacheState.allowedLayers.expiresAt = now + 15000;
-  return value;
-}
-
-async function isAllowedLayer(schema, table) {
-  const layers = await getAllowedLayers();
-  return layers.some((entry) => entry.schema_name === schema && entry.table_name === table);
-}
-
-function parseBbox(raw) {
-  if (!raw) {
-    return null;
-  }
-  const parts = String(raw).split(',').map(Number);
-  if (parts.length !== 4 || parts.some((value) => !Number.isFinite(value))) {
-    return null;
-  }
-  return {
-    minx: parts[0],
-    miny: parts[1],
-    maxx: parts[2],
-    maxy: parts[3]
-  };
-}
-
-function layerLimit(schema, table, requestedLimit) {
-  const upperBound = isPozosLayer(schema, table) ? 10000 : 2500;
-  const safeRequested = Math.max(50, Math.min(Number(requestedLimit) || 800, upperBound));
-  if (schema === 'ordenamiento_territorial' && table === 'tierras_parcelas') {
-    return Math.min(safeRequested, 1500);
-  }
-  return safeRequested;
-}
-
-function searchLimit(raw) {
-  return Math.max(1, Math.min(Number(raw) || 15, 50));
-}
-
-async function getPozosFilterOptions() {
-  const now = Date.now();
-  if (cacheState.pozosFilterOptions.value && cacheState.pozosFilterOptions.expiresAt > now) {
-    return cacheState.pozosFilterOptions.value;
+    const value = await runJsonQuery(sql, [], []);
+    cacheState.allowedLayers.value = value;
+    cacheState.allowedLayers.expiresAt = now + CACHE_TTL_MS.allowedLayers;
+    return value;
   }
 
-  const sql = `
+  async function isAllowedLayer(schema, table) {
+    const layers = await getAllowedLayers();
+    return Array.isArray(layers) && layers.some(
+      (entry) => entry.schema_name === schema && entry.table_name === table
+    );
+  }
+
+  async function getPozosFilterOptions() {
+    const now = Date.now();
+    if (cacheState.pozosFilterOptions.value && cacheState.pozosFilterOptions.expiresAt > now) {
+      return cacheState.pozosFilterOptions.value;
+    }
+
+    const sql = `
     SELECT json_build_object(
       'tipopozo',
       (
@@ -342,48 +466,39 @@ async function getPozosFilterOptions() {
     ) AS payload;
   `;
 
-  const value = await runJsonQuery(sql, [], { tipopozo: [], estpozo: [], area: [], yacimiento: [] });
-  cacheState.pozosFilterOptions.value = value;
-  cacheState.pozosFilterOptions.expiresAt = now + 30000;
-  return value;
-}
-
-async function getLayerGeoJson(schema, table, bbox, requestedLimit, filters = {}) {
-  if (!(await isAllowedLayer(schema, table))) {
-    throw new Error('La capa solicitada no esta publicada para CATSERVER Web.');
+    const value = await runJsonQuery(sql, [], { tipopozo: [], estpozo: [], area: [], yacimiento: [] });
+    cacheState.pozosFilterOptions.value = value;
+    cacheState.pozosFilterOptions.expiresAt = now + CACHE_TTL_MS.pozosFilterOptions;
+    return value;
   }
 
-  const limit = layerLimit(schema, table, requestedLimit);
-  const params = [];
-  const whereClauses = [];
-
-  if (bbox) {
-    params.push(bbox.minx, bbox.miny, bbox.maxx, bbox.maxy);
-    whereClauses.push('src.geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)');
-  }
-
-  if (isPozosLayer(schema, table)) {
-    if (filters.tipopozo && filters.tipopozo.length) {
-      params.push(filters.tipopozo);
-      whereClauses.push(`coalesce(src.tipopozo, '') = ANY($${params.length}::text[])`);
+  async function getLayerGeoJson(schema, table, bbox, requestedLimit, filters = {}) {
+    if (!(await isAllowedLayer(schema, table))) {
+      throw new HttpError(403, 'La capa solicitada no esta publicada para CATSERVER Web.');
     }
-    if (filters.estpozo && filters.estpozo.length) {
-      params.push(filters.estpozo);
-      whereClauses.push(`coalesce(src.estpozo, '') = ANY($${params.length}::text[])`);
-    }
-    if (filters.area && filters.area.length) {
-      params.push(filters.area);
-      whereClauses.push(`coalesce(src.area, '') = ANY($${params.length}::text[])`);
-    }
-    if (filters.yacimiento && filters.yacimiento.length) {
-      params.push(filters.yacimiento);
-      whereClauses.push(`coalesce(src.yacimiento, '') = ANY($${params.length}::text[])`);
-    }
-  }
 
-  const whereClause = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const limit = layerLimit(schema, table, requestedLimit);
+    const params = [];
+    const whereClauses = [];
 
-  const sql = `
+    if (bbox) {
+      params.push(bbox.minx, bbox.miny, bbox.maxx, bbox.maxy);
+      whereClauses.push('src.geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)');
+    }
+
+    if (isPozosLayer(schema, table)) {
+      ['tipopozo', 'estpozo', 'area', 'yacimiento'].forEach((filterName) => {
+        const values = filters[filterName];
+        if (values && values.length) {
+          params.push(values);
+          whereClauses.push(`coalesce(src.${filterName}, '') = ANY($${params.length}::text[])`);
+        }
+      });
+    }
+
+    const whereClause = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+    const sql = `
     SELECT json_build_object(
       'type', 'FeatureCollection',
       'features', COALESCE(json_agg(feature), '[]'::json)
@@ -405,20 +520,20 @@ async function getLayerGeoJson(schema, table, bbox, requestedLimit, filters = {}
     ) AS features;
   `;
 
-  return runJsonQuery(sql, params, { type: 'FeatureCollection', features: [] });
-}
-
-async function getFeatureById(schema, table, gid) {
-  if (!(await isAllowedLayer(schema, table))) {
-    throw new Error('La capa solicitada no esta publicada para CATSERVER Web.');
+    return runJsonQuery(sql, params, { type: 'FeatureCollection', features: [] });
   }
 
-  const numericId = Number(gid);
-  if (!Number.isFinite(numericId)) {
-    throw new Error('Identificador invalido.');
-  }
+  async function getFeatureById(schema, table, gid) {
+    if (!(await isAllowedLayer(schema, table))) {
+      throw new HttpError(403, 'La capa solicitada no esta publicada para CATSERVER Web.');
+    }
 
-  const sql = `
+    const numericId = Number(gid);
+    if (!Number.isInteger(numericId)) {
+      throw new HttpError(400, 'Identificador invalido.');
+    }
+
+    const sql = `
     SELECT json_build_object(
       'type', 'Feature',
       'id', f.gid,
@@ -430,175 +545,334 @@ async function getFeatureById(schema, table, gid) {
     LIMIT 1;
   `;
 
-  return runJsonQuery(sql, [numericId], null);
-}
+    return runJsonQuery(sql, [numericId], null);
+  }
 
-async function getSearchResults(q, limit) {
-  const sql = `
+  async function getSearchResults(q, limit) {
+    const sql = `
     SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json) AS payload
     FROM (
       SELECT *
       FROM portal_web.buscar_general($1, $2)
     ) t;
   `;
-  return runJsonQuery(sql, [q, searchLimit(limit)], []);
-}
-
-function serveFile(filePath, res) {
-  if (!fs.existsSync(filePath)) {
-    json(res, 404, { error: 'No encontrado' });
-    return;
-  }
-  const ext = path.extname(filePath).toLowerCase();
-  const mime = staticMime[ext] || 'application/octet-stream';
-  const headers = { ...SECURITY_HEADERS, 'Content-Type': mime };
-  res.writeHead(200, headers);
-  fs.createReadStream(filePath).pipe(res);
-}
-
-function checkRateLimit(clientIp) {
-  const now = Date.now();
-  let entry = rateLimitStore.get(clientIp);
-
-  if (!entry || (now - entry.windowStart) > RATE_LIMIT_WINDOW_MS) {
-    entry = { windowStart: now, count: 0 };
-    rateLimitStore.set(clientIp, entry);
+    return runJsonQuery(sql, [q, searchLimit(limit)], []);
   }
 
-  entry.count++;
+  function checkRateLimit(clientIp) {
+    const now = Date.now();
+    let entry = rateLimitStore.get(clientIp);
 
-  if (rateLimitStore.size > 10000) {
-    const cutoff = now - RATE_LIMIT_WINDOW_MS * 2;
-    rateLimitStore.forEach((value, key) => {
-      if ((now - value.windowStart) > cutoff) {
-        rateLimitStore.delete(key);
+    if (!entry || (now - entry.windowStart) > rateLimit.windowMs) {
+      entry = { windowStart: now, count: 0 };
+      rateLimitStore.set(clientIp, entry);
+    }
+
+    entry.count += 1;
+
+    if (rateLimitStore.size > rateLimit.maxEntries) {
+      const cutoff = now - rateLimit.windowMs * 2;
+      rateLimitStore.forEach((value, key) => {
+        if ((now - value.windowStart) > cutoff) {
+          rateLimitStore.delete(key);
+        }
+      });
+    }
+
+    return entry.count <= rateLimit.maxRequests;
+  }
+
+  function getClientIp(req) {
+    if (trustProxy) {
+      const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+      if (forwarded) {
+        return forwarded;
       }
-    });
-  }
-
-  return entry.count <= RATE_LIMIT_MAX_REQUESTS;
-}
-
-function getClientIp(req) {
-  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '127.0.0.1';
-}
-
-async function handleApi(res, urlObj) {
-  if (urlObj.pathname === '/api/health') {
-    json(res, 200, {
-      ok: true,
-      app: 'catserver-web',
-      modeDefault: 'municipal'
-    });
-    return;
-  }
-
-  if (urlObj.pathname === '/api/catalog') {
-    const mode = urlObj.searchParams.get('mode') || 'municipal';
-    json(res, 200, await getCatalog(mode));
-    return;
-  }
-
-  if (urlObj.pathname === '/api/search') {
-    const q = (urlObj.searchParams.get('q') || '').trim();
-    if (!q) {
-      json(res, 200, []);
-      return;
     }
-    json(res, 200, await getSearchResults(q, urlObj.searchParams.get('limit')));
-    return;
+    return (req.socket && req.socket.remoteAddress) || '127.0.0.1';
   }
 
-  if (urlObj.pathname === '/api/pozos-filter-options') {
-    json(res, 200, await getPozosFilterOptions());
-    return;
-  }
-
-  if (urlObj.pathname === '/api/layer-data') {
-    const schema = (urlObj.searchParams.get('schema') || '').trim();
-    const table = (urlObj.searchParams.get('table') || '').trim();
-    if (!schema || !table) {
-      json(res, 400, { error: 'Faltan schema o table.' });
-      return;
+  async function serveFile(res, filePath, method) {
+    let stats;
+    try {
+      stats = await fs.promises.stat(filePath);
+    } catch {
+      throw new HttpError(404, 'No encontrado');
     }
-    const bbox = parseBbox(urlObj.searchParams.get('bbox'));
-    const filters = {
-      tipopozo: parseFilterList(urlObj.searchParams.get('tipopozo')),
-      estpozo: parseFilterList(urlObj.searchParams.get('estpozo')),
-      area: parseFilterList(urlObj.searchParams.get('area')),
-      yacimiento: parseFilterList(urlObj.searchParams.get('yacimiento'))
+    if (!stats.isFile()) {
+      throw new HttpError(404, 'No encontrado');
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    const mime = STATIC_MIME[ext] || 'application/octet-stream';
+    const headers = {
+      ...SECURITY_HEADERS,
+      'Content-Type': mime,
+      'Content-Length': String(stats.size),
+      'Cache-Control': 'no-cache'
     };
-    json(res, 200, await getLayerGeoJson(schema, table, bbox, urlObj.searchParams.get('limit'), filters));
-    return;
+
+    res.writeHead(200, headers);
+    if (method === 'HEAD') {
+      res.end();
+      return;
+    }
+
+    await new Promise((resolve, reject) => {
+      const stream = fs.createReadStream(filePath);
+      stream.on('error', reject);
+      res.on('close', resolve);
+      stream.pipe(res);
+      stream.on('end', resolve);
+    });
   }
 
-  if (urlObj.pathname === '/api/feature') {
-    const schema = (urlObj.searchParams.get('schema') || '').trim();
-    const table = (urlObj.searchParams.get('table') || '').trim();
-    const gid = (urlObj.searchParams.get('gid') || '').trim();
-    if (!schema || !table || !gid) {
-      json(res, 400, { error: 'Faltan schema, table o gid.' });
-      return;
-    }
-    const feature = await getFeatureById(schema, table, gid);
-    if (!feature) {
-      json(res, 404, { error: 'No encontrado' });
-      return;
-    }
-    json(res, 200, feature);
-    return;
-  }
-
-  json(res, 404, { error: 'No encontrado' });
-}
-
-const server = http.createServer(async (req, res) => {
-  try {
-    const clientIp = getClientIp(req);
-
-    if (!checkRateLimit(clientIp)) {
-      json(res, 429, { error: 'Demasiadas solicitudes. Reintenta en un minuto.' });
+  async function handleApi(req, res, urlObj, method) {
+    if (urlObj.pathname === '/api/health') {
+      sendJson(res, 200, {
+        ok: true,
+        app: 'catserver-web',
+        modeDefault: 'municipal'
+      }, { method });
       return;
     }
 
-    const urlObj = new URL(req.url, `http://${req.headers.host}`);
+    if (urlObj.pathname === '/api/catalog') {
+      const mode = urlObj.searchParams.get('mode') || 'municipal';
+      sendJson(res, 200, await getCatalog(mode), { method });
+      return;
+    }
 
-    if (urlObj.pathname.startsWith('/api/')) {
-      if (!checkApiKey(req, res)) {
+    if (urlObj.pathname === '/api/search') {
+      const q = (urlObj.searchParams.get('q') || '').trim().slice(0, MAX_SEARCH_QUERY_LENGTH);
+      if (!q) {
+        sendJson(res, 200, [], { method });
         return;
       }
-      await handleApi(res, urlObj);
+      sendJson(res, 200, await getSearchResults(q, urlObj.searchParams.get('limit')), { method });
       return;
     }
 
-    if (urlObj.pathname === '/' || urlObj.pathname === '/index.html') {
-      serveFile(path.join(publicDir, 'index.html'), res);
+    if (urlObj.pathname === '/api/pozos-filter-options') {
+      sendJson(res, 200, await getPozosFilterOptions(), { method });
       return;
     }
 
-    const safePath = path.normalize(urlObj.pathname).replace(/^(\.\.[/\\])+/, '');
-    serveFile(path.join(publicDir, safePath), res);
-  } catch (error) {
-    console.error('Error interno del servidor:', error.message);
-    json(res, 500, { error: 'Error interno del servidor.' });
+    if (urlObj.pathname === '/api/layer-data') {
+      const schema = (urlObj.searchParams.get('schema') || '').trim();
+      const table = (urlObj.searchParams.get('table') || '').trim();
+      if (!schema || !table) {
+        sendJson(res, 400, { error: 'Faltan schema o table.' }, { method });
+        return;
+      }
+      const bbox = parseBbox(urlObj.searchParams.get('bbox'));
+      const filters = {
+        tipopozo: parseFilterList(urlObj.searchParams.get('tipopozo')),
+        estpozo: parseFilterList(urlObj.searchParams.get('estpozo')),
+        area: parseFilterList(urlObj.searchParams.get('area')),
+        yacimiento: parseFilterList(urlObj.searchParams.get('yacimiento'))
+      };
+      const payload = await getLayerGeoJson(
+        schema,
+        table,
+        bbox,
+        urlObj.searchParams.get('limit'),
+        filters
+      );
+      sendJson(res, 200, payload, { method });
+      return;
+    }
+
+    if (urlObj.pathname === '/api/feature') {
+      const schema = (urlObj.searchParams.get('schema') || '').trim();
+      const table = (urlObj.searchParams.get('table') || '').trim();
+      const gid = (urlObj.searchParams.get('gid') || '').trim();
+      if (!schema || !table || !gid) {
+        sendJson(res, 400, { error: 'Faltan schema, table o gid.' }, { method });
+        return;
+      }
+      const feature = await getFeatureById(schema, table, gid);
+      if (!feature) {
+        sendJson(res, 404, { error: 'No encontrado' }, { method });
+        return;
+      }
+      sendJson(res, 200, feature, { method });
+      return;
+    }
+
+    sendJson(res, 404, { error: 'No encontrado' }, { method });
   }
-});
 
-async function shutdown() {
-  server.close(() => {});
-  await pool.end().catch(() => {});
+  async function handleRequest(req, res) {
+    const method = (req.method || 'GET').toUpperCase();
+    try {
+      if (method !== 'GET' && method !== 'HEAD') {
+        sendJson(res, 405, { error: 'Metodo no permitido.' }, {
+          method,
+          headers: { Allow: 'GET, HEAD' }
+        });
+        return;
+      }
+
+      const clientIp = getClientIp(req);
+      if (!checkRateLimit(clientIp)) {
+        sendJson(res, 429, { error: 'Demasiadas solicitudes. Reintenta en un minuto.' }, {
+          method,
+          headers: { 'Retry-After': String(Math.ceil(rateLimit.windowMs / 1000)) }
+        });
+        return;
+      }
+
+      let urlObj;
+      try {
+        urlObj = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+      } catch {
+        throw new HttpError(400, 'Solicitud invalida.');
+      }
+
+      if (urlObj.pathname.startsWith('/api/')) {
+        if (!checkApiKey(req, res, method)) {
+          return;
+        }
+        await handleApi(req, res, urlObj, method);
+        return;
+      }
+
+      if (urlObj.pathname === '/' || urlObj.pathname === '/index.html') {
+        await serveFile(res, path.join(publicDir, 'index.html'), method);
+        return;
+      }
+
+      await serveFile(res, resolveStaticPath(urlObj.pathname), method);
+    } catch (error) {
+      if (res.headersSent) {
+        if (!res.writableEnded) {
+          res.end();
+        }
+        return;
+      }
+      if (error instanceof HttpError) {
+        sendJson(res, error.status, { error: error.message }, { method });
+        return;
+      }
+      logger.error('Error interno del servidor:', error && error.message ? error.message : error);
+      sendJson(res, 500, { error: 'Error interno del servidor.' }, { method });
+    }
+  }
+
+  return {
+    handleRequest,
+    getCatalog,
+    getAllowedLayers,
+    getLayerGeoJson,
+    getFeatureById,
+    getSearchResults,
+    getPozosFilterOptions,
+    config
+  };
 }
 
-process.on('SIGINT', async () => {
-  await shutdown();
-  process.exit(0);
-});
+function createServer(app) {
+  const server = http.createServer(app.handleRequest);
+  server.requestTimeout = 30000;
+  server.headersTimeout = 35000;
+  return server;
+}
 
-process.on('SIGTERM', async () => {
-  await shutdown();
-  process.exit(0);
-});
+function start() {
+  loadEnvFile(path.join(rootDir, '.env'));
 
-server.listen(config.port, () => {
-  console.log(`CATSERVER Web escuchando en http://localhost:${config.port}`);
-});
+  let config;
+  try {
+    config = loadConfig();
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+    return;
+  }
+
+  if (!config.db.password) {
+    console.error('CATSERVER_DB_PASSWORD no configurada. Definila como variable de entorno o en .env / config/local.json.');
+    process.exit(1);
+    return;
+  }
+
+  const pool = new Pool({
+    host: config.db.host,
+    port: config.db.port,
+    database: config.db.database,
+    user: config.db.user,
+    password: config.db.password,
+    max: 8,
+    idleTimeoutMillis: 15000
+  });
+
+  pool.on('error', (error) => {
+    console.error('Error inesperado en el pool de PostgreSQL:', error.message);
+  });
+
+  const app = createApp({
+    pool,
+    config,
+    apiKey: process.env.CATSERVER_WEB_API_KEY || '',
+    trustProxy: parseTrustProxy(process.env.CATSERVER_WEB_TRUST_PROXY)
+  });
+
+  const server = createServer(app);
+
+  server.on('error', (error) => {
+    if (error && error.code === 'EADDRINUSE') {
+      console.error(`El puerto ${config.port} ya esta en uso. Definí CATSERVER_WEB_PORT con otro valor.`);
+    } else {
+      console.error('Error del servidor HTTP:', error && error.message ? error.message : error);
+    }
+    process.exit(1);
+  });
+
+  server.listen(config.port, () => {
+    console.log(`CATSERVER Web escuchando en http://localhost:${config.port}`);
+  });
+
+  let shuttingDown = false;
+  async function shutdown(signal) {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    console.log(`Cerrando CATSERVER Web (${signal})...`);
+    server.close();
+    await pool.end().catch(() => {});
+    process.exit(0);
+  }
+
+  process.on('SIGINT', () => { shutdown('SIGINT'); });
+  process.on('SIGTERM', () => { shutdown('SIGTERM'); });
+
+  return server;
+}
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = {
+  createApp,
+  createServer,
+  start,
+  loadConfig,
+  loadEnvFile,
+  parseEnvContents,
+  parseTrustProxy,
+  parseFilterList,
+  parseBbox,
+  layerLimit,
+  searchLimit,
+  quoteIdent,
+  qualifiedName,
+  resolveStaticPath,
+  validatePort,
+  HttpError,
+  SECURITY_HEADERS,
+  STATIC_MIME,
+  DEFAULT_CONFIG
+};

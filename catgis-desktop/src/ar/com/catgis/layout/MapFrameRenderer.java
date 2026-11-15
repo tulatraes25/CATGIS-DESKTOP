@@ -182,7 +182,6 @@ public class MapFrameRenderer {
         }
 
         try {
-            org.locationtech.jts.geom.GeometryFactory gf = new org.locationtech.jts.geom.GeometryFactory();
             SimpleFeatureCollection collection = data.getFeatureCollection();
             if (collection == null) return;
 

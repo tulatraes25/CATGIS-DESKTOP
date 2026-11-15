@@ -50,8 +50,10 @@ public class SaveMapViewAction extends AbstractAction {
         }
 
         try {
-            int width = Math.max(AppContext.mapPanel().getWidth(), 1200);
-            int height = Math.max(AppContext.mapPanel().getHeight(), 800);
+            // Export exactly the painted viewport: paint() renders at the panel's
+            // current size, so a larger backing image would leave blank margins.
+            int width = Math.max(AppContext.mapPanel().getWidth(), 1);
+            int height = Math.max(AppContext.mapPanel().getHeight(), 1);
 
             BufferedImage image = new BufferedImage(width, height,
                     "jpg".equalsIgnoreCase(format) ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB);

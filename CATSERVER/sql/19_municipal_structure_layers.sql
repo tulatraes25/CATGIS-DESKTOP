@@ -68,10 +68,9 @@ CREATE OR REPLACE VIEW ordenamiento_territorial.tierras_cad_barrios_control AS
 SELECT *
 FROM catastro.cad_barrios_control;
 
-CREATE OR REPLACE VIEW ordenamiento_territorial.ambiente_pozos_petroleros AS
-SELECT *
-FROM control_urbano_operativo.pozos_petroleros_ejido;
-
+-- ordenamiento_territorial.ambiente_pozos_petroleros se crea en
+-- 21_pozos_petroleros_ejido.sql: depende de la tabla que ese script construye
+-- y no puede crearse en este punto sin un error de dependencia.
 CREATE OR REPLACE VIEW gobierno_modernizacion.redes_servicios_publicos_lineas AS
 SELECT *
 FROM ingenieria.lineas;
@@ -116,7 +115,6 @@ COMMENT ON VIEW ordenamiento_territorial.planeamiento_ejido_urbano IS 'Ejido urb
 COMMENT ON VIEW ordenamiento_territorial.tierras_cad_barrios_lineas IS 'Lineas CAD barriales bajo Secretaria de Ordenamiento Territorial / Tierras.';
 COMMENT ON VIEW ordenamiento_territorial.tierras_cad_barrios_rotulos IS 'Rotulos CAD barriales bajo Secretaria de Ordenamiento Territorial / Tierras.';
 COMMENT ON VIEW ordenamiento_territorial.tierras_cad_barrios_control IS 'Puntos de control CAD barriales bajo Secretaria de Ordenamiento Territorial / Tierras.';
-COMMENT ON VIEW ordenamiento_territorial.ambiente_pozos_petroleros IS 'Pozos petroleros bajo Secretaria de Ordenamiento Territorial / Subsecretaria de Ambiente / Direccion General de Minas e Hidrocarburos.';
 COMMENT ON VIEW gobierno_modernizacion.redes_servicios_publicos_lineas IS 'Lineas de redes y servicios publicos bajo Secretaria de Gobierno, Modernizacion y Transparencia.';
 COMMENT ON VIEW infraestructura_osp.obras_reservorios_poligonos IS 'Reservorios poligonales bajo Secretaria de Infraestructura, Obras y Servicios Publicos.';
 COMMENT ON VIEW infraestructura_osp.obras_reservorios_barreras IS 'Barreras de reservorios bajo Secretaria de Infraestructura, Obras y Servicios Publicos.';
@@ -136,7 +134,6 @@ GRANT SELECT ON
     ordenamiento_territorial.tierras_cad_barrios_lineas,
     ordenamiento_territorial.tierras_cad_barrios_rotulos,
     ordenamiento_territorial.tierras_cad_barrios_control,
-    ordenamiento_territorial.ambiente_pozos_petroleros,
     gobierno_modernizacion.redes_servicios_publicos_lineas,
     infraestructura_osp.obras_reservorios_poligonos,
     infraestructura_osp.obras_reservorios_barreras,
@@ -157,7 +154,6 @@ REVOKE INSERT, UPDATE, DELETE ON
     ordenamiento_territorial.tierras_cad_barrios_lineas,
     ordenamiento_territorial.tierras_cad_barrios_rotulos,
     ordenamiento_territorial.tierras_cad_barrios_control,
-    ordenamiento_territorial.ambiente_pozos_petroleros,
     gobierno_modernizacion.redes_servicios_publicos_lineas,
     infraestructura_osp.obras_reservorios_poligonos,
     infraestructura_osp.obras_reservorios_barreras,
