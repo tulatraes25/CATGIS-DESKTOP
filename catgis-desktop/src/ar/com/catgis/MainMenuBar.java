@@ -958,7 +958,8 @@ public class MainMenuBar extends JMenuBar {
         try {
             java.io.File recentFile = new java.io.File(System.getProperty("user.home"), ".catgis-recent");
             if (recentFile.exists()) {
-                try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(recentFile))) {
+                try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(
+                        new java.io.FileInputStream(recentFile), java.nio.charset.StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = br.readLine()) != null && recentFiles.size() < MAX_RECENT) {
                         if (!line.trim().isEmpty()) recentFiles.add(line.trim());
@@ -1006,7 +1007,7 @@ public class MainMenuBar extends JMenuBar {
     private static void saveRecentFiles() {
         try {
             java.io.File recentFile = new java.io.File(System.getProperty("user.home"), ".catgis-recent");
-            try (java.io.PrintWriter pw = new java.io.PrintWriter(recentFile)) {
+            try (java.io.PrintWriter pw = new java.io.PrintWriter(recentFile, java.nio.charset.StandardCharsets.UTF_8)) {
                 for (String path : recentFiles) pw.println(path);
             }
         } catch (Exception ignored) { CatgisLogger.warn("MainMenuBar: operation failed", ignored); }
