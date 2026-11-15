@@ -36,7 +36,7 @@ Ejemplo:
 ```powershell
 .\scripts\04_import_kmz_examples.ps1 `
   -SourceRoot "<CATSERVER_SOURCE_ROOT>\KMZ" `
-  -Host "localhost" `
+  -DbHost "localhost" `
   -Database "CATSERVER" `
   -User "catserver_etl"
 ```

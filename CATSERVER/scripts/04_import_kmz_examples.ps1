@@ -1,6 +1,7 @@
 param(
     [string]$Ogr2OgrPath = "ogr2ogr",
-    [string]$Host = "localhost",
+    [Alias("Host")]
+    [string]$DbHost = "localhost",
     [int]$Port = 5432,
     [string]$Database = "CATSERVER",
     [string]$User = "catserver_etl",
@@ -43,7 +44,7 @@ foreach ($item in $items) {
         continue
     }
 
-    $pgConnection = "PG:host=$Host port=$Port dbname=$Database user=$User"
+    $pgConnection = "PG:host=$DbHost port=$Port dbname=$Database user=$User"
     $targetLayer = "$Schema.$($item.Target)"
 
     Write-Host "Importando $($sourcePath) -> $targetLayer"

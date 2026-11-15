@@ -250,6 +250,10 @@ Acceptance:
   rejects an unrelated database.
 - AC-AR-14.6: A static contract (checker + unit tests) enforces the previous
   points inside the required Repository Safety check.
+- AC-AR-14.7: The CATSERVER orchestrator scripts do not declare parameters that
+  collide with PowerShell automatic variables (`$Host`), so they can run on
+  PowerShell 7 and from CI; the host parameter keeps a `Host` alias for
+  backward-compatible invocations.
 
 ## Constraints
 

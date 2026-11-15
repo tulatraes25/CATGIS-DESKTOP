@@ -1,6 +1,7 @@
 param(
     [string]$PsqlPath = "psql",
-    [string]$Host = "localhost",
+    [Alias("Host")]
+    [string]$DbHost = "localhost",
     [int]$Port = 5432,
     [string]$SuperUser = "postgres",
     [string]$BootstrapDatabase = "postgres",
@@ -38,7 +39,7 @@ foreach ($sqlFile in $sqlFiles) {
 
     Write-Host "Ejecutando $sqlFile sobre $targetDatabase ..."
     & $psqlCommand.Source `
-        -h $Host `
+        -h $DbHost `
         -p $Port `
         -U $SuperUser `
         -d $targetDatabase `

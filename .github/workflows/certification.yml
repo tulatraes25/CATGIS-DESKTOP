@@ -662,7 +662,7 @@ jobs:
           # "CATSERVER" and now targets it explicitly instead of relying on
           # per-file \connect statements.
           pwsh -NoProfile -File CATSERVER/scripts/03_run_bootstrap_psql.ps1 \
-            -PsqlPath psql -Host localhost -Port 5432 -SuperUser catgis_test \
+            -PsqlPath psql -DbHost localhost -Port 5432 -SuperUser catgis_test \
             -BootstrapDatabase catgis_test -Database "CATSERVER"
           $PSQL -d "CATSERVER" -f CATSERVER/sql/12_security_roles_current.sql
 

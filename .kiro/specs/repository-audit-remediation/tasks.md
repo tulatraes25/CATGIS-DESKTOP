@@ -306,6 +306,13 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     `scripts/03_run_bootstrap_psql.ps1` gained `-Database` and targets the
     maintenance database for `sql/00` and the created database for `sql/01`–`04`.
     `docs/11` and `docs/06` document the resolved behaviour and both scenarios.
+  - The new PostGIS evidence also exposed a latent blocker: `03_run_bootstrap_psql.ps1`
+    and `04_import_kmz_examples.ps1` declared `[string]$Host`, which collides with
+    the read-only PowerShell automatic variable `$Host` and made the orchestrator
+    fail before running any SQL on PowerShell 7. Renamed to `$DbHost` with a
+    `Host` alias for backward-compatible invocations; local binding evidence:
+    running the script without `psql` now fails with the expected
+    "No se encontro psql" message instead of the read-only-variable error.
   - Executor: Local → GitHub pending (T31)
 
 - [x] **T30 — Static SQL contract in the required safety check**
