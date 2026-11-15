@@ -268,7 +268,7 @@ final class LayerVectorDataSupport {
         if (layer == null || data == null) {
             return data;
         }
-        LocalVectorSourceCrsProvenance.rememberBeforeProjection(layer);
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(layer, data);
         ShapefileData projected = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
         layer.setSourceName(projected.getSourceName());
         layer.setFeatureCount(projected.getFeatureCount());

@@ -40,13 +40,23 @@ class FlatGeobufProjectCrsRoundTripContractTest {
     }
 
     @Test
-    void nonFlatGeobufLayersKeepExistingProjectSerialization() {
-        Layer shape = new VectorLayer("ordinary", "/tmp/source.shp");
+    void shapefileNowPreservesSourceCrsInsteadOfPersistingProjectedMapCrs() {
+        Layer shape = new VectorLayer("survey", "/tmp/source.shp");
         shape.setSourceCRS("EPSG:32719");
         LocalVectorSourceCrsProvenance.rememberBeforeProjection(shape);
         shape.setSourceCRS("EPSG:4326");
-        assertEquals("EPSG:4326",
+        assertEquals("EPSG:32719",
                 serializedSourceCrs(SaveProjectAction.buildLayerLine(shape)));
+    }
+
+    @Test
+    void nonSourceReferencedRasterKeepsExistingSerializationBehavior() {
+        Layer raster = new RasterLayer("elevation", "/tmp/dem.tif");
+        raster.setSourceCRS("EPSG:32719");
+        LocalVectorSourceCrsProvenance.rememberBeforeProjection(raster);
+        raster.setSourceCRS("EPSG:4326");
+        assertEquals("EPSG:4326",
+                serializedSourceCrs(SaveProjectAction.buildLayerLine(raster)));
     }
 
     @Test
