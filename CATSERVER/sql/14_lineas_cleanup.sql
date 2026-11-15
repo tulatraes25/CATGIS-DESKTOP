@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect catserver
+\ir _common/assert_catserver_database.sql
 
 DROP TABLE IF EXISTS infraestructura.lineas_shape_cleanup_excluded;
 CREATE TABLE infraestructura.lineas_shape_cleanup_excluded AS

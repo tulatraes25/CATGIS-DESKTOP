@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect catserver
+\ir _common/assert_catserver_database.sql
 
 CREATE OR REPLACE VIEW public.v_catserver_layers AS
 WITH catalog(load_order, display_name, schema_name, table_name, theme, load_default, notes) AS (

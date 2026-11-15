@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP on
+\ir _common/assert_catserver_database.sql
 
 DROP TABLE IF EXISTS infraestructura.reservpol_shape_src;
 CREATE TABLE infraestructura.reservpol_shape_src AS

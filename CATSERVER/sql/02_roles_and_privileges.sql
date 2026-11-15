@@ -1,8 +1,12 @@
 \set ON_ERROR_STOP on
-\connect "CATSERVER"
+\ir _common/assert_catserver_database.sql
 
-REVOKE ALL ON DATABASE "CATSERVER" FROM PUBLIC;
-GRANT CONNECT, TEMPORARY ON DATABASE "CATSERVER" TO catserver_admin, catserver_etl, catserver_edit, catserver_read, catserver_publish;
+DO $catgis_db_privileges$
+BEGIN
+    EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
+    EXECUTE format('GRANT CONNECT, TEMPORARY ON DATABASE %I TO catserver_admin, catserver_etl, catserver_edit, catserver_read, catserver_publish', current_database());
+END
+$catgis_db_privileges$;
 
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 

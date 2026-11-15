@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP on
+\ir _common/assert_catserver_database.sql
 
 DROP TABLE IF EXISTS catastro.barrios_shape_src;
 CREATE TABLE catastro.barrios_shape_src AS

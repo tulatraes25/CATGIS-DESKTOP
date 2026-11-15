@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect catserver
+\ir _common/assert_catserver_database.sql
 
 SELECT 'CREATE ROLE catserver_owner NOLOGIN'
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'catserver_owner') \gexec
@@ -19,8 +19,12 @@ WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'catserver_read') \gexe
 SELECT 'CREATE ROLE catserver_publish NOLOGIN'
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'catserver_publish') \gexec
 
-REVOKE ALL ON DATABASE catserver FROM PUBLIC;
-GRANT CONNECT ON DATABASE catserver TO catserver_admin, catserver_etl, catserver_edit, catserver_read, catserver_publish;
+DO $catgis_db_privileges$
+BEGIN
+    EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO catserver_admin, catserver_etl, catserver_edit, catserver_read, catserver_publish', current_database());
+END
+$catgis_db_privileges$;
 
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
 REVOKE ALL ON SCHEMA admin FROM PUBLIC;

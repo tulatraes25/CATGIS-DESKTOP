@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect catserver
+\ir _common/assert_catserver_database.sql
 
 -- Prerrequisitos: 12_security_roles_current.sql (roles) y
 -- 19_municipal_structure_layers.sql (esquema ordenamiento_territorial y vista

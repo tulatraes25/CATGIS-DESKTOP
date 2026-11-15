@@ -4,6 +4,7 @@ param(
     [int]$Port = 5432,
     [string]$SuperUser = "postgres",
     [string]$BootstrapDatabase = "postgres",
+    [string]$Database = "CATSERVER",
     [string]$SqlRoot = ""
 )
 
@@ -31,20 +32,24 @@ foreach ($sqlFile in $sqlFiles) {
         throw "Falta el archivo SQL requerido: $fullPath"
     }
 
-    Write-Host "Ejecutando $sqlFile ..."
+    # 00 creates the database from the maintenance database; the remaining files
+    # must target the created database because the SQL no longer forces \connect.
+    $targetDatabase = if ($sqlFile -like "00_*") { $BootstrapDatabase } else { $Database }
+
+    Write-Host "Ejecutando $sqlFile sobre $targetDatabase ..."
     & $psqlCommand.Source `
         -h $Host `
         -p $Port `
         -U $SuperUser `
-        -d $BootstrapDatabase `
+        -d $targetDatabase `
         -v ON_ERROR_STOP=1 `
         -f $fullPath
 
     if ($LASTEXITCODE -ne 0) {
-        throw "Fallo la ejecucion de $sqlFile"
+        throw "Fallo la ejecucion de $sqlFile sobre $targetDatabase"
     }
 }
 
 Write-Host ""
-Write-Host "Bootstrap SQL completado para CATSERVER."
+Write-Host "Bootstrap SQL completado para CATSERVER (base: $Database)."
 
