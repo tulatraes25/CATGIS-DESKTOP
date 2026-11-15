@@ -5,26 +5,37 @@ Este documento completa el [README](../README.md) y
 **que base** y **que datos tiene que existir antes**. Los prefijos numericos son
 por carpeta (`sql/` y `scripts/`) y no expresan un orden unico global.
 
-## 1. Nombre fisico de la base (leer antes de ejecutar)
+## 1. Nombre fisico de la base
 
 El bootstrap crea la base como `"CATSERVER"` (con mayusculas y comillas, ver
-[00_cluster_bootstrap.sql](../sql/00_cluster_bootstrap.sql)). En cambio, los
-scripts de las etapas posteriores asumen una base llamada `catserver`
-(minusculas):
+[00_cluster_bootstrap.sql](../sql/00_cluster_bootstrap.sql)). Los scripts SQL de
+las etapas siguientes **ya no fijan el nombre de la base**: el destino lo decide
+la invocacion (`psql -d <base>`), tal como exige la seccion 7 de
+[03_pipeline_etl.md](03_pipeline_etl.md).
 
-| Conjunto | Nombre de base que asume |
+| Conjunto | Base destino |
 | --- | --- |
-| `sql/00` a `sql/06` | `"CATSERVER"` (literal en `\connect` y en `GRANT ... ON DATABASE`) |
-| `scripts/03_run_bootstrap_psql.ps1` | se conecta a `postgres` para crear la base |
+| `sql/00` | base de mantenimiento (`postgres`), porque es la que crea la base |
+| `sql/01` a `sql/21` | la base indicada con `-d`; el guard compartido exige que se llame `catserver`/`CATSERVER` |
+| `scripts/03_run_bootstrap_psql.ps1` | `-BootstrapDatabase` para `sql/00`; `-Database` (por defecto `"CATSERVER"`) para `sql/01` a `sql/04` |
 | `scripts/04_import_kmz_examples.ps1` | `-Database "CATSERVER"` por defecto |
-| `sql/12` a `sql/21` | `catserver` (literal en `\connect` y en `GRANT ... ON DATABASE`) |
 | `scripts/06, 07, 14, 15, 17, 18` | `-Database "catserver"` por defecto |
 
-Consecuencia: **en una instalacion nueva hecha con `docs/04`, los SQL 12 a 21
-fallan de entrada** con `database "catserver" does not exist`, porque el
-`\connect catserver` de cada archivo pisa el `-d` de la invocacion. Y a la
-inversa, sobre una base existente `catserver` no deben correrse los SQL 00 a 04
-(crearian otra base y apuntarian a `"CATSERVER"`).
+Cada archivo `sql/01` a `sql/21` empieza con
+`\ir _common/assert_catserver_database.sql`: si la base destino no se llama
+`catserver`/`CATSERVER`, el script falla de inmediato con un mensaje explicito.
+Asi un `-d` olvidado no escribe en la base por defecto del operador. Las
+sentencias de privilegios sobre la base usan `current_database()`, por lo que no
+queda ningun nombre fisico incrustado.
+
+Escenarios soportados sin renombrar instalaciones:
+
+- **A. Instalacion nueva:** `scripts/03_run_bootstrap_psql.ps1` (crea
+  `"CATSERVER"` y aplica `sql/01` a `sql/04` sobre ella) y luego las etapas
+  05-21 con `psql -d "CATSERVER"` o con los scripts `-Database "CATSERVER"`.
+- **B. Base existente `catserver`:** no ejecutar `sql/00`; correr
+  `sql/01`-`sql/21` y los scripts con `-Database catserver`. Los privilegios
+  sobre la base y el guard funcionan igual.
 
 Antes de cualquier etapa, verificar la base real:
 
@@ -37,14 +48,11 @@ Reglas practicas:
 - No renombrar una instalacion existente como parte de una limpieza (ver
   [03_pipeline_etl.md](03_pipeline_etl.md), seccion 7). Normalizar el nombre
   fisico es una migracion aparte, con backup y verificacion.
-- Elegir un escenario por instalacion:
-  - **A. Instalacion nueva:** ejecutar solo `sql/00` a `sql/06` mas los
-    `scripts/*` que no fijen base. Para usar las etapas 07-21 hay que crear
-    ademas una base `catserver` o hacer la migracion de nombre.
-  - **B. Base existente `catserver`:** no ejecutar `sql/00` a `sql/06`; correr
-    las etapas 07-21 y los scripts con `-Database catserver`.
-- `psql -d CATSERVER` funciona con el nombre exacto (el argumento no se
-  normaliza), pero los scripts que tienen `\connect` adentro ignoran el `-d`.
+- Evidencia automatizada: el job **PostGIS Real Integration** ejecuta el
+  bootstrap real sobre `"CATSERVER"`, el mismo SQL sobre una base `catserver` y
+  verifica que el guard rechaza una base ajena; el job **Repository Safety
+  Checks** valida el contrato estatico con
+  `tools/qa/check_catserver_sql_contract.py`.
 
 ## 2. Orden SQL base (instalacion nueva)
 

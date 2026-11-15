@@ -53,4 +53,4 @@ ALTER ROLE nombre_usuario WITH PASSWORD 'NUEVA_CLAVE_SEGURA';
 - Usuario: el login creado
 - Clave: la del login creado
 
-Nota de nombre de base: el bootstrap de este repositorio crea la base como `"CATSERVER"`; los scripts posteriores usan `catserver`. Ver [11_orden_de_ejecucion_y_prerrequisitos.md](11_orden_de_ejecucion_y_prerrequisitos.md).
+Nota de nombre de base: el bootstrap de este repositorio crea la base como `"CATSERVER"`, pero los SQL ya no fuerzan el nombre: se ejecutan sobre la base indicada con `psql -d` y el guard compartido exige que se llame `catserver`/`CATSERVER`. Ver [11_orden_de_ejecucion_y_prerrequisitos.md](11_orden_de_ejecucion_y_prerrequisitos.md).

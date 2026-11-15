@@ -646,6 +646,39 @@ jobs:
           cache-disabled: true
       - name: Real PostGIS read/write roundtrip
         run: ./gradlew --offline --no-daemon postgisIntegrationTest
+      - name: CATSERVER SQL pipeline on both database names
+        shell: bash
+        env:
+          PGPASSWORD: ${{ env.CATGIS_TEST_POSTGIS_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          PSQL="psql -h localhost -p 5432 -U catgis_test -v ON_ERROR_STOP=1"
+          # Mirror a default PostgreSQL install: script 12 sets default privileges
+          # for role postgres (tracked separately as DC-7).
+          $PSQL -d catgis_test -c 'CREATE ROLE postgres SUPERUSER' || true
+
+          # Scenario A: bootstrap through the real orchestrator, which creates
+          # "CATSERVER" and now targets it explicitly instead of relying on
+          # per-file \connect statements.
+          pwsh -NoProfile -File CATSERVER/scripts/03_run_bootstrap_psql.ps1 \
+            -PsqlPath psql -Host localhost -Port 5432 -SuperUser catgis_test \
+            -BootstrapDatabase catgis_test -Database "CATSERVER"
+          $PSQL -d "CATSERVER" -f CATSERVER/sql/12_security_roles_current.sql
+
+          # Scenario B: an existing lowercase install runs the same SQL with -d.
+          $PSQL -d catgis_test -c 'CREATE DATABASE catserver'
+          $PSQL -d catserver -f CATSERVER/sql/01_extensions_and_schemas.sql
+          $PSQL -d catserver -f CATSERVER/sql/02_roles_and_privileges.sql
+          $PSQL -d catserver -f CATSERVER/sql/12_security_roles_current.sql
+
+          # The shared guard must reject an unrelated database explicitly.
+          if output=$($PSQL -d catgis_test -f CATSERVER/sql/07_kml_html_helpers.sql 2>&1); then
+            echo "GUARD_FAILED: unrelated database was accepted" >&2
+            exit 1
+          fi
+          echo "$output" | grep -F 'CATSERVER: ejecutar con psql -d' > /dev/null
+          echo "CATSERVER_SQL_PIPELINE_PASS databases=CATSERVER,catserver guard=rejected-unrelated"
       - name: Upload PostGIS evidence
         if: failure()
         uses: actions/upload-artifact@v4
