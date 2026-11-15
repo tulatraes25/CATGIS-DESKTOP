@@ -1,8 +1,9 @@
 # Repository Audit Remediation — Tasks
 
-Status: TRANCHES 1 AND 2 IMPLEMENTED — tranche 2 awaiting GitHub certification
-Baseline: `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819` (main after PR #206)
-Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication` (tranche 2)
+Status: TRANCHES 1 AND 2 CERTIFIED — tranche 3 awaiting GitHub certification
+Baseline: `ca980eeb1754abd1b036a57ebe3673a5267a6ce5` (main after PR #207)
+Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
+(merged, PR #207) · `fix/vector-axis-order-single-normalization` (tranche 3)
 
 Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 (Win11 + JDK 21.0.10 + Gradle 8.10.2 + Node 26 + Python 3.14) · Manual admin
@@ -201,12 +202,46 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     failures, 15 pre-existing skips.
   - Executor: Local → GitHub pending (T22)
 
-- [ ] **T22 — GitHub certification of tranche 2 (BLOCKING for closure)**
+- [x] **T22 — GitHub certification of tranche 2 (PR #207)**
   - Requirements: REQ-AR-11, program rule GITHUB-first
-  - Required evidence: PR from `fix/vector-export-atomic-publication` against
-    `main` with exact base `b2b52ff`; PR-head CI + Certification + Runtime
-    Identity + GeoParquet SUCCESS; merge with expected head SHA; post-main runs
-    SUCCESS and post-main attestation PASS.
+  - Evidence: PR [#207](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/207)
+    from `fix/vector-export-atomic-publication` against `main` `b2b52ff`; PR head
+    `9eecf75cfd46c1f3bb361571097c1670bb86c138` with **30/30 checks PASS**
+    (CI 43731049657, Certification 43731049826, Runtime Identity 43731049668
+    8/8, GeoParquet 43731049700, PR attestation 43731049685); merged with
+    `--match-head-commit` as `ca980eeb1754abd1b036a57ebe3673a5267a6ce5`;
+    post-main CI 43732244120, Certification 43732244126, Runtime Identity
+    43732244230 and GeoParquet 43732244146 all SUCCESS; post-main attestation
+    run 43733562098 SUCCESS with `ATTEST_BINDING_PASS` and 26 attested PASS jobs.
+  - Executor: GitHub + local follow-up (completed)
+
+## Tranche 3 — DC-2 envelope axis order
+
+- [x] **T23 — Remove the envelope axis swap (DC-2)**
+  - Requirements: REQ-AR-12, AC-AR-12.1…12.4
+  - Evidence: `ShapefileData` no longer normalizes the envelope in any
+    constructor; `ShapefileLoader` and `GeoPackageLoader` pass the raw bounds;
+    `CRSDefinitions.normalizeEnvelopeAxisOrder`/`isLatLonAxisOrder` removed as
+    misleading dead helpers. RED evidence on baseline `ShapefileData`: a point
+    stored at `(-58.45, -34.62)` with latitude-first CRS produced
+    `Env[-34.62:-34.62, -58.45:-58.45]` and failed with
+    `expected: <-58.45> but was: <-34.62>` (2 of 5 contract cases).
+  - Executor: Local → GitHub pending (T25)
+
+- [x] **T24 — Axis-order behavior contract**
+  - Requirements: AC-AR-12.5
+  - Evidence: `VectorEnvelopeAxisOrderContractTest` **5/5 GREEN** (latitude-first
+    constructor, longitude-first constructor, feature-collection constructor,
+    real Shapefile fixture, real GeoPackage fixture). Full suite: 1332 tests, 0
+    failures, 15 pre-existing skips (217 suites).
+  - Executor: Local → GitHub pending (T25)
+
+- [ ] **T25 — GitHub certification of tranche 3 (BLOCKING for closure)**
+  - Requirements: REQ-AR-12, program rule GITHUB-first
+  - Required evidence: PR from `fix/vector-axis-order-single-normalization`
+    against `main` with exact base `ca980eeb`; PR-head CI + Certification +
+    Runtime Identity + GeoParquet SUCCESS; merge with expected head SHA;
+    post-main runs SUCCESS and post-main attestation PASS.
   - Executor: GitHub (credentialed account) + local follow-up
 
 ## Deferred defect register
@@ -214,7 +249,7 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 | ID | Severity | Defect | Why deferred |
 |---|---|---|---|
 | DC-1 | ~~HIGH~~ RESOLVED | `ExportVectorLayerAction.saveLayerToFile` deleted shapefile sidecars (`.shp/.shx/.dbf/.prj…`) **before** exporting; a failed export destroyed the user's source file | Resolved by T20/T21 (PR pending in T22): same-volume staging, backup/restore publication and 8 deterministic contracts |
-| DC-2 | MEDIUM | Double axis-order normalization: `ShapefileLoader`/`GeoPackageLoader` normalize the envelope and `ShapefileData` normalizes again, cancelling the swap for some CRS | Needs empirical axis-order proof with real datasets before changing; a wrong fix breaks `zoomToLayer` |
+| DC-2 | ~~MEDIUM~~ RESOLVED | Double axis-order normalization: `ShapefileLoader`/`GeoPackageLoader` normalized the envelope and `ShapefileData` normalized again, cancelling the swap for some CRS; with latitude-first CRS metadata other constructors stored a swapped envelope | Resolved by T23/T24 (PR pending in T25): envelope is always the stored (x, y) bounds and 5 deterministic cases lock it |
 | DC-3 | MEDIUM | CATMAP atlas generation calls `MapPanel.renderMapViewImage` and mutates live Swing state/unsynchronized caches from a background thread | Architectural: serialize renders or take immutable viewport snapshots |
 | DC-4 | HIGH | CATSERVER: `sql/12–21` `\connect catserver` while the bootstrap creates `"CATSERVER"`; a fresh install aborts at script 12 | Data-model/naming migration decision documented in `docs/11`; renaming an existing install is explicitly out of scope |
 | DC-5 | HIGH | CATSERVER: `catastro.ejido_urbano_mask`, required by `sql/10/11/18`, is created by no SQL or script | Requires a data-source decision and a documented import step |
@@ -228,8 +263,9 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Blocker / dependency notes
 
-- Tranche 1 is certified on GitHub (T14). Tranche 2 still needs its own exact-PR
-  and post-main certification cycle (T22); local runs do not certify it.
+- Tranches 1 (T14) and 2 (T22) are certified on GitHub. Tranche 3 still needs its
+  own exact-PR and post-main certification cycle (T25); local runs do not
+  certify it.
 - No PostgreSQL/PostGIS instance locally: SQL changes are dependency-analysis
   verified, not executed. The certified PostGIS job exercises the tranche-1
   `sql/21` ordering change.
@@ -239,8 +275,8 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Current next action
 
-Certify tranche 2 on GitHub (T22: PR `fix/vector-export-atomic-publication`
-against `main` `b2b52ff`, exact PR CI/Certification, merge with
+Certify tranche 3 on GitHub (T25: PR `fix/vector-axis-order-single-normalization`
+against `main` `ca980eeb`, exact PR CI/Certification, merge with
 `expected_head_sha`, post-main runs and attestation). After that, the only
 remaining deferred high-severity items are CATSERVER DC-4/DC-5, which need a
 data-model/source decision before any code change.
