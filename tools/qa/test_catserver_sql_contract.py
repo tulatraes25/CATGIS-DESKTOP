@@ -17,7 +17,31 @@ GUARD = (
     'END\n'
     '$catgis_db_guard$;\n'
 )
+MASK_GUARD = (
+    'DO $catgis_ejido_mask_guard$\n'
+    'DECLARE\n'
+    '    mask_srid integer;\n'
+    'BEGIN\n'
+    "    IF to_regclass('catastro.ejido_urbano_mask') IS NULL THEN\n"
+    "        RAISE EXCEPTION 'falta catastro.ejido_urbano_mask';\n"
+    '    END IF;\n'
+    "    SELECT srid INTO mask_srid FROM geometry_columns WHERE f_geometry_column = 'geom';\n"
+    '    IF mask_srid <> 4326 THEN\n'
+    "        RAISE EXCEPTION 'SRID 4326 requerido';\n"
+    '    END IF;\n'
+    '    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE column_name = ' + "'gid') THEN\n"
+    "        RAISE EXCEPTION 'falta gid';\n"
+    '    END IF;\n'
+    'END\n'
+    '$catgis_ejido_mask_guard$;\n'
+)
 GUARDED_SCRIPT = '\\set ON_ERROR_STOP on\n\\ir _common/assert_catserver_database.sql\n\nSELECT 1;\n'
+MASK_CONSUMER_SCRIPT = (
+    '\\set ON_ERROR_STOP on\n'
+    '\\ir _common/assert_catserver_database.sql\n'
+    '\\ir _common/assert_ejido_mask.sql\n\n'
+    'SELECT 1 FROM catastro.ejido_urbano_mask;\n'
+)
 
 
 class CatserverSqlContractTest(unittest.TestCase):
@@ -74,6 +98,25 @@ class CatserverSqlContractTest(unittest.TestCase):
         (self.sql_root / '00_cluster_bootstrap.sql').unlink(missing_ok=True)
         with self.assertRaisesRegex(RuntimeError, 'No CATSERVER SQL scripts'):
             audit(self.root)
+
+    def test_mask_consumer_requires_mask_guard(self) -> None:
+        self.put(
+            '10_cad_barrios_finalize.sql',
+            GUARDED_SCRIPT + '\nSELECT 1 FROM catastro.ejido_urbano_mask;\n',
+        )
+        with self.assertRaisesRegex(RuntimeError, 'consumes catastro.ejido_urbano_mask'):
+            audit(self.root)
+
+    def test_mask_guard_must_validate_the_data_contract(self) -> None:
+        self.put('_common/assert_ejido_mask.sql', 'DO $$ BEGIN END $$;\n')
+        self.put('10_cad_barrios_finalize.sql', MASK_CONSUMER_SCRIPT)
+        with self.assertRaisesRegex(RuntimeError, 'does not validate'):
+            audit(self.root)
+
+    def test_valid_mask_guard_passes(self) -> None:
+        self.put('_common/assert_ejido_mask.sql', MASK_GUARD)
+        self.put('10_cad_barrios_finalize.sql', MASK_CONSUMER_SCRIPT)
+        self.assertEqual(3, audit(self.root))
 
 
 if __name__ == '__main__':

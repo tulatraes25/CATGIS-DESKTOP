@@ -2,16 +2,18 @@
 
 Status: ACTIVE
 Owner: CATGIS
-Baseline: `4f47378925413163faca4adb460d68f352ae2fad` (main after PR #210)
+Baseline: `f363ace2fc1110e0c8f312456bfbc758b3fbb758` (main after PR #211)
 Baseline history: tranche 1 started at `aecb4d2` (PR #199) and merged as
 `b2b52ff`; tranche 2 (DC-1 atomic vector export) merged as `ca980eeb`;
 tranche 3 (DC-2 envelope axis order) merged as `8455375`; tranche 4
 (DC-3 EDT render serialization) merged as `4f47378`; tranche 5
-(DC-4 adaptive CATSERVER database) starts at `4f47378`.
+(DC-4 adaptive CATSERVER database) merged as `f363ace`; tranche 6
+(DC-5 fail-closed ejido mask) starts at `f363ace`.
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
 `fix/catmap-atlas-edt-render` (merged, PR #210) ·
-`fix/catserver-adaptive-database-connect` (tranche 5)
+`fix/catserver-adaptive-database-connect` (merged, PR #211) ·
+`fix/catserver-ejido-mask-fail-closed` (tranche 6)
 Program: BUGFIX_ONLY — feature freeze respected (no new features, no dependency upgrades, no GUI/OpenCode validation)
 
 ## Goal
@@ -254,6 +256,28 @@ Acceptance:
   collide with PowerShell automatic variables (`$Host`), so they can run on
   PowerShell 7 and from CI; the host parameter keeps a `Host` alias for
   backward-compatible invocations.
+
+## REQ-AR-15 — Missing CATSERVER data prerequisites must fail closed
+
+WHEN a CATSERVER script depends on a data table that no repository artifact
+produces, THE SYSTEM SHALL fail at the start of the script with an actionable
+message describing the required schema, instead of failing late with an obscure
+missing-relation error.
+
+Acceptance:
+- AC-AR-15.1: `sql/10`, `sql/11` and `sql/18` include a shared guard that
+  validates `catastro.ejido_urbano_mask`.
+- AC-AR-15.2: The guard rejects a missing table, a missing `geom` column, a
+  `geom` column not in SRID 4326, and a missing `gid` column, each with a
+  distinct message.
+- AC-AR-15.3: The required schema contract (`gid`, `geom`, SRID 4326) and the
+  absence of an automatic producer are documented in the CATSERVER execution
+  guide.
+- AC-AR-15.4: The PostGIS certification job proves the three guard outcomes
+  (missing table, wrong SRID, valid contract proceeds) and the static contract
+  keeps consumers guarded.
+- AC-AR-15.5: The data-source decision for producing the mask automatically
+  remains explicitly open (DC-5 is mitigated, not resolved).
 
 ## Constraints
 

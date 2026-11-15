@@ -678,7 +678,30 @@ jobs:
             exit 1
           fi
           echo "$output" | grep -F 'CATSERVER: ejecutar con psql -d' > /dev/null
-          echo "CATSERVER_SQL_PIPELINE_PASS databases=CATSERVER,catserver guard=rejected-unrelated"
+
+          # DC-5 fail-closed: the ejido mask prerequisite must fail fast and with
+          # an actionable message, and must reject an incompatible SRID.
+          if output=$($PSQL -d "CATSERVER" -f CATSERVER/sql/10_cad_barrios_finalize.sql 2>&1); then
+            echo "MASK_GUARD_FAILED: missing ejido mask was accepted" >&2
+            exit 1
+          fi
+          echo "$output" | grep -F 'falta catastro.ejido_urbano_mask' > /dev/null
+
+          $PSQL -d "CATSERVER" -c "CREATE TABLE catastro.ejido_urbano_mask (gid bigint PRIMARY KEY, geom geometry(MultiPolygon, 3857))"
+          if output=$($PSQL -d "CATSERVER" -f CATSERVER/sql/10_cad_barrios_finalize.sql 2>&1); then
+            echo "MASK_GUARD_FAILED: wrong mask SRID was accepted" >&2
+            exit 1
+          fi
+          echo "$output" | grep -F 'SRID 4326' > /dev/null
+
+          $PSQL -d "CATSERVER" -c "DROP TABLE catastro.ejido_urbano_mask; CREATE TABLE catastro.ejido_urbano_mask (gid bigint PRIMARY KEY, geom geometry(MultiPolygon, 4326))"
+          if output=$($PSQL -d "CATSERVER" -f CATSERVER/sql/10_cad_barrios_finalize.sql 2>&1); then
+            echo "MASK_GUARD_FAILED: script unexpectedly succeeded without raw sources" >&2
+            exit 1
+          fi
+          echo "$output" | grep -F 'staging.cad_barrios_lineas_src' > /dev/null
+
+          echo "CATSERVER_SQL_PIPELINE_PASS databases=CATSERVER,catserver db_guard=rejected-unrelated mask_guard=fail-closed"
       - name: Upload PostGIS evidence
         if: failure()
         uses: actions/upload-artifact@v4

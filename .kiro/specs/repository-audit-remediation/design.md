@@ -1,11 +1,12 @@
 # Repository Audit Remediation — Design
 
 Status: ACTIVE
-Baseline: `4f47378925413163faca4adb460d68f352ae2fad` (main after PR #210)
+Baseline: `f363ace2fc1110e0c8f312456bfbc758b3fbb758` (main after PR #211)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
 `fix/catmap-atlas-edt-render` (merged, PR #210) ·
-`fix/catserver-adaptive-database-connect` (tranche 5)
+`fix/catserver-adaptive-database-connect` (merged, PR #211) ·
+`fix/catserver-ejido-mask-fail-closed` (tranche 6)
 Commits: `0bb839a` (web), `7c4b4d8` (catserver), `8474980` (desktop), `aca48da`
 (launchers), `3c7d9d8` (docs), `5d126d5` (gitignore), `d7e4e7f` (encoding),
 `d9da0e5` (verified test count), `0c335ef` + `9e1f24c` (contracts and spec) —
@@ -14,8 +15,9 @@ contracts (`8c6ba96`, `a8930f5`, `65f374a`, `9eecf75`) — merged as `ca980eeb`;
 tranche 3 removed the envelope axis swap (`a45b2e9`, `a2aa6fe`, `9b3432e`) —
 merged as `8455375`; tranche 4 serialized export renders on the EDT (`6ed72c4`,
 `c757a8a`, `08a81d1`, rebased as `9b2f041`, `080a176`, `ecaaab1`) — merged as
-`4f47378`; tranche 5 makes the CATSERVER SQL database-agnostic on top of
-`4f47378`.
+`4f47378`; tranche 5 made the CATSERVER SQL database-agnostic (`0ef8703`,
+`fc43ba8`, `f0bc789`, `dea8f46`, `a594702`) — merged as `f363ace`; tranche 6
+fails closed on the missing ejido mask on top of `f363ace`.
 
 ## Current state
 
@@ -35,7 +37,9 @@ finding was re-validated before being fixed. Three classes of outcome resulted:
    data-model gaps. The destructive shapefile export (former DC-1) was fixed in
    tranche 2, the envelope axis swap (former DC-2) in tranche 3, the off-EDT
    atlas render (former DC-3) in tranche 4 and the hardcoded CATSERVER database
-   name (former DC-4) in tranche 5.
+   name (former DC-4) in tranche 5. The missing ejido mask (DC-5) is mitigated
+   fail-closed in tranche 6; deciding which script must *produce* it remains a
+   data-source decision.
 
 ## Target state
 
@@ -196,6 +200,30 @@ Validation is executable in GitHub:
   lowercase `catserver`, and proves the guard rejects an unrelated database with
   the expected message.
 
+### Fail-closed ejido mask prerequisite (DC-5)
+
+`sql/10`, `sql/11` and `sql/18` filter with `catastro.ejido_urbano_mask`, but no
+repository artifact creates that table: on a clean database the failure was a
+late `relation "catastro.ejido_urbano_mask" does not exist` in the middle of a
+load, after some derived tables were already dropped.
+
+Tranche 6 adds `_common/assert_ejido_mask.sql`, a shared guard included at the
+top of those three scripts, which raises a specific actionable error when:
+
+- the table is missing (`falta catastro.ejido_urbano_mask`),
+- the `geom` column is missing,
+- `geom` is not in SRID 4326,
+- the `gid` column is missing (needed because `sql/13`/`sql/18` publish the
+  table as a viewer layer).
+
+`docs/11` now states the full contract table, the `ogr2ogr` command with
+`-lco FID=gid`, and explicitly keeps the *producer* decision open. The static
+contract checker requires the mask guard for every script that consumes the
+mask, and validates the guard content. The PostGIS job proves three outcomes
+against the real database: missing table rejected with the expected message,
+wrong SRID rejected with the SRID message, and the valid contract letting the
+script proceed until the next missing prerequisite (`staging.cad_barrios_lineas_src`).
+
 ## Sequence
 
 1. Synchronize the clone to the exact main SHA and re-validate each finding.
@@ -239,6 +267,7 @@ Validation is executable in GitHub:
 | RED proof (DC-3) | Disabling the EDT dispatch left the `MapFrameRenderer` export delegation painting off the EDT; contract failed with `El render de exportacion debe pintar en el Event Dispatch Thread. ==> expected: <true> but was: <false>` |
 | CATSERVER SQL contract (tranche 5) | `CATSERVER_SQL_CONTRACT_PASS files=20`; contract unit tests 7/7; no Java changes, so the Java suite remains 1337 tests / 0 failures from tranche 4; PowerShell parser clean for the modified orchestrator |
 | PostGIS pipeline evidence | The certification PostGIS job bootstraps `"CATSERVER"` through `scripts/03_run_bootstrap_psql.ps1`, applies `sql/12` there, repeats `sql/01`/`02`/`12` on a lowercase `catserver`, and proves the guard rejects an unrelated database (run IDs in T31) |
+| Ejido mask fail-closed (tranche 6) | `CATSERVER_SQL_CONTRACT_PASS files=20 mask_consumers=3`; contract unit tests 10/10; PostGIS job proves missing-table rejection, wrong-SRID rejection and valid-contract continuation (run IDs in T34) |
 | Certification locks | `FeatureSurfaceInventoryCertificationTest` and `SemanticFeatureMatrixCertificationTest` updated and green with the new export surface registered |
 | Existing export contracts | `ReleaseVectorInteropTest`, `ReleaseProjectRoundTripTest`, `ReleaseProjectRoundTripTest`, `ProjectOperationalCrsRoundTripTest`, `ReleaseFormatCompatibilityTest` green through the staging path |
 | Web | `npm run lint` clean; `npm test` 31/31 |
@@ -302,6 +331,10 @@ backup files.
   the documented psql-only pipeline. The certification job creates a `postgres`
   role to mirror a default PostgreSQL install because `sql/12` sets default
   privileges for that role (tracked as DC-7).
+- **Ejido mask (DC-5)**: the guard makes the missing prerequisite loud, but the
+  mask must still be imported manually; which script should produce it, from
+  which source, and with which attributes remains an open data-source decision.
+  A future producer must satisfy the documented `gid`/`geom`/SRID 4326 contract.
 
 ## Traceability
 
@@ -321,3 +354,4 @@ backup files.
 | REQ-AR-12 | Envelope axis-order consistency (DC-2) | T23, T24, T25 |
 | REQ-AR-13 | EDT serialization of export renders (DC-3) | T26, T27, T28 |
 | REQ-AR-14 | Adaptive CATSERVER database selection (DC-4) | T29, T30, T31 |
+| REQ-AR-15 | Fail-closed CATSERVER data prerequisites (DC-5) | T32, T33, T34 |

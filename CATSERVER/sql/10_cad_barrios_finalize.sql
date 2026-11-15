@@ -1,5 +1,6 @@
 \set ON_ERROR_STOP on
 \ir _common/assert_catserver_database.sql
+\ir _common/assert_ejido_mask.sql
 
 CREATE SCHEMA IF NOT EXISTS staging;
 
