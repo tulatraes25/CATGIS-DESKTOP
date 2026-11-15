@@ -1,13 +1,15 @@
 # Repository Audit Remediation — Design
 
 Status: ACTIVE
-Baseline: `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819` (main after PR #206)
-Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication` (tranche 2)
+Baseline: `ca980eeb1754abd1b036a57ebe3673a5267a6ce5` (main after PR #207)
+Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
+(merged, PR #207) · `fix/vector-axis-order-single-normalization` (tranche 3)
 Commits: `0bb839a` (web), `7c4b4d8` (catserver), `8474980` (desktop), `aca48da`
 (launchers), `3c7d9d8` (docs), `5d126d5` (gitignore), `d7e4e7f` (encoding),
 `d9da0e5` (verified test count), `0c335ef` + `9e1f24c` (contracts and spec) —
-merged as `b2b52ff`; tranche 2 adds the atomic vector export publisher and its
-contracts on top of `b2b52ff`.
+merged as `b2b52ff`; tranche 2 added the atomic vector export publisher and its
+contracts (`8c6ba96`, `a8930f5`, `65f374a`, `9eecf75`) — merged as `ca980eeb`;
+tranche 3 removes the envelope axis swap on top of `ca980eeb`.
 
 ## Current state
 
@@ -23,10 +25,10 @@ finding was re-validated before being fixed. Three classes of outcome resulted:
    (`visitedPages` + cap), atomic project save (`ProjectFilePublisher`),
    bounded project open (`ProjectOpenRecordIntegrity`), pan-preview rework,
    `GeoParquetReader` resource handling.
-3. **Documented but intentionally not patched** (see Deferred): double envelope
-   axis normalization, atlas rendering off the EDT, CATSERVER data-model gaps.
-   The destructive shapefile export (former DC-1) was fixed in tranche 2; see
-   *Atomic vector export* below.
+3. **Documented but intentionally not patched** (see Deferred): atlas rendering
+   off the EDT and CATSERVER data-model gaps. The destructive shapefile export
+   (former DC-1) was fixed in tranche 2 and the envelope axis swap (former DC-2)
+   in tranche 3; see *Atomic vector export* and *Envelope axis-order consistency*.
 
 ## Target state
 
@@ -109,6 +111,29 @@ Every export now goes through `VectorExportPublisher`:
   `CatmapAtomicExport -> LayoutExportEngine` precedent, so the architecture
   certification locks stay green.
 
+### Envelope axis-order consistency (DC-2)
+
+`ShapefileData` used to call `CRSDefinitions.normalizeEnvelopeAxisOrder`, which
+swapped min/max X/Y whenever the schema CRS declared a latitude-first axis order
+(`AXIS["Geodetic latitude", NORTH]` first, as some ESRI `.prj` files or the
+`CRS.decode` fallback produce). JTS envelopes are the (x, y) bounds of the stored
+coordinates, so swapping them made the layer envelope disagree with its own
+geometry. The shapefile and GeoPackage loaders additionally pre-normalized the
+envelope, so on those two paths the swap cancelled out; every other constructor
+(used by the DXF/KML/GPX/GeoJSON/FlatGeobuf/PostGIS loaders and by editing code)
+received a swapped envelope for latitude-first metadata.
+
+RED evidence on baseline `ShapefileData`: one point stored at `(-58.45, -34.62)`
+produced `dataEnvelope=Env[-34.62:-34.62, -58.45:-58.45]`, and the contract failed
+with `expected: <-58.45> but was: <-34.62>`.
+
+Tranche 3 keeps envelopes untouched in `ShapefileData`, removes the redundant
+loader pre-normalization, removes the misleading
+`CRSDefinitions.normalizeEnvelopeAxisOrder`/`isLatLonAxisOrder` helpers, and locks
+the invariant with `VectorEnvelopeAxisOrderContractTest` (five cases:
+latitude-first constructor, longitude-first constructor, feature-collection
+constructor, real Shapefile fixture, real GeoPackage fixture).
+
 ## Sequence
 
 1. Synchronize the clone to the exact main SHA and re-validate each finding.
@@ -142,17 +167,19 @@ Every export now goes through `VectorExportPublisher`:
 |---|---|
 | Java build + suite (tranche 1) | BUILD SUCCESSFUL, 1319 tests (1314 baseline + 5 new contract cases), 0 failures, 15 pre-existing skips |
 | Java build + suite (tranche 2) | BUILD SUCCESSFUL, 1327 tests (1319 + 8 DC-1 contract cases), 0 failures, 15 pre-existing skips |
-| New contracts | `ScaleApplyPanSyncContractTest` 2/2, `LayoutDmsDirectionContractTest` 3/3, `VectorExportPublisherContractTest` 7/7, `VectorExportRepublishContractTest` 1/1 |
+| Java build + suite (tranche 3) | BUILD SUCCESSFUL, 1332 tests (1327 + 5 DC-2 contract cases), 0 failures, 15 pre-existing skips |
+| New contracts | `ScaleApplyPanSyncContractTest` 2/2, `LayoutDmsDirectionContractTest` 3/3, `VectorExportPublisherContractTest` 7/7, `VectorExportRepublishContractTest` 1/1, `VectorEnvelopeAxisOrderContractTest` 5/5 |
 | RED proof (scale/pan) | Removing the delegation failed both tests: mirror `10.0` vs `49.995`, zoom after pan `2.0` vs `3.9995` |
 | RED proof (graticule) | Restoring the identical-branch expression failed the latitude test (1 of 3) |
 | RED proof (DC-1) | Reproducing the baseline `deleteShapefileSidecars(file); exportToShapefile(...)` sequence with a failing writer left no `.shp/.shx/.dbf` for the previous dataset (data loss confirmed) |
+| RED proof (DC-2) | Baseline `ShapefileData` with latitude-first CRS stored `Env[-34.62:-34.62, -58.45:-58.45]` for a point at `(-58.45, -34.62)`; contract failed with `expected: <-58.45> but was: <-34.62>` (2 of 5 cases) |
 | Certification locks | `FeatureSurfaceInventoryCertificationTest` and `SemanticFeatureMatrixCertificationTest` updated and green with the new export surface registered |
 | Existing export contracts | `ReleaseVectorInteropTest`, `ReleaseProjectRoundTripTest`, `ReleaseProjectRoundTripTest`, `ProjectOperationalCrsRoundTripTest`, `ReleaseFormatCompatibilityTest` green through the staging path |
 | Web | `npm run lint` clean; `npm test` 31/31 |
-| LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=750` |
+| LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=751` |
 | Repo policy | `.github/tests` 11/11; `tools/qa` integrity tests 8/8; PowerShell parser 9/9; repository-safety strings 5/5 |
 | Wrapper | gradle-wrapper.jar sha256 matches services.gradle.org for 8.10.2 |
-| NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation for tranche 2, GUI/native runtime, PostgreSQL execution, installer generation |
+| NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation for tranche 3, GUI/native runtime, PostgreSQL execution, installer generation |
 
 ## Rollback
 
@@ -191,6 +218,11 @@ backup files.
 - **GeoTools regenerates index/`.cpg` parts when reading** a shapefile, so the
   integration contract asserts the published content and the absence of
   `.catgis-*` temporaries instead of pinning a specific regenerated sidecar.
+- **Envelope axis order (DC-2)**: the app now assumes every reader returns
+  geometry coordinates in stored (x, y) order, which is what Shapefile,
+  GeoPackage and the other GeoTools readers do. A dataset whose coordinates were
+  genuinely stored latitude-first would need a coordinate transform, not an
+  envelope swap; that remains out of scope and no repo fixture behaves that way.
 
 ## Traceability
 
@@ -207,3 +239,4 @@ backup files.
 | REQ-AR-9 | Governing docs / Sequence step 7 | T12, T16, T17 |
 | REQ-AR-10 | Validation | T13, T14, T19 |
 | REQ-AR-11 | Atomic vector export (DC-1) | T20, T21, T22 |
+| REQ-AR-12 | Envelope axis-order consistency (DC-2) | T23, T24, T25 |

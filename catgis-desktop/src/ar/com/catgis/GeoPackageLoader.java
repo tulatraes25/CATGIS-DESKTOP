@@ -112,12 +112,9 @@ public final class GeoPackageLoader {
                 layer.setSourceName(file.getName());
             }
 
-            Envelope normalizedEnvelope = CRSDefinitions.normalizeEnvelopeAxisOrder(
-                    envelope, schema != null ? schema.getCoordinateReferenceSystem() : null);
-
             return new ShapefileData(
                     features,
-                    normalizedEnvelope,
+                    envelope,
                     file.getName() + " :: " + layer.getTableName(),
                     features.size(),
                     "GeoPackage cargado correctamente en modo lectura.",

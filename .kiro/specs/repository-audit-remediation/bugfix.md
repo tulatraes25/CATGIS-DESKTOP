@@ -2,10 +2,12 @@
 
 Status: ACTIVE
 Owner: CATGIS
-Baseline: `b2b52ff6633b1dda115b4d0ebcd9d988b22c1819` (main after PR #206)
+Baseline: `ca980eeb1754abd1b036a57ebe3673a5267a6ce5` (main after PR #207)
 Baseline history: tranche 1 started at `aecb4d2` (PR #199) and merged as
-`b2b52ff`; tranche 2 (DC-1 atomic vector export) starts at `b2b52ff`.
-Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication` (tranche 2)
+`b2b52ff`; tranche 2 (DC-1 atomic vector export) merged as `ca980eeb`;
+tranche 3 (DC-2 envelope axis order) starts at `ca980eeb`.
+Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
+(merged, PR #207) · `fix/vector-axis-order-single-normalization` (tranche 3)
 Program: BUGFIX_ONLY — feature freeze respected (no new features, no dependency upgrades, no GUI/OpenCode validation)
 
 ## Goal
@@ -187,6 +189,25 @@ Acceptance:
   the new content and the result stays readable.
 - AC-AR-11.6: The new export publisher is registered in the checked-in
   certification surface inventory and semantic map in the same change set.
+
+## REQ-AR-12 — Layer envelopes must match their stored geometries
+
+WHEN a vector layer is built, loaded or rebuilt from any constructor path, THE
+SYSTEM SHALL expose an envelope equal to the (x, y) bounds of its stored
+feature geometries, regardless of the axis order declared by the CRS metadata.
+
+Acceptance:
+- AC-AR-12.1: A latitude-first CRS (for example an ESRI `.prj` or a
+  `CRS.decode("EPSG:4326")` authority-order fallback) never swaps the layer
+  envelope: `minX`/`maxX` stay longitudes and `minY`/`maxY` stay latitudes.
+- AC-AR-12.2: All `ShapefileData` construction paths (feature collection,
+  feature list plus envelope, raw feature list) agree with
+  `featureCollection.getBounds()` for the same data.
+- AC-AR-12.3: A real Shapefile and a real GeoPackage fixture keep their
+  geographic envelope (`-58.45…-58.37`, `-34.62…-34.57`) after loading.
+- AC-AR-12.4: No redundant axis normalization remains in the shapefile or
+  GeoPackage loaders, and the misleading envelope-swap helper is removed.
+- AC-AR-12.5: A deterministic headless contract covers the three points above.
 
 ## Constraints
 
