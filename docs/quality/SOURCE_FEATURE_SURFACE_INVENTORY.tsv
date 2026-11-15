@@ -118,6 +118,7 @@ EXPORT_SURFACE	ExportVectorLayerAction.java
 EXPORT_SURFACE	KmlExportEngine.java
 EXPORT_SURFACE	layout/LayoutExportContext.java
 EXPORT_SURFACE	PostgisExportDialog.java
+EXPORT_SURFACE	VectorExportPublisher.java
 LOADER_OR_READER	climate/GribLoader.java
 LOADER_OR_READER	climate/NetCdfLoader.java
 LOADER_OR_READER	CsvTableReader.java

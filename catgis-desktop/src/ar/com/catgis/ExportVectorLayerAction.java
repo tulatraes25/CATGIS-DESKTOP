@@ -310,17 +310,22 @@ public class ExportVectorLayerAction {
                 return false;
             }
 
+            String resolvedCode = resolveTargetCode(layer, option, targetCode);
             if (SHAPEFILE_OPTION.equals(option)) {
-                deleteShapefileSidecars(file);
-                exportToShapefile(layer, data, file, resolveTargetCode(layer, option, targetCode));
+                VectorExportPublisher.publishShapefile(file,
+                        staging -> exportToShapefile(layer, data, staging, resolvedCode));
             } else if (DXF_OPTION.equals(option)) {
-                exportToDxf(layer, data, file, resolveTargetCode(layer, option, targetCode));
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToDxf(layer, data, staging, resolvedCode));
             } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolveTargetCode(layer, option, targetCode));
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToGeoJson(layer, data, staging, resolvedCode));
             } else if (GPX_OPTION.equals(option)) {
-                exportToGpx(layer, data, file);
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToGpx(layer, data, staging));
             } else {
-                exportToKml(layer, data, file, kmlOptions);
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToKml(layer, data, staging, kmlOptions));
             }
 
             if (showSuccessMessage) {
@@ -384,16 +389,20 @@ public class ExportVectorLayerAction {
             }
 
             if (SHAPEFILE_OPTION.equals(option)) {
-                deleteShapefileSidecars(file);
-                exportToShapefile(layer, data, file, resolvedTargetCode);
+                VectorExportPublisher.publishShapefile(file,
+                        staging -> exportToShapefile(layer, data, staging, resolvedTargetCode));
             } else if (DXF_OPTION.equals(option)) {
-                exportToDxf(layer, data, file, resolvedTargetCode);
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToDxf(layer, data, staging, resolvedTargetCode));
             } else if (GEOJSON_OPTION.equals(option)) {
-                exportToGeoJson(layer, data, file, resolvedTargetCode);
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToGeoJson(layer, data, staging, resolvedTargetCode));
             } else if (GPX_OPTION.equals(option)) {
-                exportToGpx(layer, data, file);
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToGpx(layer, data, staging));
             } else {
-                exportToKml(layer, data, file, kmlOptions);
+                VectorExportPublisher.publishSingleFile(file,
+                        staging -> exportToKml(layer, data, staging, kmlOptions));
             }
 
             if (!GPX_OPTION.equals(option)) {
@@ -1550,19 +1559,6 @@ public class ExportVectorLayerAction {
     private record KmlExportOptions(boolean exportLabels, String labelField, boolean includeDescription) {
         private static KmlExportOptions defaults() {
             return new KmlExportOptions(false, null, true);
-        }
-    }
-
-    private static void deleteShapefileSidecars(File shpFile) {
-        String absolutePath = shpFile.getAbsolutePath();
-        int dot = absolutePath.lastIndexOf('.');
-        String base = dot > 0 ? absolutePath.substring(0, dot) : absolutePath;
-        String[] extensions = {".shp", ".shx", ".dbf", ".prj", ".fix", ".qix", ".cpg"};
-        for (String extension : extensions) {
-            File candidate = new File(base + extension);
-            if (candidate.exists() && !candidate.delete()) {
-                throw new RuntimeException("No se pudo reemplazar el archivo existente: " + candidate.getAbsolutePath());
-            }
         }
     }
 
