@@ -1,4 +1,5 @@
 \set ON_ERROR_STOP on
+\ir _common/assert_catserver_database.sql
 
 CREATE OR REPLACE FUNCTION admin.kml_desc_value(desc_html text, label text)
 RETURNS text

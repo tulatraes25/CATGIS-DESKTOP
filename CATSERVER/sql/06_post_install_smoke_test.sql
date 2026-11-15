@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect "CATSERVER"
+\ir _common/assert_catserver_database.sql
 
 SELECT current_database() AS database_name;
 SELECT postgis_full_version() AS postgis_version;

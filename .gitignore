@@ -101,7 +101,12 @@ ChatGPT Image*
 Resumenes chats/
 srczip/
 tmp-flat/
-tools/
+# Herramientas locales de empaquetado (WiX, kits). El QA versionado vive en tools/qa.
+tools/*
+!tools/qa/
+!tools/qa/**
+tools/qa/__pycache__/
+tools/qa/*.py[cod]
 
 # Datos GIS (archivos pesados, no son codigo fuente)
 catserver_shapes/

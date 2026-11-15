@@ -1,10 +1,11 @@
 # Repository Audit Remediation — Tasks
 
-Status: TRANCHES 1–3 CERTIFIED — tranche 4 awaiting GitHub certification
-Baseline: `84553751eb404e0662cf3ce8892371ffaa7ca7a6` (main after PR #208)
+Status: TRANCHES 1–4 CERTIFIED — tranche 5 awaiting GitHub certification
+Baseline: `4f47378925413163faca4adb460d68f352ae2fad` (main after PR #210)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
-`fix/catmap-atlas-edt-render` (tranche 4)
+`fix/catmap-atlas-edt-render` (merged, PR #210) ·
+`fix/catserver-adaptive-database-connect` (tranche 5)
 
 Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 (Win11 + JDK 21.0.10 + Gradle 8.10.2 + Node 26 + Python 3.14) · Manual admin
@@ -275,12 +276,62 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     0 failures, 15 pre-existing skips (219 suites).
   - Executor: Local → GitHub pending (T28)
 
-- [ ] **T28 — GitHub certification of tranche 4 (BLOCKING for closure)**
+- [x] **T28 — GitHub certification of tranche 4 (PR #210)**
   - Requirements: REQ-AR-13, program rule GITHUB-first
-  - Required evidence: PR from `fix/catmap-atlas-edt-render` against `main` with
-    exact base `8455375`; PR-head CI + Certification + Runtime Identity +
-    GeoParquet SUCCESS; merge with expected head SHA; post-main runs SUCCESS and
-    post-main attestation PASS.
+  - Evidence: PR [#210](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/210)
+    from `fix/catmap-atlas-edt-render` against `main` `8455375`; PR head
+    `ecaaab157591da04625eeb2b2528cc87067f9b37` with **30/30 checks PASS**
+    (CI 43746289195, Certification 43746289396, Runtime Identity 43746289179
+    8/8, GeoParquet 43746289204, PR attestation 43746289158); merged with
+    `--match-head-commit` as `4f47378925413163faca4adb460d68f352ae2fad`;
+    post-main CI 43747510374, Certification 43747510316, Runtime Identity
+    43747510365 and GeoParquet 43747510561 all SUCCESS; post-main attestation
+    run 43748542492 SUCCESS with `ATTEST_BINDING_PASS` and 26 attested PASS jobs.
+    An earlier PR #209 was closed because its branch was based on the tranche-3
+    head instead of live main; the attestation gate rejected it
+    (`PR_HEAD_NOT_DESCENDED_FROM_LIVE_MAIN`) and the branch was recreated from
+    main without force-push.
+  - Executor: GitHub + local follow-up (completed)
+
+## Tranche 5 — DC-4 adaptive CATSERVER database
+
+- [x] **T29 — Stop forcing the CATSERVER database name**
+  - Requirements: REQ-AR-14, AC-AR-14.1…14.4
+  - Evidence: all 19 stage scripts (`sql/01`–`sql/21`, clustered into 01-15 and
+    18-21) lost their hardcoded `\connect` and now include
+    `\common/assert_catserver_database.sql`, a shared guard that rejects any
+    database other than `catserver`/`CATSERVER` with an explicit message.
+    `sql/02` and `sql/12` build database-level privileges from
+    `current_database()` via `format('%I', …)`.
+    `scripts/03_run_bootstrap_psql.ps1` gained `-Database` and targets the
+    maintenance database for `sql/00` and the created database for `sql/01`–`04`.
+    `docs/11` and `docs/06` document the resolved behaviour and both scenarios.
+  - The new PostGIS evidence also exposed a latent blocker: `03_run_bootstrap_psql.ps1`
+    and `04_import_kmz_examples.ps1` declared `[string]$Host`, which collides with
+    the read-only PowerShell automatic variable `$Host` and made the orchestrator
+    fail before running any SQL on PowerShell 7. Renamed to `$DbHost` with a
+    `Host` alias for backward-compatible invocations; local binding evidence:
+    running the script without `psql` now fails with the expected
+    "No se encontro psql" message instead of the read-only-variable error.
+  - Executor: Local → GitHub pending (T31)
+
+- [x] **T30 — Static SQL contract in the required safety check**
+  - Requirements: AC-AR-14.6
+  - Evidence: `tools/qa/check_catserver_sql_contract.py`
+    (`CATSERVER_SQL_CONTRACT_PASS files=20`) and
+    `tools/qa/test_catserver_sql_contract.py` (7/7 disposable-fixture tests:
+    clean tree, `\connect` rejection, missing guard, hardcoded database
+    privilege, permissive guard, bootstrap without canonical database, empty
+    tree). Both run in the required **Repository Safety Checks** job.
+  - Executor: Local → GitHub pending (T31)
+
+- [ ] **T31 — GitHub certification of tranche 5 (BLOCKING for closure)**
+  - Requirements: REQ-AR-14, AC-AR-14.5
+  - Required evidence: PR from `fix/catserver-adaptive-database-connect` against
+    `main` with exact base `4f47378`; PR-head CI + Certification (including the
+    new PostGIS SQL pipeline step) + Runtime Identity + GeoParquet SUCCESS;
+    merge with expected head SHA; post-main runs SUCCESS and post-main
+    attestation PASS.
   - Executor: GitHub (credentialed account) + local follow-up
 
 ## Deferred defect register
@@ -290,7 +341,7 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 | DC-1 | ~~HIGH~~ RESOLVED | `ExportVectorLayerAction.saveLayerToFile` deleted shapefile sidecars (`.shp/.shx/.dbf/.prj…`) **before** exporting; a failed export destroyed the user's source file | Resolved by T20/T21 (PR pending in T22): same-volume staging, backup/restore publication and 8 deterministic contracts |
 | DC-2 | ~~MEDIUM~~ RESOLVED | Double axis-order normalization: `ShapefileLoader`/`GeoPackageLoader` normalized the envelope and `ShapefileData` normalized again, cancelling the swap for some CRS; with latitude-first CRS metadata other constructors stored a swapped envelope | Resolved by T23/T24 (PR pending in T25): envelope is always the stored (x, y) bounds and 5 deterministic cases lock it |
 | DC-3 | ~~MEDIUM~~ RESOLVED | CATMAP atlas generation called `MapPanel.renderMapViewImage` from a background thread, mutating live Swing state/unsynchronized caches | Resolved by T26/T27 (PR pending in T28): export seams marshal renders to the EDT with `EdtRenderSupport` without growing `MapPanel` |
-| DC-4 | HIGH | CATSERVER: `sql/12–21` `\connect catserver` while the bootstrap creates `"CATSERVER"`; a fresh install aborts at script 12 | Data-model/naming migration decision documented in `docs/11`; renaming an existing install is explicitly out of scope |
+| DC-4 | ~~HIGH~~ RESOLVED | CATSERVER: `sql/12–21` forced `\connect catserver` while the bootstrap creates `"CATSERVER"`; a fresh install aborted at script 12 | Resolved by T29/T30 (PR pending in T31): no script forces a database, the shared guard rejects non-CATSERVER databases, and both names are exercised in the PostGIS job |
 | DC-5 | HIGH | CATSERVER: `catastro.ejido_urbano_mask`, required by `sql/10/11/18`, is created by no SQL or script | Requires a data-source decision and a documented import step |
 | DC-6 | MEDIUM | CATSERVER: table/vista name collision `catastro.circunscripcion_sector` (04 table vs 18 view) | Model decision |
 | DC-7 | MEDIUM | CATSERVER: inconsistent role/default-privilege policies between `sql/02`, `sql/12`, `sql/19` | Needs a single ownership model before editing grants |
@@ -302,20 +353,20 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Blocker / dependency notes
 
-- Tranches 1 (T14), 2 (T22) and 3 (T25) are certified on GitHub. Tranche 4 still
-  needs its own exact-PR and post-main certification cycle (T28); local runs do
-  not certify it.
-- No PostgreSQL/PostGIS instance locally: SQL changes are dependency-analysis
-  verified, not executed. The certified PostGIS job exercises the tranche-1
-  `sql/21` ordering change.
+- Tranches 1 (T14), 2 (T22), 3 (T25) and 4 (T28) are certified on GitHub.
+  Tranche 5 still needs its own exact-PR and post-main certification cycle (T31);
+  local runs do not certify it.
+- No local PostgreSQL/PostGIS instance: the CATSERVER pipeline evidence runs in
+  the certification PostGIS job (real bootstrap on `"CATSERVER"`, lowercase
+  `catserver` and guard rejection).
 - GUI/native runtime, installer generation and Windows script execution require
   the authorized local phase after A0.7 and are explicitly NOT_VERIFIED.
 - A0.7 remains **NOT_CERTIFIED**; this spec does not claim otherwise.
 
 ## Current next action
 
-Certify tranche 4 on GitHub (T28: PR `fix/catmap-atlas-edt-render` against `main`
-`8455375`, exact PR CI/Certification, merge with `expected_head_sha`, post-main
-runs and attestation). After that, the remaining deferred high-severity items are
-CATSERVER DC-4/DC-5, which need a data-model/source decision before any code
-change.
+Certify tranche 5 on GitHub (T31: PR `fix/catserver-adaptive-database-connect`
+against `main` `4f47378`, exact PR CI/Certification, merge with
+`expected_head_sha`, post-main runs and attestation). After that, the remaining
+deferred high-severity item is CATSERVER DC-5 (`catastro.ejido_urbano_mask` has
+no producer), which needs a data-source decision before any code change.

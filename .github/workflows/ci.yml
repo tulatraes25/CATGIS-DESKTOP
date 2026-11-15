@@ -118,6 +118,12 @@ jobs:
         shell: bash
         run: python3 -m unittest discover -s .github/tests -p 'test_main_push_attestation.py' -v
 
+      - name: CATSERVER SQL database-connect contract
+        shell: bash
+        run: |
+          python3 tools/qa/test_catserver_sql_contract.py
+          python3 tools/qa/check_catserver_sql_contract.py
+
       - name: Prove the exact twelve-file mechanical repair
         if: github.event_name == 'pull_request' && github.head_ref == 'maintenance/java-lf-integrity-post121'
         shell: bash

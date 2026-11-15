@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect "CATSERVER"
+\ir _common/assert_catserver_database.sql
 
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_raster;

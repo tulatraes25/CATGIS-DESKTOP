@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect "CATSERVER"
+\ir _common/assert_catserver_database.sql
 SET ROLE catserver_owner;
 
 -- Este seed público no registra admin.source_asset.

@@ -1,5 +1,5 @@
 \set ON_ERROR_STOP on
-\connect catserver
+\ir _common/assert_catserver_database.sql
 
 CREATE SCHEMA IF NOT EXISTS gobierno_modernizacion;
 CREATE SCHEMA IF NOT EXISTS control_urbano_operativo;
