@@ -1,6 +1,6 @@
 # CATGIS Desktop — Tested Environments
 
-**Fecha**: 2026-11-15 | **Rama**: `fix/repo-audit` (base `947d39f`)
+**Fecha**: 2026-11-15 | **Rama**: `fix/main-audit` (base `aecb4d2`)
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Windows | Java | OSGeo4W / GDAL | PostgreSQL / PostGIS | Pantalla | Resultado | Notas |
 |---|---|---|---|---|---|---|
-| Windows 11 Pro (build 26200) | OpenJDK 21.0.10 | No instalado | No disponible | — | ✅ BUILD SUCCESSFUL, 761 tests (0 fallos, 15 omitidos) | Verificación de auditoría 2026-11-15 |
+| Windows 11 Pro (build 26200) | OpenJDK 21.0.10 | No instalado | No disponible | — | ✅ BUILD SUCCESSFUL, 1314 tests (0 fallos, 15 omitidos) | Verificación de auditoría 2026-11-15 sobre `aecb4d2` + parche de auditoría |
 | Windows 11 23H2 | OpenJDK 17.0.9 | OSGeo4W64 (GDAL 3.8.4) | — | 1920x1080 (100% scaling) | ✅ BUILD SUCCESSFUL, 647 tests | Registro histórico (`d0934b7`) |
 | *(pendiente)* | | | | | ⬜ No verificado | Testear en Windows 10 |
 | *(pendiente)* | | | | | ⬜ No verificado | Testear con HiDPI (150% scaling) |
