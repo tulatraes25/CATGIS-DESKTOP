@@ -1,11 +1,12 @@
 # Repository Audit Remediation — Tasks
 
-Status: TRANCHES 1–4 CERTIFIED — tranche 5 awaiting GitHub certification
-Baseline: `4f47378925413163faca4adb460d68f352ae2fad` (main after PR #210)
+Status: TRANCHES 1–5 CERTIFIED — tranche 6 awaiting GitHub certification
+Baseline: `f363ace2fc1110e0c8f312456bfbc758b3fbb758` (main after PR #211)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
 `fix/catmap-atlas-edt-render` (merged, PR #210) ·
-`fix/catserver-adaptive-database-connect` (tranche 5)
+`fix/catserver-adaptive-database-connect` (merged, PR #211) ·
+`fix/catserver-ejido-mask-fail-closed` (tranche 6)
 
 Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 (Win11 + JDK 21.0.10 + Gradle 8.10.2 + Node 26 + Python 3.14) · Manual admin
@@ -325,13 +326,50 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     tree). Both run in the required **Repository Safety Checks** job.
   - Executor: Local → GitHub pending (T31)
 
-- [ ] **T31 — GitHub certification of tranche 5 (BLOCKING for closure)**
+- [x] **T31 — GitHub certification of tranche 5 (PR #211)**
   - Requirements: REQ-AR-14, AC-AR-14.5
-  - Required evidence: PR from `fix/catserver-adaptive-database-connect` against
-    `main` with exact base `4f47378`; PR-head CI + Certification (including the
-    new PostGIS SQL pipeline step) + Runtime Identity + GeoParquet SUCCESS;
-    merge with expected head SHA; post-main runs SUCCESS and post-main
-    attestation PASS.
+  - Evidence: PR [#211](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/211)
+    from `fix/catserver-adaptive-database-connect` against `main` `4f47378`;
+    PR head `a5947022403658cff934f8fea458e09f958d1522` with **30/30 checks PASS**
+    (CI 43764737116, Certification 43764737097 including the new PostGIS SQL
+    pipeline, Runtime Identity 43764737106 8/8, GeoParquet 43764737108, PR
+    attestation 43764737114); merged with `--match-head-commit` as
+    `f363ace2fc1110e0c8f312456bfbc758b3fbb758`; post-main CI 43765849688,
+    Certification 43765849690, Runtime Identity 43765849714 and GeoParquet
+    43765849728 all SUCCESS; post-main attestation run 43767012563 SUCCESS with
+    `ATTEST_BINDING_PASS` and 26 attested PASS jobs. The first CI run exposed a
+    latent `$Host` automatic-variable collision; fixed and re-certified without
+    force-push.
+  - Executor: GitHub + local follow-up (completed)
+
+## Tranche 6 — DC-5 fail-closed ejido mask
+
+- [x] **T32 — Fail-closed prerequisite guard for the ejido mask**
+  - Requirements: REQ-AR-15, AC-AR-15.1…15.3
+  - Evidence: new `_common/assert_ejido_mask.sql` included at the top of
+    `sql/10`, `sql/11` and `sql/18`; it rejects a missing table, a missing
+    `geom`, a `geom` not in SRID 4326, and a missing `gid`, each with its own
+    actionable message. `docs/11` documents the full `gid`/`geom`/SRID 4326
+    contract, the `ogr2ogr` command with `-lco FID=gid`, and keeps the producer
+    decision explicitly open.
+  - Executor: Local → GitHub pending (T34)
+
+- [x] **T33 — Static and executable mask contract**
+  - Requirements: AC-AR-15.4
+  - Evidence: the static checker now requires the mask guard for every consumer
+    and validates the guard content
+    (`CATSERVER_SQL_CONTRACT_PASS files=20 mask_consumers=3`); contract unit
+    tests 10/10 (consumer without guard, weak guard, valid guard). The PostGIS
+    job proves missing-table rejection, wrong-SRID rejection and valid-contract
+    continuation against the real database.
+  - Executor: Local → GitHub pending (T34)
+
+- [ ] **T34 — GitHub certification of tranche 6 (BLOCKING for closure)**
+  - Requirements: REQ-AR-15, AC-AR-15.5
+  - Required evidence: PR from `fix/catserver-ejido-mask-fail-closed` against
+    `main` with exact base `f363ace`; PR-head CI + Certification (including the
+    extended PostGIS step) + Runtime Identity + GeoParquet SUCCESS; merge with
+    expected head SHA; post-main runs SUCCESS and post-main attestation PASS.
   - Executor: GitHub (credentialed account) + local follow-up
 
 ## Deferred defect register
@@ -342,7 +380,7 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 | DC-2 | ~~MEDIUM~~ RESOLVED | Double axis-order normalization: `ShapefileLoader`/`GeoPackageLoader` normalized the envelope and `ShapefileData` normalized again, cancelling the swap for some CRS; with latitude-first CRS metadata other constructors stored a swapped envelope | Resolved by T23/T24 (PR pending in T25): envelope is always the stored (x, y) bounds and 5 deterministic cases lock it |
 | DC-3 | ~~MEDIUM~~ RESOLVED | CATMAP atlas generation called `MapPanel.renderMapViewImage` from a background thread, mutating live Swing state/unsynchronized caches | Resolved by T26/T27 (PR pending in T28): export seams marshal renders to the EDT with `EdtRenderSupport` without growing `MapPanel` |
 | DC-4 | ~~HIGH~~ RESOLVED | CATSERVER: `sql/12–21` forced `\connect catserver` while the bootstrap creates `"CATSERVER"`; a fresh install aborted at script 12 | Resolved by T29/T30 (PR pending in T31): no script forces a database, the shared guard rejects non-CATSERVER databases, and both names are exercised in the PostGIS job |
-| DC-5 | HIGH | CATSERVER: `catastro.ejido_urbano_mask`, required by `sql/10/11/18`, is created by no SQL or script | Requires a data-source decision and a documented import step |
+| DC-5 | **ALTO (MITIGADO, no resuelto)** | CATSERVER: `catastro.ejido_urbano_mask`, requerida por `sql/10/11/18`, no la crea ningun SQL ni script | Fail-closed + contrato documentado + evidencia en CI (T32/T33, PR pendiente en T34). **Sigue abierta la decision de origen de datos**: que script debe producir la mascara y desde que fuente |
 | DC-6 | MEDIUM | CATSERVER: table/vista name collision `catastro.circunscripcion_sector` (04 table vs 18 view) | Model decision |
 | DC-7 | MEDIUM | CATSERVER: inconsistent role/default-privilege policies between `sql/02`, `sql/12`, `sql/19` | Needs a single ownership model before editing grants |
 | DC-8 | MEDIUM | CATSERVER: `DROP`/`TRUNCATE`/`-overwrite` destructive paths without backup or transactional wrapper | Operational policy decision |
@@ -353,20 +391,19 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 
 ## Blocker / dependency notes
 
-- Tranches 1 (T14), 2 (T22), 3 (T25) and 4 (T28) are certified on GitHub.
-  Tranche 5 still needs its own exact-PR and post-main certification cycle (T31);
-  local runs do not certify it.
-- No local PostgreSQL/PostGIS instance: the CATSERVER pipeline evidence runs in
-  the certification PostGIS job (real bootstrap on `"CATSERVER"`, lowercase
-  `catserver` and guard rejection).
+- Tranches 1 (T14), 2 (T22), 3 (T25), 4 (T28) and 5 (T31) are certified on
+  GitHub. Tranche 6 still needs its own exact-PR and post-main certification
+  cycle (T34); local runs do not certify it.
+- PostgreSQL/PostGIS execution lives in the certification job: real bootstrap on
+  both database names, the DC-4 guards and the three DC-5 mask outcomes.
 - GUI/native runtime, installer generation and Windows script execution require
   the authorized local phase after A0.7 and are explicitly NOT_VERIFIED.
 - A0.7 remains **NOT_CERTIFIED**; this spec does not claim otherwise.
 
 ## Current next action
 
-Certify tranche 5 on GitHub (T31: PR `fix/catserver-adaptive-database-connect`
-against `main` `4f47378`, exact PR CI/Certification, merge with
-`expected_head_sha`, post-main runs and attestation). After that, the remaining
-deferred high-severity item is CATSERVER DC-5 (`catastro.ejido_urbano_mask` has
-no producer), which needs a data-source decision before any code change.
+Certify tranche 6 on GitHub (T34: PR `fix/catserver-ejido-mask-fail-closed`
+against `main` `f363ace`, exact PR CI/Certification, merge with
+`expected_head_sha`, post-main runs and attestation). After that, DC-5 needs the
+data-source decision to produce `catastro.ejido_urbano_mask` automatically, and
+DC-6…DC-12 remain as documented policy/administrative follow-ups.
