@@ -2,14 +2,16 @@
 
 Status: ACTIVE
 Owner: CATGIS
-Baseline: `84553751eb404e0662cf3ce8892371ffaa7ca7a6` (main after PR #208)
+Baseline: `4f47378925413163faca4adb460d68f352ae2fad` (main after PR #210)
 Baseline history: tranche 1 started at `aecb4d2` (PR #199) and merged as
 `b2b52ff`; tranche 2 (DC-1 atomic vector export) merged as `ca980eeb`;
 tranche 3 (DC-2 envelope axis order) merged as `8455375`; tranche 4
-(DC-3 EDT render serialization) starts at `8455375`.
+(DC-3 EDT render serialization) merged as `4f47378`; tranche 5
+(DC-4 adaptive CATSERVER database) starts at `4f47378`.
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
-`fix/catmap-atlas-edt-render` (tranche 4)
+`fix/catmap-atlas-edt-render` (merged, PR #210) ·
+`fix/catserver-adaptive-database-connect` (tranche 5)
 Program: BUGFIX_ONLY — feature freeze respected (no new features, no dependency upgrades, no GUI/OpenCode validation)
 
 ## Goal
@@ -228,6 +230,26 @@ Acceptance:
 - AC-AR-13.4: The panel view (`viewMinX`, `viewMinY`, zoom) and size are restored
   after an off-EDT export render.
 - AC-AR-13.5: Existing render contracts and atlas page isolation remain green.
+
+## REQ-AR-14 — CATSERVER SQL must adapt to the caller's database
+
+WHEN a CATSERVER SQL stage script runs, THE SYSTEM SHALL execute against the
+database selected by the caller instead of forcing a hardcoded name, and SHALL
+fail explicitly when that database is not a CATSERVER database.
+
+Acceptance:
+- AC-AR-14.1: No `CATSERVER/sql` stage script contains `\connect`.
+- AC-AR-14.2: Every stage script includes the shared database guard, and the
+  guard rejects any database that is not `catserver`/`CATSERVER`.
+- AC-AR-14.3: Database-level privilege statements use `current_database()`, so
+  the same SQL works on both historical names.
+- AC-AR-14.4: The bootstrap orchestrator targets the maintenance database for
+  `sql/00` and the created database for `sql/01`–`sql/04`.
+- AC-AR-14.5: The PostGIS certification job executes the real bootstrap on
+  `"CATSERVER"`, the same SQL on a lowercase `catserver`, and proves the guard
+  rejects an unrelated database.
+- AC-AR-14.6: A static contract (checker + unit tests) enforces the previous
+  points inside the required Repository Safety check.
 
 ## Constraints
 

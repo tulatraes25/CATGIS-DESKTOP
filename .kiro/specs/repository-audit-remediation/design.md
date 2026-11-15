@@ -1,18 +1,21 @@
 # Repository Audit Remediation — Design
 
 Status: ACTIVE
-Baseline: `84553751eb404e0662cf3ce8892371ffaa7ca7a6` (main after PR #208)
+Baseline: `4f47378925413163faca4adb460d68f352ae2fad` (main after PR #210)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
-`fix/catmap-atlas-edt-render` (tranche 4)
+`fix/catmap-atlas-edt-render` (merged, PR #210) ·
+`fix/catserver-adaptive-database-connect` (tranche 5)
 Commits: `0bb839a` (web), `7c4b4d8` (catserver), `8474980` (desktop), `aca48da`
 (launchers), `3c7d9d8` (docs), `5d126d5` (gitignore), `d7e4e7f` (encoding),
 `d9da0e5` (verified test count), `0c335ef` + `9e1f24c` (contracts and spec) —
 merged as `b2b52ff`; tranche 2 added the atomic vector export publisher and its
 contracts (`8c6ba96`, `a8930f5`, `65f374a`, `9eecf75`) — merged as `ca980eeb`;
 tranche 3 removed the envelope axis swap (`a45b2e9`, `a2aa6fe`, `9b3432e`) —
-merged as `8455375`; tranche 4 serializes map export renders on the EDT on top of
-`8455375`.
+merged as `8455375`; tranche 4 serialized export renders on the EDT (`6ed72c4`,
+`c757a8a`, `08a81d1`, rebased as `9b2f041`, `080a176`, `ecaaab1`) — merged as
+`4f47378`; tranche 5 makes the CATSERVER SQL database-agnostic on top of
+`4f47378`.
 
 ## Current state
 
@@ -30,8 +33,9 @@ finding was re-validated before being fixed. Three classes of outcome resulted:
    `GeoParquetReader` resource handling.
 3. **Documented but intentionally not patched** (see Deferred): CATSERVER
    data-model gaps. The destructive shapefile export (former DC-1) was fixed in
-   tranche 2, the envelope axis swap (former DC-2) in tranche 3 and the off-EDT
-   atlas render (former DC-3) in tranche 4.
+   tranche 2, the envelope axis swap (former DC-2) in tranche 3, the off-EDT
+   atlas render (former DC-3) in tranche 4 and the hardcoded CATSERVER database
+   name (former DC-4) in tranche 5.
 
 ## Target state
 
@@ -165,6 +169,33 @@ off the EDT and the contract failed with
 architecture ratchet stayed green because `MapPanel` was reverted to its
 certified size (3489 lines, ceiling 3500).
 
+### Adaptive CATSERVER database selection (DC-4)
+
+The stage-2 SQL files hardcoded `\connect catserver` while `sql/00` creates the
+database as `"CATSERVER"`. On a fresh install each stage-2 script aborted with
+`database "catserver" does not exist` before running a single statement, and the
+internal `\connect` also overrode the caller's `psql -d`.
+
+Tranche 5 removes the hardcoded connection from every stage script (19 files)
+and replaces it with `\ir _common/assert_catserver_database.sql`, a shared guard
+that raises an explicit error unless `lower(current_database()) = 'catserver'`.
+The database-level privilege statements in `sql/02` and `sql/12` now build their
+target from `current_database()` through `format('%I', ...)`, so the same SQL
+works on both historical names without renaming any installation. The bootstrap
+orchestrator (`scripts/03_run_bootstrap_psql.ps1`) gained a `-Database`
+parameter: `sql/00` runs against the maintenance database and `sql/01`–`sql/04`
+against the created database.
+
+Validation is executable in GitHub:
+
+- `tools/qa/check_catserver_sql_contract.py` (plus seven disposable-fixture unit
+  tests) rejects any `\connect`, missing guard or hardcoded database privilege
+  statement, and runs inside the required Repository Safety check;
+- the PostGIS certification job runs the real orchestrator to bootstrap
+  `"CATSERVER"`, applies `sql/12` there, repeats `sql/01`, `02` and `12` on a
+  lowercase `catserver`, and proves the guard rejects an unrelated database with
+  the expected message.
+
 ## Sequence
 
 1. Synchronize the clone to the exact main SHA and re-validate each finding.
@@ -206,13 +237,15 @@ certified size (3489 lines, ceiling 3500).
 | RED proof (DC-1) | Reproducing the baseline `deleteShapefileSidecars(file); exportToShapefile(...)` sequence with a failing writer left no `.shp/.shx/.dbf` for the previous dataset (data loss confirmed) |
 | RED proof (DC-2) | Baseline `ShapefileData` with latitude-first CRS stored `Env[-34.62:-34.62, -58.45:-58.45]` for a point at `(-58.45, -34.62)`; contract failed with `expected: <-58.45> but was: <-34.62>` (2 of 5 cases) |
 | RED proof (DC-3) | Disabling the EDT dispatch left the `MapFrameRenderer` export delegation painting off the EDT; contract failed with `El render de exportacion debe pintar en el Event Dispatch Thread. ==> expected: <true> but was: <false>` |
+| CATSERVER SQL contract (tranche 5) | `CATSERVER_SQL_CONTRACT_PASS files=20`; contract unit tests 7/7; no Java changes, so the Java suite remains 1337 tests / 0 failures from tranche 4; PowerShell parser clean for the modified orchestrator |
+| PostGIS pipeline evidence | The certification PostGIS job bootstraps `"CATSERVER"` through `scripts/03_run_bootstrap_psql.ps1`, applies `sql/12` there, repeats `sql/01`/`02`/`12` on a lowercase `catserver`, and proves the guard rejects an unrelated database (run IDs in T31) |
 | Certification locks | `FeatureSurfaceInventoryCertificationTest` and `SemanticFeatureMatrixCertificationTest` updated and green with the new export surface registered |
 | Existing export contracts | `ReleaseVectorInteropTest`, `ReleaseProjectRoundTripTest`, `ReleaseProjectRoundTripTest`, `ProjectOperationalCrsRoundTripTest`, `ReleaseFormatCompatibilityTest` green through the staging path |
 | Web | `npm run lint` clean; `npm test` 31/31 |
 | LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=754` |
 | Repo policy | `.github/tests` 11/11; `tools/qa` integrity tests 8/8; PowerShell parser 9/9; repository-safety strings 5/5 |
 | Wrapper | gradle-wrapper.jar sha256 matches services.gradle.org for 8.10.2 |
-| NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation for tranche 3, GUI/native runtime, PostgreSQL execution, installer generation |
+| NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation for tranche 5, GUI/native runtime, installer generation |
 
 ## Rollback
 
@@ -262,6 +295,13 @@ backup files.
   briefly freeze the UI. A future improvement is rendering from immutable
   viewport snapshots without touching the live `MapPanel`; the architecture
   ratchet forbids growing `MapPanel` to absorb that work.
+- **Adaptive CATSERVER database (DC-4)**: the guard accepts only
+  `catserver`/`CATSERVER`; an installation with another physical name must be
+  migrated explicitly (documented as a separate migration, never a silent
+  rename). The stage scripts rely on the psql `\ir` metacommand, which matches
+  the documented psql-only pipeline. The certification job creates a `postgres`
+  role to mirror a default PostgreSQL install because `sql/12` sets default
+  privileges for that role (tracked as DC-7).
 
 ## Traceability
 
@@ -280,3 +320,4 @@ backup files.
 | REQ-AR-11 | Atomic vector export (DC-1) | T20, T21, T22 |
 | REQ-AR-12 | Envelope axis-order consistency (DC-2) | T23, T24, T25 |
 | REQ-AR-13 | EDT serialization of export renders (DC-3) | T26, T27, T28 |
+| REQ-AR-14 | Adaptive CATSERVER database selection (DC-4) | T29, T30, T31 |
