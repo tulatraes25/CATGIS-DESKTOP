@@ -189,3 +189,31 @@ BLOCKED until A0 is CLOSED_CERTIFIED and F3/R1 runtime blocking items are certif
 ## Current next action
 
 Resolve F2 STAC pagination PR #36 test failure and certify A0.3 Tranche C WMS disk cache on GitHub against `22961526117bf2e090450cd837042241f23af64b`. Continue audit of remaining EDT/network/disk boundaries and A0.2/A0.4/A0.5, then A0.6/A0.7 before GUI/OpenCode.
+
+## Reconciliation note (repository audit, 2026-11-15)
+
+This ledger's baseline `bb5d854d17510a1c2518993a0c2120461f9d92a3` is a historical
+snapshot, not the current public state. At 2026-11-15 the public `main` is
+`aecb4d20621bb5065f8acb388813eefe594f3a27` (PR #199, 2026-10-17) and
+`git ls-remote origin` reports 150 `refs/heads` and 0 tags. Re-validate the
+"Current next action" above against that SHA before treating it as open work:
+
+- `StacClient.getCollections` already implements bounded pagination
+  (`visitedPages`, `MAX_COLLECTION_PAGES`, relative next-link resolution and
+  HTTP(S) enforcement) and `StacCollectionPaginationContractTest` covers
+  multi-page, cyclic, non-HTTP and null-link cases. The F2 pagination repair is
+  present on main; it still needs exact-PR CI/Certification evidence before it
+  leaves `CANDIDATE` state. See
+  `docs/quality/STAC_COLLECTION_PAGINATION_CONTRACT.md`.
+- Project atomic save (`ProjectFilePublisher`), bounded project open
+  (`ProjectOpenRecordIntegrity`), the pan-scene preview rework and
+  `GeoParquetReader` resource handling are also already present on main, so
+  their candidate branches must not be re-ported blindly.
+- A0.5/A0.7 remain `NOT_CERTIFIED` per
+  `a0-critical-gate-evidence-20261017.md`; no task above is retroactively
+  certified by this note.
+
+F2.4/F2.5/A0.2/A0.3 and the rest of the ledger must be re-verified against
+`aecb4d20…` before any status changes. The independent defect inventory produced
+by the audit lives in `.kiro/specs/repository-audit-remediation/` and does not
+certify this program.
