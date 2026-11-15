@@ -76,20 +76,35 @@ canonico; no se corrige en este repo porque implica cambio de modelo de datos.
 
 `sql/10`, `sql/11` y `sql/18` filtran contra `catastro.ejido_urbano_mask`, pero
 **ningun archivo de `sql/` crea esa tabla**. Hay que importar la mascara del
-ejido antes de `sql/10`. Debe estar en EPSG:4326 (los JOIN usan
-`ST_Intersects` contra geometrias 4326) y con la columna de geometria llamada
-`geom` (los SQL 10 y 11 usan `m.geom` explicito):
+ejido antes de `sql/10`. Contrato requerido:
+
+| Requisito | Detalle |
+| --- | --- |
+| Tabla | `catastro.ejido_urbano_mask` |
+| Columna de geometria | `geom`, en **SRID 4326** (los JOIN usan `ST_Intersects` contra geometrias 4326) |
+| Clave publicada | `gid` (los SQL 13 y 18 publican la tabla como capa del visor) |
+| Tipo | compatible con `(Multi)Polygon` |
+
+Esos scripts empiezan con `\ir _common/assert_ejido_mask.sql`: si la tabla no
+existe, no tiene `geom`, no esta en 4326 o no tiene `gid`, **fallan de inmediato**
+con un mensaje accionable en lugar de un `relation does not exist` tardio a mitad
+de la carga. Importacion sugerida (ajustar ruta de ogr2ogr):
 
 ```powershell
 & "C:\Program Files\PostgreSQL\18\bin\ogr2ogr.exe" `
   -f PostgreSQL "PG:host=localhost port=5432 dbname=catserver user=postgres" `
   "C:\CATSERVER_SOURCE_ROOT\ejido\ejido_urbano_mask.shp" `
   -nln catastro.ejido_urbano_mask -nlt PROMOTE_TO_MULTI `
-  -lco GEOMETRY_NAME=geom -t_srs EPSG:4326
+  -lco GEOMETRY_NAME=geom -lco FID=gid -t_srs EPSG:4326
 ```
 
 El `SourceShape` de esa mascara es el mismo que usa
 `scripts/16_build_shape_delivery_package.ps1` (`ejido\ejido_urbano_mask.shp`).
+**Sigue abierto (DC-5):** que script debe *producir* esa mascara de forma
+automatica es una decision de origen de datos pendiente; el guard solo garantiza
+que su ausencia no sea silenciosa. Evidencia automatizada: el job PostGIS verifica
+el rechazo sin mascara, el rechazo con SRID incorrecto y que el guard deja pasar
+el contrato correcto; el job Repository Safety valida el guard estaticamente.
 
 ## 4. Contrato de importacion KMZ a `raw`
 
