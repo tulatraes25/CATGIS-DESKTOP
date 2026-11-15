@@ -1,15 +1,18 @@
 # Repository Audit Remediation — Design
 
 Status: ACTIVE
-Baseline: `ca980eeb1754abd1b036a57ebe3673a5267a6ce5` (main after PR #207)
+Baseline: `84553751eb404e0662cf3ce8892371ffaa7ca7a6` (main after PR #208)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
-(merged, PR #207) · `fix/vector-axis-order-single-normalization` (tranche 3)
+(merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
+`fix/catmap-atlas-edt-render` (tranche 4)
 Commits: `0bb839a` (web), `7c4b4d8` (catserver), `8474980` (desktop), `aca48da`
 (launchers), `3c7d9d8` (docs), `5d126d5` (gitignore), `d7e4e7f` (encoding),
 `d9da0e5` (verified test count), `0c335ef` + `9e1f24c` (contracts and spec) —
 merged as `b2b52ff`; tranche 2 added the atomic vector export publisher and its
 contracts (`8c6ba96`, `a8930f5`, `65f374a`, `9eecf75`) — merged as `ca980eeb`;
-tranche 3 removes the envelope axis swap on top of `ca980eeb`.
+tranche 3 removed the envelope axis swap (`a45b2e9`, `a2aa6fe`, `9b3432e`) —
+merged as `8455375`; tranche 4 serializes map export renders on the EDT on top of
+`8455375`.
 
 ## Current state
 
@@ -25,10 +28,10 @@ finding was re-validated before being fixed. Three classes of outcome resulted:
    (`visitedPages` + cap), atomic project save (`ProjectFilePublisher`),
    bounded project open (`ProjectOpenRecordIntegrity`), pan-preview rework,
    `GeoParquetReader` resource handling.
-3. **Documented but intentionally not patched** (see Deferred): atlas rendering
-   off the EDT and CATSERVER data-model gaps. The destructive shapefile export
-   (former DC-1) was fixed in tranche 2 and the envelope axis swap (former DC-2)
-   in tranche 3; see *Atomic vector export* and *Envelope axis-order consistency*.
+3. **Documented but intentionally not patched** (see Deferred): CATSERVER
+   data-model gaps. The destructive shapefile export (former DC-1) was fixed in
+   tranche 2, the envelope axis swap (former DC-2) in tranche 3 and the off-EDT
+   atlas render (former DC-3) in tranche 4.
 
 ## Target state
 
@@ -134,6 +137,34 @@ the invariant with `VectorEnvelopeAxisOrderContractTest` (five cases:
 latitude-first constructor, longitude-first constructor, feature-collection
 constructor, real Shapefile fixture, real GeoPackage fixture).
 
+### EDT serialization of export renders (DC-3)
+
+CATMAP atlas generation runs on a background `new Thread` and eventually calls
+`MapPanel.renderMapViewImage` through `LayoutMap` (which resolves the live
+`AppContext.mapPanel()`) and through `MapFrameRenderer` when the project has
+raster/online layers. The same seam is used by layout export and preview
+snapshots. That method mutates live panel state (`viewMinX/viewMinY/zoomFactor`,
+panel size, `layoutRenderMode`, the exporting flag and the temporary render
+order) and calls `paintComponent`, so calling it from a worker race against the
+normal EDT paint cycle could corrupt view state or produce wrong atlas pages.
+
+Tranche 4 routes the three export seams through `EdtRenderSupport.call(...)`:
+`LayoutMap.captureMapImage`, the `MapFrameRenderer.render` delegation to the live
+panel, and `LayoutPageRenderer`'s page render. The helper follows the repo's
+architecture ratchet: it does not grow `MapPanel` (which is at its certified
+ceiling); it guards the export boundaries instead.
+
+- callers already on the EDT run inline (no deadlock, no extra round-trip);
+- background callers are marshalled with `invokeAndWait` and receive the image,
+  the original failure, or a clear interruption error (interrupt flag restored);
+- `MapPanel` keeps its certified size and render contracts unchanged.
+
+RED evidence: disabling the dispatch left the background export render painting
+off the EDT and the contract failed with
+`El render de exportacion debe pintar en el Event Dispatch Thread. ==> expected: <true> but was: <false>`. The
+architecture ratchet stayed green because `MapPanel` was reverted to its
+certified size (3489 lines, ceiling 3500).
+
 ## Sequence
 
 1. Synchronize the clone to the exact main SHA and re-validate each finding.
@@ -168,15 +199,17 @@ constructor, real Shapefile fixture, real GeoPackage fixture).
 | Java build + suite (tranche 1) | BUILD SUCCESSFUL, 1319 tests (1314 baseline + 5 new contract cases), 0 failures, 15 pre-existing skips |
 | Java build + suite (tranche 2) | BUILD SUCCESSFUL, 1327 tests (1319 + 8 DC-1 contract cases), 0 failures, 15 pre-existing skips |
 | Java build + suite (tranche 3) | BUILD SUCCESSFUL, 1332 tests (1327 + 5 DC-2 contract cases), 0 failures, 15 pre-existing skips |
-| New contracts | `ScaleApplyPanSyncContractTest` 2/2, `LayoutDmsDirectionContractTest` 3/3, `VectorExportPublisherContractTest` 7/7, `VectorExportRepublishContractTest` 1/1, `VectorEnvelopeAxisOrderContractTest` 5/5 |
+| Java build + suite (tranche 4) | BUILD SUCCESSFUL, 1337 tests (1332 + 5 DC-3 contract cases), 0 failures, 15 pre-existing skips; architecture hot-spot ratchet green with `MapPanel` at 3489/3500 lines |
+| New contracts | `ScaleApplyPanSyncContractTest` 2/2, `LayoutDmsDirectionContractTest` 3/3, `VectorExportPublisherContractTest` 7/7, `VectorExportRepublishContractTest` 1/1, `VectorEnvelopeAxisOrderContractTest` 5/5, `EdtRenderSupportContractTest` 4/4, `ExportRenderEdtContractTest` 1/1 |
 | RED proof (scale/pan) | Removing the delegation failed both tests: mirror `10.0` vs `49.995`, zoom after pan `2.0` vs `3.9995` |
 | RED proof (graticule) | Restoring the identical-branch expression failed the latitude test (1 of 3) |
 | RED proof (DC-1) | Reproducing the baseline `deleteShapefileSidecars(file); exportToShapefile(...)` sequence with a failing writer left no `.shp/.shx/.dbf` for the previous dataset (data loss confirmed) |
 | RED proof (DC-2) | Baseline `ShapefileData` with latitude-first CRS stored `Env[-34.62:-34.62, -58.45:-58.45]` for a point at `(-58.45, -34.62)`; contract failed with `expected: <-58.45> but was: <-34.62>` (2 of 5 cases) |
+| RED proof (DC-3) | Disabling the EDT dispatch left the `MapFrameRenderer` export delegation painting off the EDT; contract failed with `El render de exportacion debe pintar en el Event Dispatch Thread. ==> expected: <true> but was: <false>` |
 | Certification locks | `FeatureSurfaceInventoryCertificationTest` and `SemanticFeatureMatrixCertificationTest` updated and green with the new export surface registered |
 | Existing export contracts | `ReleaseVectorInteropTest`, `ReleaseProjectRoundTripTest`, `ReleaseProjectRoundTripTest`, `ProjectOperationalCrsRoundTripTest`, `ReleaseFormatCompatibilityTest` green through the staging path |
 | Web | `npm run lint` clean; `npm test` 31/31 |
-| LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=751` |
+| LF/source integrity | `JAVA_SOURCE_INTEGRITY_PASS files=754` |
 | Repo policy | `.github/tests` 11/11; `tools/qa` integrity tests 8/8; PowerShell parser 9/9; repository-safety strings 5/5 |
 | Wrapper | gradle-wrapper.jar sha256 matches services.gradle.org for 8.10.2 |
 | NOT_VERIFIED | GitHub PR/CI/Certification/merge/attestation for tranche 3, GUI/native runtime, PostgreSQL execution, installer generation |
@@ -223,6 +256,12 @@ backup files.
   GeoPackage and the other GeoTools readers do. A dataset whose coordinates were
   genuinely stored latitude-first would need a coordinate transform, not an
   envelope swap; that remains out of scope and no repo fixture behaves that way.
+- **EDT serialization cost (DC-3)**: each atlas page or layout export render now
+  occupies the EDT for the duration of that page. The atlas flow is modal, so the
+  user cannot trigger conflicting edits while it runs, but a very heavy page can
+  briefly freeze the UI. A future improvement is rendering from immutable
+  viewport snapshots without touching the live `MapPanel`; the architecture
+  ratchet forbids growing `MapPanel` to absorb that work.
 
 ## Traceability
 
@@ -240,3 +279,4 @@ backup files.
 | REQ-AR-10 | Validation | T13, T14, T19 |
 | REQ-AR-11 | Atomic vector export (DC-1) | T20, T21, T22 |
 | REQ-AR-12 | Envelope axis-order consistency (DC-2) | T23, T24, T25 |
+| REQ-AR-13 | EDT serialization of export renders (DC-3) | T26, T27, T28 |
