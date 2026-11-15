@@ -86,8 +86,6 @@ public final class RasterCalculatorEngine {
         }
 
         // Evaluate per pixel
-        int numBands = inputRasters.get(0).getNumBands();
-        double[] pixel = new double[numBands];
         int totalPixels = width * height;
         int pixelCount = 0;
 

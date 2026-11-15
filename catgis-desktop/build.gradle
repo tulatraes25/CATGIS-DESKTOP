@@ -801,7 +801,7 @@ tasks.register('packageWindowsJpackageExeInstaller') {
     doLast {
         File wixBinDir = project.ext.resolveWixBinDir.call()
         if (wixBinDir == null) {
-            throw new GradleException('No se puede generar el .exe porque falta WiX Toolset 3.x (candle.exe y light.exe). La app-image con runtime ya queda disponible; agrega WiX al PATH o en C:\\CATGIS\\tools\\wix314\\bin y vuelve a ejecutar packageWindowsExeInstaller.')
+            throw new GradleException('No se puede generar el .exe porque falta WiX Toolset 3.x (candle.exe y light.exe). La app-image con runtime ya queda disponible; agrega WiX al PATH o en C:\\CATGIS\\tools\\wix314\\bin y vuelve a ejecutar packageWindowsJpackageExeInstaller.')
         }
 
         File outputDir = outputDirProvider.get().asFile

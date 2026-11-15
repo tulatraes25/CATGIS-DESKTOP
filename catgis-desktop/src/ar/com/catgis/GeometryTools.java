@@ -295,7 +295,6 @@ public final class GeometryTools {
             if (g != null && !g.isEmpty()) geoms.add(g);
         }
         if (geoms.isEmpty()) return null;
-        GeometryFactory gf = new GeometryFactory();
         return org.locationtech.jts.operation.union.UnaryUnionOp.union(geoms);
     }
 

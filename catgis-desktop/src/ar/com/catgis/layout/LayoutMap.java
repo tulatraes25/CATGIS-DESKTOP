@@ -205,7 +205,7 @@ public class LayoutMap implements LayoutElement {
                 if (gx < px || gx > px + pw) continue;
                 g2.drawLine(gx, py, gx, py + ph);
                 if (showGridLabels) {
-                    drawGridLabel(g2, formatGridCoordinate(wx, isGeographic), gx, py + ph - 2, true);
+                    drawGridLabel(g2, formatGridCoordinate(wx, isGeographic, true), gx, py + ph - 2, true);
                 }
             }
 
@@ -218,7 +218,7 @@ public class LayoutMap implements LayoutElement {
                 if (gy < py || gy > py + ph) continue;
                 g2.drawLine(px, gy, px + pw, gy);
                 if (showGridLabels) {
-                    drawGridLabel(g2, formatGridCoordinate(wy, isGeographic), px + 2, gy - 2, false);
+                    drawGridLabel(g2, formatGridCoordinate(wy, isGeographic, false), px + 2, gy - 2, false);
                 }
             }
         } else if (gridCols > 0 && gridRows > 0) {
@@ -244,10 +244,10 @@ public class LayoutMap implements LayoutElement {
         return crs.contains("4326") || crs.contains("4269") || crs.contains("4283");
     }
 
-    private String formatGridCoordinate(double value, boolean isGeographic) {
+    private String formatGridCoordinate(double value, boolean isGeographic, boolean isLongitude) {
         if (isGeographic) {
             // Format as DMS (degrees, minutes, seconds)
-            return formatDMS(value);
+            return formatDMS(value, isLongitude);
         }
         // Format as meters with appropriate precision
         if (Math.abs(value) >= 10000) return String.format("%.0f m", value);
@@ -256,15 +256,17 @@ public class LayoutMap implements LayoutElement {
         return String.format("%.2f m", value);
     }
 
-    private String formatDMS(double decimalDegrees) {
+    private String formatDMS(double decimalDegrees, boolean isLongitude) {
         boolean negative = decimalDegrees < 0;
         double abs = Math.abs(decimalDegrees);
         int degrees = (int) abs;
         double minutesFull = (abs - degrees) * 60;
         int minutes = (int) minutesFull;
         double seconds = (minutesFull - minutes) * 60;
-        String dir = negative ? (decimalDegrees >= 0 ? "E" : "W") : (decimalDegrees >= 0 ? "E" : "W");
-        return String.format("%d°%02d'%04.1f\"%s", degrees, minutes, seconds, dir);
+        String direction = isLongitude
+                ? (negative ? "W" : "E")
+                : (negative ? "S" : "N");
+        return String.format("%d°%02d'%04.1f\"%s", degrees, minutes, seconds, direction);
     }
 
     private void drawGridLabel(Graphics2D g2, String text, int x, int y, boolean horizontal) {
