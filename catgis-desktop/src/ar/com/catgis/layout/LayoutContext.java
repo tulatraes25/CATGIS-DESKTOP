@@ -2,8 +2,6 @@ package ar.com.catgis.layout;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 
-import ar.com.catgis.CatgisDesktopApp;
-import ar.com.catgis.AppContext;
 import ar.com.catgis.MapPanel;
 
 /**
@@ -29,8 +27,8 @@ public class LayoutContext {
      */
     public static LayoutContext fromCatgis() {
         LayoutContext ctx = new LayoutContext();
-        ctx.project = AppContext.project();
-        ctx.mapPanel = AppContext.mapPanel();
+        ctx.project = LayoutRenderHosts.get().project();
+        ctx.mapPanel = LayoutRenderHosts.get().mapPanel();
         return ctx;
     }
 
@@ -44,13 +42,13 @@ public class LayoutContext {
     }
 
     public Project getProject() {
-        return project != null ? project : AppContext.project();
+        return project != null ? project : LayoutRenderHosts.get().project();
     }
 
     public void setProject(Project project) { this.project = project; }
 
     public MapPanel getMapPanel() {
-        return mapPanel != null ? mapPanel : AppContext.mapPanel();
+        return mapPanel != null ? mapPanel : LayoutRenderHosts.get().mapPanel();
     }
 
     public void setMapPanel(MapPanel mapPanel) { this.mapPanel = mapPanel; }

@@ -1,6 +1,5 @@
 package ar.com.catgis.layout;
 
-import ar.com.catgis.AppContext;
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.CRSDefinitions;

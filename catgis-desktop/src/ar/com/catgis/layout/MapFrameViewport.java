@@ -5,8 +5,6 @@ import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.data.vector.VectorLayerUtils;
 import ar.com.catgis.data.online.OnlineWmsLayer;
 
-import ar.com.catgis.CatgisDesktopApp;
-import ar.com.catgis.AppContext;
 import ar.com.catgis.MapPanel;
 import ar.com.catgis.OnlineTileLayer;
 import org.locationtech.jts.geom.Envelope;
@@ -101,7 +99,7 @@ public class MapFrameViewport {
     }
 
     public boolean fitFromMainMap() {
-        MapPanel map = AppContext.mapPanel();
+        MapPanel map = LayoutRenderHosts.get().mapPanel();
         if (map != null) {
             Envelope env = map.getCurrentViewEnvelope();
             if (env != null && !env.isNull() && env.getWidth() > 0 && env.getHeight() > 0) {
@@ -109,7 +107,7 @@ public class MapFrameViewport {
                 // In standalone mode, MapPanel is created fresh with default view
                 // (viewMinX=0, viewMinY=0, zoomFactor=1) which gives an envelope
                 // around (0,0) — this is wrong for real-world data.
-                Project project = AppContext.project();
+                Project project = LayoutRenderHosts.get().project();
                 boolean hasData = project != null && project.getLayers() != null
                     && project.getLayers().stream().anyMatch(l -> l != null);
 
@@ -161,7 +159,7 @@ public class MapFrameViewport {
     }
 
     public boolean fitFromProjectLayers() {
-        Project project = AppContext.project();
+        Project project = LayoutRenderHosts.get().project();
         if (project == null || project.getLayers() == null || project.getLayers().isEmpty()) {
             return false;
         }
@@ -220,7 +218,7 @@ public class MapFrameViewport {
         // For online tile layers, try to get the current view from MapPanel
         // instead of returning the entire world extent
         if (layer instanceof OnlineTileLayer) {
-            MapPanel map = AppContext.mapPanel();
+            MapPanel map = LayoutRenderHosts.get().mapPanel();
             if (map != null) {
                 Envelope viewEnv = map.getCurrentViewEnvelope();
                 if (viewEnv != null && !viewEnv.isNull() && viewEnv.getWidth() > 0 && viewEnv.getHeight() > 0) {

@@ -235,7 +235,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private boolean isGeographicCRS() {
-        ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
+        ar.com.catgis.core.model.Project proj = LayoutRenderHosts.get().project();
         if (proj == null) return false;
         String crs = proj.getProjectCRS();
         if (crs == null) return false;
@@ -298,14 +298,14 @@ public class LayoutMap implements LayoutElement {
             key = key * 31 + Double.doubleToLongBits(ownViewMinY);
             key = key * 31 + Double.doubleToLongBits(ownZoomFactor);
         } else {
-            ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
+            ar.com.catgis.MapPanel map = LayoutRenderHosts.get().mapPanel();
             if (map != null) {
                 key = key * 31 + Double.doubleToLongBits(map.getViewMinX());
                 key = key * 31 + Double.doubleToLongBits(map.getViewMinY());
                 key = key * 31 + Double.doubleToLongBits(map.getZoomFactor());
             }
         }
-        ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
+        ar.com.catgis.core.model.Project proj = LayoutRenderHosts.get().project();
         if (proj != null && proj.getLayers() != null) {
             for (ar.com.catgis.core.model.Layer layer : proj.getLayers()) {
                 if (layer == null) continue;
@@ -317,7 +317,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private boolean shouldPreferMainMapComposite() {
-        ar.com.catgis.core.model.Project proj = ar.com.catgis.AppContext.project();
+        ar.com.catgis.core.model.Project proj = LayoutRenderHosts.get().project();
         if (proj == null || proj.getLayers() == null) {
             return false;
         }
@@ -419,7 +419,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private BufferedImage captureMapImage(int w, int h) {
-        ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
+        ar.com.catgis.MapPanel map = LayoutRenderHosts.get().mapPanel();
         if (map == null) return null;
         try {
             double vx, vy, zf;
@@ -462,7 +462,7 @@ public class LayoutMap implements LayoutElement {
     }
 
     private List<Layer> resolveRenderLayers() {
-        Project project = ar.com.catgis.AppContext.project();
+        Project project = LayoutRenderHosts.get().project();
         if (project == null) {
             return java.util.Collections.emptyList();
         }
@@ -560,7 +560,7 @@ public class LayoutMap implements LayoutElement {
     public double getOwnZoomFactor() { return ownZoomFactor; }
     public void setOwnZoomFactor(double v) { ownZoomFactor = v; }
     public void captureFromMainMap() {
-        ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
+        ar.com.catgis.MapPanel map = LayoutRenderHosts.get().mapPanel();
         if (map != null) {
             ownViewMinX = map.getViewMinX();
             ownViewMinY = map.getViewMinY();
