@@ -114,6 +114,7 @@ EXPORT_SURFACE	catmap/LayoutExportEngine.java
 EXPORT_SURFACE	catmap/LayoutExportService.java
 EXPORT_SURFACE	catmap/PdfExportOptions.java
 EXPORT_SURFACE	catmap/SvgExportEngine.java
+EXPORT_SURFACE	catmap/GeoTiffLayoutExporter.java
 EXPORT_SURFACE	DxfExportEngine.java
 EXPORT_SURFACE	ExportReprojectedLayerDialog.java
 EXPORT_SURFACE	ExportVectorLayerAction.java

@@ -17,6 +17,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.io.File;
+import java.util.Locale;
 import java.util.prefs.Preferences;
 
 /**
@@ -1332,7 +1333,54 @@ public class Main {
     }
 
     private static void exportImage() {
-        exportPng(); // Default to PNG
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "Imagen (*.png, *.jpg, *.tif, *.tiff)", "png", "jpg", "tif", "tiff"));
+        if (chooser.showSaveDialog(mainFrame) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = chooser.getSelectedFile();
+        String lowerName = file.getName().toLowerCase(Locale.ROOT);
+        try {
+            if (lowerName.endsWith(".tif") || lowerName.endsWith(".tiff")) {
+                File target = withExtension(file, ".tif");
+                statusLabel.setText("Exportando GeoTIFF...");
+                GeoTiffLayoutExporter.exportMapFrame(
+                        layoutModel, target, exportResolution);
+                statusLabel.setText("GeoTIFF exportado: " + target.getName());
+                NotificationManager.info(mainFrame,
+                        "Exportar GeoTIFF",
+                        "GeoTIFF georreferenciado exportado correctamente:\n" + target.getAbsolutePath());
+            } else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+                File target = withExtension(file, ".jpg");
+                statusLabel.setText("Exportando JPG...");
+                LayoutExportEngine.exportJpg(layoutModel, target, exportResolution);
+                statusLabel.setText("JPG exportado: " + target.getName());
+                NotificationManager.info(mainFrame,
+                        "Exportar JPG",
+                        "JPG exportado correctamente:\n" + target.getAbsolutePath());
+            } else {
+                File target = withExtension(file, ".png");
+                statusLabel.setText("Exportando PNG...");
+                LayoutExportEngine.exportPng(layoutModel, target, exportResolution);
+                statusLabel.setText("PNG exportado: " + target.getName());
+                NotificationManager.info(mainFrame,
+                        "Exportar PNG",
+                        "PNG exportado correctamente:\n" + target.getAbsolutePath());
+            }
+        } catch (Exception ex) {
+            NotificationManager.error(mainFrame,
+                    "Error",
+                    "Error al exportar la imagen:\n" + ex.getMessage());
+            statusLabel.setText("Error al exportar la imagen");
+        }
+    }
+
+    private static File withExtension(File file, String extension) {
+        if (file.getName().toLowerCase(Locale.ROOT).endsWith(extension)) {
+            return file;
+        }
+        return new File(file.getAbsolutePath() + extension);
     }
 
     private static void printLayout() {

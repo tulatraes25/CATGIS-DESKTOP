@@ -394,28 +394,40 @@ public class LayoutMap implements LayoutElement {
         cacheKey = 0;
     }
 
-    private void syncViewportToSource(int w, int h) {
-        if (viewport == null) {
-            viewport = new MapFrameViewport();
-        }
-
+    /**
+     * Resolve the viewport this frame would render for the given pixel size.
+     * Own extents are deterministic; otherwise the live map or the project
+     * layers provide the extent. Used by render and by georeferenced export.
+     */
+    public MapFrameViewport viewportForFrame(int widthPx, int heightPx) {
+        MapFrameViewport resolved = new MapFrameViewport();
         if (ownExtent) {
             double effectiveZoom = ownZoomFactor > 0 ? ownZoomFactor : 1d;
-            viewport.fitToExtent(
+            resolved.fitToExtent(
                     ownViewMinX,
                     ownViewMinY,
-                    ownViewMinX + w * effectiveZoom,
-                    ownViewMinY + h * effectiveZoom
+                    ownViewMinX + Math.max(widthPx, 1) * effectiveZoom,
+                    ownViewMinY + Math.max(heightPx, 1) * effectiveZoom
             );
-            return;
+            return resolved;
         }
-
         // Step 1: Try to sync from main map (fitFromMainMap now checks
         // if the view actually contains useful data, otherwise falls back)
-        if (!viewport.fitFromMainMap()) {
+        if (!resolved.fitFromMainMap()) {
             // Step 2: Fallback to project visible layers
-            viewport.fitFromProjectLayers();
+            resolved.fitFromProjectLayers();
         }
+        return resolved;
+    }
+
+    private void syncViewportToSource(int w, int h) {
+        MapFrameViewport resolved = viewportForFrame(w, h);
+        if (viewport == null) {
+            viewport = resolved;
+            return;
+        }
+        viewport.fitToExtent(resolved.getMinX(), resolved.getMinY(),
+                resolved.getMaxX(), resolved.getMaxY());
     }
 
     private BufferedImage captureMapImage(int w, int h) {
