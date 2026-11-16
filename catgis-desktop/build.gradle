@@ -440,7 +440,7 @@ tasks.register('generateLinuxInstallerAssets') {
         if (!ImageIO.write(createBrandIconImage(256), 'png', iconFile)) {
             throw new GradleException('No PNG writer available for CATGIS Linux icon.')
         }
-        // CATMAP standalone launcher (same app-image, independent entry point).
+        // CATMAP standalone launcher (same Linux app-image, independent entry).
         new File(resourcesDir, 'catmap-launcher.properties').text = """
 app-name=CATMAP Standalone
 main-class=ar.com.catgis.catmap.Main
@@ -474,11 +474,11 @@ tasks.register('packageLinuxAppImage') {
         File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage')
         File mainJar = new File(inputDir, "${project.name}-${version}.jar")
         File iconFile = new File(resourcesDir, 'catgis-desktop.png')
+        File catmapLauncher = new File(resourcesDir, 'catmap-launcher.properties')
 
         if (!jpackageExe.isFile()) {
             throw new GradleException("Linux jpackage was not found in ${jpackageExe.absolutePath}")
         }
-        File catmapLauncher = new File(resourcesDir, 'catmap-launcher.properties')
         if (!mainJar.isFile() || !iconFile.isFile()) {
             throw new GradleException('CATGIS Linux input main JAR or PNG icon is missing.')
         }
@@ -629,7 +629,6 @@ tasks.register('packageMacAppImage') {
                 '--name', installerDisplayName,
                 '--main-jar', jar.name,
                 '--main-class', 'ar.com.catgis.Main',
-                '--add-launcher', "CATMAP=${catmapLauncher.absolutePath}",
                 '--app-version', installerVersion,
                 '--vendor', installerVendor,
                 '--description', installerDescription,
@@ -745,7 +744,6 @@ tasks.register('packageWindowsAppImage') {
                 '--name', installerDisplayName,
                 '--main-jar', mainJar.name,
                 '--main-class', 'ar.com.catgis.Main',
-                '--add-launcher', "CATMAP=${catmapLauncher.absolutePath}",
                 '--app-version', installerVersion,
                 '--vendor', installerVendor,
                 '--description', installerDescription,
