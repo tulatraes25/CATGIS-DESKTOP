@@ -322,8 +322,18 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     lugar del análisis genérico. Tests `ViewshedRasterContractTest` (4) además
     del test del motor existente; build local **1517 tests / 0 fallos / 15
     skips**. Inventario surface/semántico/matriz actualizado con el diálogo.
-- [ ] **T22 — Perfil completo (REQ-PROD-8.6)**
+- [x] **T22 — Perfil completo (REQ-PROD-8.6)**
   - Pendiente del perfil, curva hipsométrica, perfil 3D.
+  - Evidence (2026-11-16): `catmap/TerrainProfile` muestrea el perfil con
+    interpolación bilineal (NoData → NaN), calcula **pendiente por muestra**
+    (diferencias centrales), pendiente media/máxima, ascenso y descenso
+    acumulados, longitud, min/máx/media y relieve, **curva hipsométrica**
+    (altura relativa vs área relativa en N bandas) y **línea 3D** JTS con la
+    elevación en Z. Validaciones de DEM/extensión/longitud/muestras/bandas.
+    Tests `TerrainProfileContractTest` (5: plano conocido exacto, curva
+    monótona, línea 3D con Z, NoData sin invalidar métricas, validaciones);
+    build local **1527 tests / 0 fallos / 15 skips**. Integración visual del
+    perfil en el diálogo existente queda para P5/T26+.
 - [x] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
   - Evidence (2026-11-16): `catmap/VolumeCalculator` calcula corte/relleno sobre
     `AnalysisRaster` float: `againstPlane` (DEM contra cota de referencia) y
