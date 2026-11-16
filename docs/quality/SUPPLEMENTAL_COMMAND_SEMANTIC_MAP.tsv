@@ -110,6 +110,7 @@ catmap/Main.java	JBUTTON	Aplicar	CONTROL	NON_FEATURE
 catmap/Main.java	JBUTTON	Cancelar	CONTROL	NON_FEATURE
 catmap/Main.java	JBUTTON	Generar	CONTROL	NON_FEATURE
 catmap/Main.java	JBUTTON	Refrescar	CONTROL	NON_FEATURE
+catmap/ui/DataWorkspacePanel.java	JBUTTON	Refrescar	ACTION	SEM-CATMAP-WORKSPACE-REFRESH
 catmap/Main.java	JCHECKBOXMENUITEM	Mostrar grilla	ACTION	SEM-LAYOUT-VIEW-GRID
 catmap/Main.java	JCHECKBOXMENUITEM	Mostrar guías	ACTION	SEM-LAYOUT-VIEW-GUIDES
 catmap/Main.java	JCHECKBOXMENUITEM	Mostrar panel de capas	ACTION	SEM-LAYOUT-VIEW-LAYERS-PANEL

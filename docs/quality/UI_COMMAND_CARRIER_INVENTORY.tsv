@@ -10,6 +10,7 @@ ModulesMenu.java
 StatusBar.java
 TemporalController.java
 catmap/Main.java
+catmap/ui/DataWorkspacePanel.java
 climate/EnvironmentalAreaMarker.java
 core/model/DataDefinedOverridesPanel.java
 ui/components/layout/LayoutBottomBar.java
