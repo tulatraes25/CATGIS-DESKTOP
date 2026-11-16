@@ -106,8 +106,19 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 - [ ] **T9 — PDF multipágina con fuentes (REQ-PROD-3.1)**
 - [ ] **T10 — SVG vectorial real (REQ-PROD-7.2)**
-- [ ] **T11 — GeoTIFF georreferenciado (REQ-PROD-7.1)**
+- [x] **T11 — GeoTIFF georreferenciado (REQ-PROD-7.1)**
   - Export del marco con CRS/extent; test ida/vuelta `GeoTiffReader`.
+  - Evidence (2026-11-16): `catmap/GeoTiffLayoutExporter` exporta el marco de mapa
+    visible de la página activa renderizado con su viewport
+    (`LayoutMap.viewportForFrame`, compartido con el render normal) a GeoTIFF con
+    el CRS del proyecto y el envelope del viewport, publicación atómica y
+    validación independiente con `GeoTiffReader` (CRS, extent y tamaño de ráster)
+    antes de reemplazar el archivo; "Exportar imagen…" acepta `.tif/.tiff` además
+    de PNG/JPG (sin sumar comandos). Inventarios surface/semántico/matriz
+    actualizados (`SEM-SURFACE-GEOTIFFLAYOUTEXPORTER`). Tests
+    `GeoTiffLayoutExporterContractTest` (5: CRS/extent/tamaño, reemplazo con
+    cabecera TIFF, fallo cerrado sin marco y sin CRS, marco inválido); build local
+    **1419 tests / 0 fallos / 15 skips**.
 - [ ] **T12 — Atlas v2 (REQ-PROD-4)**
   - Encuadre centro+buffer+aspecto, orden/nombre, `{page}`/`{feature}`,
     configuración persistida, PDF/PNG/SVG.
