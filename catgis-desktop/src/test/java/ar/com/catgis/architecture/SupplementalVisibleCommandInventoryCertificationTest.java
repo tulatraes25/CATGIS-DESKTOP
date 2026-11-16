@@ -25,9 +25,9 @@ class SupplementalVisibleCommandInventoryCertificationTest {
     private static final Path COMMAND_INVENTORY =
             Path.of("..", "docs", "quality", "SUPPLEMENTAL_VISIBLE_COMMAND_INVENTORY.tsv");
 
-    private static final int BASELINE_OCCURRENCES = 207;
-    private static final int BASELINE_ROWS = 197;
-    private static final int BASELINE_LABELS = 152;
+    private static final int BASELINE_OCCURRENCES = 208;
+    private static final int BASELINE_ROWS = 198;
+    private static final int BASELINE_LABELS = 153;
 
     private static final List<CommandPattern> PATTERNS = List.of(
             new CommandPattern("JMENUITEM",

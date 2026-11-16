@@ -12,6 +12,7 @@ CatgisDesktopApp.java	JBUTTON	Iniciar edicion	1
 catmap/Main.java	ADDMENUITEM	Abrir layout...	1
 catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	1
 catmap/Main.java	ADDMENUITEM	Abrir datos...	1
+catmap/Main.java	ADDMENUITEM	Buscar comando...	1
 catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	1
 catmap/Main.java	ADDMENUITEM	Agregar página	1
 catmap/Main.java	ADDMENUITEM	Actualizar desde CATGIS	1

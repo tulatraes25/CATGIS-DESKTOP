@@ -148,6 +148,7 @@ public class Main {
         addMenuItem(menuArchivo, "Abrir layout...", KeyEvent.VK_O, e -> openLayout());
         addMenuItem(menuArchivo, "Abrir proyecto .catgis...", 0, e -> openProject());
         addMenuItem(menuArchivo, "Abrir datos...", 0, e -> openQuickData());
+        addMenuItem(menuArchivo, "Buscar comando...", 0, e -> showCommandPalette());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Guardar", KeyEvent.VK_S, e -> saveLayout());
         addMenuItem(menuArchivo, "Guardar como...", 0, e -> saveLayoutAs());
@@ -1250,6 +1251,65 @@ public class Main {
         }
     }
 
+    /** Task-oriented command palette over the visible CATMAP commands. */
+    private static void showCommandPalette() {
+        java.util.List<ar.com.catgis.catmap.ui.CommandPaletteIndex.Command> commands =
+                new java.util.ArrayList<>();
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "nuevo-layout", "Nuevo layout", "Crear un layout vacio",
+                java.util.List.of("nuevo", "layout"), Main::newLayout));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "abrir-layout", "Abrir layout", "Abrir un archivo .catmap",
+                java.util.List.of("abrir", "layout", "catmap"), Main::openLayout));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "abrir-proyecto", "Abrir proyecto .catgis", "Abrir un proyecto CATGIS",
+                java.util.List.of("proyecto", "catgis"), Main::openProject));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "abrir-datos", "Abrir datos", "Abrir un dato suelto sin proyecto",
+                java.util.List.of("datos", "shp", "geojson", "geotiff", "csv"), Main::openQuickData));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "guardar", "Guardar layout", "Guardar el layout actual",
+                java.util.List.of("guardar", "salvar"), Main::saveLayout));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "guardar-como", "Guardar como", "Guardar el layout en otro archivo",
+                java.util.List.of("guardar", "como"), Main::saveLayoutAs));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "configurar-pagina", "Configurar pagina",
+                "Tamano de hoja, orientacion y margenes",
+                java.util.List.of("pagina", "hoja", "a3", "a4", "margen"),
+                Main::configureLayoutPage));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "agregar-pagina", "Agregar pagina", "Añadir una pagina al documento",
+                java.util.List.of("pagina", "agregar"), Main::addLayoutPage));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "pagina-anterior", "Pagina anterior", "Ir a la pagina anterior",
+                java.util.List.of("pagina", "anterior"), () -> navigateLayoutPage(-1)));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "pagina-siguiente", "Pagina siguiente", "Ir a la pagina siguiente",
+                java.util.List.of("pagina", "siguiente"), () -> navigateLayoutPage(1)));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "plantillas", "Plantillas", "Galeria de plantillas y QPT",
+                java.util.List.of("plantilla", "qpt", "galeria"), Main::openTemplateGallery));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "atlas", "Generar atlas", "Serie de paginas por entidad",
+                java.util.List.of("atlas", "serie", "pdf"), Main::showAtlasDialog));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-pdf", "Exportar PDF", "PDF vectorial multipagina",
+                java.util.List.of("exportar", "pdf", "documento"), Main::exportPdf));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-png", "Exportar PNG", "Pagina como imagen PNG",
+                java.util.List.of("exportar", "png", "imagen"), Main::exportPng));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-svg", "Exportar SVG", "SVG vectorial editable",
+                java.util.List.of("exportar", "svg", "vector"), Main::exportSvg));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-imagen", "Exportar imagen", "PNG, JPG o GeoTIFF segun el sufijo",
+                java.util.List.of("exportar", "imagen", "jpg", "geotiff"), Main::exportImage));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "imprimir", "Imprimir", "Imprimir todas las paginas del documento",
+                java.util.List.of("imprimir", "impresora"), Main::printLayout));
+        ar.com.catgis.catmap.ui.CommandPaletteDialog.show(mainFrame, commands);
+    }
     /** Quick map: choose a data file and open it without a previous project. */
     private static void openQuickData() {
         JFileChooser chooser = new JFileChooser();
