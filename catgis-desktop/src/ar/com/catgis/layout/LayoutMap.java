@@ -641,6 +641,9 @@ public class LayoutMap implements LayoutElement {
      */
     public void setPreviewImage(BufferedImage img) { this.previewImage = img; }
 
+    /** Runtime preview cache (never persisted in the document). */
+    public BufferedImage getPreviewImage() { return previewImage; }
+
     @Override
     public boolean containsMm(double xMm, double yMm) {
         return boundsMm.contains(xMm, yMm);
