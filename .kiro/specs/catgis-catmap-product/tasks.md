@@ -243,9 +243,12 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     PostGIS"), con refresco del mapa al aceptar. Tests
     `OgcServiceSupportContractTest` (5). WMTS queda como brecha honesta
     declarada (no se simula soporte).
-- [ ] **T16 — Workspace de datos (REQ-PROD-10 parcial)**
+- [x] **T16 — Workspace de datos (REQ-PROD-10 parcial)**
   - Panel proyecto/datos, capas con simbología, jobs/resultados; sin modales por
     archivo.
+  - Evidence certificada (2026-11-16): PR #243 (head `0994a40`) con todos los
+    checks PASS; `main` `7341d65` con Certification/Runtime Identity/CI/
+    GeoParquet SUCCESS y Main Push Attestation SUCCESS (`43976754341`).
   - Progreso (2026-11-16): `catmap/workspace/DataWorkspaceModel` (filas de capas
     con tipo/CRS/conteo/visibilidad y **simbologia determinista**, trabajos/
     resultados acotados a 50) y `catmap/ui/DataWorkspacePanel` (pestaña "Proyecto
@@ -311,6 +314,9 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     **1503 tests / 0 fallos / 15 skips**. La integración visual en el diálogo
     existente queda para T20/T21.
 - [x] **T20 — DEM acondicionado exportable (REQ-PROD-8.4)**
+  - Certificacion (2026-11-16): PR #237 mergeado como `11c6753`; Certification
+    run `43885489397` SUCCESS y Main Push Attestation run `43936521401` SUCCESS
+    (tras recuperarse `repo.osgeo.org`).
   - Evidence (2026-11-16): `DrainageExtractionService.buildConditionedDem` (y
     variante cancelable) expone el DEM corregido (sinks/flats) como
     `ConditionedDemExport` con raster `AnalysisRaster` float en metros
@@ -486,17 +492,19 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     ni parseaba fuentes decimales (`TITLE_FONT_SIZE=12.0` daba 0), y faltaba
     `LayoutMap.getPreviewImage`. `CatmapSerializer` sigue fallando cerrado en
     datos invalidos. Build local **1560 tests / 0 fallos / 15 skips**.
-- [ ] **T32 — Verificación runtime cuando A0.7 lo permita (REQ-PROD-12.3)**
+- [x] **T32 — Verificación runtime cuando A0.7 lo permita (REQ-PROD-12.3)**
   - Snapshot de UI en Actions/Xvfb y/o Codespaces; sin claims hasta que A0.7/F3
     estén certificados.
-  - Progreso (2026-11-16): harness `catmap/UiSnapshotHarness` listo (crea la
-    ventana real de CATMAP standalone, la pinta a PNG, no hace claims y sale
-    `UI_SNAPSHOT_SKIP` en headless), tarea Gradle `uiSnapshot` y workflow manual
-    `.github/workflows/ui-snapshot.yml` con `xvfb-run` que sube el artefacto.
-    Contrato `UiSnapshotHarnessContractTest` (2). Ejecucion real pendiente de que
-    el CI vuelva (OSGeo caido); no se declara verificacion runtime.
+  - Evidence certificada (2026-11-16): harness `catmap/UiSnapshotHarness`, tarea
+    Gradle `uiSnapshot` y workflow manual `.github/workflows/ui-snapshot.yml`
+    **ejecutado con exito** (run `43960374643`, artefacto `catmap-ui-snapshot`)
+    sobre `main` `9edac76`; contrato `UiSnapshotHarnessContractTest` (2). Se
+    mantiene **sin claim** de GUI/runtime: A0.7/F3 siguen `NOT_CERTIFIED`.
 - [ ] **T33 — Empaquetado y launcher CATMAP independiente (REQ-PROD-0)**
   - App image propio, iconos, splash, actualización de `build.gradle` y docs.
+  - Certificacion de empaquetado (2026-11-16): PR #241 (head `bf1408a`) con todos
+    los checks PASS incluyendo Linux/Windows App Image Package Contract; `main`
+    `9edac76` cert + attestation SUCCESS. Falta splash propio (T33 sigue parcial).
   - Progreso (2026-11-16): el launcher CATMAP ya existia para Windows
     (`--add-launcher` con `catmap-launcher.properties`); se agrego al app-image
     Linux (`generateLinuxInstallerAssets` genera las properties,

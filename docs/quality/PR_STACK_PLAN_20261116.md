@@ -1,6 +1,6 @@
-# Plan de certificación de la pila local — 2026-11-16
+# Plan de certificación de la pila local — 2026-11-16 (CERRADO: PRs #238–#243 mergeados y certificados)
 
-Estado: **BLOQUEADO por infraestructura externa**. `repo.osgeo.org` devuelve 502/timeout,
+Estado: **COMPLETADO**. La pila se publico en PRs #238–#243 con checks PASS, merge con head exacto, post-main SUCCESS y attestation SUCCESS; `main` final `7341d65`. Detalle en `docs/quality/CERTIFICATION_LOG_20261116.md`. `repo.osgeo.org` devuelve 502/timeout,
 por lo que el job `Real Native GDAL` no puede resolver `org.geotools:gt-bom:34.0` y la
 Certification/attestation de `main` (`11c6753`, merge de PR #237/T20) sigue pendiente.
 Ninguna rama se declara certificada hasta completar el ciclo exacto en GitHub.
