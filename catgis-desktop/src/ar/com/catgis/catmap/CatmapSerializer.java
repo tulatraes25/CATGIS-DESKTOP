@@ -119,6 +119,17 @@ public final class CatmapSerializer {
                 if (!LayoutPageSpec.A4_LANDSCAPE.equals(pageSpec)) {
                     writePageGeometry(w, pageSpec);
                 }
+                if (model.getAtlasCoverageLayer() != null) {
+                    w.write("ATLAS_COVERAGE_LAYER=" + model.getAtlasCoverageLayer());
+                    w.newLine();
+                    w.write("ATLAS_NAME_FIELD="
+                            + (model.getAtlasNameField() != null ? model.getAtlasNameField() : ""));
+                    w.newLine();
+                    w.write("ATLAS_BUFFER_PERCENT=" + model.getAtlasBufferPercent());
+                    w.newLine();
+                    w.write("ATLAS_ORDER=" + (model.isAtlasOrderAscending() ? "ASC" : "DESC"));
+                    w.newLine();
+                }
                 if (multipage) {
                     w.write("PAGE_COUNT=" + pageCount);
                     w.newLine();
@@ -220,6 +231,9 @@ public final class CatmapSerializer {
                             || trimmed.startsWith("PAGE_COUNT=")) {
                         throw new IOException("CATMAP multi-page document is missing its v2 header.");
                     }
+                    if (applyAtlasMetadata(model, trimmed)) {
+                        continue;
+                    }
                     if (pageMetadata.parse(trimmed)) {
                         continue;
                     }
@@ -266,6 +280,7 @@ public final class CatmapSerializer {
                     }
                     activePage = -1;
                     completedPages++;
+                } else if (applyAtlasMetadata(model, trimmed)) {
                 } else if (pageMetadata.parse(trimmed)) {
                     if (activePage != -1) {
                         throw new IOException("CATMAP v2 page metadata inside element section.");
@@ -303,6 +318,40 @@ public final class CatmapSerializer {
         }
         model.setPageSpec(pageMetadata.toSpec());
         return model;
+    }
+
+    private static boolean applyAtlasMetadata(LayoutModel model, String line) throws IOException {
+        if (!line.startsWith("ATLAS_")) {
+            return false;
+        }
+        int eq = line.indexOf('=');
+        if (eq < 0) {
+            throw new IOException("CATMAP atlas metadata is malformed: " + line);
+        }
+        String key = line.substring(0, eq);
+        String value = line.substring(eq + 1).trim();
+        switch (key) {
+            case "ATLAS_COVERAGE_LAYER" -> model.setAtlasCoverageLayer(value);
+            case "ATLAS_NAME_FIELD" -> model.setAtlasNameField(value);
+            case "ATLAS_BUFFER_PERCENT" -> {
+                try {
+                    model.setAtlasBufferPercent(Double.parseDouble(value));
+                } catch (IllegalArgumentException invalid) {
+                    throw new IOException("CATMAP atlas buffer is invalid: " + value, invalid);
+                }
+            }
+            case "ATLAS_ORDER" -> {
+                if ("ASC".equalsIgnoreCase(value)) {
+                    model.setAtlasOrderAscending(true);
+                } else if ("DESC".equalsIgnoreCase(value)) {
+                    model.setAtlasOrderAscending(false);
+                } else {
+                    throw new IOException("CATMAP atlas order is invalid: " + value);
+                }
+            }
+            default -> throw new IOException("CATMAP atlas metadata is unknown: " + key);
+        }
+        return true;
     }
 
     private static void writePageGeometry(BufferedWriter writer, LayoutPageSpec pageSpec)

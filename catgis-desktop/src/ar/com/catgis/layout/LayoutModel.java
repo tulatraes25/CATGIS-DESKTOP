@@ -271,6 +271,13 @@ public class LayoutModel {
     // Page geometry is document state: every page of a CATMAP document shares
     // the same sheet, orientation and margins.
     private LayoutPageSpec pageSpec = LayoutPageSpec.A4_LANDSCAPE;
+
+    // Atlas configuration travels with the document (coverage layer, name
+    // field, buffer and feature order) so a saved atlas can be reproduced.
+    private String atlasCoverageLayer;
+    private String atlasNameField;
+    private double atlasBufferPercent = 10.0;
+    private boolean atlasOrderAscending = true;
     {
         pages.add(elements); // page 0 uses the main elements list
         pageUndoStacks.add(new ArrayList<>());
@@ -315,5 +322,40 @@ public class LayoutModel {
     /** Replace the document page geometry. Null restores the legacy A4 landscape. */
     public void setPageSpec(LayoutPageSpec newPageSpec) {
         pageSpec = newPageSpec != null ? newPageSpec : LayoutPageSpec.A4_LANDSCAPE;
+    }
+
+    public String getAtlasCoverageLayer() {
+        return atlasCoverageLayer;
+    }
+
+    public void setAtlasCoverageLayer(String layerName) {
+        atlasCoverageLayer = layerName == null || layerName.isBlank() ? null : layerName.trim();
+    }
+
+    public String getAtlasNameField() {
+        return atlasNameField;
+    }
+
+    public void setAtlasNameField(String fieldName) {
+        atlasNameField = fieldName == null || fieldName.isBlank() ? null : fieldName.trim();
+    }
+
+    public double getAtlasBufferPercent() {
+        return atlasBufferPercent;
+    }
+
+    public void setAtlasBufferPercent(double percent) {
+        if (!Double.isFinite(percent) || percent < 0 || percent > 100) {
+            throw new IllegalArgumentException("CATMAP atlas buffer must be between 0 and 100.");
+        }
+        atlasBufferPercent = percent;
+    }
+
+    public boolean isAtlasOrderAscending() {
+        return atlasOrderAscending;
+    }
+
+    public void setAtlasOrderAscending(boolean ascending) {
+        atlasOrderAscending = ascending;
     }
 }
