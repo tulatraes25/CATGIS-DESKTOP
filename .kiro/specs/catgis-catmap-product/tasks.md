@@ -45,10 +45,20 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     formato desconocido, `format` ajeno, tipo de elemento no soportado o
     coordenada faltante. Tests `CatmapDocumentIOTest` (10); build local
     **1388 tests / 0 fallos / 15 skips**.
-- [ ] **T4 — Servicio único de export (REQ-PROD-3)**
+- [x] **T4 — Servicio único de export (REQ-PROD-3)**
   - `LayoutExportService.renderPage(model, pageIndex, pageSpec, metrics)` para
     PDF multipágina, PNG/JPG/ZIP, SVG, print y atlas; verificador parametrizado.
   - Test: PDF de 3 páginas con tamaño exacto.
+  - Evidence (2026-11-16): `catmap/LayoutExportService` con
+    `renderPage(model,pageIndex,dpi)` (página real del documento),
+    `exportPdf` multipágina (todas las páginas del documento en un PDF) y
+    `exportPngPages` (un PNG atómico por página, nombre validado, staging y
+    `verifyImage`); `LayoutExportEngine.renderLayout` delega en el servicio y
+    `writePdf` itera las páginas; `CatmapAtomicExport.verifyPdf` parametrizado
+    por cantidad de páginas y tamaño de hoja; `LayoutModel` expone
+    `getVisibleElementsSortedByZ(page)`. Inventario/mapeo semántico actualizados
+    (regla del repo). Tests `LayoutExportServiceContractTest` (8); build local
+    **1395 tests / 0 fallos / 15 skips**.
 
 ## Fase P1 — Cartografía correcta
 

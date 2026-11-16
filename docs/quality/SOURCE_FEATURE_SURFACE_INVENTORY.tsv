@@ -110,6 +110,7 @@ DIALOG_OR_WINDOW	WelcomePageDialog.java
 DIALOG_OR_WINDOW	WhiteboxToolDialog.java
 EXPORT_SURFACE	catmap/CatmapAtomicExport.java
 EXPORT_SURFACE	catmap/LayoutExportEngine.java
+EXPORT_SURFACE	catmap/LayoutExportService.java
 EXPORT_SURFACE	catmap/PdfExportOptions.java
 EXPORT_SURFACE	catmap/SvgExportEngine.java
 EXPORT_SURFACE	DxfExportEngine.java
@@ -142,6 +143,7 @@ LOADER_OR_READER	WfsFeatureLoader.java
 LOADER_OR_READER	XlsTableReader.java
 LOADER_OR_READER	XlsxTableReader.java
 SERVICE	analysis/PgRoutingService.java
+SERVICE	catmap/LayoutExportService.java
 SERVICE	analysis/vector/GeoprocessingService.java
 SERVICE	BooleanRiskService.java
 SERVICE	climate/ClimateOnlineDownloadService.java

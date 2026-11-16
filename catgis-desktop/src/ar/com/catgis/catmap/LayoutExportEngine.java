@@ -131,7 +131,8 @@ public final class LayoutExportEngine {
                 ? opts.pageHeightMm : model.getPageSpec().heightMm();
         CatmapAtomicExport.publish(file,
                 staged -> writePdf(model, staged.toFile(), opts, widthMm, heightMm),
-                staged -> CatmapAtomicExport.verifyPdf(staged, widthMm, heightMm));
+                staged -> CatmapAtomicExport.verifyPdf(staged, widthMm, heightMm,
+                        model.getPageCount()));
     }
 
     private static void writePdf(LayoutModel model, File file, PdfExportOptions opts,
@@ -151,22 +152,26 @@ public final class LayoutExportEngine {
             org.apache.pdfbox.pdmodel.common.PDRectangle rect =
                     new org.apache.pdfbox.pdmodel.common.PDRectangle(
                             (float) pageWidthPt, (float) pageHeightPt);
-            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage(rect);
-            document.addPage(page);
 
-            try (org.apache.pdfbox.pdmodel.PDPageContentStream cs =
-                         new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+            for (int pageIndex = 0; pageIndex < model.getPageCount(); pageIndex++) {
+                org.apache.pdfbox.pdmodel.PDPage page =
+                        new org.apache.pdfbox.pdmodel.PDPage(rect);
+                document.addPage(page);
 
-                cs.setNonStrokingColor(Color.WHITE);
-                cs.addRect(0, 0, (float) pageWidthPt, (float) pageHeightPt);
-                cs.fill();
+                try (org.apache.pdfbox.pdmodel.PDPageContentStream cs =
+                             new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
 
-                for (LayoutElement element : model.getVisibleElementsSortedByZ()) {
-                    exportElementToPdf(document, cs, element, dpi, pageW, pageH);
-                }
+                    cs.setNonStrokingColor(Color.WHITE);
+                    cs.addRect(0, 0, (float) pageWidthPt, (float) pageHeightPt);
+                    cs.fill();
 
-                if (!opts.watermark.isEmpty()) {
-                    drawWatermark(cs, opts.watermark, pageWidthPt, pageHeightPt);
+                    for (LayoutElement element : model.getVisibleElementsSortedByZ(pageIndex)) {
+                        exportElementToPdf(document, cs, element, dpi, pageW, pageH);
+                    }
+
+                    if (!opts.watermark.isEmpty()) {
+                        drawWatermark(cs, opts.watermark, pageWidthPt, pageHeightPt);
+                    }
                 }
             }
 
@@ -454,37 +459,6 @@ public final class LayoutExportEngine {
      */
     public static BufferedImage renderLayout(LayoutModel model, int dpi) {
         java.util.Objects.requireNonNull(model, "CATMAP layout model");
-        LayoutPageSpec pageSpec = model.getPageSpec();
-        double pageWidthMm = pageSpec.widthMm();
-        double pageHeightMm = pageSpec.heightMm();
-
-        int[] dimensions = CatmapAtomicExport.rasterSize(dpi, pageWidthMm, pageHeightMm);
-        int widthPx = dimensions[0];
-        int heightPx = dimensions[1];
-
-        LayoutRenderContext ctx = new LayoutRenderContext(
-                LayoutRenderContext.Mode.EXPORT_IMAGE, dpi, pageWidthMm, pageHeightMm);
-
-        BufferedImage image = new BufferedImage(widthPx, heightPx, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = image.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-
-        try {
-            // White page background
-            g2.setColor(Color.WHITE);
-            g2.fillRect(0, 0, widthPx, heightPx);
-
-            // Render all visible elements
-            for (LayoutElement element : model.getVisibleElementsSortedByZ()) {
-                element.render(g2, ctx);
-            }
-        } finally {
-            g2.dispose();
-        }
-
-        return image;
+        return LayoutExportService.renderPage(model, model.getCurrentPage(), dpi);
     }
 }
