@@ -399,6 +399,8 @@ public class Main {
             String field = (String) fieldCombo.getSelectedItem();
             if (layoutAtlas == null) layoutAtlas = new LayoutAtlas();
             layoutAtlas.setCoverageLayer(selLayer.getName(), field != null ? field : "");
+            layoutModel.setAtlasCoverageLayer(selLayer.getName());
+            layoutModel.setAtlasNameField(field);
 
             // Collect page names
             ShapefileData data = VectorLayerUtils.ensureVectorData(selLayer);
@@ -477,12 +479,25 @@ public class Main {
 
         g.gridx = 0; g.gridy = 3;
         form.add(new JLabel("Formato:"), g);
-        // Only PNG is wired to AtlasEngine.generateAndSave. Do not offer PDF
-        // for atlas export until a real multi-page PDF path is implemented.
-        JLabel formatLabel = new JLabel("PNG (atlas)");
-        formatLabel.setToolTipText("La exportacion PDF de atlas aun no esta disponible.");
+        JComboBox<String> formatCombo = new JComboBox<>(
+                new String[]{"PNG (serie de paginas)", "PDF multipagina"});
         g.gridx = 1;
-        form.add(formatLabel, g);
+        form.add(formatCombo, g);
+
+        g.gridx = 0; g.gridy = 4;
+        form.add(new JLabel("Margen del mapa (%):"), g);
+        JSpinner bufferSpinner = new JSpinner(new SpinnerNumberModel(
+                (int) Math.round(layoutModel.getAtlasBufferPercent()), 0, 100, 1));
+        g.gridx = 1;
+        form.add(bufferSpinner, g);
+
+        g.gridx = 0; g.gridy = 5;
+        form.add(new JLabel("Orden de paginas:"), g);
+        JComboBox<String> orderCombo = new JComboBox<>(
+                new String[]{"Ascendente", "Descendente"});
+        orderCombo.setSelectedIndex(layoutModel.isAtlasOrderAscending() ? 0 : 1);
+        g.gridx = 1;
+        form.add(orderCombo, g);
 
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton cancelBtn = new JButton("Cancelar");
@@ -498,6 +513,15 @@ public class Main {
                 final int pageCount = (Integer) pagesSpinner.getValue();
                 final String baseName = nameField.getText().trim().isEmpty()
                     ? "mapa_atlas" : nameField.getText().trim();
+                final boolean exportPdf = formatCombo.getSelectedIndex() == 1;
+                final double bufferPercent = ((Integer) bufferSpinner.getValue()).doubleValue();
+                final boolean ascending = orderCombo.getSelectedIndex() == 0;
+                layoutModel.setAtlasBufferPercent(bufferPercent);
+                layoutModel.setAtlasOrderAscending(ascending);
+                if (layoutAtlas != null) {
+                    layoutModel.setAtlasCoverageLayer(layoutAtlas.getCoverageLayerName());
+                    layoutModel.setAtlasNameField(layoutAtlas.getPageNameField());
+                }
 
                 statusLabel.setText("Generando atlas...");
                 new Thread(() -> {
@@ -520,31 +544,41 @@ public class Main {
                                 ShapefileData data = VectorLayerUtils.ensureVectorData(coverageLayer);
                                 if (data != null) {
                                     String pageField = layoutAtlas.getPageNameField();
-                                    int idx = 0;
+                                    java.util.List<org.geotools.api.feature.simple.SimpleFeature>
+                                            featureList = new java.util.ArrayList<>();
                                     try (org.geotools.feature.FeatureIterator<
                                             org.geotools.api.feature.simple.SimpleFeature> it =
                                             data.getFeatureCollection().features()) {
                                         while (it.hasNext()) {
-                                            org.geotools.api.feature.simple.SimpleFeature f = it.next();
-                                            String pageTitle = pageField != null && !pageField.isEmpty()
-                                                ? String.valueOf(f.getAttribute(pageField))
-                                                : "Mapa " + (idx + 1);
-                                            String subtitle = "Hoja " + (idx + 1);
-                                            // Extract feature extent for zoom-to-feature
-                                            Object geomObj = f.getDefaultGeometry();
-                                            Double extX = null, extY = null;
-                                            Double zf = null;
-                                            if (geomObj instanceof org.locationtech.jts.geom.Geometry geom) {
-                                                org.locationtech.jts.geom.Envelope env = geom.getEnvelopeInternal();
-                                                extX = env.getMinX();
-                                                extY = env.getMinY();
-                                                // zoomFactor derived from extent width
-                                                zf = env.getWidth() > 0 ? env.getWidth() : 1.0;
-                                            }
-                                            pageList.add(new AtlasEngine.AtlasPage(
-                                                pageTitle, subtitle, extX, extY, zf));
-                                            idx++;
+                                            featureList.add(it.next());
                                         }
+                                    }
+                                    featureList.sort((a, b) -> {
+                                        String ta = pageField != null && !pageField.isEmpty()
+                                                ? String.valueOf(a.getAttribute(pageField)) : "";
+                                        String tb = pageField != null && !pageField.isEmpty()
+                                                ? String.valueOf(b.getAttribute(pageField)) : "";
+                                        int cmp = ta.compareToIgnoreCase(tb);
+                                        return ascending ? cmp : -cmp;
+                                    });
+                                    int idx = 0;
+                                    for (org.geotools.api.feature.simple.SimpleFeature f : featureList) {
+                                        String pageTitle = pageField != null && !pageField.isEmpty()
+                                            ? String.valueOf(f.getAttribute(pageField))
+                                            : "Mapa " + (idx + 1);
+                                        String subtitle = "Hoja " + (idx + 1);
+                                        Double minX = null, minY = null, maxX = null, maxY = null;
+                                        Object geomObj = f.getDefaultGeometry();
+                                        if (geomObj instanceof org.locationtech.jts.geom.Geometry geom) {
+                                            org.locationtech.jts.geom.Envelope env = geom.getEnvelopeInternal();
+                                            minX = env.getMinX();
+                                            minY = env.getMinY();
+                                            maxX = env.getMaxX();
+                                            maxY = env.getMaxY();
+                                        }
+                                        pageList.add(new AtlasEngine.AtlasPage(
+                                            pageTitle, subtitle, minX, minY, maxX, maxY, bufferPercent));
+                                        idx++;
                                     }
                                 }
                             }
@@ -554,18 +588,28 @@ public class Main {
                             for (int i = 0; i < pageCount; i++) {
                                 pageList.add(new AtlasEngine.AtlasPage(
                                     "Mapa " + (i + 1),
-                                    "Hoja " + (i + 1) + " de " + pageCount,
-                                    null, null, null
+                                    "Hoja " + (i + 1) + " de " + pageCount
                                 ));
                             }
                         }
-                        AtlasEngine.generateAndSave(layoutModel, pageList, outDir, baseName, 150);
-                        SwingUtilities.invokeLater(() -> {
-                            statusLabel.setText("Atlas generado: " + outDir.getAbsolutePath());
-                            NotificationManager.info(mainFrame,
-                                "Atlas completado",
-                                "Atlas generado correctamente:\n" + outDir.getAbsolutePath());
-                        });
+                        if (exportPdf) {
+                            java.io.File pdf = new java.io.File(outDir, baseName + ".pdf");
+                            AtlasEngine.exportPdf(layoutModel, pageList, pdf, 150);
+                            SwingUtilities.invokeLater(() -> {
+                                statusLabel.setText("Atlas PDF generado: " + pdf.getName());
+                                NotificationManager.info(mainFrame,
+                                    "Atlas completado",
+                                    "PDF multipagina generado correctamente:\n" + pdf.getAbsolutePath());
+                            });
+                        } else {
+                            AtlasEngine.generateAndSave(layoutModel, pageList, outDir, baseName, 150);
+                            SwingUtilities.invokeLater(() -> {
+                                statusLabel.setText("Atlas generado: " + outDir.getAbsolutePath());
+                                NotificationManager.info(mainFrame,
+                                    "Atlas completado",
+                                    "Atlas generado correctamente:\n" + outDir.getAbsolutePath());
+                            });
+                        }
                     } catch (Exception ex) {
                         SwingUtilities.invokeLater(() -> {
                             statusLabel.setText("Error al generar atlas");
