@@ -10,7 +10,6 @@ import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import ar.com.catgis.*;
 import ar.com.catgis.layout.*;
-import com.formdev.flatlaf.intellijthemes.FlatArcIJTheme;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -224,6 +223,12 @@ public class Main {
         menuBar.add(menuVista);
 
         // --- Insertar ---
+        addMenuItem(menuVista, "Cambiar tema (claro/oscuro)", 0, e -> {
+            ar.com.catgis.catmap.ui.ThemeSupport.toggle(mainFrame);
+            statusLabel.setText(ar.com.catgis.catmap.ui.ThemeSupport.describe(
+                    ar.com.catgis.catmap.ui.ThemeSupport.isDark(),
+                    ar.com.catgis.catmap.ui.ThemeSupport.uiScale()));
+        });
         JMenu menuInsertar = new JMenu("Insertar");
         menuInsertar.setMnemonic(KeyEvent.VK_I);
         addMenuItem(menuInsertar, "Texto", 0, e -> insertText());
@@ -2153,14 +2158,6 @@ public class Main {
     }
 
     private static void installLookAndFeel() {
-        try {
-            Class<?> themeClass = Class.forName("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme");
-            Object laf = themeClass.getDeclaredConstructor().newInstance();
-            UIManager.setLookAndFeel((javax.swing.LookAndFeel) laf);
-        } catch (Throwable ignored) {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored2) {}
-        }
+        ar.com.catgis.catmap.ui.ThemeSupport.initialize();
     }
 }
