@@ -103,6 +103,17 @@ public class LayoutModel {
                 .collect(Collectors.toList());
     }
 
+    /** Visible elements of an arbitrary page, ordered by z-order. */
+    public List<LayoutElement> getVisibleElementsSortedByZ(int page) {
+        if (page < 0 || page >= pages.size()) {
+            throw new IndexOutOfBoundsException("CATMAP page index out of range: " + page);
+        }
+        return pages.get(page).stream()
+                .filter(LayoutElement::isVisible)
+                .sorted(Comparator.comparingInt(LayoutElement::getZOrder))
+                .collect(Collectors.toList());
+    }
+
     public LayoutElement findElementAtMm(double xMm, double yMm) {
         return findTopmostElementAtMm(xMm, yMm);
     }

@@ -165,18 +165,31 @@ final class CatmapAtomicExport {
 
     /** PDFBox 3 parses the actual staged PDF before any existing file is replaced. */
     static void verifyPdf(Path file, double widthMm, double heightMm) throws IOException {
+        verifyPdf(file, widthMm, heightMm, 1);
+    }
+
+    /** Multi-page contract: every page must exist and match the document sheet. */
+    static void verifyPdf(Path file, double widthMm, double heightMm,
+                          int expectedPages) throws IOException {
+        if (expectedPages < 1) {
+            throw new IOException("CATMAP: cantidad de paginas PDF esperada invalida.");
+        }
         try (org.apache.pdfbox.pdmodel.PDDocument pdf =
                      org.apache.pdfbox.Loader.loadPDF(file.toFile())) {
-            if (pdf.getNumberOfPages() != 1) {
-                throw new IOException("CATMAP: cantidad de paginas PDF inesperada.");
+            if (pdf.getNumberOfPages() != expectedPages) {
+                throw new IOException("CATMAP: cantidad de paginas PDF inesperada ("
+                        + pdf.getNumberOfPages() + " de " + expectedPages + ").");
             }
-            org.apache.pdfbox.pdmodel.common.PDRectangle page =
-                    pdf.getPage(0).getMediaBox();
             float expectedWidth = (float) (widthMm * 72.0 / 25.4);
             float expectedHeight = (float) (heightMm * 72.0 / 25.4);
-            if (Math.abs(page.getWidth() - expectedWidth) > 0.5f
-                    || Math.abs(page.getHeight() - expectedHeight) > 0.5f) {
-                throw new IOException("CATMAP: tamano de pagina PDF inesperado.");
+            for (int pageIndex = 0; pageIndex < pdf.getNumberOfPages(); pageIndex++) {
+                org.apache.pdfbox.pdmodel.common.PDRectangle page =
+                        pdf.getPage(pageIndex).getMediaBox();
+                if (Math.abs(page.getWidth() - expectedWidth) > 0.5f
+                        || Math.abs(page.getHeight() - expectedHeight) > 0.5f) {
+                    throw new IOException("CATMAP: tamano de pagina PDF inesperado en pagina "
+                            + (pageIndex + 1) + ".");
+                }
             }
         }
     }
