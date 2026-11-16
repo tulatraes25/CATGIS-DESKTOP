@@ -297,7 +297,17 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     flancos (Strahler 2), validaciones de geometría/outlet y NoData; build local
     **1503 tests / 0 fallos / 15 skips**. La integración visual en el diálogo
     existente queda para T20/T21.
-- [ ] **T20 — DEM acondicionado exportable (REQ-PROD-8.4)**
+- [x] **T20 — DEM acondicionado exportable (REQ-PROD-8.4)**
+  - Evidence (2026-11-16): `DrainageExtractionService.buildConditionedDem` (y
+    variante cancelable) expone el DEM corregido (sinks/flats) como
+    `ConditionedDemExport` con raster `AnalysisRaster` float en metros
+    (`NO_DATA` en celdas inválidas) y **trazabilidad** de `detail`,
+    `conditioning` y CRS de origen; geometría y resolución nativa del DEM
+    (sin remuestreo). Exportable a GeoTIFF/ASCII con la validación de T17.
+    Tests `ConditionedDemExportContractTest` (4): relleno del pozo conservando
+    la pendiente y geometría nativa, NoData preservado, GeoTIFF reabierto con
+    CRS/dimensiones, cancelación y rechazo de capas no raster; build local
+    **1507 tests / 0 fallos / 15 skips**.
 - [ ] **T21 — Viewshed en producto (REQ-PROD-8.5)**
   - UI con observador/radio; capa de resultado; test del motor existente.
 - [ ] **T22 — Perfil completo (REQ-PROD-8.6)**
