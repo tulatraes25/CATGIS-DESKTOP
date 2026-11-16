@@ -311,7 +311,7 @@ public class LoadProjectAction extends AbstractAction {
     }
 
     // Package-visible seam for deterministic project layer parse/serialize contracts.
-    static Layer parseLayer(String line) {
+    public static Layer parseLayer(String line) {
         try {
             String[] parts = line.split("\\|", -1);
             if (parts.length < 3) {
@@ -616,7 +616,7 @@ public class LoadProjectAction extends AbstractAction {
         }
     }
 
-    private static void applyProjectMetadata(Project project, String key, String value) {
+    public static void applyProjectMetadata(Project project, String key, String value) {
         if (project == null || key == null) {
             return;
         }
@@ -779,7 +779,7 @@ public class LoadProjectAction extends AbstractAction {
         return name;
     }
 
-    private static void normalizeCatserverGrouping(Project project) {
+    public static void normalizeCatserverGrouping(Project project) {
         if (project == null) {
             return;
         }

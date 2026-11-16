@@ -149,6 +149,7 @@ SERVICE	analysis/PgRoutingService.java
 SERVICE	catmap/LayoutExportService.java
 SERVICE	catmap/print/LayoutPrintService.java
 SERVICE	catmap/TemplateApplicationService.java
+SERVICE	ProjectOpenService.java
 EXPORT_SURFACE	catmap/SvgVectorExporter.java
 EXPORT_SURFACE	catmap/PdfVectorExporter.java
 SERVICE	analysis/vector/GeoprocessingService.java
