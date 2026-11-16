@@ -436,9 +436,23 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     `I18nHonestyContractTest` (4: fuente en español, ausencia de invencion en
     ingles, solo locales completos seleccionables, inicializacion en español);
     build local **1552 tests / 0 fallos / 15 skips**.
-- [ ] **T30 — Limpieza de UI muerta y duplicados (REQ-PROD-10.6)**
+- [x] **T30 — Limpieza de UI muerta y duplicados (REQ-PROD-10.6)**
   - Toolbars jamás agregados, paneles vacíos, exporters duplicados, welcome page
     inalcanzable.
+  - Evidence (2026-11-16): se elimino el **camino duplicado de exportacion** del
+    menu Archivo (PDF/PNG/SVG/imagen quedan solo en el menu Exportar; "Exportar
+    imagen..." se movio alli) y el guard `CatmapCommandUniquenessTest` falla si
+    vuelve a existir un comando visible duplicado en `catmap.Main` (cubre las 33+
+    entradas actuales). El item de tema se ubico dentro del bloque Vista antes de
+    agregar el menu. La **welcome page** de CATGIS ya no depende de que el
+    proyecto sea nulo (condicion practicamente inalcanzable por el proyecto por
+    defecto): se muestra al inicio si `AppBranding.isShowWelcomePage()` y el
+    usuario puede desactivarla; contrato `AppBrandingWelcomeContractTest`.
+    Auditoria de toolbars: la barra del compositor si se agrega
+    (`frame.add(createToolBar(), NORTH)`); no se encontraron toolbars huerfanas
+    ni paneles vacios agregados. Inventario suplementario actualizado
+    (ocurrencias 209→206, una sola ruta por exportador); build local **1554
+    tests / 0 fallos / 15 skips**.
 
 ## Fase P6 — Verificación y release
 
