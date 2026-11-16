@@ -3,6 +3,8 @@ import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.data.raster.RasterCoverageSupport;
 import ar.com.catgis.data.vector.VectorLayerUtils;
 import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.catmap.AnalysisRaster;
+import ar.com.catgis.catmap.TerrainRasterAlgorithms;
 
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
@@ -297,6 +299,58 @@ public final class DrainageExtractionService {
         );
     }
 
+    /** Conditioned DEM (sink/flat corrected) as an exportable float raster. */
+    public record ConditionedDemExport(AnalysisRaster raster,
+                                       AnalysisDetail detail,
+                                       HydrologicConditioning conditioning,
+                                       String sourceCrsCode) {
+    }
+
+    public static ConditionedDemExport buildConditionedDem(Layer rasterLayer,
+                                                           AnalysisDetail detail,
+                                                           HydrologicConditioning conditioning) throws Exception {
+        return buildConditionedDem(rasterLayer, detail, conditioning, () -> false);
+    }
+
+    /** Cancellable conditioned-DEM build for background workers. */
+    public static ConditionedDemExport buildConditionedDem(Layer rasterLayer,
+                                                           AnalysisDetail detail,
+                                                           HydrologicConditioning conditioning,
+                                                           java.util.function.BooleanSupplier cancelled) throws Exception {
+        checkCancelled(cancelled);
+        if (!(rasterLayer instanceof RasterLayer)) {
+            throw new IllegalArgumentException("La capa seleccionada no es un DEM raster valido.");
+        }
+        GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
+        AnalysisDetail effectiveDetail = detail != null ? detail : AnalysisDetail.NATIVE;
+        HydrologicConditioning effectiveConditioning =
+                conditioning != null ? conditioning : HydrologicConditioning.ROBUST;
+        SampledDem sampled = sampleDem(coverage, rasterLayer, effectiveDetail, cancelled);
+        if (sampled.validCellCount < 4) {
+            throw new IllegalStateException(
+                    "El DEM no tiene suficientes celdas validas para acondicionar.");
+        }
+        ConditionedDem conditioned = conditionDem(sampled, effectiveConditioning, cancelled);
+        checkCancelled(cancelled);
+
+        int width = sampled.width;
+        int height = sampled.height;
+        float[] values = new float[width * height];
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < width; col++) {
+                int index = row * width + col;
+                values[index] = sampled.validMask[row][col]
+                        ? (float) conditioned.elevations[row][col]
+                        : TerrainRasterAlgorithms.NO_DATA;
+            }
+        }
+        AnalysisRaster raster = new AnalysisRaster("DEM acondicionado", "m",
+                width, height, values, TerrainRasterAlgorithms.NO_DATA,
+                sampled.minX, sampled.minY, sampled.maxX, sampled.maxY,
+                sampled.sourceCrsCode);
+        return new ConditionedDemExport(raster, effectiveDetail, effectiveConditioning,
+                sampled.sourceCrsCode);
+    }
     private static void applyDrainageSymbology(Layer layer) {
         CategorizedSymbology symbology = layer.getLineCategorizedSymbology();
         symbology.setFieldName("channel_class");
