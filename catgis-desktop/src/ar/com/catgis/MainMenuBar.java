@@ -554,7 +554,7 @@ public class MainMenuBar extends JMenuBar {
                 TopographyWorkflowSupport.showNoRasterMessage();
                 return;
             }
-            TerrainHydrologyAnalysisDialog.open();
+            ViewshedDialog.open();
         });
 
         JMenuItem itemRecortarDem = createItem("Recortar DEM...", AppIcons.cutIcon());
