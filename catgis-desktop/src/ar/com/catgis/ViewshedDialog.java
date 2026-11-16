@@ -52,8 +52,9 @@ public class ViewshedDialog extends JDialog {
             return;
         }
         Layer preferred = TopographyWorkflowSupport.resolvePreferredRasterLayer();
-        java.awt.Window owner = CatgisDesktopApp.getMainFrameSafe()
-                instanceof java.awt.Window window ? window : null;
+        // getMainFrameSafe() already returns a Window; a pattern test here is
+        // unconditional and javac 17 rejects it (runtime-identity gate).
+        java.awt.Window owner = CatgisDesktopApp.getMainFrameSafe();
         ViewshedDialog dialog = new ViewshedDialog(owner, rasters, preferred);
         dialog.setVisible(true);
     }
