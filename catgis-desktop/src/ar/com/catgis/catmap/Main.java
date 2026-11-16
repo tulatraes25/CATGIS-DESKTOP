@@ -101,7 +101,7 @@ public class Main {
     }
 
     private static JFrame createMainWindow() {
-        JFrame frame = new JFrame("CATMAP - Cartographic Layout Composer");
+        JFrame frame = new JFrame(ar.com.catgis.I18n.t("CATMAP - Compositor de planchetas"));
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
@@ -1267,7 +1267,7 @@ public class Main {
         currentFile = null;
         addDefaultElements(layoutModel);
         installPreviewForActiveModel();
-        mainFrame.setTitle("CATMAP - Nuevo layout");
+        mainFrame.setTitle(ar.com.catgis.I18n.t("CATMAP - Nuevo layout"));
         layoutAtlas = null;
         statusLabel.setText("Nuevo layout creado");
     }
