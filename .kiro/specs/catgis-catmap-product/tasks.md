@@ -105,7 +105,21 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 ## Fase P2 — Formatos y atlas
 
 - [ ] **T9 — PDF multipágina con fuentes (REQ-PROD-3.1)**
-- [ ] **T10 — SVG vectorial real (REQ-PROD-7.2)**
+- [x] **T10 — SVG vectorial real (REQ-PROD-7.2)**
+  - Evidence (2026-11-16): `catmap/SvgVectorExporter` emite SVG nativo con hoja
+    del documento (mm + viewBox), fondo, y elementos vectoriales reales:
+    `<text>` (labels con familia/tamaño/peso/color/underline, tokens dinámicos
+    ya resueltos por el modelo), `<rect>`, `<ellipse>`, `<line>`, barra de escala
+    (líneas + ticks + textos), leyenda (fondo, título, símbolos y etiquetas),
+    cartouche (campos clave/valor), tabla (filas y separadores) y flecha norte
+    (polígonos + N). Sólo el marco de mapa y elementos sin geometría vectorial
+    (imagen, graticule) se incrustan como PNG data URI a 150 DPI, con presupuesto
+    de píxeles. Publicación atómica + validación XML independiente (raíz/hoja,
+    sin `<script>`/`foreignObject`, imágenes sólo `data:image/png;base64`, al
+    menos un elemento dibujable); "Exportar SVG" usa el exportador vectorial.
+    Inventarios actualizados (`EXPORT_SURFACE` + `SEM-SURFACE-SVGVECTOREXPORTER`).
+    Tests `SvgVectorExporterContractTest` (6); build local **1445 tests / 0
+    fallos / 15 skips**.
 - [x] **T11 — GeoTIFF georreferenciado (REQ-PROD-7.1)**
   - Export del marco con CRS/extent; test ida/vuelta `GeoTiffReader`.
   - Evidence (2026-11-16): `catmap/GeoTiffLayoutExporter` exporta el marco de mapa

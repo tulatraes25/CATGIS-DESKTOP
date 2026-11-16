@@ -1378,23 +1378,25 @@ public class Main {
 
     private static void exportSvg() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setFileFilter(new FileNameExtensionFilter("SVG raster (PNG incrustado, no vectorial) (*.svg)", "svg"));
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "SVG vectorial (texto y formas editables) (*.svg)", "svg"));
         if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
             File file = chooser.getSelectedFile();
             if (!file.getName().toLowerCase().endsWith(".svg")) {
                 file = new File(file.getAbsolutePath() + ".svg");
             }
-            statusLabel.setText("Exportando SVG rasterizado...");
+            statusLabel.setText("Exportando SVG vectorial...");
             try {
-                SvgExportEngine.exportSvg(layoutModel, file, exportResolution);
-                statusLabel.setText("SVG rasterizado exportado: " + file.getName());
+                SvgVectorExporter.exportPage(layoutModel, file);
+                statusLabel.setText("SVG vectorial exportado: " + file.getName());
                 NotificationManager.info(mainFrame,
                         "Exportar SVG",
-                        "SVG exportado con PNG incrustado (no es vectorial editable).\nArchivo: " + file.getAbsolutePath());
+                        "SVG vectorial exportado (texto y formas editables; el mapa va incrustado).\nArchivo: "
+                                + file.getAbsolutePath());
             } catch (Exception ex) {
                 NotificationManager.error(mainFrame,
                         "Error",
-                        "Error al exportar SVG:\n" + ex.getMessage());
+                        "Error al exportar SVG vectorial:\n" + ex.getMessage());
                 statusLabel.setText("Error al exportar SVG");
             }
         }
