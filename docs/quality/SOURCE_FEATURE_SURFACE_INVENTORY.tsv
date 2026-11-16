@@ -48,6 +48,7 @@ DIALOG_OR_WINDOW	CategorizedSymbologyDialog.java
 DIALOG_OR_WINDOW	CatmapItemEditorDialog.java
 DIALOG_OR_WINDOW	CatmapLegendEditorDialog.java
 DIALOG_OR_WINDOW	catmap/ui/PageSetupDialog.java
+DIALOG_OR_WINDOW	catmap/ui/TemplateGalleryDialog.java
 DIALOG_OR_WINDOW	CatserverLayerSelectionDialog.java
 DIALOG_OR_WINDOW	climate/ClimateAreaAnalysisDialog.java
 DIALOG_OR_WINDOW	climate/ClimateOnlineDownloadDialog.java
@@ -147,6 +148,7 @@ LOADER_OR_READER	XlsxTableReader.java
 SERVICE	analysis/PgRoutingService.java
 SERVICE	catmap/LayoutExportService.java
 SERVICE	catmap/print/LayoutPrintService.java
+SERVICE	catmap/TemplateApplicationService.java
 SERVICE	analysis/vector/GeoprocessingService.java
 SERVICE	BooleanRiskService.java
 SERVICE	climate/ClimateOnlineDownloadService.java
