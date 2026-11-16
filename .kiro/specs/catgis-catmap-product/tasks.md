@@ -279,9 +279,24 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     conversión de umbral, presupuesto, resolución nativa igual al DEM,
     umbral por área aplicado, cancelación y etiqueta del modo); build local
     **1498 tests / 0 fallos / 15 skips**.
-- [ ] **T19 — Morfometría de cuencas (REQ-PROD-8.3)**
+- [x] **T19 — Morfometría de cuencas (REQ-PROD-8.3)**
   - Área, perímetro, elevación/pendiente media, Strahler, densidad de drenaje;
     zonal stats reutilizado.
+  - Evidence (2026-11-16): `catmap/BasinMorphometry` delimita la cuenca aguas
+    arriba del outlet con D8 inverso (BFS sobre la grilla de direcciones,
+    respetando NoData) y calcula un `BasinStats` con celdas, **área km²**,
+    **perímetro km** (longitud de bordes de celda no compartidos), elevación
+    mínima/máxima/media, **relieve**, **pendiente media** (usa el raster de
+    pendiente o lo deriva con `TerrainRasterAlgorithms`), **orden de Strahler**
+    máximo de la red (canales = acumulación ≥ umbral; orden calculado
+    aguas-arriba en orden de elevación descendente) y **densidad de drenaje**
+    (longitud de canales por área). Utilidades `basinCellCount` y
+    `channelCells` para reportes. Tests `BasinMorphometryContractTest` (5):
+    plano con geometría conocida (área 0.002 km², perímetro 0.42 km, media
+    14.25 m, densidad 90 km/km²), cuenca de una celda en plano, valle con dos
+    flancos (Strahler 2), validaciones de geometría/outlet y NoData; build local
+    **1503 tests / 0 fallos / 15 skips**. La integración visual en el diálogo
+    existente queda para T20/T21.
 - [ ] **T20 — DEM acondicionado exportable (REQ-PROD-8.4)**
 - [ ] **T21 — Viewshed en producto (REQ-PROD-8.5)**
   - UI con observador/radio; capa de resultado; test del motor existente.
