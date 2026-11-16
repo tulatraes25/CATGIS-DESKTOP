@@ -421,9 +421,21 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     descripción y escala finita); build local **1548 tests / 0 fallos / 15
     skips**. La verificación visual en pantalla HiDPI real queda declarada como
     pendiente (A0.7).
-- [ ] **T29 — i18n honesta (REQ-PROD-10.5)**
+- [x] **T29 — i18n honesta (REQ-PROD-10.5)**
   - Sin traducción automática parcial; completar inglés o retirar del selector;
     títulos hardcodeados eliminados.
+  - Evidence (2026-11-16): se elimino el fallback heuristico que traducia palabra
+    por palabra (`englishFallback` en `I18n`); ahora una clave sin traduccion
+    revisada devuelve el **texto fuente** (español), sin inventar idioma.
+    **Ingles retirado del selector** (`isLanguageSelectable(ENGLISH)=false`,
+    ítem deshabilitado con tooltip explicativo, migracion de `ui.language`
+    persistido a español) hasta completar la traduccion; el menu "Idioma"
+    conserva sus comandos. Titulos hardcodeados del standalone
+    ("CATMAP - Cartographic Layout Composer" y "CATMAP - Nuevo layout")
+    centralizados via `I18n.t` con texto español revisado. Tests
+    `I18nHonestyContractTest` (4: fuente en español, ausencia de invencion en
+    ingles, solo locales completos seleccionables, inicializacion en español);
+    build local **1552 tests / 0 fallos / 15 skips**.
 - [ ] **T30 — Limpieza de UI muerta y duplicados (REQ-PROD-10.6)**
   - Toolbars jamás agregados, paneles vacíos, exporters duplicados, welcome page
     inalcanzable.
