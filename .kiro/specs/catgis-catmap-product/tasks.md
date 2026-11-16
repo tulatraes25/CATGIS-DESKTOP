@@ -408,7 +408,19 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     Tests `CommandPaletteIndexContractTest` (5: ranking, acentos/mayúsculas,
     tareas por keywords, sin resultados y validaciones); build local **1538
     tests / 0 fallos / 15 skips**.
-- [ ] **T28 — HiDPI y temas (REQ-PROD-10.4)**
+- [x] **T28 — HiDPI y temas (REQ-PROD-10.4)**
+  - Evidence (2026-11-16): `catmap/ui/ThemeSupport` selecciona **tema claro/oscuro**
+    FlatLaf con **preferencia persistida** (Preferences) y refresco de ventanas
+    abiertas, aplica un flag HiDPI seguro, detecta la **escala de pantalla**
+    real (`GraphicsConfiguration` transform) y la acota a `1.0..2.0` para
+    métricas/estado. `catmap.Main` usa `ThemeSupport.initialize()` en el
+    arranque (reemplaza el tema fijo FlatArcIJ) y agrega **Vista → "Cambiar tema
+    (claro/oscuro)"** con descripción "Tema ... - HiDPI xNN" en la barra de
+    estado; inventarios surface/semántico/suplementario y baselines actualizados.
+    Tests `ThemeSupportContractTest` (4: preferencia vs sistema, clamp de escala,
+    descripción y escala finita); build local **1548 tests / 0 fallos / 15
+    skips**. La verificación visual en pantalla HiDPI real queda declarada como
+    pendiente (A0.7).
 - [ ] **T29 — i18n honesta (REQ-PROD-10.5)**
   - Sin traducción automática parcial; completar inglés o retirar del selector;
     títulos hardcodeados eliminados.
