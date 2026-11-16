@@ -456,9 +456,23 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P6 — Verificación y release
 
-- [ ] **T31 — Golden masters y caracterización A0.2 (REQ-PROD-11)**
+- [x] **T31 — Golden masters y caracterización A0.2 (REQ-PROD-11)**
   - Escenas deterministas con hash, roundtrips, preview=export; antes de tocar
     `MapPanel`/compositor.
+  - Evidence (2026-11-16): `catmap/GoldenMaster` define 4 escenas deterministas
+    (a4_label, a4_pipeline, a3_portrait, a4_map_preview con preview sintetica sin
+    random/timers), un **hash SHA-256 estable** sobre dimensiones+pixeles ARGB y
+    un reporte markdown; `docs/quality/GOLDEN_MASTERS_20261116.md` registra los
+    hashes de referencia (Windows 11/JDK 21). Tests
+    `GoldenMasterContractTest` (6): determinismo por escena, **roundtrip .catmap
+    conserva el hash** (solo escenas persistibles), preview==export PNG al mismo
+    DPI, mapa con preview es cache runtime (no documento) y sensibilidad del
+    hash. La caracterizacion encontro y corrigio **3 defectos reales de
+    roundtrip**: `LayoutLine` no persistia extremos/estilo (ahora `LINE_X1..Y2` +
+    ancho/dash/color, con heuristico legacy), la **leyenda no persistia items**
+    ni parseaba fuentes decimales (`TITLE_FONT_SIZE=12.0` daba 0), y faltaba
+    `LayoutMap.getPreviewImage`. `CatmapSerializer` sigue fallando cerrado en
+    datos invalidos. Build local **1560 tests / 0 fallos / 15 skips**.
 - [ ] **T32 — Verificación runtime cuando A0.7 lo permita (REQ-PROD-12.3)**
   - Snapshot de UI en Actions/Xvfb y/o Codespaces; sin claims hasta que A0.7/F3
     estén certificados.
