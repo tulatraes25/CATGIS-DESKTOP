@@ -46,6 +46,7 @@ public final class DrainageExtractionService {
             Math.sqrt(2d), 1d, Math.sqrt(2d)
     };
     private static final double FLOW_EPSILON = 1e-9;
+    public static final int MAX_NATIVE_CELLS = 4_000_000;
 
     private DrainageExtractionService() {
     }
@@ -57,6 +58,49 @@ public final class DrainageExtractionService {
                                                           HydrologicConditioning conditioning,
                                                           double minimumBranchLengthMeters,
                                                           CleanupLevel cleanupLevel) throws Exception {
+        return generateDrainage(rasterLayer, accumulationThreshold, Double.NaN, outputLayerName,
+                detail, conditioning, minimumBranchLengthMeters, cleanupLevel);
+    }
+
+    /** Drainage threshold expressed in area (m2) instead of accumulation cells. */
+    public static GeneratedDrainageLayer generateDrainage(Layer rasterLayer,
+                                                          int accumulationThreshold,
+                                                          double thresholdAreaM2,
+                                                          String outputLayerName,
+                                                          AnalysisDetail detail,
+                                                          HydrologicConditioning conditioning,
+                                                          double minimumBranchLengthMeters,
+                                                          CleanupLevel cleanupLevel) throws Exception {
+        return generateDrainageInternal(rasterLayer, accumulationThreshold, thresholdAreaM2,
+                outputLayerName, detail, conditioning, minimumBranchLengthMeters, cleanupLevel,
+                () -> false);
+    }
+
+    /** Cancellable drainage generation; call from a worker thread, never the EDT. */
+    public static GeneratedDrainageLayer generateDrainageCancellable(Layer rasterLayer,
+                                                          int accumulationThreshold,
+                                                          double thresholdAreaM2,
+                                                          String outputLayerName,
+                                                          AnalysisDetail detail,
+                                                          HydrologicConditioning conditioning,
+                                                          double minimumBranchLengthMeters,
+                                                          CleanupLevel cleanupLevel,
+                                                          java.util.function.BooleanSupplier cancelled) throws Exception {
+        return generateDrainageInternal(rasterLayer, accumulationThreshold, thresholdAreaM2,
+                outputLayerName, detail, conditioning, minimumBranchLengthMeters, cleanupLevel,
+                cancelled != null ? cancelled : () -> false);
+    }
+
+    private static GeneratedDrainageLayer generateDrainageInternal(Layer rasterLayer,
+                                                          int accumulationThreshold,
+                                                          double thresholdAreaM2,
+                                                          String outputLayerName,
+                                                          AnalysisDetail detail,
+                                                          HydrologicConditioning conditioning,
+                                                          double minimumBranchLengthMeters,
+                                                          CleanupLevel cleanupLevel,
+                                                          java.util.function.BooleanSupplier cancelled) throws Exception {
+        checkCancelled(cancelled);
         if (!(rasterLayer instanceof RasterLayer)) {
             throw new IllegalArgumentException("La capa seleccionada no es un DEM raster valido.");
         }
@@ -66,32 +110,43 @@ public final class DrainageExtractionService {
         if (minimumBranchLengthMeters < 0d) {
             throw new IllegalArgumentException("La longitud minima del ramal no puede ser negativa.");
         }
+        if (Double.isFinite(thresholdAreaM2) && thresholdAreaM2 <= 0d) {
+            throw new IllegalArgumentException("El umbral de area debe ser mayor a cero m2.");
+        }
 
         GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
-        SampledDem sampled = sampleDem(coverage, rasterLayer, detail != null ? detail : AnalysisDetail.BALANCED);
+        SampledDem sampled = sampleDem(coverage, rasterLayer,
+                detail != null ? detail : AnalysisDetail.NATIVE, cancelled);
         if (sampled.validCellCount < 16) {
             throw new IllegalStateException("El DEM no tiene suficientes celdas validas para calcular drenajes.");
         }
 
         HydrologicConditioning effectiveConditioning =
                 conditioning != null ? conditioning : HydrologicConditioning.ROBUST;
-        ConditionedDem conditioned = conditionDem(sampled, effectiveConditioning);
+        ConditionedDem conditioned = conditionDem(sampled, effectiveConditioning, cancelled);
 
         int[] downstream = computeDownstream(
                 conditioned.elevations,
                 sampled.validMask,
                 conditioned.flatRanks,
                 sampled.width,
-                sampled.height
+                sampled.height,
+                cancelled
         );
-        long[] accumulation = computeAccumulation(downstream, sampled.validMask, sampled.width, sampled.height);
+        long[] accumulation = computeAccumulation(downstream, sampled.validMask,
+                sampled.width, sampled.height, cancelled);
+        int effectiveThreshold = resolveThresholdCells(accumulationThreshold, thresholdAreaM2,
+                sampled.cellAreaSquareMeters);
+        double effectiveThresholdAreaM2 = sampled.cellAreaSquareMeters > 0d
+                ? effectiveThreshold * sampled.cellAreaSquareMeters : Double.NaN;
+        checkCancelled(cancelled);
         CleanupLevel effectiveCleanup = cleanupLevel != null ? cleanupLevel : CleanupLevel.BALANCED;
         ChannelNetwork network = extractChannelNetwork(
                 sampled,
                 conditioned.flatRanks,
                 downstream,
                 accumulation,
-                accumulationThreshold,
+                effectiveThreshold,
                 minimumBranchLengthMeters,
                 effectiveCleanup
         );
@@ -114,7 +169,7 @@ public final class DrainageExtractionService {
             long accCells = branch.maxAccumulationCells;
             double accAreaM2 = sampled.cellAreaSquareMeters > 0d ? accCells * sampled.cellAreaSquareMeters : Double.NaN;
             double lengthM = branch.lengthMeters;
-            String channelClass = classifyChannel(accCells, accumulationThreshold);
+            String channelClass = classifyChannel(accCells, effectiveThreshold);
 
             builder.set("the_geom", line);
             builder.set("drain_id", featureIndex);
@@ -122,7 +177,11 @@ public final class DrainageExtractionService {
             builder.set("acc_cells", accCells);
             builder.set("acc_area_m2", Double.isFinite(accAreaM2) ? accAreaM2 : null);
             builder.set("length_m", Double.isFinite(lengthM) ? lengthM : null);
-            builder.set("threshold_cells", accumulationThreshold);
+            builder.set("threshold_cells", effectiveThreshold);
+            builder.set("threshold_area_m2",
+                    Double.isFinite(effectiveThresholdAreaM2) ? effectiveThresholdAreaM2 : null);
+            builder.set("threshold_ha",
+                    Double.isFinite(effectiveThresholdAreaM2) ? effectiveThresholdAreaM2 / 10_000d : null);
             features.add(builder.buildFeature(safeTypeName(outputLayerName) + "." + featureIndex));
             builder.reset();
 
@@ -157,7 +216,7 @@ public final class DrainageExtractionService {
                 outputEnvelope,
                 resultLayer.getSourceName(),
                 features.size(),
-                "Red de drenaje generada desde DEM con umbral " + accumulationThreshold
+                "Red de drenaje generada desde DEM con umbral " + effectiveThreshold
                         + " celdas, detalle " + sampled.detail.label
                         + " y acondicionamiento " + effectiveConditioning.label + ".",
                 schema
@@ -166,7 +225,7 @@ public final class DrainageExtractionService {
         return new GeneratedDrainageLayer(
                 resultLayer,
                 data,
-                accumulationThreshold,
+                effectiveThreshold,
                 sampled.width,
                 sampled.height,
                 sampled.cellAreaSquareMeters,
@@ -179,27 +238,31 @@ public final class DrainageExtractionService {
     public static HydrologyGrid analyzeHydrologyGrid(Layer rasterLayer,
                                                      AnalysisDetail detail,
                                                      HydrologicConditioning conditioning) throws Exception {
+        java.util.function.BooleanSupplier cancelled = () -> false;
         if (!(rasterLayer instanceof RasterLayer)) {
             throw new IllegalArgumentException("La capa seleccionada no es un DEM raster valido.");
         }
 
         GridCoverage2D coverage = RasterCoverageSupport.readCoverage(rasterLayer);
-        SampledDem sampled = sampleDem(coverage, rasterLayer, detail != null ? detail : AnalysisDetail.BALANCED);
+        SampledDem sampled = sampleDem(coverage, rasterLayer,
+                detail != null ? detail : AnalysisDetail.NATIVE, cancelled);
         if (sampled.validCellCount < 16) {
             throw new IllegalStateException("El DEM no tiene suficientes celdas validas para analisis topohidrologico.");
         }
 
         HydrologicConditioning effectiveConditioning =
                 conditioning != null ? conditioning : HydrologicConditioning.ROBUST;
-        ConditionedDem conditioned = conditionDem(sampled, effectiveConditioning);
+        ConditionedDem conditioned = conditionDem(sampled, effectiveConditioning, cancelled);
         int[] downstream = computeDownstream(
                 conditioned.elevations,
                 sampled.validMask,
                 conditioned.flatRanks,
                 sampled.width,
-                sampled.height
+                sampled.height,
+                cancelled
         );
-        long[] accumulation = computeAccumulation(downstream, sampled.validMask, sampled.width, sampled.height);
+        long[] accumulation = computeAccumulation(downstream, sampled.validMask,
+                sampled.width, sampled.height, cancelled);
         double[] metricCellSize = estimateCellSizeMeters(
                 sampled.minX,
                 sampled.maxX,
@@ -260,7 +323,9 @@ public final class DrainageExtractionService {
         principal.setLineWidth(2.35f);
     }
 
-    private static SampledDem sampleDem(GridCoverage2D coverage, Layer rasterLayer, AnalysisDetail detail) throws Exception {
+    private static SampledDem sampleDem(GridCoverage2D coverage, Layer rasterLayer,
+                                              AnalysisDetail detail,
+                                              java.util.function.BooleanSupplier cancelled) throws Exception {
         if (coverage == null || coverage.getRenderedImage() == null) {
             throw new IllegalStateException("No se pudo leer la cobertura raster del DEM.");
         }
@@ -276,7 +341,12 @@ public final class DrainageExtractionService {
             throw new IllegalStateException("El DEM no tiene suficiente resolucion para analisis de drenaje.");
         }
 
-        int maxGrid = detail != null ? detail.maxGridSize : AnalysisDetail.BALANCED.maxGridSize;
+        int maxGrid = detail != null ? detail.maxGridSize : AnalysisDetail.NATIVE.maxGridSize;
+        if (maxGrid == Integer.MAX_VALUE && exceedsNativeBudget(sourceWidth, sourceHeight)) {
+            throw new IllegalStateException("El DEM tiene " + (long) sourceWidth * sourceHeight
+                    + " celdas; la resolucion nativa excede el limite de " + MAX_NATIVE_CELLS
+                    + ". Usa un detalle reducido o recorta el DEM.");
+        }
         double scale = Math.max(
                 sourceWidth / (double) maxGrid,
                 sourceHeight / (double) maxGrid
@@ -307,6 +377,9 @@ public final class DrainageExtractionService {
         int rasterMinY = raster.getMinY();
 
         for (int row = 0; row < height; row++) {
+            if ((row & 31) == 0) {
+                checkCancelled(cancelled);
+            }
             int srcY = clamp((int) Math.floor(((row + 0.5d) * sourceHeight) / height), 0, sourceHeight - 1);
             for (int col = 0; col < width; col++) {
                 int srcX = clamp((int) Math.floor(((col + 0.5d) * sourceWidth) / width), 0, sourceWidth - 1);
@@ -383,7 +456,9 @@ public final class DrainageExtractionService {
     }
 
     private static ConditionedDem conditionDem(SampledDem sampled,
-                                               HydrologicConditioning conditioning) {
+                                               HydrologicConditioning conditioning,
+                                               java.util.function.BooleanSupplier cancelled) {
+        checkCancelled(cancelled);
         double[][] conditioned = copyGrid(sampled.elevations);
         int[][] flatRanks = null;
 
@@ -704,7 +779,9 @@ public final class DrainageExtractionService {
                                            boolean[][] validMask,
                                            int[][] flatRanks,
                                            int width,
-                                           int height) {
+                                           int height,
+                                           java.util.function.BooleanSupplier cancelled) {
+        checkCancelled(cancelled);
         int[] downstream = new int[width * height];
         java.util.Arrays.fill(downstream, -1);
 
@@ -801,7 +878,9 @@ public final class DrainageExtractionService {
     private static long[] computeAccumulation(int[] downstream,
                                               boolean[][] validMask,
                                               int width,
-                                              int height) {
+                                              int height,
+                                              java.util.function.BooleanSupplier cancelled) {
+        checkCancelled(cancelled);
         int total = width * height;
         long[] accumulation = new long[total];
         int[] indegree = new int[total];
@@ -1393,6 +1472,8 @@ public final class DrainageExtractionService {
         builder.add("acc_area_m2", Double.class);
         builder.add("length_m", Double.class);
         builder.add("threshold_cells", Integer.class);
+        builder.add("threshold_area_m2", Double.class);
+        builder.add("threshold_ha", Double.class);
         return builder.buildFeatureType();
     }
 
@@ -1493,6 +1574,7 @@ public final class DrainageExtractionService {
     }
 
     public enum AnalysisDetail {
+        NATIVE("Nativa", Integer.MAX_VALUE),
         FAST("Rapida", 256),
         BALANCED("Equilibrada", 512),
         DETAILED("Detallada", 768);
@@ -1507,7 +1589,27 @@ public final class DrainageExtractionService {
 
         @Override
         public String toString() {
-            return label + " (" + maxGridSize + ")";
+            return maxGridSize == Integer.MAX_VALUE
+                    ? label + " (nativa)" : label + " (" + maxGridSize + ")";
+        }
+    }
+
+    static int resolveThresholdCells(int baseCells, double areaM2, double cellAreaM2) {
+        int base = Math.max(2, baseCells);
+        if (!Double.isFinite(areaM2) || areaM2 <= 0d || !(cellAreaM2 > 0d)) {
+            return base;
+        }
+        long areaCells = (long) Math.ceil(areaM2 / cellAreaM2);
+        return (int) Math.max(base, Math.max(2L, areaCells));
+    }
+
+    static boolean exceedsNativeBudget(int width, int height) {
+        return width > 0 && height > 0 && (long) width * height > MAX_NATIVE_CELLS;
+    }
+
+    private static void checkCancelled(java.util.function.BooleanSupplier cancelled) {
+        if (cancelled != null && cancelled.getAsBoolean()) {
+            throw new java.util.concurrent.CancellationException("Analisis de drenaje cancelado.");
         }
     }
 

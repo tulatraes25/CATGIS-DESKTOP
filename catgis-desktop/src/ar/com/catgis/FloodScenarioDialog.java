@@ -52,7 +52,7 @@ public class FloodScenarioDialog extends JDialog {
         }
         baseNameField = new JTextField(buildDefaultBaseName(), 28);
         detailCombo = new JComboBox<>(DrainageExtractionService.AnalysisDetail.values());
-        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.BALANCED);
+        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.NATIVE);
         conditioningCombo = new JComboBox<>(DrainageExtractionService.HydrologicConditioning.values());
         conditioningCombo.setSelectedItem(DrainageExtractionService.HydrologicConditioning.ADVANCED);
         thresholdField = new JTextField("30", 12);

@@ -293,7 +293,7 @@ public final class FloodScenarioService {
         try {
             return value != null && !value.isBlank()
                     ? DrainageExtractionService.AnalysisDetail.valueOf(value.trim())
-                    : DrainageExtractionService.AnalysisDetail.BALANCED;
+                    : DrainageExtractionService.AnalysisDetail.NATIVE;
         } catch (Exception ex) {
             return DrainageExtractionService.AnalysisDetail.BALANCED;
         }
