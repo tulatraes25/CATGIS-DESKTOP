@@ -31,9 +31,9 @@ class AtlasEngineSafetyContractTest {
     @TempDir Path tempDir;
 
     private static final AtlasEngine.AtlasPage PAGE_A =
-            new AtlasEngine.AtlasPage("Mapa A", "Region A", -70.0, -45.0, 1.25);
+            new AtlasEngine.AtlasPage("Mapa A", "Region A", -70.0, -45.0, -68.75, -43.75);
     private static final AtlasEngine.AtlasPage PAGE_B =
-            new AtlasEngine.AtlasPage("Mapa B", "Region B", -69.0, -44.0, 2.50);
+            new AtlasEngine.AtlasPage("Mapa B", "Region B", -69.0, -44.0, -66.5, -41.5);
 
     private static LayoutModel model() {
         LayoutModel model = new LayoutModel();
@@ -113,7 +113,7 @@ class AtlasEngineSafetyContractTest {
     void invalidPartialExtentAndExcessiveDpiFailBeforeMutatingTemplate() {
         LayoutModel template = model();
         AtlasEngine.AtlasPage incomplete =
-                new AtlasEngine.AtlasPage("bad", null, -70.0, null, null);
+                new AtlasEngine.AtlasPage("bad", null, -70.0, null, null, null);
         assertThrows(IllegalArgumentException.class, () ->
                 AtlasEngine.generatePages(template, List.of(incomplete), 72));
         assertThrows(IllegalArgumentException.class, () ->
