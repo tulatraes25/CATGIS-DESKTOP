@@ -1,0 +1,26 @@
+name: UI Snapshot (manual, no runtime claim)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ui-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build CATMAP and capture a UI snapshot under Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          cd catgis-desktop
+          chmod +x gradlew
+          xvfb-run -a ./gradlew --no-daemon --console=plain uiSnapshot
+      - uses: actions/upload-artifact@v4
+        with:
+          name: catmap-ui-snapshot
+          path: catgis-desktop/build/ui-snapshots/*.png
+          if-no-files-found: error

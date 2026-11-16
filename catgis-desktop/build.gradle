@@ -1234,3 +1234,12 @@ void writeLeInt(ByteArrayOutputStream out, int value) {
     out.write((value >> 16) & 0xFF)
     out.write((value >> 24) & 0xFF)
 }
+
+// T32: UI snapshot harness (run under xvfb-run in Actions; no runtime claim).
+tasks.register('uiSnapshot', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'ar.com.catgis.catmap.UiSnapshotHarness'
+    systemProperty 'java.awt.headless', 'false'
+    args = ['build/ui-snapshots']
+}
