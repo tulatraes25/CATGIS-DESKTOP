@@ -294,10 +294,10 @@ public class LayoutTemplateManager {
         double portraitHeight = pageOrientation == PageOrientation.LANDSCAPE ? pageW : pageH;
         model.setPageSpec(LayoutPageSpec.fromPortraitDimensions(
                 portraitWidth, portraitHeight, pageOrientation));
-        ar.com.catgis.catmap.CatmapDocumentIO.save(model, file);
+        LayoutCodecs.documents().save(model, file);
     }
     public static void loadTemplate(File file, LayoutModel model) throws IOException {
-        LayoutModel loaded = ar.com.catgis.catmap.CatmapDocumentIO.load(file);
+        LayoutModel loaded = LayoutCodecs.documents().load(file);
         model.setPageSpec(loaded.getPageSpec());
         for (LayoutElement element : loaded.getElements()) {
             model.addElement(element);

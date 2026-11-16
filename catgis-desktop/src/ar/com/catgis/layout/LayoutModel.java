@@ -63,7 +63,7 @@ public class LayoutModel {
     private String serializeElements() {
         StringBuilder sb = new StringBuilder();
         for (LayoutElement e : activeElements()) {
-            sb.append(ar.com.catgis.catmap.CatmapSerializer.serializeElementRaw(e)).append("\n");
+            sb.append(LayoutCodecs.elements().encode(e)).append("\n");
         }
         return sb.toString();
     }
@@ -74,7 +74,7 @@ public class LayoutModel {
         for (String line : data.split("\n")) {
             String t = line.trim();
             if (t.isEmpty()) continue;
-            LayoutElement e = ar.com.catgis.catmap.CatmapSerializer.parseElementRaw(t);
+            LayoutElement e = LayoutCodecs.elements().decode(t);
             if (e != null) active.add(e);
         }
     }
