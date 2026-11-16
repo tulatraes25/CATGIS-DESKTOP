@@ -1,5 +1,11 @@
 # Repository Sanitization — Design
 
+> **Registro historico (anotado 2026-11-15, T7 del backlog de decisiones).** Los
+> IDs de ruleset/repositorio citados en este diseno describen la secuencia de
+> aislamiento ya cerrada. IDs **activos**: repositorio publico
+> `tulatraes25/CATGIS-DESKTOP` (ID `1406486908`) y ruleset `24546459`. Los demas
+> IDs son historicos y no deben usarse como referencia operativa.
+
 Status: CLOSED_CERTIFIED
 Requirements: `requirements.md`
 Baseline at spec creation: `3d07252ea9b9af62b2ff3230ff76d11d94297313`

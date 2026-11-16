@@ -1,5 +1,14 @@
 # Repository Sanitization — Requirements
 
+> **Registro historico (anotado 2026-11-15, T7 del backlog de decisiones).** Este
+> documento conserva los IDs de ruleset y de repositorio vigentes cuando se
+> certifico. Los IDs **activos** son: repositorio publico
+> `tulatraes25/CATGIS-DESKTOP` (ID `1406486908`) y ruleset `24546459`. Los IDs
+> `24466311`, `1405554812` y `1199177324` son **historicos**: describen la
+> secuencia de aislamiento/privacidad ya cerrada y no deben usarse como
+> referencia operativa. No se reescribio el cuerpo del documento: es evidencia
+> historica.
+
 Status: CLOSED_CERTIFIED
 Spec type: Security / repository governance
 Canonical repository: `tulatraes25/CATGIS-DESKTOP`

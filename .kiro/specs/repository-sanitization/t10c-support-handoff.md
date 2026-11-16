@@ -1,5 +1,10 @@
 # T10C — GitHub Support Purge Handoff
 
+> **Registro historico (anotado 2026-11-15, T7 del backlog de decisiones).** El
+> handoff quedo cerrado sin soporte de GitHub. IDs **activos**: repositorio
+> publico `tulatraes25/CATGIS-DESKTOP` (ID `1406486908`) y ruleset `24546459`.
+> Cualquier ID de repositorio citado dentro de este archivo es historico.
+
 Status: CLOSED_CERTIFIED / SUPPORT_NOT_REQUIRED
 
 This file contains only repository-safe metadata required to hand T10C to GitHub Support. The private evidence bundle remains outside Git and MUST NOT be committed.
