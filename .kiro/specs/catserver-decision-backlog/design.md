@@ -74,9 +74,13 @@ Options: (a) fail-closed `-Force` style confirmation parameter, (b) stage to a
 temp directory and swap on success, (c) backup suffix before delete. Recommended:
 (b) where a writer exists, (a) for table-level operations.
 
-## 5. DC-9 — branch inventory (159 remote, 113 merged, 46 unmerged)
+## 5. DC-9 — branch inventory (estado inicial 160: 114 mergeadas, 46 sin mergear; ejecutado)
 
-The 46 branches not contained in `main` at `f965869`:
+**Ejecutado el 2026-11-15:** se borraron las **113** ramas contenidas en `main`
+(excluyendo `main`), con SHA registrado en
+`docs/quality/BRANCH_INVENTORY_20261115.md`; quedan **47** ramas (main + 46
+históricas sin mergear, conservadas para triage). La lista original de las 46 no
+contenidas al momento del inventario:
 
 ```
 audit/fgb-crs-post-main-20261017          fix/vector-singlefile-atomic-post-las-20261017
