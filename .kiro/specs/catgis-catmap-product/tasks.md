@@ -308,11 +308,44 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     la pendiente y geometría nativa, NoData preservado, GeoTIFF reabierto con
     CRS/dimensiones, cancelación y rechazo de capas no raster; build local
     **1507 tests / 0 fallos / 15 skips**.
-- [ ] **T21 — Viewshed en producto (REQ-PROD-8.5)**
+- [x] **T21 — Viewshed en producto (REQ-PROD-8.5)**
   - UI con observador/radio; capa de resultado; test del motor existente.
-- [ ] **T22 — Perfil completo (REQ-PROD-8.6)**
+  - Evidence (2026-11-16): `catmap/ViewshedRaster` envuelve el motor existente
+    (`TerrainHydrologyAnalysisService.computeViewshed`) sobre `AnalysisRaster`:
+    máscara float (visible=1, oculta=0, fuera del radio/NoData=NO_DATA), overlay
+    ARGB (verde visible, transparente oculto, marcador naranja del observador) y
+    validaciones de observador/altura/radio. `ViewshedDialog` (nuevo) permite
+    elegir DEM, observador X/Y (precargado al centro del DEM), altura y radio en
+    metros, calcula en `SwingWorker` (cancelable) y **agrega la capa de
+    resultado** al proyecto/mapa como raster derivado `viewshed` con parámetros
+    registrados; el menú "Visibilidad / Viewshed..." ahora abre este diálogo en
+    lugar del análisis genérico. Tests `ViewshedRasterContractTest` (4) además
+    del test del motor existente; build local **1517 tests / 0 fallos / 15
+    skips**. Inventario surface/semántico/matriz actualizado con el diálogo.
+- [x] **T22 — Perfil completo (REQ-PROD-8.6)**
   - Pendiente del perfil, curva hipsométrica, perfil 3D.
-- [ ] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
+  - Evidence (2026-11-16): `catmap/TerrainProfile` muestrea el perfil con
+    interpolación bilineal (NoData → NaN), calcula **pendiente por muestra**
+    (diferencias centrales), pendiente media/máxima, ascenso y descenso
+    acumulados, longitud, min/máx/media y relieve, **curva hipsométrica**
+    (altura relativa vs área relativa en N bandas) y **línea 3D** JTS con la
+    elevación en Z. Validaciones de DEM/extensión/longitud/muestras/bandas.
+    Tests `TerrainProfileContractTest` (5: plano conocido exacto, curva
+    monótona, línea 3D con Z, NoData sin invalidar métricas, validaciones);
+    build local **1527 tests / 0 fallos / 15 skips**. Integración visual del
+    perfil en el diálogo existente queda para P5/T26+.
+- [x] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
+  - Evidence (2026-11-16): `catmap/VolumeCalculator` calcula corte/relleno sobre
+    `AnalysisRaster` float: `againstPlane` (DEM contra cota de referencia) y
+    `between` (DEM existente vs propuesto) con `VolumeResult` (celdas válidas,
+    área m², corte m³, relleno m³, neto, mínimo/máximo/media del delta); las
+    celdas NoData se excluyen y los rasters deben compartir grilla, extensión y
+    CRS (tolerancia relativa). `differenceRaster` produce el raster de diferencia
+    de elevación exportable a GeoTIFF/ASCII con NoData preservado. Tests
+    `VolumeCalculatorContractTest` (5: corte exacto contra plano, neto entre DEMs
+    y signo invertido, exclusión de NoData, raster de diferencia con NoData y
+    validaciones de geometría/entradas); build local **1522 tests / 0 fallos /
+    15 skips**. La integración visual (diálogo de volumen) queda para P5/T26+.
 - [x] **T24 — Interpolación desde puntos (REQ-PROD-8.8)**
   - IDW propio; evaluar kriging con dependencia verificable.
   - Evidence (2026-11-16): `catmap/IdwInterpolator` implementa IDW propio
