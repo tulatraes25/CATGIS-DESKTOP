@@ -20,6 +20,7 @@ public class LayoutScaleBar implements LayoutElement {
     private int segments = 4;
     private Color color = new Color(50, 50, 55);
     private Font font = new Font("SansSerif", Font.PLAIN, 9);
+    private boolean autoScale = true;
 
     public LayoutScaleBar(String id, double xMm, double yMm, double wMm, double hMm) {
         this.id = id; this.name = id;
@@ -44,6 +45,29 @@ public class LayoutScaleBar implements LayoutElement {
 
     public double getMapScaleDenominator() { return mapScaleDenominator; }
     public void setMapScaleDenominator(double d) { this.mapScaleDenominator = d > 0 ? d : 10000; }
+
+    /** When true (default), render derives the denominator from the map frame. */
+    public boolean isAutoScale() { return autoScale; }
+
+    public void setAutoScale(boolean auto) { this.autoScale = auto; }
+
+    /** Independent copy for render-time scale resolution (document model stays intact). */
+    public LayoutScaleBar copyForRender() {
+        LayoutScaleBar copy = new LayoutScaleBar(id, boundsMm.x, boundsMm.y,
+                boundsMm.width, boundsMm.height);
+        copy.name = name;
+        copy.zOrder = zOrder;
+        copy.visible = visible;
+        copy.locked = locked;
+        copy.metersPerUnit = metersPerUnit;
+        copy.unitLabel = unitLabel;
+        copy.segments = segments;
+        copy.color = color;
+        copy.font = font;
+        copy.autoScale = autoScale;
+        copy.mapScaleDenominator = mapScaleDenominator;
+        return copy;
+    }
     public double getMetersPerUnit() { return metersPerUnit; }
     public void setMetersPerUnit(double v) { metersPerUnit = v; }
     public String getUnitLabel() { return unitLabel; }
@@ -72,7 +96,9 @@ public class LayoutScaleBar implements LayoutElement {
         double totalPx = (totalMeters / maxMeters) * w;
         totalPx = Math.max(w * 0.4, Math.min(w * 1.02, totalPx));
 
-        Font sFont = font.deriveFont((float) Math.max(7, Math.min(font.getSize2D(), barH * 0.6)));
+        double requestedPx = RenderMetrics.pointsToPixels(font.getSize2D(), ctx.getDpi());
+        Font sFont = font.deriveFont((float) Math.max(7.0,
+                Math.min(requestedPx, barH * 0.6)));
         g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setFont(sFont);
         FontMetrics fm = g2.getFontMetrics();

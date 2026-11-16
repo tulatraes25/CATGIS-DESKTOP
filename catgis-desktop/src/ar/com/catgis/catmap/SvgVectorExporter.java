@@ -47,6 +47,8 @@ public final class SvgVectorExporter {
 
     private static final int RASTER_DPI = 150;
     private static final double PT_TO_MM = 25.4 / 72.0;
+    /** Layout font sizes are baseline pixels at 96 DPI: 1 px = 0.75 pt. */
+    private static final double LAYOUT_PX_TO_PT = 72.0 / 96.0;
     private static final long MAX_EMBEDDED_PIXELS = 18_000_000L;
 
     private SvgVectorExporter() {}
@@ -109,7 +111,7 @@ public final class SvgVectorExporter {
     private static void appendLabel(StringBuilder svg, LayoutLabel label) {
         Rectangle2D.Double bounds = label.getBoundsMm();
         Font font = label.getFont();
-        double fontSizeMm = font.getSize2D() * PT_TO_MM;
+        double fontSizeMm = font.getSize2D() * LAYOUT_PX_TO_PT * PT_TO_MM;
         double baseline = bounds.y + fontSizeMm * 0.95;
         svg.append(String.format(Locale.ROOT,
                 "  <text x=\"%s\" y=\"%s\" font-family=\"%s\" font-size=\"%s\""
@@ -177,7 +179,7 @@ public final class SvgVectorExporter {
         double y = bounds.y;
         double height = Math.max(2.0, bounds.height * 0.35);
         Font font = scaleBar.getFont();
-        double fontSizeMm = font.getSize2D() * PT_TO_MM;
+        double fontSizeMm = font.getSize2D() * LAYOUT_PX_TO_PT * PT_TO_MM;
         svg.append(String.format(Locale.ROOT,
                 "  <g stroke=\"%s\" stroke-width=\"0.3\">", hex(scaleBar.getColor())));
         svg.append(String.format(Locale.ROOT,
@@ -221,8 +223,8 @@ public final class SvgVectorExporter {
                     legend.isShowBorder()
                             ? " stroke=\"#666666\" stroke-width=\"0.3\"" : ""));
         }
-        double titleSize = legend.getTitleFont().getSize2D() * PT_TO_MM;
-        double itemSize = legend.getItemFont().getSize2D() * PT_TO_MM;
+        double titleSize = legend.getTitleFont().getSize2D() * LAYOUT_PX_TO_PT * PT_TO_MM;
+        double itemSize = legend.getItemFont().getSize2D() * LAYOUT_PX_TO_PT * PT_TO_MM;
         double y = bounds.y + titleSize;
         if (legend.getTitle() != null && !legend.getTitle().isBlank()) {
             svg.append(String.format(Locale.ROOT,
@@ -266,8 +268,8 @@ public final class SvgVectorExporter {
                                 + "\" stroke-width=\"" + number(cartouche.getBorderWidth()) + "\""
                         : ""));
         double y = bounds.y + 4.0;
-        double labelSize = cartouche.getLabelFont().getSize2D() * PT_TO_MM;
-        double valueSize = cartouche.getValueFont().getSize2D() * PT_TO_MM;
+        double labelSize = cartouche.getLabelFont().getSize2D() * LAYOUT_PX_TO_PT * PT_TO_MM;
+        double valueSize = cartouche.getValueFont().getSize2D() * LAYOUT_PX_TO_PT * PT_TO_MM;
         for (var field : cartouche.getFields().entrySet()) {
             if (y > bounds.y + bounds.height - 2.0) {
                 break;

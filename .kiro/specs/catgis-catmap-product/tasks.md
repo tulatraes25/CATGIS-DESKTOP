@@ -71,12 +71,32 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P1 — Cartografía correcta
 
-- [ ] **T5 — Métricas DPI únicas (REQ-PROD-3.3)**
+- [x] **T5 — Métricas DPI únicas (REQ-PROD-3.3)**
   - `RenderMetrics` (pt/mm→px `dpi/72`) en labels, escala, leyenda, tabla,
     cartouche y etiquetas del mapa; quitar 96 fijo en `LayoutMap`.
   - Test "preview == export" 96/150/200 DPI con tolerancia declarada.
-- [ ] **T6 — Escala derivada (REQ-PROD-5)**
+  - Evidence (2026-11-16): `layout/RenderMetrics` convierte tamanos de layout
+    (px base 96 DPI, la metrica historica de las plantillas) a pixeles de
+    dispositivo con `size*dpi/96` y expone `scaledFont` y el round-trip px→base;
+    aplicado a `LayoutLabel` (fuente, halo, subrayado) y `LayoutScaleBar`
+    (etiquetas y ratio, con el clamp historico escalado por DPI). Los
+    exportadores vectoriales PDF/SVG convierten px@96 → pt (`×0.75`) para
+    compartir el tamano fisico del raster. Contrato
+    `LayoutTextDpiParityContractTest`: la tinta del texto escala 2× entre 96 y
+    192 DPI (paridad fisica preview/export); `RenderMetricsContractTest` (4).
+    Los goldens existentes no cambian a 96 DPI y la politica de tolerancia por OS
+    queda intacta.
+- [x] **T6 — Escala derivada (REQ-PROD-5)**
   - `ScaleResolver` compartido; barra recalculada en pan/zoom y export.
+  - Evidence (2026-11-16): `layout/ScaleResolver` deriva el denominador del
+    viewport y tamaño de píxel del marco (proyectado por unidad del CRS;
+    geográfico con corrección de latitud `111320·cos(lat)`), con
+    `withResolvedScale` que renderiza una copia de la barra (el documento nunca
+    se muta) y `autoScale` en `LayoutScaleBar` (default true). Cableado en
+    `LayoutExportService.renderPage` (PNG/PDF raster/goldens),
+    `LayoutExportEngine` (PDF raster histórico), `AtlasEngine` y la vista previa
+    standalone. Contrato `ScaleResolverContractTest` (5) y paridad de render con
+    zoom 1×/4× en `LayoutTextDpiParityContractTest`.
 - [x] **T7 — Configurar página en UI (REQ-PROD-2)**
   - Diálogo A3/A4/A5/Carta/Legal/Tabloide/custom + orientación/márgenes/DPI;
     preview, export, atlas y print usan la `PageSpec`.

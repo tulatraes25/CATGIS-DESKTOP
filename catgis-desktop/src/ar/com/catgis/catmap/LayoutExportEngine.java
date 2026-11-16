@@ -166,7 +166,10 @@ public final class LayoutExportEngine {
                     cs.fill();
 
                     for (LayoutElement element : model.getVisibleElementsSortedByZ(pageIndex)) {
-                        exportElementToPdf(document, cs, element, dpi, pageW, pageH);
+                        exportElementToPdf(document, cs,
+                                ar.com.catgis.layout.ScaleResolver
+                                        .withResolvedScale(element, model, dpi),
+                                dpi, pageW, pageH);
                     }
 
                     if (!opts.watermark.isEmpty()) {
