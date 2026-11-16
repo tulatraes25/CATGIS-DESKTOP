@@ -1,19 +1,27 @@
 # Repository Audit Remediation — Bugfix
 
-Status: ACTIVE
+Status: CLOSED_CERTIFIED (2026-11-15)
 Owner: CATGIS
-Baseline: `f363ace2fc1110e0c8f312456bfbc758b3fbb758` (main after PR #211)
+Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)
 Baseline history: tranche 1 started at `aecb4d2` (PR #199) and merged as
 `b2b52ff`; tranche 2 (DC-1 atomic vector export) merged as `ca980eeb`;
 tranche 3 (DC-2 envelope axis order) merged as `8455375`; tranche 4
 (DC-3 EDT render serialization) merged as `4f47378`; tranche 5
 (DC-4 adaptive CATSERVER database) merged as `f363ace`; tranche 6
-(DC-5 fail-closed ejido mask) starts at `f363ace`.
+(DC-5 fail-closed ejido mask) merged as `530abf2`; tranche 7 (rescate de PRs
+históricos) merged as `963c561`, `0c73e8f` and `f965869`.
+Closure: all blocking tasks are certified on GitHub at the exact SHAs above;
+the remaining decision-gated items (DC-5 producer and DC-6…DC-12) were
+**transferred** to `.kiro/specs/catserver-decision-backlog/` (T1–T8) instead of
+being silently dropped.
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
 `fix/catmap-atlas-edt-render` (merged, PR #210) ·
 `fix/catserver-adaptive-database-connect` (merged, PR #211) ·
-`fix/catserver-ejido-mask-fail-closed` (tranche 6)
+`fix/catserver-ejido-mask-fail-closed` (merged, PR #212) ·
+`port/205-vector-source-crs` (merged, PR #213) ·
+`port/204-project-state-authority` (merged, PR #214) ·
+`port/202-specialized-layer-identity` (merged, PR #215)
 Program: BUGFIX_ONLY — feature freeze respected (no new features, no dependency upgrades, no GUI/OpenCode validation)
 
 ## Goal

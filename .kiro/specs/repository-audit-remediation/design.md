@@ -1,12 +1,15 @@
 # Repository Audit Remediation — Design
 
-Status: ACTIVE
-Baseline: `f363ace2fc1110e0c8f312456bfbc758b3fbb758` (main after PR #211)
+Status: CLOSED_CERTIFIED (2026-11-15)
+Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
 `fix/catmap-atlas-edt-render` (merged, PR #210) ·
 `fix/catserver-adaptive-database-connect` (merged, PR #211) ·
-`fix/catserver-ejido-mask-fail-closed` (tranche 6)
+`fix/catserver-ejido-mask-fail-closed` (merged, PR #212) ·
+`port/205-vector-source-crs` (merged, PR #213) ·
+`port/204-project-state-authority` (merged, PR #214) ·
+`port/202-specialized-layer-identity` (merged, PR #215)
 Commits: `0bb839a` (web), `7c4b4d8` (catserver), `8474980` (desktop), `aca48da`
 (launchers), `3c7d9d8` (docs), `5d126d5` (gitignore), `d7e4e7f` (encoding),
 `d9da0e5` (verified test count), `0c335ef` + `9e1f24c` (contracts and spec) —
@@ -17,7 +20,13 @@ merged as `8455375`; tranche 4 serialized export renders on the EDT (`6ed72c4`,
 `c757a8a`, `08a81d1`, rebased as `9b2f041`, `080a176`, `ecaaab1`) — merged as
 `4f47378`; tranche 5 made the CATSERVER SQL database-agnostic (`0ef8703`,
 `fc43ba8`, `f0bc789`, `dea8f46`, `a594702`) — merged as `f363ace`; tranche 6
-fails closed on the missing ejido mask on top of `f363ace`.
+failed closed on the missing ejido mask (`4853fc1`, `646830d`, `1eac5b7`,
+`df0917f`) — merged as `530abf2`; tranche 7 rescued the historical open PRs onto
+live main (`d5b008f`, `3ac2e0c`, `b994d0b`) — merged as `963c561`, `0c73e8f`
+and `f965869`.
+Closure: every blocking task is certified on GitHub at the exact PR heads and
+post-main SHAs; the decision-gated remainder is transferred to
+`.kiro/specs/catserver-decision-backlog/`.
 
 ## Current state
 
