@@ -47,7 +47,8 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     puente). Guard de arquitectura `LayoutPackageDependencyGuardTest` (3) falla
     si vuelve una referencia directa; `LayoutCodecContractTest` (5) cubre
     roundtrip elemento/documento sin instalación explícita, undo por el puente y
-    override instalado. Build local **1476 tests / 0 fallos / 15 skips**.- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
+    override instalado. Build local **1476 tests / 0 fallos / 15 skips**.
+- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
   - `LayoutPageSpec` (preset/CUSTOM mm, orientación, márgenes, DPI) en el modelo
     y en el serializador; migración de `.catmap` v1/v2.
   - Test: roundtrip A3 vertical + custom mm; export dimensiones exactas.
@@ -240,10 +241,24 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P4 — Terreno, hidrología y riesgo
 
-- [ ] **T17 — Rasters analíticos exportables (REQ-PROD-8.1)**
+- [x] **T17 — Rasters analíticos exportables (REQ-PROD-8.1)**
   - Pipeline `AnalysisRaster` float/NoData/unidad + GeoTIFF + estadísticas para
     pendiente, aspecto, hillshade, dirección y acumulación; sin truncado 8 bits.
   - Fixtures numéricos con pendiente conocida.
+  - Evidence (2026-11-16): `catmap/AnalysisRaster` (valores `float[]`, NoData,
+    unidad, extent+CRS explícito, `stats()` min/max/media/desvío sobre celdas
+    válidas, `exportGeoTiff` con publicación atómica + reapertura GeoTIFF que
+    valida CRS/extent/dimensiones, `exportAsciiGrid` ESRI con cabecera y
+    verificación de cantidad de valores) y `catmap/TerrainRasterAlgorithms`
+    (pendiente y aspecto por método de Horn, hillshade azimut/elevación
+    configurables, dirección D8 y acumulación D8 por orden de elevación, con
+    propagación de NoData; **sin cuantización 8 bits**). Fixtures numéricos:
+    plano ascendente al este con pendiente `atan(0.1)=5.7106°`, aspecto 270°,
+    D8=16 y acumulación 9; plano horizontal con hillshade `cos(45°)=0.7071`.
+    Tests `AnalysisRasterContractTest` (4) y
+    `TerrainRasterAlgorithmsContractTest` (6); build local **1492 tests / 0
+    fallos / 15 skips**. Las salidas de los diálogos existentes quedan como
+    imágenes de preview hasta T20/T21.
 - [ ] **T18 — Resolución nativa y umbrales en área (REQ-PROD-8.2)**
   - Eliminar downsample fijo; umbrales en m²/ha además de celdas; performance
     acotada y cancelable (fuera del EDT).
