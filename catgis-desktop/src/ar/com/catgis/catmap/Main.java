@@ -188,6 +188,7 @@ public class Main {
         // --- Páginas ---
         JMenu menuPaginas = new JMenu("Páginas");
         addMenuItem(menuPaginas, "Agregar página", 0, e -> addLayoutPage());
+        addMenuItem(menuPaginas, "Configurar página...", 0, e -> configureLayoutPage());
         menuPaginas.addSeparator();
         addMenuItem(menuPaginas, "Página anterior", 0, e -> navigateLayoutPage(-1));
         addMenuItem(menuPaginas, "Página siguiente", 0, e -> navigateLayoutPage(1));
@@ -1107,6 +1108,16 @@ public class Main {
 
     // --- Actions ---
 
+    private static void configureLayoutPage() {
+        LayoutPageSpec updated = ar.com.catgis.catmap.ui.PageSetupDialog
+                .showDialog(mainFrame, layoutModel.getPageSpec());
+        if (updated == null) {
+            return;
+        }
+        layoutModel.setPageSpec(updated);
+        installPreviewForActiveModel();
+        statusLabel.setText("Página configurada: " + updated);
+    }
     private static void installPreviewForActiveModel() {
         LayoutPageSpec pageSpec = layoutModel.getPageSpec();
         LayoutPreviewPanel newPreview = new LayoutPreviewPanel(layoutModel,
