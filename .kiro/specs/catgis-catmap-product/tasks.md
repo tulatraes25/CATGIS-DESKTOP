@@ -89,9 +89,18 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     suplementario visible y sus baselines). Tests
     `PageSetupDialogContractTest` (7); build local **1407 tests / 0 fallos /
     15 skips**.
-- [ ] **T8 — Impresión profesional (REQ-PROD-3.5)**
+- [x] **T8 — Impresión profesional (REQ-PROD-3.5)**
   - `LayoutPrintable` con `PageFormat` del documento y `Book` multipágina; sin
     raster fijo 200 DPI.
+  - Evidence (2026-11-16): `catmap/print/LayoutPrintable` (render por página con
+    el mismo camino de export, escalado dentro del área imprimible, NO_SUCH_PAGE
+    fuera de rango) y `catmap/print/LayoutPrintService` (`buildBook` con un
+    `PageFormat` por página: hoja del documento en mm, orientación y márgenes
+    como área imprimible; `print()` con diálogo opcional). `catmap.Main` ya no
+    rasteriza A4 fijo: "Imprimir…" imprime todas las páginas del documento.
+    Inventario actualizado (`SERVICE catmap/print/LayoutPrintService.java`).
+    Tests `LayoutPrintServiceContractTest` (7); build local **1414 tests / 0
+    fallos / 15 skips**.
 
 ## Fase P2 — Formatos y atlas
 

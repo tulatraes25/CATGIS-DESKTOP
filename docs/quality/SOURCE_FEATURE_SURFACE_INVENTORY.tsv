@@ -145,6 +145,7 @@ LOADER_OR_READER	XlsTableReader.java
 LOADER_OR_READER	XlsxTableReader.java
 SERVICE	analysis/PgRoutingService.java
 SERVICE	catmap/LayoutExportService.java
+SERVICE	catmap/print/LayoutPrintService.java
 SERVICE	analysis/vector/GeoprocessingService.java
 SERVICE	BooleanRiskService.java
 SERVICE	climate/ClimateOnlineDownloadService.java

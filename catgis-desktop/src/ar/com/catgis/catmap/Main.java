@@ -1338,28 +1338,7 @@ public class Main {
     private static void printLayout() {
         statusLabel.setText("Preparando impresión...");
         try {
-            java.awt.print.PrinterJob job = java.awt.print.PrinterJob.getPrinterJob();
-            job.setJobName("CATMAP - Layout");
-
-            // Render at print resolution
-            java.awt.image.BufferedImage image = LayoutExportEngine.renderLayout(layoutModel, 200);
-
-            job.setPrintable((java.awt.print.Printable) (java.awt.Graphics graphics,
-                    java.awt.print.PageFormat pageFormat, int pageIndex) -> {
-                if (pageIndex > 0) return java.awt.print.Printable.NO_SUCH_PAGE;
-                java.awt.Graphics2D g2 = (java.awt.Graphics2D) graphics;
-                g2.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
-                double sx = pageFormat.getImageableWidth() / image.getWidth();
-                double sy = pageFormat.getImageableHeight() / image.getHeight();
-                double scale = Math.min(sx, sy);
-                g2.scale(scale, scale);
-                g2.drawImage(image, 0, 0, null);
-                return java.awt.print.Printable.PAGE_EXISTS;
-            });
-
-            if (job.printDialog()) {
-                statusLabel.setText("Imprimiendo...");
-                job.print();
+            if (ar.com.catgis.catmap.print.LayoutPrintService.print(layoutModel, true)) {
                 statusLabel.setText("Impresión completada");
             } else {
                 statusLabel.setText("Impresión cancelada");
