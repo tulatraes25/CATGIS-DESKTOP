@@ -10,7 +10,7 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P0 — Fundaciones (sin esto todo se construye dos veces)
 
-- [ ] **T1 — Contexto y host de render de CATMAP (REQ-PROD-0)**
+- [x] **T1 — Contexto y host de render de CATMAP (REQ-PROD-0)**
   - `catmap/app/CatmapAppContext` + `ProjectOpenService` sin GUI; `catmap.Main`
     deja de fabricar estáticos de `CatgisDesktopApp`.
   - `layout/LayoutRenderHost` (proyecto, capas visibles, render de mapa, escala)
@@ -37,8 +37,17 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     capas vía `LoadProjectAction.parseLayer`, normalización CATSERVER y preflight
     de fuentes locales) y devuelve `ProjectInspection`; CATMAP pre-valida con él
     antes de aplicar el proyecto (menú Abrir y `--project`). Tests
-    `ProjectOpenServiceTest` (5) y `CatmapAppContextTest` (2); build local
-    **1468 tests / 0 fallos / 15 skips**. Falta T1c.- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
+    `ProjectOpenServiceTest` (5) y `CatmapAppContextTest` (2).
+  - Progreso T1c (2026-11-16): **ciclo `layout`↔`catmap` roto** — `layout`
+    declara `LayoutElementCodec`/`LayoutDocumentCodec` y el registro
+    `LayoutCodecs` (instalación explícita + puente reflectivo perezoso a
+    `CatmapSerializer`/`CatmapDocumentIO`); `LayoutModel` (undo/redo) y
+    `LayoutTemplateManager` (guardar/cargar plantilla) ya no importan ni
+    referencian `ar.com.catgis.catmap` (sólo cadenas `Class.forName` dentro del
+    puente). Guard de arquitectura `LayoutPackageDependencyGuardTest` (3) falla
+    si vuelve una referencia directa; `LayoutCodecContractTest` (5) cubre
+    roundtrip elemento/documento sin instalación explícita, undo por el puente y
+    override instalado. Build local **1476 tests / 0 fallos / 15 skips**.- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
   - `LayoutPageSpec` (preset/CUSTOM mm, orientación, márgenes, DPI) en el modelo
     y en el serializador; migración de `.catmap` v1/v2.
   - Test: roundtrip A3 vertical + custom mm; export dimensiones exactas.
