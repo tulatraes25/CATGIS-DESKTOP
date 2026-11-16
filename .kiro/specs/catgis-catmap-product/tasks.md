@@ -379,9 +379,22 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P5 — UX "Filmora del GIS"
 
-- [ ] **T26 — Salida segura y notificaciones (REQ-PROD-10.1/10.2)**
+- [x] **T26 — Salida segura y notificaciones (REQ-PROD-10.1/10.2)**
   - Confirmación universal de cambios (incluye `catmap.Main`); toasts para carga
     masiva en lugar de N modales.
+  - Evidence (2026-11-16): `LayoutModel` ahora lleva **dirty tracking**
+    (`saveSnapshot`/`restoreFromSnapshot` marcan cambios, `setPageSpec` solo si
+    difiere, `markSaved` al abrir/guardar) y `catmap/ExitGuard` decide con
+    `needsConfirmation` + diálogo Guardar/Salir sin guardar/Cancelar.
+    `catmap.Main` reemplaza `System.exit(0)` y `EXIT_ON_CLOSE` por
+    `DO_NOTHING_ON_CLOSE` + `requestExit()` (guarda si el usuario lo pide y solo
+    sale si el guardado tuvo éxito); los guardados marcan el documento limpio.
+    "Abrir datos..." acepta **multi-selección** y usa **un solo toast/aviso
+    resumen** (`QuickMapService.bulkSummary`) en lugar de N modales, y las cargas
+    individuales/exportaciones exitosas usan `NotificationManager.toastSuccess`.
+    Tests `LayoutModelDirtyContractTest` (3), `ExitGuardContractTest` (2) y
+    resumen masivo en `QuickMapServiceContractTest`; build local **1544 tests /
+    0 fallos / 15 skips**.
 - [x] **T27 — Paleta de comandos (REQ-PROD-10.3)**
   - Búsqueda por tarea sobre comandos registrados; integración con inventarios.
   - Evidence (2026-11-16): `catmap/ui/CommandPaletteIndex` (modelo puro:
