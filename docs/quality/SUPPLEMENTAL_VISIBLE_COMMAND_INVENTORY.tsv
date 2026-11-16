@@ -13,6 +13,10 @@ catmap/Main.java	ADDMENUITEM	Abrir layout...	1
 catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	1
 catmap/Main.java	ADDMENUITEM	Abrir datos...	1
 catmap/Main.java	ADDMENUITEM	Buscar comando...	1
+catmap/Main.java	ADDMENUITEM	Agregar servicio WMS...	1
+catmap/Main.java	ADDMENUITEM	Agregar servicio WFS...	1
+catmap/Main.java	ADDMENUITEM	Agregar servicio WMTS...	1
+catmap/Main.java	ADDMENUITEM	Agregar capa PostGIS...	1
 catmap/Main.java	ADDMENUITEM	Cambiar tema (claro/oscuro)	1
 catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	1
 catmap/Main.java	ADDMENUITEM	Agregar página	1
