@@ -1,12 +1,15 @@
 # Repository Audit Remediation — Tasks
 
-Status: TRANCHES 1–5 CERTIFIED — tranche 6 awaiting GitHub certification
-Baseline: `f363ace2fc1110e0c8f312456bfbc758b3fbb758` (main after PR #211)
+Status: CLOSED_CERTIFIED (2026-11-15) — tranches 1–7 certified and attested on GitHub
+Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)
 Branches: `fix/main-audit` (merged, PR #206) · `fix/vector-export-atomic-publication`
 (merged, PR #207) · `fix/vector-axis-order-single-normalization` (merged, PR #208) ·
 `fix/catmap-atlas-edt-render` (merged, PR #210) ·
 `fix/catserver-adaptive-database-connect` (merged, PR #211) ·
-`fix/catserver-ejido-mask-fail-closed` (tranche 6)
+`fix/catserver-ejido-mask-fail-closed` (merged, PR #212) ·
+`port/205-vector-source-crs` (merged, PR #213) ·
+`port/204-project-state-authority` (merged, PR #214) ·
+`port/202-specialized-layer-identity` (merged, PR #215)
 
 Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 (Win11 + JDK 21.0.10 + Gradle 8.10.2 + Node 26 + Python 3.14) · Manual admin
@@ -364,13 +367,52 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
     continuation against the real database.
   - Executor: Local → GitHub pending (T34)
 
-- [ ] **T34 — GitHub certification of tranche 6 (BLOCKING for closure)**
+- [x] **T34 — GitHub certification of tranche 6 (PR #212)**
   - Requirements: REQ-AR-15, AC-AR-15.5
-  - Required evidence: PR from `fix/catserver-ejido-mask-fail-closed` against
-    `main` with exact base `f363ace`; PR-head CI + Certification (including the
-    extended PostGIS step) + Runtime Identity + GeoParquet SUCCESS; merge with
-    expected head SHA; post-main runs SUCCESS and post-main attestation PASS.
-  - Executor: GitHub (credentialed account) + local follow-up
+  - Evidence: PR [#212](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/212)
+    from `fix/catserver-ejido-mask-fail-closed` against `main` `f363ace`;
+    PR head `df0917f7d9fc9c24980441e7bc7f23581ecbe7c9` with **30/30 checks PASS**
+    (CI 43769834193, Certification 43769834135 with the extended PostGIS mask
+    outcomes, Runtime Identity 43769834117 8/8, GeoParquet 43769834138, PR
+    attestation 43769834172); merged with `--match-head-commit` as
+    `530abf2db19db8a7cc2ed73829fc6ca729265577`; post-main CI 43771224970,
+    Certification 43771224982, Runtime Identity 43771225011 and GeoParquet
+    43771224979 all SUCCESS; post-main attestation run 43772222938 SUCCESS with
+    `ATTEST_BINDING_PASS` and 26 attested PASS jobs.
+  - Executor: GitHub + local follow-up (completed)
+
+## Tranche 7 — rescate de PRs históricos (auditoría 2026-11-15)
+
+Auditoría de los 5 PRs abiertos contra el main vivo: se portaron sobre ramas
+nuevas desde main (sin force-push) los tres con valor único, se cerró el
+superado y se decidió el de investigación.
+
+- [x] **T35 — Rescatar #205 (CRS de origen SHP/GeoJSON/KML)**
+  - Evidence: PR [#213](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/213),
+    head `d5b008f`, 30/30 PASS, merge `963c561`; post-main CI 43777931485,
+    Certification 43777931482, Runtime Identity 43777931532, GeoParquet
+    43777931504 SUCCESS; attestation 43779241164 PASS (26 jobs). Suite local
+    1342 tests / 0 fallos.
+- [x] **T36 — Rescatar #204 (autoridad del estado del proyecto)**
+  - Evidence: PR [#214](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/214),
+    head `3ac2e0c`, 30/30 PASS (el check de binding se re-ejecutó tras una
+    carrera con el `runtime-identity` del push de main), merge `0c73e8f`;
+    post-main CI 43781384115, Certification 43781384143, Runtime Identity
+    43781384162, GeoParquet 43781384108 SUCCESS; attestation 43782528934 PASS.
+    Suite local 1346 / 0 fallos.
+- [x] **T37 — Rescatar #202 rebasado sobre #205 (identidad de capas)**
+  - Evidence: PR [#215](https://github.com/tulatraes25/CATGIS-DESKTOP/pull/215),
+    head `b994d0b`, 30/30 PASS, merge `f965869`; post-main CI 43783614760,
+    Certification 43783614726, Runtime Identity 43783614837, GeoParquet
+    43783614727 SUCCESS; attestation 43784807844 PASS. Conflicto con #205
+    resuelto en `LocalVectorSourceCrsProvenance` (+`SpatiaLiteLayer`) y
+    `OpenFileAction`. Suite local 1361 / 0 fallos / 15 skips.
+- [x] **T38 — Cerrar el superado (#203) y decidir el research (#122)**
+  - Evidence: #203 cerrado como superado por DC-1/#207 (conflicto textual real;
+    su validación por reapertura queda como follow-up opcional); #205/#204/#202
+    cerrados apuntando a sus rescates; #122 cerrado como research no adoptado
+    (habría añadido un workflow disparado en push a main para una herramienta de
+    investigación). Sin PRs abiertos al cierre.
 
 ## Deferred defect register
 
@@ -389,21 +431,27 @@ Executor vocabulary: GitHub (PR/CI/Certification/merge/attestation) · Local
 | DC-11 | LOW | Historical certification specs (`requirements.md`, `t10c-support-handoff.md`) contain superseded ruleset/repository IDs | Historical records; only a dated reconciliation was added, not a rewrite |
 | DC-12 | LOW | 15 skipped Java tests and 3 reviewed environment skips remain pre-existing | Skip inventory must not grow; reducing it is separate certification work |
 
+**Transferencia en el cierre:** DC-1…DC-4 quedaron resueltos y certificados; DC-5
+quedó mitigado fail-closed con el productor pendiente; DC-5 (productor) y
+DC-6…DC-12 se transfieren como tareas **T1–T8** a
+`.kiro/specs/catserver-decision-backlog/` (spec ACTIVE, decision-gated). No se
+pierde ningún ítem: cada uno conserva evidencia, opciones y criterio de
+aceptación allí.
+
 ## Blocker / dependency notes
 
-- Tranches 1 (T14), 2 (T22), 3 (T25), 4 (T28) and 5 (T31) are certified on
-  GitHub. Tranche 6 still needs its own exact-PR and post-main certification
-  cycle (T34); local runs do not certify it.
-- PostgreSQL/PostGIS execution lives in the certification job: real bootstrap on
-  both database names, the DC-4 guards and the three DC-5 mask outcomes.
-- GUI/native runtime, installer generation and Windows script execution require
-  the authorized local phase after A0.7 and are explicitly NOT_VERIFIED.
-- A0.7 remains **NOT_CERTIFIED**; this spec does not claim otherwise.
+- Todos los tranches 1–7 están certificados en GitHub con PR head exacto,
+  merge `--match-head-commit`, runs post-main SUCCESS y atestación post-main.
+- La ejecución PostgreSQL/PostGIS vive en el job de certificación: bootstrap
+  real en ambas bases, guards de DC-4 y las tres salidas de DC-5.
+- GUI/native runtime, generación de instaladores y ejecución de scripts Windows
+  requieren la fase local autorizada posterior a A0.7; siguen NOT_VERIFIED.
+- A0.7 permanece **NOT_CERTIFIED**; este spec no declara lo contrario.
 
 ## Current next action
 
-Certify tranche 6 on GitHub (T34: PR `fix/catserver-ejido-mask-fail-closed`
-against `main` `f363ace`, exact PR CI/Certification, merge with
-`expected_head_sha`, post-main runs and attestation). After that, DC-5 needs the
-data-source decision to produce `catastro.ejido_urbano_mask` automatically, and
-DC-6…DC-12 remain as documented policy/administrative follow-ups.
+**Cerrado.** El trabajo restante dejó de ser un bugfix autónomo y pasó a
+decisiones de datos/modelo/política registradas en
+`.kiro/specs/catserver-decision-backlog/` (T1–T8). Este spec no debe reabrirse
+salvo que una decisión de ese backlog produzca un cambio de código que exija
+nueva certificación.
