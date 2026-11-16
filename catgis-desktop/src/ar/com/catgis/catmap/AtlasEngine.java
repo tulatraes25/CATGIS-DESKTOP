@@ -4,6 +4,7 @@ import ar.com.catgis.layout.LayoutElement;
 import ar.com.catgis.layout.LayoutLabel;
 import ar.com.catgis.layout.LayoutMap;
 import ar.com.catgis.layout.LayoutModel;
+import ar.com.catgis.layout.LayoutPageSpec;
 import ar.com.catgis.layout.LayoutRenderContext;
 
 import javax.imageio.ImageIO;
@@ -45,14 +46,15 @@ public final class AtlasEngine {
     private record PageSetup(LayoutRenderContext context, int width, int height,
                              long bytes) {}
 
-    private static PageSetup setup(int dpi) {
+    private static PageSetup setup(int dpi, LayoutPageSpec pageSpec) {
         if (dpi < MIN_DPI || dpi > MAX_DPI) {
             throw new IllegalArgumentException("CATMAP atlas: DPI must be between 36 and 450.");
         }
         LayoutRenderContext context = new LayoutRenderContext(
-                LayoutRenderContext.Mode.EXPORT_IMAGE, dpi, 297, 210);
-        int width = context.mmToPxInt(297);
-        int height = context.mmToPxInt(210);
+                LayoutRenderContext.Mode.EXPORT_IMAGE, dpi,
+                pageSpec.widthMm(), pageSpec.heightMm());
+        int width = context.mmToPxInt(pageSpec.widthMm());
+        int height = context.mmToPxInt(pageSpec.heightMm());
         if (width <= 0 || height <= 0) {
             throw new IllegalArgumentException("CATMAP atlas: invalid page dimensions.");
         }
@@ -140,7 +142,7 @@ public final class AtlasEngine {
             LayoutModel template, List<AtlasPage> pages, int dpi) {
         Objects.requireNonNull(template, "CATMAP atlas template");
         Objects.requireNonNull(pages, "CATMAP atlas pages");
-        PageSetup setup = setup(dpi);
+        PageSetup setup = setup(dpi, template.getPageSpec());
         if (setup.bytes() * pages.size() > MAX_BATCH_BYTES) {
             throw new IllegalArgumentException(
                     "CATMAP atlas batch exceeds the in-memory image budget; export pages to files.");
@@ -179,7 +181,7 @@ public final class AtlasEngine {
             throw new IOException("CATMAP atlas output name is invalid.");
         }
 
-        PageSetup setup = setup(dpi);
+        PageSetup setup = setup(dpi, template.getPageSpec());
         Path supplied = outputDir.toPath().toAbsolutePath().normalize();
         if (Files.isSymbolicLink(supplied)) {
             throw new IOException("CATMAP atlas output directory cannot be a symbolic link.");

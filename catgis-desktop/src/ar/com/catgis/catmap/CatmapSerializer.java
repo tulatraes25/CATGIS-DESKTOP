@@ -111,10 +111,14 @@ public final class CatmapSerializer {
                 boolean multipage = pageCount > 1;
                 w.write(multipage ? "# CATMAP Layout v2" : "# CATMAP Layout v1");
                 w.newLine();
-                w.write("PAGE_SIZE=A4");
+                LayoutPageSpec pageSpec = model.getPageSpec();
+                w.write("PAGE_SIZE=" + pageSpec.presetName());
                 w.newLine();
-                w.write("PAGE_ORIENTATION=LANDSCAPE");
+                w.write("PAGE_ORIENTATION=" + pageSpec.orientation().name());
                 w.newLine();
+                if (!LayoutPageSpec.A4_LANDSCAPE.equals(pageSpec)) {
+                    writePageGeometry(w, pageSpec);
+                }
                 if (multipage) {
                     w.write("PAGE_COUNT=" + pageCount);
                     w.newLine();
@@ -188,6 +192,7 @@ public final class CatmapSerializer {
             throw new IOException("CATMAP layout exceeds the maximum supported file size.");
         }
         LayoutModel model = new LayoutModel();
+        PageMetadata pageMetadata = new PageMetadata();
         boolean v2 = false;
         int expectedPages = -1;
         int selectedPage = 0;
@@ -214,6 +219,9 @@ public final class CatmapSerializer {
                     if (trimmed.startsWith("PAGE_BEGIN=") || trimmed.startsWith("PAGE_END=")
                             || trimmed.startsWith("PAGE_COUNT=")) {
                         throw new IOException("CATMAP multi-page document is missing its v2 header.");
+                    }
+                    if (pageMetadata.parse(trimmed)) {
+                        continue;
                     }
                     if (trimmed.startsWith("PAGE_")) {
                         continue; // Backward-compatible v1 page metadata.
@@ -258,10 +266,7 @@ public final class CatmapSerializer {
                     }
                     activePage = -1;
                     completedPages++;
-                } else if (trimmed.startsWith("PAGE_SIZE=")
-                        || trimmed.startsWith("PAGE_ORIENTATION=")) {
-                    // Legacy fixed A4/landscape metadata. Editable per-page
-                    // dimensions are a separate product/model acceptance gate.
+                } else if (pageMetadata.parse(trimmed)) {
                     if (activePage != -1) {
                         throw new IOException("CATMAP v2 page metadata inside element section.");
                     }
@@ -296,7 +301,136 @@ public final class CatmapSerializer {
             }
             model.setCurrentPage(selectedPage);
         }
+        model.setPageSpec(pageMetadata.toSpec());
         return model;
+    }
+
+    private static void writePageGeometry(BufferedWriter writer, LayoutPageSpec pageSpec)
+            throws IOException {
+        writer.write("PAGE_WIDTH_MM=" + pageSpec.portraitWidthMm());
+        writer.newLine();
+        writer.write("PAGE_HEIGHT_MM=" + pageSpec.portraitHeightMm());
+        writer.newLine();
+        if (pageSpec.hasMargins()) {
+            writer.write("PAGE_MARGINS_MM=" + pageSpec.marginTopMm() + ","
+                    + pageSpec.marginRightMm() + "," + pageSpec.marginBottomMm() + ","
+                    + pageSpec.marginLeftMm());
+            writer.newLine();
+        }
+    }
+
+    /**
+     * Parses the page-geometry keys of the document header. Legacy files only
+     * carry PAGE_SIZE/PAGE_ORIENTATION and load as their preset; new files also
+     * carry explicit portrait millimetres and optional margins.
+     */
+    private static final class PageMetadata {
+        private String preset;
+        private PageOrientation orientation;
+        private Double widthMm;
+        private Double heightMm;
+        private double[] margins;
+        private boolean marginSeen;
+
+        boolean parse(String line) throws IOException {
+            if (line.startsWith("PAGE_SIZE=")) {
+                if (preset != null) {
+                    throw new IOException("CATMAP page size is repeated.");
+                }
+                preset = line.substring("PAGE_SIZE=".length()).trim().toUpperCase(java.util.Locale.ROOT);
+                if (!LayoutPageSpec.CUSTOM_PRESET.equals(preset)) {
+                    try {
+                        PageSizePreset.valueOf(preset);
+                    } catch (IllegalArgumentException invalid) {
+                        throw new IOException("CATMAP page size is not supported: " + preset, invalid);
+                    }
+                }
+                return true;
+            }
+            if (line.startsWith("PAGE_ORIENTATION=")) {
+                if (orientation != null) {
+                    throw new IOException("CATMAP page orientation is repeated.");
+                }
+                String value = line.substring("PAGE_ORIENTATION=".length())
+                        .trim().toUpperCase(java.util.Locale.ROOT);
+                try {
+                    orientation = PageOrientation.valueOf(value);
+                } catch (IllegalArgumentException invalid) {
+                    throw new IOException("CATMAP page orientation is not supported: " + value, invalid);
+                }
+                return true;
+            }
+            if (line.startsWith("PAGE_WIDTH_MM=")) {
+                widthMm = parseMillimetres(line.substring("PAGE_WIDTH_MM=".length()), "page width");
+                return true;
+            }
+            if (line.startsWith("PAGE_HEIGHT_MM=")) {
+                heightMm = parseMillimetres(line.substring("PAGE_HEIGHT_MM=".length()), "page height");
+                return true;
+            }
+            if (line.startsWith("PAGE_MARGINS_MM=")) {
+                margins = parseMargins(line.substring("PAGE_MARGINS_MM=".length()));
+                marginSeen = true;
+                return true;
+            }
+            return false;
+        }
+
+        LayoutPageSpec toSpec() throws IOException {
+            if (preset == null) {
+                if (orientation != null || widthMm != null || heightMm != null || marginSeen) {
+                    throw new IOException("CATMAP page geometry is missing PAGE_SIZE.");
+                }
+                return LayoutPageSpec.A4_LANDSCAPE;
+            }
+            PageOrientation actualOrientation = orientation != null
+                    ? orientation : PageOrientation.LANDSCAPE;
+            try {
+                LayoutPageSpec spec;
+                if (LayoutPageSpec.CUSTOM_PRESET.equals(preset)) {
+                    if (widthMm == null || heightMm == null) {
+                        throw new IOException(
+                                "CATMAP custom page requires PAGE_WIDTH_MM and PAGE_HEIGHT_MM.");
+                    }
+                    spec = LayoutPageSpec.custom(widthMm, heightMm, actualOrientation);
+                } else {
+                    PageSizePreset size = PageSizePreset.valueOf(preset);
+                    if (widthMm != null && Math.abs(widthMm - size.widthMm) > 0.01) {
+                        throw new IOException("CATMAP page width does not match PAGE_SIZE=" + preset);
+                    }
+                    if (heightMm != null && Math.abs(heightMm - size.heightMm) > 0.01) {
+                        throw new IOException("CATMAP page height does not match PAGE_SIZE=" + preset);
+                    }
+                    spec = LayoutPageSpec.preset(size, actualOrientation);
+                }
+                if (marginSeen) {
+                    spec = spec.withMargins(margins[0], margins[1], margins[2], margins[3]);
+                }
+                return spec;
+            } catch (IllegalArgumentException invalid) {
+                throw new IOException("CATMAP page geometry is invalid: " + invalid.getMessage(), invalid);
+            }
+        }
+
+        private static double parseMillimetres(String text, String label) throws IOException {
+            try {
+                return Double.parseDouble(text.trim());
+            } catch (NumberFormatException invalid) {
+                throw new IOException("CATMAP " + label + " is not a valid number: " + text, invalid);
+            }
+        }
+
+        private static double[] parseMargins(String text) throws IOException {
+            String[] parts = text.trim().split(",");
+            if (parts.length != 4) {
+                throw new IOException("CATMAP page margins require four comma-separated values.");
+            }
+            double[] values = new double[4];
+            for (int i = 0; i < 4; i++) {
+                values[i] = parseMillimetres(parts[i], "page margin");
+            }
+            return values;
+        }
     }
 
     private static int parseStrictPageNumber(String text, int max) throws IOException {

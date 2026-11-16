@@ -1,6 +1,7 @@
 package ar.com.catgis.catmap;
 
 import ar.com.catgis.layout.LayoutModel;
+import ar.com.catgis.layout.LayoutPageSpec;
 
 import javax.imageio.ImageIO;
 import javax.xml.XMLConstants;
@@ -29,8 +30,6 @@ public final class SvgExportEngine {
     private static final String IMAGE_PREFIX = "data:image/png;base64,";
     private static final long MAX_EMBEDDED_PNG_BYTES = 64L * 1024L * 1024L;
     private static final long MAX_SVG_BYTES = 128L * 1024L * 1024L;
-    private static final double PAGE_WIDTH_MM = 297.0;
-    private static final double PAGE_HEIGHT_MM = 210.0;
 
     private SvgExportEngine() {}
 
@@ -47,13 +46,16 @@ public final class SvgExportEngine {
     static void exportSvg(LayoutModel model, File file, int dpi,
                           CatmapAtomicExport.AtomicMover mover) throws Exception {
         BufferedImage raster = LayoutExportEngine.renderLayout(model, dpi);
+        LayoutPageSpec pageSpec = model.getPageSpec();
         CatmapAtomicExport.publish(file,
-                staged -> writeRasterSvg(raster, staged),
-                staged -> verifyRasterSvg(staged, raster.getWidth(), raster.getHeight()),
+                staged -> writeRasterSvg(raster, staged, pageSpec.widthMm(), pageSpec.heightMm()),
+                staged -> verifyRasterSvg(staged, raster.getWidth(), raster.getHeight(),
+                        pageSpec.widthMm(), pageSpec.heightMm()),
                 mover);
     }
 
-    private static void writeRasterSvg(BufferedImage raster, Path staged)
+    private static void writeRasterSvg(BufferedImage raster, Path staged,
+                                       double pageWidthMm, double pageHeightMm)
             throws IOException {
         ByteArrayOutputStream png = new ByteArrayOutputStream();
         if (!ImageIO.write(raster, "png", png)) {
@@ -68,13 +70,13 @@ public final class SvgExportEngine {
         try (Writer writer = Files.newBufferedWriter(staged, StandardCharsets.UTF_8)) {
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             writer.write("<svg xmlns=\"" + SVG_NAMESPACE
-                    + "\" width=\"" + PAGE_WIDTH_MM + "mm\" height=\""
-                    + PAGE_HEIGHT_MM + "mm\" viewBox=\"0 0 "
-                    + PAGE_WIDTH_MM + " " + PAGE_HEIGHT_MM + "\">\n");
-            writer.write("  <rect width=\"" + PAGE_WIDTH_MM
-                    + "\" height=\"" + PAGE_HEIGHT_MM + "\" fill=\"white\"/>\n");
+                    + "\" width=\"" + pageWidthMm + "mm\" height=\""
+                    + pageHeightMm + "mm\" viewBox=\"0 0 "
+                    + pageWidthMm + " " + pageHeightMm + "\">\n");
+            writer.write("  <rect width=\"" + pageWidthMm
+                    + "\" height=\"" + pageHeightMm + "\" fill=\"white\"/>\n");
             writer.write("  <image x=\"0\" y=\"0\" width=\""
-                    + PAGE_WIDTH_MM + "\" height=\"" + PAGE_HEIGHT_MM
+                    + pageWidthMm + "\" height=\"" + pageHeightMm
                     + "\" href=\"" + IMAGE_PREFIX);
             writer.write(base64);
             writer.write("\"/>\n</svg>\n");
@@ -86,7 +88,14 @@ public final class SvgExportEngine {
      * Parsing is restricted to CATMAP's bounded output, with DTD and external
      * entities disabled. This validates a raster SVG, not true vector data.
      */
+    /** Legacy A4-landscape overload kept for existing callers of the default document. */
     static void verifyRasterSvg(Path staged, int expectedWidth, int expectedHeight)
+            throws IOException {
+        verifyRasterSvg(staged, expectedWidth, expectedHeight, 297.0, 210.0);
+    }
+
+    static void verifyRasterSvg(Path staged, int expectedWidth, int expectedHeight,
+                                double pageWidthMm, double pageHeightMm)
             throws IOException {
         long bytes = Files.size(staged);
         if (bytes == 0 || bytes > MAX_SVG_BYTES) {
@@ -107,9 +116,9 @@ public final class SvgExportEngine {
             Element root = document.getDocumentElement();
             if (!SVG_NAMESPACE.equals(root.getNamespaceURI())
                     || !"svg".equals(root.getLocalName())
-                    || !((PAGE_WIDTH_MM + "mm").equals(root.getAttribute("width")))
-                    || !((PAGE_HEIGHT_MM + "mm").equals(root.getAttribute("height")))
-                    || !("0 0 " + PAGE_WIDTH_MM + " " + PAGE_HEIGHT_MM)
+                    || !((pageWidthMm + "mm").equals(root.getAttribute("width")))
+                    || !((pageHeightMm + "mm").equals(root.getAttribute("height")))
+                    || !("0 0 " + pageWidthMm + " " + pageHeightMm)
                             .equals(root.getAttribute("viewBox"))) {
                 throw new IOException("CATMAP SVG tiene dimensiones o raiz inesperadas.");
             }

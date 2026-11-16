@@ -111,7 +111,10 @@ public final class LayoutExportEngine {
      * Export layout to PDF using PDFBox with vector elements.
      */
     public static void exportPdf(LayoutModel model, File file, int dpi) throws Exception {
-        exportPdf(model, file, new PdfExportOptions().dpi(dpi));
+        java.util.Objects.requireNonNull(model, "CATMAP layout model");
+        LayoutPageSpec pageSpec = model.getPageSpec();
+        exportPdf(model, file, new PdfExportOptions().dpi(dpi)
+                .pageSize(pageSpec.widthMm(), pageSpec.heightMm()));
     }
 
     /**
@@ -121,17 +124,19 @@ public final class LayoutExportEngine {
         if (opts == null) {
             throw new IllegalArgumentException("CATMAP requiere opciones PDF validas.");
         }
-        double widthMm = opts.pageWidthMm > 0 ? opts.pageWidthMm : 297;
-        double heightMm = opts.pageHeightMm > 0 ? opts.pageHeightMm : 210;
-        CatmapAtomicExport.publish(file, staged -> writePdf(model, staged.toFile(), opts),
+        java.util.Objects.requireNonNull(model, "CATMAP layout model");
+        double widthMm = opts.hasExplicitPageSize()
+                ? opts.pageWidthMm : model.getPageSpec().widthMm();
+        double heightMm = opts.hasExplicitPageSize()
+                ? opts.pageHeightMm : model.getPageSpec().heightMm();
+        CatmapAtomicExport.publish(file,
+                staged -> writePdf(model, staged.toFile(), opts, widthMm, heightMm),
                 staged -> CatmapAtomicExport.verifyPdf(staged, widthMm, heightMm));
     }
 
-    private static void writePdf(LayoutModel model, File file, PdfExportOptions opts)
-            throws Exception {
+    private static void writePdf(LayoutModel model, File file, PdfExportOptions opts,
+                                 double pageW, double pageH) throws Exception {
         int dpi = opts.dpi > 0 ? opts.dpi : 300;
-        double pageW = opts.pageWidthMm > 0 ? opts.pageWidthMm : 297;
-        double pageH = opts.pageHeightMm > 0 ? opts.pageHeightMm : 210;
 
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
 
@@ -157,7 +162,7 @@ public final class LayoutExportEngine {
                 cs.fill();
 
                 for (LayoutElement element : model.getVisibleElementsSortedByZ()) {
-                    exportElementToPdf(document, cs, element, dpi, pageH);
+                    exportElementToPdf(document, cs, element, dpi, pageW, pageH);
                 }
 
                 if (!opts.watermark.isEmpty()) {
@@ -172,14 +177,7 @@ public final class LayoutExportEngine {
     private static void exportElementToPdf(
             org.apache.pdfbox.pdmodel.PDDocument document,
             org.apache.pdfbox.pdmodel.PDPageContentStream cs,
-            LayoutElement element, int dpi) throws Exception {
-        exportElementToPdf(document, cs, element, dpi, 210);
-    }
-
-    private static void exportElementToPdf(
-            org.apache.pdfbox.pdmodel.PDDocument document,
-            org.apache.pdfbox.pdmodel.PDPageContentStream cs,
-            LayoutElement element, int dpi, double pageHeightMm) throws Exception {
+            LayoutElement element, int dpi, double pageWidthMm, double pageHeightMm) throws Exception {
 
         Rectangle2D.Double b = element.getBoundsMm();
         float x = (float) mmToPt(b.x);
@@ -198,7 +196,7 @@ public final class LayoutExportEngine {
         } else {
             // Fallback: render to raster (LayoutMap, LayoutLegend, LayoutTable,
             // LayoutImage, LayoutScaleBar, LayoutNorthArrow, LayoutCartouche, etc.)
-            exportAsRaster(document, cs, element, x, y, w, h, dpi);
+            exportAsRaster(document, cs, element, x, y, w, h, dpi, pageWidthMm, pageHeightMm);
         }
     }
 
@@ -339,7 +337,7 @@ public final class LayoutExportEngine {
             org.apache.pdfbox.pdmodel.PDDocument document,
             org.apache.pdfbox.pdmodel.PDPageContentStream cs,
             LayoutElement element, float x, float y, float w, float h,
-            int dpi) throws Exception {
+            int dpi, double pageWidthMm, double pageHeightMm) throws Exception {
 
         // Render element to a BufferedImage at the right resolution
         Rectangle2D.Double b = element.getBoundsMm();
@@ -361,7 +359,7 @@ public final class LayoutExportEngine {
             g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
             LayoutRenderContext ctx = new LayoutRenderContext(
-                LayoutRenderContext.Mode.EXPORT_IMAGE, dpi, 297, 210);
+                LayoutRenderContext.Mode.EXPORT_IMAGE, dpi, pageWidthMm, pageHeightMm);
             element.render(g2, ctx);
         } finally {
             g2.dispose();
@@ -455,9 +453,10 @@ public final class LayoutExportEngine {
      * Render layout to BufferedImage at specified DPI.
      */
     public static BufferedImage renderLayout(LayoutModel model, int dpi) {
-        // A4 landscape: 297mm x 210mm
-        double pageWidthMm = 297;
-        double pageHeightMm = 210;
+        java.util.Objects.requireNonNull(model, "CATMAP layout model");
+        LayoutPageSpec pageSpec = model.getPageSpec();
+        double pageWidthMm = pageSpec.widthMm();
+        double pageHeightMm = pageSpec.heightMm();
 
         int[] dimensions = CatmapAtomicExport.rasterSize(dpi, pageWidthMm, pageHeightMm);
         int widthPx = dimensions[0];

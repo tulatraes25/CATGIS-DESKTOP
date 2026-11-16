@@ -117,8 +117,9 @@ public class Main {
         }
 
         // Create preview panel
+        LayoutPageSpec pageSpec = layoutModel.getPageSpec();
         LayoutRenderContext renderCtx = new LayoutRenderContext(
-                LayoutRenderContext.Mode.PREVIEW, 96, 297, 210);
+                LayoutRenderContext.Mode.PREVIEW, 96, pageSpec.widthMm(), pageSpec.heightMm());
         previewPanel = new LayoutPreviewPanel(layoutModel, renderCtx);
         previewPanel.setSelectionCallback(element -> updatePropertiesPanel(element));
 
@@ -1048,10 +1049,10 @@ public class Main {
         LayoutElement sel = layoutModel.getSelected();
         if (sel == null) { statusLabel.setText("Selecciona un elemento"); return; }
         layoutModel.saveSnapshot();
+        LayoutPageSpec pageSpec = layoutModel.getPageSpec();
         double px = sel.getBoundsMm().x, py = sel.getBoundsMm().y;
         double pw = sel.getBoundsMm().width, ph = sel.getBoundsMm().height;
-        // Page is A4 landscape: 297 x 210 mm
-        double pageW = 297, pageH = 210;
+        double pageW = pageSpec.widthMm(), pageH = pageSpec.heightMm();
         switch (mode) {
             case 0: sel.setBoundsMm(15, py, pw, ph); break;
             case 1: sel.setBoundsMm((pageW - pw) / 2, py, pw, ph); break;
@@ -1107,8 +1108,10 @@ public class Main {
     // --- Actions ---
 
     private static void installPreviewForActiveModel() {
+        LayoutPageSpec pageSpec = layoutModel.getPageSpec();
         LayoutPreviewPanel newPreview = new LayoutPreviewPanel(layoutModel,
-                new LayoutRenderContext(LayoutRenderContext.Mode.PREVIEW, 96, 297, 210));
+                new LayoutRenderContext(LayoutRenderContext.Mode.PREVIEW, 96,
+                        pageSpec.widthMm(), pageSpec.heightMm()));
         newPreview.setSelectionCallback(Main::updatePropertiesPanel);
         previewPanel = newPreview;
         if (previewScrollPane != null) {
