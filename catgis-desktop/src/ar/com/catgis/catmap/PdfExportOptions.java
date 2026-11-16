@@ -11,13 +11,22 @@ public class PdfExportOptions {
     double pageHeightMm = 210;
     int dpi = 300;
     String watermark = "";
+    private boolean explicitPageSize;
 
     public PdfExportOptions() {}
 
     public PdfExportOptions title(String v) { title = v; return this; }
     public PdfExportOptions author(String v) { author = v; return this; }
     public PdfExportOptions subject(String v) { subject = v; return this; }
-    public PdfExportOptions pageSize(double wMm, double hMm) { pageWidthMm = wMm; pageHeightMm = hMm; return this; }
+    public PdfExportOptions pageSize(double wMm, double hMm) {
+        pageWidthMm = wMm;
+        pageHeightMm = hMm;
+        explicitPageSize = true;
+        return this;
+    }
     public PdfExportOptions dpi(int v) { dpi = v; return this; }
     public PdfExportOptions watermark(String v) { watermark = v; return this; }
+
+    /** True when the caller fixed the sheet size; false means "use the document page". */
+    public boolean hasExplicitPageSize() { return explicitPageSize; }
 }

@@ -256,6 +256,10 @@ public class LayoutModel {
     // Multi-page support
     private int currentPage = 0;
     private final List<java.util.List<LayoutElement>> pages = new java.util.ArrayList<>();
+
+    // Page geometry is document state: every page of a CATMAP document shares
+    // the same sheet, orientation and margins.
+    private LayoutPageSpec pageSpec = LayoutPageSpec.A4_LANDSCAPE;
     {
         pages.add(elements); // page 0 uses the main elements list
         pageUndoStacks.add(new ArrayList<>());
@@ -290,5 +294,15 @@ public class LayoutModel {
             throw new IndexOutOfBoundsException("CATMAP page index out of range: " + page);
         }
         return new ArrayList<>(pages.get(page));
+    }
+
+    /** Page geometry shared by all pages of this document. */
+    public LayoutPageSpec getPageSpec() {
+        return pageSpec;
+    }
+
+    /** Replace the document page geometry. Null restores the legacy A4 landscape. */
+    public void setPageSpec(LayoutPageSpec newPageSpec) {
+        pageSpec = newPageSpec != null ? newPageSpec : LayoutPageSpec.A4_LANDSCAPE;
     }
 }
