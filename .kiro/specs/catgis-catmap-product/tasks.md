@@ -19,10 +19,18 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     `AppContext` estático. Ciclo `layout`↔`catmap` resuelto con
     `LayoutElementCodec`.
   - Test: apertura de proyecto y render de página headless sin app principal.
-- [ ] **T2 — Página como estado del documento (REQ-PROD-2)**
+- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
   - `LayoutPageSpec` (preset/CUSTOM mm, orientación, márgenes, DPI) en el modelo
     y en el serializador; migración de `.catmap` v1/v2.
   - Test: roundtrip A3 vertical + custom mm; export dimensiones exactas.
+  - Evidence (2026-11-15): `layout/LayoutPageSpec.java` + `LayoutModel.pageSpec`;
+    `CatmapSerializer` persiste `PAGE_SIZE`/`PAGE_ORIENTATION` y agrega
+    `PAGE_WIDTH_MM`/`PAGE_HEIGHT_MM`/`PAGE_MARGINS_MM` cuando la página no es A4
+    horizontal (legado carga A4 horizontal; corrupto falla cerrado);
+    `LayoutExportEngine` (PNG/JPG/PDF), `SvgExportEngine`, `AtlasEngine` y el
+    preview/alineación de `catmap.Main` usan la página del documento. Tests
+    nuevos: `LayoutPageSpecTest` (7) + `CatmapPageGeometryContractTest` (10);
+    build local **1378 tests / 0 fallos / 15 skips**.
 - [ ] **T3 — Documento único y IO (REQ-PROD-0/2)**
   - `CatmapDocumentIO` reemplaza los dos formatos; migra JSON del compositor y
     líneas del standalone; falla explícito ante formato desconocido.
