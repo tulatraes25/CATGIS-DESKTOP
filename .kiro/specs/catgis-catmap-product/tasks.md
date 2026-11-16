@@ -104,7 +104,20 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P2 — Formatos y atlas
 
-- [ ] **T9 — PDF multipágina con fuentes (REQ-PROD-3.1)**
+- [x] **T9 — PDF multipágina con fuentes (REQ-PROD-3.1)**
+  - Evidence (2026-11-16): `catmap/PdfVectorExporter` escribe PDF vectorial
+    multipágina con la hoja del documento (mm→pt, A3/A4/custom), texto real
+    extraíble (Helvetica/Helvetica-Bold estándar, texto saneado a WinAnsi) y
+    formas vectoriales: labels (con underline), rectángulos, elipses (bézier),
+    líneas (con dash), barra de escala (ticks + textos), leyenda (fondo, título,
+    símbolos), cartouche (campos), tabla (filas) y flecha norte (polígonos);
+    sólo el marco de mapa se rasteriza (PNG 200 DPI embebido, presupuesto de
+    píxeles). Publicación atómica + validación independiente con PDFBox
+    (cantidad de páginas y MediaBox); "Exportar PDF" usa el exportador
+    vectorial; el PDF de atlas y `LayoutExportEngine` quedan como ruta raster
+    histórica. Inventarios actualizados (`EXPORT_SURFACE` +
+    `SEM-SURFACE-PDFVECTOREXPORTER`). Tests `PdfVectorExporterContractTest` (5);
+    build local **1450 tests / 0 fallos / 15 skips**.
 - [x] **T10 — SVG vectorial real (REQ-PROD-7.2)**
   - Evidence (2026-11-16): `catmap/SvgVectorExporter` emite SVG nativo con hoja
     del documento (mm + viewBox), fondo, y elementos vectoriales reales:
