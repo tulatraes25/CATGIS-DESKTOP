@@ -246,6 +246,11 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 - [ ] **T16 — Workspace de datos (REQ-PROD-10 parcial)**
   - Panel proyecto/datos, capas con simbología, jobs/resultados; sin modales por
     archivo.
+  - Progreso (2026-11-16): `catmap/workspace/DataWorkspaceModel` (filas de capas
+    con tipo/CRS/conteo/visibilidad y **simbologia determinista**, trabajos/
+    resultados acotados a 50) y `catmap/ui/DataWorkspacePanel` (pestaña "Proyecto
+    y datos" con capas + trabajos, refresco junto al mapa). Test
+    `DataWorkspaceModelContractTest` (3). Sin modales por archivo (T26).
 
 ## Fase P4 — Terreno, hidrología y riesgo
 
