@@ -3,8 +3,9 @@ package ar.com.catgis;
 import ar.com.catgis.core.model.Layer;
 
 /**
- * Layer model for SpatiaLite data sources.
- * SpatiaLite is a spatial extension for SQLite databases.
+ * Layer model for one spatial table inside a SQLite / SpatiaLite database.
+ * The inherited path is always the real database file path; table identity is
+ * stored separately so file I/O never receives a pseudo URI.
  */
 public class SpatiaLiteLayer extends Layer {
 
@@ -13,22 +14,47 @@ public class SpatiaLiteLayer extends Layer {
     private String resolvedCrs = "";
 
     public SpatiaLiteLayer(String name, String path) {
-        super(name, path, "SPATIALITE");
+        super(name, extractDatabasePath(path), "SPATIALITE");
+        this.tableName = extractLegacyTable(path);
     }
 
     public String getTableName() { return tableName; }
-    public void setTableName(String tableName) { this.tableName = tableName != null ? tableName.trim() : ""; refreshPath(); }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName != null ? tableName.trim() : "";
+    }
 
     public String getGeometryTypeLabel() { return geometryTypeLabel; }
-    public void setGeometryTypeLabel(String label) { this.geometryTypeLabel = label != null ? label : ""; }
+
+    public void setGeometryTypeLabel(String label) {
+        this.geometryTypeLabel = label != null ? label : "";
+    }
 
     public String getResolvedCrs() { return resolvedCrs; }
-    public void setResolvedCrs(String crs) { this.resolvedCrs = crs != null ? crs : ""; }
 
-    private void refreshPath() {
-        String path = getPath();
-        if (path == null) path = "";
-        String base = path.contains("spatialite://") ? path.substring(path.indexOf("spatialite://") + 13) : path;
-        setPath("spatialite://" + base + "#" + tableName);
+    public void setResolvedCrs(String crs) {
+        this.resolvedCrs = crs != null ? crs : "";
+    }
+
+    private static String extractDatabasePath(String path) {
+        String value = path != null ? path.trim() : "";
+        if (!value.regionMatches(true, 0, "spatialite://", 0, "spatialite://".length())) {
+            return value;
+        }
+        String legacy = value.substring("spatialite://".length());
+        int tableSeparator = legacy.lastIndexOf('#');
+        return tableSeparator >= 0 ? legacy.substring(0, tableSeparator) : legacy;
+    }
+
+    private static String extractLegacyTable(String path) {
+        String value = path != null ? path.trim() : "";
+        if (!value.regionMatches(true, 0, "spatialite://", 0, "spatialite://".length())) {
+            return "";
+        }
+        String legacy = value.substring("spatialite://".length());
+        int tableSeparator = legacy.lastIndexOf('#');
+        return tableSeparator >= 0 && tableSeparator + 1 < legacy.length()
+                ? legacy.substring(tableSeparator + 1).trim()
+                : "";
     }
 }
