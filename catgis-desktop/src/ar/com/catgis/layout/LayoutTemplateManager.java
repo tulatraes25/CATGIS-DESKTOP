@@ -286,181 +286,23 @@ public class LayoutTemplateManager {
         }
     }
 
-    public static void saveTemplate(File file, LayoutModel model, double pageW, double pageH, String orientation) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("  \"format\": \"catmap\",\n");
-        sb.append("  \"version\": 1,\n");
-        sb.append("  \"page\": { \"widthMm\": ").append(pageW).append(", \"heightMm\": ").append(pageH);
-        sb.append(", \"orientation\": \"").append(orientation).append("\" },\n");
-        sb.append("  \"elements\": [\n");
-        java.util.List<LayoutElement> elements = model.getElements();
-        for (int i = 0; i < elements.size(); i++) {
-            LayoutElement el = elements.get(i);
-            sb.append("    {");
-            sb.append("\"type\": \"").append(el.getClass().getSimpleName()).append("\", ");
-            sb.append("\"id\": \"").append(esc(el.getId())).append("\", ");
-            sb.append("\"xMm\": ").append(el.getBoundsMm().x).append(", ");
-            sb.append("\"yMm\": ").append(el.getBoundsMm().y).append(", ");
-            sb.append("\"wMm\": ").append(el.getBoundsMm().width).append(", ");
-            sb.append("\"hMm\": ").append(el.getBoundsMm().height).append(", ");
-            sb.append("\"zOrder\": ").append(el.getZOrder()).append(", ");
-            sb.append("\"visible\": ").append(el.isVisible()).append(", ");
-            sb.append("\"locked\": ").append(el.isLocked()).append(", ");
-            sb.append("\"name\": \"").append(esc(el.getName() != null ? el.getName() : el.getId())).append("\"");
-
-            if (el instanceof LayoutLegend) {
-                LayoutLegend leg = (LayoutLegend) el;
-                sb.append(serializeLegend(leg));
-            } else if (el instanceof LayoutMap) {
-                LayoutMap map = (LayoutMap) el;
-                sb.append(", \"showGrid\": ").append(map.isShowGrid())
-                  .append(", \"gridCols\": ").append(map.getGridCols())
-                  .append(", \"gridRows\": ").append(map.getGridRows())
-                  .append(", \"gridByDistance\": ").append(map.isGridByDistance())
-                  .append(", \"gridIntervalX\": ").append(map.getGridIntervalX())
-                  .append(", \"gridIntervalY\": ").append(map.getGridIntervalY())
-                  .append(", \"gridUnit\": \"").append(esc(map.getGridUnit())).append("\"")
-                  .append(", \"gridColor\": ").append(colorHex(map.getGridColor()))
-                  .append(", \"targetScale\": ").append(map.getTargetScaleDenominator())
-                  .append(", \"assignedLayers\": \"").append(esc(String.join(";", map.getAssignedLayerKeys()))).append("\"");
-            } else if (el instanceof LayoutLabel) {
-                LayoutLabel lab = (LayoutLabel) el;
-                sb.append(", \"text\": \"").append(esc(lab.getText())).append("\"");
-                sb.append(", \"fontSize\": ").append(lab.getFont().getSize2D());
-                sb.append(", \"fontFamily\": \"").append(esc(lab.getFont().getFamily())).append("\"");
-                sb.append(", \"bold\": ").append(lab.getFont().isBold());
-                sb.append(", \"color\": ").append(colorHex(lab.getColor()));
-            }
-
-            sb.append("}");
-            if (i < elements.size() - 1) sb.append(",");
-            sb.append("\n");
-        }
-        sb.append("  ]\n");
-        sb.append("}\n");
-
-        try (FileWriter w = new FileWriter(file, StandardCharsets.UTF_8)) {
-            w.write(sb.toString());
-        }
+    public static void saveTemplate(File file, LayoutModel model, double pageW, double pageH,
+                                    String orientation) throws IOException {
+        PageOrientation pageOrientation = "portrait".equalsIgnoreCase(orientation)
+                ? PageOrientation.PORTRAIT : PageOrientation.LANDSCAPE;
+        double portraitWidth = pageOrientation == PageOrientation.LANDSCAPE ? pageH : pageW;
+        double portraitHeight = pageOrientation == PageOrientation.LANDSCAPE ? pageW : pageH;
+        model.setPageSpec(LayoutPageSpec.fromPortraitDimensions(
+                portraitWidth, portraitHeight, pageOrientation));
+        ar.com.catgis.catmap.CatmapDocumentIO.save(model, file);
     }
-
-    private static String serializeLegend(LayoutLegend leg) {
-        StringBuilder s = new StringBuilder();
-        s.append(", \"title\": \"").append(esc(leg.getTitle())).append("\"");
-        s.append(", \"autoHeight\": ").append(leg.isAutoHeight());
-        s.append(", \"showBg\": ").append(leg.isShowBackground());
-        s.append(", \"showBorder\": ").append(leg.isShowBorder());
-        s.append(", \"titleFontSize\": ").append(leg.getTitleFont().getSize2D());
-        s.append(", \"itemFontSize\": ").append(leg.getItemFont().getSize2D());
-        s.append(", \"items\": [");
-        for (int i = 0; i < leg.getItems().size(); i++) {
-            LayoutLegend.LegendItem item = leg.getItems().get(i);
-            s.append("{\"label\": \"").append(esc(item.label)).append("\", ");
-            s.append("\"included\": ").append(item.included).append("}");
-            if (i < leg.getItems().size() - 1) s.append(", ");
-        }
-        s.append("]");
-        return s.toString();
-    }
-
     public static void loadTemplate(File file, LayoutModel model) throws IOException {
-        String content;
-        try (FileReader r = new FileReader(file, StandardCharsets.UTF_8)) {
-            StringBuilder sb = new StringBuilder();
-            char[] buf = new char[4096];
-            int len;
-            while ((len = r.read(buf)) > 0) sb.append(buf, 0, len);
-            content = sb.toString();
-        }
-        // Simple JSON parsing - just extract elements array
-        int elementsStart = content.indexOf("\"elements\"");
-        if (elementsStart < 0) return;
-        int arrStart = content.indexOf('[', elementsStart);
-        int arrEnd = content.lastIndexOf(']');
-        if (arrStart < 0 || arrEnd < 0) return;
-        String arr = content.substring(arrStart + 1, arrEnd);
-
-        String[] parts = arr.split("\\},\\s*\\{");
-        for (int i = 0; i < parts.length; i++) {
-            String part = parts[i].trim();
-            if (part.startsWith("{")) part = part.substring(1);
-            if (part.endsWith("}")) part = part.substring(0, part.length() - 1);
-            parseElement(part, model);
+        LayoutModel loaded = ar.com.catgis.catmap.CatmapDocumentIO.load(file);
+        model.setPageSpec(loaded.getPageSpec());
+        for (LayoutElement element : loaded.getElements()) {
+            model.addElement(element);
         }
     }
-
-    private static void parseElement(String json, LayoutModel model) {
-        String type = extractStr(json, "type");
-        String id = extractStr(json, "id");
-        double x = extractDouble(json, "xMm");
-        double y = extractDouble(json, "yMm");
-        double w = extractDouble(json, "wMm");
-        double h = extractDouble(json, "hMm");
-        int z = extractInt(json, "zOrder");
-        boolean vis = extractBool(json, "visible", true);
-        boolean locked = extractBool(json, "locked", false);
-
-        LayoutElement el = null;
-        if ("LayoutLabel".equals(type)) {
-            String text = extractStr(json, "text");
-            el = new LayoutLabel(id, text, x, y, w, h);
-            LayoutLabel lab = (LayoutLabel) el;
-            double fs = extractDouble(json, "fontSize");
-            String ff = extractStr(json, "fontFamily");
-            boolean bold = extractBool(json, "bold", false);
-            if (fs > 0 && !ff.isEmpty()) {
-                lab.setFont(new Font(ff, bold ? Font.BOLD : Font.PLAIN, (int) fs));
-            } else if (fs > 0) {
-                lab.setFont(new Font("SansSerif", bold ? Font.BOLD : Font.PLAIN, (int) fs));
-            }
-            String c = extractStr(json, "color");
-            if (!c.isEmpty()) lab.setColor(parseColor(c));
-            String nm = extractStr(json, "name");
-            if (!nm.isEmpty()) lab.setName(nm);
-        } else if ("LayoutMap".equals(type)) {
-            el = new LayoutMap(id, x, y, w, h);
-            LayoutMap map = (LayoutMap) el;
-            map.setShowGrid(extractBool(json, "showGrid", false));
-            map.setGridCols(extractInt(json, "gridCols", 3));
-            map.setGridRows(extractInt(json, "gridRows", 3));
-            map.setGridByDistance(extractBool(json, "gridByDistance", false));
-            map.setGridIntervalX(extractDouble(json, "gridIntervalX", 100));
-            map.setGridIntervalY(extractDouble(json, "gridIntervalY", 100));
-            String gu = extractStr(json, "gridUnit");
-            if (!gu.isEmpty()) map.setGridUnit(gu);
-            String gc = extractStr(json, "gridColor");
-            if (!gc.isEmpty()) map.setGridColor(parseColor(gc));
-            map.setTargetScaleDenominator(extractDouble(json, "targetScale", 0));
-            String assignedLayers = extractStr(json, "assignedLayers");
-            if (!assignedLayers.isEmpty()) {
-                map.setAssignedLayerKeys(java.util.Arrays.stream(assignedLayers.split(";"))
-                        .map(String::trim)
-                        .filter(s -> !s.isBlank())
-                        .toList());
-            }
-        } else if ("LayoutLegend".equals(type)) {
-            el = new LayoutLegend(id, x, y, w, h);
-            LayoutLegend leg = (LayoutLegend) el;
-            leg.setTitle(extractStr(json, "title"));
-            leg.setAutoHeight(extractBool(json, "autoHeight", true));
-            leg.setShowBackground(extractBool(json, "showBg", false));
-            leg.setShowBorder(extractBool(json, "showBorder", false));
-            double tfs = extractDouble(json, "titleFontSize");
-            double ifs = extractDouble(json, "itemFontSize");
-            if (tfs > 0) leg.setTitleFont(new Font("SansSerif", Font.BOLD, (int) tfs));
-            if (ifs > 0) leg.setItemFont(new Font("SansSerif", Font.PLAIN, (int) ifs));
-        }
-        if (el != null) {
-            el.setZOrder(z);
-            el.setVisible(vis);
-            el.setLocked(locked);
-            String nm = extractStr(json, "name");
-            if (!nm.isEmpty()) el.setName(nm);
-            model.addElement(el);
-        }
-    }
-
     private static String extractStr(String json, String key) {
         int ki = json.indexOf("\"" + key + "\"");
         if (ki < 0) return "";
