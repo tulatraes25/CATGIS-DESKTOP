@@ -190,6 +190,7 @@ public class Main {
         JMenu menuPaginas = new JMenu("Páginas");
         addMenuItem(menuPaginas, "Agregar página", 0, e -> addLayoutPage());
         addMenuItem(menuPaginas, "Configurar página...", 0, e -> configureLayoutPage());
+        addMenuItem(menuPaginas, "Plantillas...", 0, e -> openTemplateGallery());
         menuPaginas.addSeparator();
         addMenuItem(menuPaginas, "Página anterior", 0, e -> navigateLayoutPage(-1));
         addMenuItem(menuPaginas, "Página siguiente", 0, e -> navigateLayoutPage(1));
@@ -1153,6 +1154,29 @@ public class Main {
 
     // --- Actions ---
 
+    private static void openTemplateGallery() {
+        TemplateApplicationService.TemplateSelection selection =
+                ar.com.catgis.catmap.ui.TemplateGalleryDialog.show(mainFrame);
+        if (selection == null) {
+            return;
+        }
+        try {
+            if (selection.templateKey() != null) {
+                TemplateApplicationService.applyTemplate(layoutModel, selection.templateKey());
+                statusLabel.setText("Plantilla aplicada: " + selection.templateKey());
+            } else if (selection.qptFile() != null) {
+                TemplateApplicationService.applyQpt(layoutModel, selection.qptFile());
+                statusLabel.setText("QPT importado: " + selection.qptFile().getName());
+            } else {
+                return;
+            }
+            installPreviewForActiveModel();
+        } catch (Exception ex) {
+            NotificationManager.error(mainFrame,
+                    "Plantillas",
+                    "Error al aplicar la plantilla:\n" + ex.getMessage());
+        }
+    }
     private static void configureLayoutPage() {
         LayoutPageSpec updated = ar.com.catgis.catmap.ui.PageSetupDialog
                 .showDialog(mainFrame, layoutModel.getPageSpec());

@@ -46,7 +46,7 @@ class SupplementalCommandSemanticCertificationTest {
                     "Duplicate supplemental semantic key: " + line);
         }
 
-        assertEquals(195, expected.size(), "Unexpected supplemental command baseline.");
+        assertEquals(196, expected.size(), "Unexpected supplemental command baseline.");
         assertEquals(expected, actual, "Supplemental semantic coverage drifted.");
     }
 
@@ -80,7 +80,7 @@ class SupplementalCommandSemanticCertificationTest {
         }
 
         assertEquals(98, counts.getOrDefault("ALIAS_EXISTING", 0));
-        assertEquals(78, counts.getOrDefault("ACTION", 0));
+        assertEquals(79, counts.getOrDefault("ACTION", 0));
         assertEquals(14, counts.getOrDefault("CONTROL", 0));
         assertEquals(2, counts.getOrDefault("DISPLAY_ONLY", 0));
         assertEquals(3, counts.getOrDefault("DISABLED_UNSUPPORTED", 0));
@@ -115,7 +115,7 @@ class SupplementalCommandSemanticCertificationTest {
                         "Supplemental feature promoted before A0.7: " + p[4]);
             }
         }
-        assertEquals(69, checked.size(), "Unexpected supplemental semantic feature count.");
+        assertEquals(70, checked.size(), "Unexpected supplemental semantic feature count.");
     }
 
     private static Map<String, String[]> matrixRows() throws Exception {

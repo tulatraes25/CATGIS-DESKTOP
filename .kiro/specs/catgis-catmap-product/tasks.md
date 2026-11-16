@@ -134,8 +134,19 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     UI de atlas con PNG/PDF, margen y orden. Tests `AtlasFramingContractTest`
     (6), `AtlasV2ContractTest` (8) y safety test actualizado; build local
     **1433 tests / 0 fallos / 15 skips**.
-- [ ] **T13 — Plantillas en standalone (REQ-PROD-6)**
+- [x] **T13 — Plantillas en standalone (REQ-PROD-6)**
   - Galería por categorías + QPT con página/orientación.
+  - Evidence (2026-11-16): `catmap/TemplateApplicationService` (catálogo completo
+    agrupado por categoría; aplicar plantilla reemplaza el layout y adopta la
+    hoja inferida —A4 horizontal para el catálogo actual, A3 como fallback—;
+    importar `.qpt` reemplaza elementos y adopta página/orientación del QPT, y
+    **sólo modifica el modelo si el QPT aporta elementos**; fallo cerrado para
+    plantilla desconocida, QPT corrupto o QPT vacío) y
+    `catmap/ui/TemplateGalleryDialog` (categorías + lista + Aplicar +
+    Importar QPT). Menú "Páginas → Plantillas…" en `catmap.Main`; inventarios
+    surface/semántico/suplementario actualizados en el mismo PR. Tests
+    `TemplateApplicationServiceContractTest` (7); build local **1440 tests / 0
+    fallos / 15 skips**.
 
 ## Fase P3 — Datos del usuario (local-first)
 
