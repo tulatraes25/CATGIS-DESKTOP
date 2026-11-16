@@ -760,6 +760,7 @@ public class Main {
     }
 
     private static JPanel propsPanel;
+    private static ar.com.catgis.catmap.ui.DataWorkspacePanel dataWorkspacePanel;
     private static JLabel selectedElementLabel;
 
     private static JPanel createMainPanel() {
@@ -818,12 +819,18 @@ public class Main {
         JList<String> layerList = new JList<>(new DefaultListModel<>());
         bottomPanel.add(new JScrollPane(layerList), BorderLayout.CENTER);
 
+        // Data workspace tab (REQ-PROD-10): project layers + jobs/results.
+        javax.swing.JTabbedPane bottomTabs = new javax.swing.JTabbedPane();
+        bottomTabs.addTab("Capas del mapa", bottomPanel);
+        dataWorkspacePanel = new ar.com.catgis.catmap.ui.DataWorkspacePanel();
+        bottomTabs.addTab("Proyecto y datos", dataWorkspacePanel);
+
         // Split panes
         JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, previewScrollPane);
         leftSplit.setDividerLocation(200);
         JSplitPane rightSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, rightPanel);
         rightSplit.setDividerLocation(900);
-        JSplitPane mainSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightSplit, bottomPanel);
+        JSplitPane mainSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightSplit, bottomTabs);
         mainSplit.setDividerLocation(600);
 
         mainPanel.add(mainSplit, BorderLayout.CENTER);
@@ -1906,6 +1913,9 @@ public class Main {
     }
 
     private static void refreshMap() {
+        if (dataWorkspacePanel != null) {
+            dataWorkspacePanel.refresh();
+        }
         previewPanel.invalidateRender();
         previewPanel.repaint();
         statusLabel.setText("Mapa actualizado");
