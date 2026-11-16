@@ -1,6 +1,6 @@
 # Fichas de decisión SQL (T2–T4 / DC-6, DC-7, DC-8)
 
-Estado: **PENDIENTE DE DECISIÓN DEL OWNER**. Según
+Estado: **DECISIONES REGISTRADAS (2026-11-16)**. Según
 `.kiro/specs/catserver-decision-backlog/tasks.md`, ninguna de estas tareas puede
 tocar código/SQL hasta que la decisión quede registrada aquí. Estas fichas
 preparan la decisión (opciones, recomendación, impacto y criterio de aceptación)
@@ -17,7 +17,7 @@ para que aprobarla sea un acto explícito y rápido.
 Aceptación (cualquier opción): la secuencia completa `00→21` corre en el job
 PostGIS sin colisiones y el catálogo refleja el objeto elegido. REQ-AR-17.
 
-**Decisión owner:** `[ ] A  [ ] B  [ ] C` — fecha / autor: ____________
+**Decisión owner (2026-11-16):** `[x] A` — vista canónica sobre la tabla cruda renombrada. Autor: owner de la sesión.
 
 ## DC-7 — Modelo único de ownership/privilegios (T3)
 
@@ -29,7 +29,7 @@ PostGIS sin colisiones y el catálogo refleja el objeto elegido. REQ-AR-17.
 Aceptación: `sql/02`, `sql/12`, `sql/19` alineados a la opción; CI provisiona los
 roles; test PostGIS prueba que una tabla nueva hereda los defaults. REQ-AR-18.
 
-**Decisión owner:** `[ ] A  [ ] B` — fecha / autor: ____________
+**Decisión owner (2026-11-16):** `[x] A` — rol DDL dueño del esquema + rol de import con `GRANT` explícitos y `ALTER DEFAULT PRIVILEGES`. Autor: owner de la sesión.
 
 ## DC-8 — Política de rutas destructivas (T4)
 
@@ -42,7 +42,34 @@ roles; test PostGIS prueba que una tabla nueva hereda los defaults. REQ-AR-18.
 Aceptación: guard/parámetro compartido en `scripts/07/10/12/14/16`, docs
 actualizados y contrato estático en el job de seguridad. REQ-AR-19.
 
-**Decisión owner:** `[ ] A  [ ] B  [ ] C` — fecha / autor: ____________
+**Decisión owner (2026-11-16):** `[x] A` — vista canónica sobre la tabla cruda renombrada. Autor: owner de la sesión.
+
+## Plan de implementación (al volver el CI)
+
+### T2 — DC-6 (vista canónica)
+
+1. Renombrar la tabla cruda a un nombre privado (`circunscripcion_sector_raw`).
+2. Crear la vista `circunscripcion_sector` con el contrato público actual.
+3. Actualizar `sql/04`, `sql/18`, `sql/19` y el catálogo para leer de la vista.
+4. Test en el job PostGIS: secuencia `00→21` completa sin colisiones y `SELECT`
+   equivalente antes/después en un fixture sintético.
+
+### T3 — DC-7 (ownership)
+
+1. Definir rol DDL (dueño del esquema) y rol de import (sin DDL).
+2. `GRANT` explícitos + `ALTER DEFAULT PRIVILEGES FOR ROLE <ddl> IN SCHEMA ...`
+   hacia el rol de import.
+3. Actualizar `sql/02`, `sql/12`, `sql/19`; documentar provisioning de roles en CI.
+4. Test PostGIS: una tabla nueva creada por el rol DDL es legible/escribible por
+   el rol de import sin `GRANT` adicional.
+
+### T4 — DC-8 (rutas destructivas)
+
+1. Guard compartido en `scripts/07/10/12/14/16`: reescrituras con stage+swap
+   (tabla temporal + `ALTER TABLE ... RENAME` en transacción).
+2. Borrados sólo con `--allow-destructive` y log auditable.
+3. Contrato estático en el job de seguridad (prohibido `DELETE`/`TRUNCATE`/
+   `DROP` sin la guarda) + docs actualizadas.
 
 ## Reglas comunes
 
