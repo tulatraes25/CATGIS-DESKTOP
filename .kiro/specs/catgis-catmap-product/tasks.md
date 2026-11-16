@@ -28,7 +28,17 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     build local **1400 tests / 0 fallos / 15 skips**. Falta T1b
     (`CatmapAppContext`/`ProjectOpenService` y quitar la fábrica de estáticos de
     `catmap.Main`) y T1c (codec del ciclo `layout`↔`catmap`).
-- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
+  - Progreso T1b (2026-11-16): **contexto standalone y apertura headless
+    entregados** — `catmap/app/CatmapAppContext` centraliza el bootstrap
+    (proyecto + MapPanel/LayersPanel/StatusBar, `standalone()`/`install()`) y
+    `catmap.Main` ya no fabrica los tres estáticos de `CatgisDesktopApp` ni fija
+    el proyecto a mano; `ProjectOpenService.inspect(File)` valida y parsea un
+    `.catgis` **sin efectos Swing** (cabecera, CRS, metadatos, grupos, vista,
+    capas vía `LoadProjectAction.parseLayer`, normalización CATSERVER y preflight
+    de fuentes locales) y devuelve `ProjectInspection`; CATMAP pre-valida con él
+    antes de aplicar el proyecto (menú Abrir y `--project`). Tests
+    `ProjectOpenServiceTest` (5) y `CatmapAppContextTest` (2); build local
+    **1468 tests / 0 fallos / 15 skips**. Falta T1c.- [x] **T2 — Página como estado del documento (REQ-PROD-2)**
   - `LayoutPageSpec` (preset/CUSTOM mm, orientación, márgenes, DPI) en el modelo
     y en el serializador; migración de `.catmap` v1/v2.
   - Test: roundtrip A3 vertical + custom mm; export dimensiones exactas.
