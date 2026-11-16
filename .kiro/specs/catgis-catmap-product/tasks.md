@@ -359,25 +359,100 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     registrada. Tests `IdwInterpolatorContractTest` (6: plano conocido con error
     acotado, nodos exactos, huecos por radio, validaciones, GeoTIFF de ida y
     vuelta, descripción); build local **1513 tests / 0 fallos / 15 skips**.
-- [ ] **T25 — Riesgo e inundación calibrados (REQ-PROD-9)**
+- [x] **T25 — Riesgo e inundación calibrados (REQ-PROD-9)**
   - Quitar 30 m/111320; clases de susceptibilidad, exposición, parámetros
     persistidos; `WILDFIRE` implementado o retirado; periodo de retorno
     documentado; trazabilidad de algoritmo/parámetros/CRS.
+  - Evidence (2026-11-16): `climate/GeographicMetrics` reemplaza el 111320 fijo
+    con fórmulas WGS84 (radios de curvatura y metros/grado por latitud);
+    `RiskAnalysisEngine` recibe `RiskParameters` explícitos y persistibles
+    (`cellSizeMeters` con fallback documentado `DEFAULT_CELL_SIZE_METERS`,
+    `returnPeriodYears` con `DEFAULT_RETURN_PERIOD_YEARS` documentado y
+    `exposureFactor` aplicado antes de normalizar), expone 5 **clases de
+    susceptibilidad** (Muy baja…Muy alta) con `classifySusceptibility`, y cada
+    `RiskResult` incluye `parameterSpec` con **trazabilidad** (algoritmo
+    `risk-analysis/1`, CRS `EPSG:4326`, escenario, celda, periodo de retorno,
+    exposición, clases y `wildfire=withdrawn`). El escenario **WILDFIRE fue
+    retirado** del enum por no tener modelo calibrado (documentado). Tests
+    `RiskAnalysisEngineCalibrationTest` (5) + suite previa del motor; build
+    local **1532 tests / 0 fallos / 15 skips**.
 
 ## Fase P5 — UX "Filmora del GIS"
 
-- [ ] **T26 — Salida segura y notificaciones (REQ-PROD-10.1/10.2)**
+- [x] **T26 — Salida segura y notificaciones (REQ-PROD-10.1/10.2)**
   - Confirmación universal de cambios (incluye `catmap.Main`); toasts para carga
     masiva en lugar de N modales.
-- [ ] **T27 — Paleta de comandos (REQ-PROD-10.3)**
+  - Evidence (2026-11-16): `LayoutModel` ahora lleva **dirty tracking**
+    (`saveSnapshot`/`restoreFromSnapshot` marcan cambios, `setPageSpec` solo si
+    difiere, `markSaved` al abrir/guardar) y `catmap/ExitGuard` decide con
+    `needsConfirmation` + diálogo Guardar/Salir sin guardar/Cancelar.
+    `catmap.Main` reemplaza `System.exit(0)` y `EXIT_ON_CLOSE` por
+    `DO_NOTHING_ON_CLOSE` + `requestExit()` (guarda si el usuario lo pide y solo
+    sale si el guardado tuvo éxito); los guardados marcan el documento limpio.
+    "Abrir datos..." acepta **multi-selección** y usa **un solo toast/aviso
+    resumen** (`QuickMapService.bulkSummary`) en lugar de N modales, y las cargas
+    individuales/exportaciones exitosas usan `NotificationManager.toastSuccess`.
+    Tests `LayoutModelDirtyContractTest` (3), `ExitGuardContractTest` (2) y
+    resumen masivo en `QuickMapServiceContractTest`; build local **1544 tests /
+    0 fallos / 15 skips**.
+- [x] **T27 — Paleta de comandos (REQ-PROD-10.3)**
   - Búsqueda por tarea sobre comandos registrados; integración con inventarios.
-- [ ] **T28 — HiDPI y temas (REQ-PROD-10.4)**
-- [ ] **T29 — i18n honesta (REQ-PROD-10.5)**
+  - Evidence (2026-11-16): `catmap/ui/CommandPaletteIndex` (modelo puro:
+    comandos con id/etiqueta/descripción/keywords/acción; búsqueda por tokens con
+    normalización de acentos y ranking etiqueta > keywords > descripción) y
+    `catmap/ui/CommandPaletteDialog` (búsqueda incremental, navegación con
+    flechas/Enter/ESC y ejecución de la acción). `catmap.Main` registra **18
+    comandos reales** (layout, proyecto, datos, guardar, páginas, plantillas,
+    atlas, exportaciones, impresión) y suma "Archivo → Buscar comando..." a los
+    inventarios (surface + semántico + suplementario) con baselines actualizados.
+    Tests `CommandPaletteIndexContractTest` (5: ranking, acentos/mayúsculas,
+    tareas por keywords, sin resultados y validaciones); build local **1538
+    tests / 0 fallos / 15 skips**.
+- [x] **T28 — HiDPI y temas (REQ-PROD-10.4)**
+  - Evidence (2026-11-16): `catmap/ui/ThemeSupport` selecciona **tema claro/oscuro**
+    FlatLaf con **preferencia persistida** (Preferences) y refresco de ventanas
+    abiertas, aplica un flag HiDPI seguro, detecta la **escala de pantalla**
+    real (`GraphicsConfiguration` transform) y la acota a `1.0..2.0` para
+    métricas/estado. `catmap.Main` usa `ThemeSupport.initialize()` en el
+    arranque (reemplaza el tema fijo FlatArcIJ) y agrega **Vista → "Cambiar tema
+    (claro/oscuro)"** con descripción "Tema ... - HiDPI xNN" en la barra de
+    estado; inventarios surface/semántico/suplementario y baselines actualizados.
+    Tests `ThemeSupportContractTest` (4: preferencia vs sistema, clamp de escala,
+    descripción y escala finita); build local **1548 tests / 0 fallos / 15
+    skips**. La verificación visual en pantalla HiDPI real queda declarada como
+    pendiente (A0.7).
+- [x] **T29 — i18n honesta (REQ-PROD-10.5)**
   - Sin traducción automática parcial; completar inglés o retirar del selector;
     títulos hardcodeados eliminados.
-- [ ] **T30 — Limpieza de UI muerta y duplicados (REQ-PROD-10.6)**
+  - Evidence (2026-11-16): se elimino el fallback heuristico que traducia palabra
+    por palabra (`englishFallback` en `I18n`); ahora una clave sin traduccion
+    revisada devuelve el **texto fuente** (español), sin inventar idioma.
+    **Ingles retirado del selector** (`isLanguageSelectable(ENGLISH)=false`,
+    ítem deshabilitado con tooltip explicativo, migracion de `ui.language`
+    persistido a español) hasta completar la traduccion; el menu "Idioma"
+    conserva sus comandos. Titulos hardcodeados del standalone
+    ("CATMAP - Cartographic Layout Composer" y "CATMAP - Nuevo layout")
+    centralizados via `I18n.t` con texto español revisado. Tests
+    `I18nHonestyContractTest` (4: fuente en español, ausencia de invencion en
+    ingles, solo locales completos seleccionables, inicializacion en español);
+    build local **1552 tests / 0 fallos / 15 skips**.
+- [x] **T30 — Limpieza de UI muerta y duplicados (REQ-PROD-10.6)**
   - Toolbars jamás agregados, paneles vacíos, exporters duplicados, welcome page
     inalcanzable.
+  - Evidence (2026-11-16): se elimino el **camino duplicado de exportacion** del
+    menu Archivo (PDF/PNG/SVG/imagen quedan solo en el menu Exportar; "Exportar
+    imagen..." se movio alli) y el guard `CatmapCommandUniquenessTest` falla si
+    vuelve a existir un comando visible duplicado en `catmap.Main` (cubre las 33+
+    entradas actuales). El item de tema se ubico dentro del bloque Vista antes de
+    agregar el menu. La **welcome page** de CATGIS ya no depende de que el
+    proyecto sea nulo (condicion practicamente inalcanzable por el proyecto por
+    defecto): se muestra al inicio si `AppBranding.isShowWelcomePage()` y el
+    usuario puede desactivarla; contrato `AppBrandingWelcomeContractTest`.
+    Auditoria de toolbars: la barra del compositor si se agrega
+    (`frame.add(createToolBar(), NORTH)`); no se encontraron toolbars huerfanas
+    ni paneles vacios agregados. Inventario suplementario actualizado
+    (ocurrencias 209→206, una sola ruta por exportador); build local **1554
+    tests / 0 fallos / 15 skips**.
 
 ## Fase P6 — Verificación y release
 

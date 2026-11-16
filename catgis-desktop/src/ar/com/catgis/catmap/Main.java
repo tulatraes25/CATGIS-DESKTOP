@@ -10,7 +10,6 @@ import ar.com.catgis.data.online.OnlineWmsLayer;
 
 import ar.com.catgis.*;
 import ar.com.catgis.layout.*;
-import com.formdev.flatlaf.intellijthemes.FlatArcIJTheme;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -102,8 +101,14 @@ public class Main {
     }
 
     private static JFrame createMainWindow() {
-        JFrame frame = new JFrame("CATMAP - Cartographic Layout Composer");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JFrame frame = new JFrame(ar.com.catgis.I18n.t("CATMAP - Compositor de planchetas"));
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent event) {
+                requestExit();
+            }
+        });
         frame.setLayout(new BorderLayout());
 
         // Initialize layout model
@@ -148,20 +153,16 @@ public class Main {
         addMenuItem(menuArchivo, "Abrir layout...", KeyEvent.VK_O, e -> openLayout());
         addMenuItem(menuArchivo, "Abrir proyecto .catgis...", 0, e -> openProject());
         addMenuItem(menuArchivo, "Abrir datos...", 0, e -> openQuickData());
+        addMenuItem(menuArchivo, "Buscar comando...", 0, e -> showCommandPalette());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Guardar", KeyEvent.VK_S, e -> saveLayout());
         addMenuItem(menuArchivo, "Guardar como...", 0, e -> saveLayoutAs());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Importar tabla climática...", KeyEvent.VK_T, e -> importTableFromFile());
         menuArchivo.addSeparator();
-        addMenuItem(menuArchivo, "Exportar PDF", 0, e -> exportPdf());
-        addMenuItem(menuArchivo, "Exportar PNG", 0, e -> exportPng());
-        addMenuItem(menuArchivo, "Exportar SVG", 0, e -> exportSvg());
-        addMenuItem(menuArchivo, "Exportar imagen...", 0, e -> exportImage());
-        menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Imprimir...", KeyEvent.VK_P, e -> printLayout());
         menuArchivo.addSeparator();
-        addMenuItem(menuArchivo, "Salir", KeyEvent.VK_X, e -> System.exit(0));
+        addMenuItem(menuArchivo, "Salir", KeyEvent.VK_X, e -> requestExit());
         menuBar.add(menuArchivo);
 
         // --- Edición ---
@@ -214,6 +215,13 @@ public class Main {
         menuVista.add(showLayers);
         JCheckBoxMenuItem showProps = new JCheckBoxMenuItem("Mostrar panel de propiedades", true);
         menuVista.add(showProps);
+        menuVista.addSeparator();
+        addMenuItem(menuVista, "Cambiar tema (claro/oscuro)", 0, e -> {
+            ar.com.catgis.catmap.ui.ThemeSupport.toggle(mainFrame);
+            statusLabel.setText(ar.com.catgis.catmap.ui.ThemeSupport.describe(
+                    ar.com.catgis.catmap.ui.ThemeSupport.isDark(),
+                    ar.com.catgis.catmap.ui.ThemeSupport.uiScale()));
+        });
         menuBar.add(menuVista);
 
         // --- Insertar ---
@@ -263,6 +271,7 @@ public class Main {
         addMenuItem(menuExportar, "Exportar PNG", 0, e -> exportPng());
         addMenuItem(menuExportar, "Exportar JPG", 0, e -> exportJpg());
         addMenuItem(menuExportar, "Exportar SVG", 0, e -> exportSvg());
+        addMenuItem(menuExportar, "Exportar imagen...", 0, e -> exportImage());
         menuExportar.addSeparator();
         addMenuItem(menuExportar, "Configuración de resolución/DPI...", 0, e -> showDpiConfigDialog());
         menuBar.add(menuExportar);
@@ -1232,12 +1241,30 @@ public class Main {
         showActivePage();
     }
 
+    /** Safe exit: dirty layouts ask to save, discard or cancel. */
+    private static void requestExit() {
+        ar.com.catgis.catmap.ExitGuard.Choice choice =
+                ar.com.catgis.catmap.ExitGuard.confirm(mainFrame,
+                        layoutModel != null && layoutModel.isDirty());
+        if (choice == ar.com.catgis.catmap.ExitGuard.Choice.CANCEL) {
+            return;
+        }
+        if (choice == ar.com.catgis.catmap.ExitGuard.Choice.SAVE_AND_EXIT
+                && !saveLayout()) {
+            return;
+        }
+        if (mainFrame != null) {
+            mainFrame.dispose();
+        }
+        System.exit(0);
+    }
+
     private static void newLayout() {
         layoutModel = new LayoutModel();
         currentFile = null;
         addDefaultElements(layoutModel);
         installPreviewForActiveModel();
-        mainFrame.setTitle("CATMAP - Nuevo layout");
+        mainFrame.setTitle(ar.com.catgis.I18n.t("CATMAP - Nuevo layout"));
         layoutAtlas = null;
         statusLabel.setText("Nuevo layout creado");
     }
@@ -1250,6 +1277,65 @@ public class Main {
         }
     }
 
+    /** Task-oriented command palette over the visible CATMAP commands. */
+    private static void showCommandPalette() {
+        java.util.List<ar.com.catgis.catmap.ui.CommandPaletteIndex.Command> commands =
+                new java.util.ArrayList<>();
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "nuevo-layout", "Nuevo layout", "Crear un layout vacio",
+                java.util.List.of("nuevo", "layout"), Main::newLayout));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "abrir-layout", "Abrir layout", "Abrir un archivo .catmap",
+                java.util.List.of("abrir", "layout", "catmap"), Main::openLayout));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "abrir-proyecto", "Abrir proyecto .catgis", "Abrir un proyecto CATGIS",
+                java.util.List.of("proyecto", "catgis"), Main::openProject));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "abrir-datos", "Abrir datos", "Abrir un dato suelto sin proyecto",
+                java.util.List.of("datos", "shp", "geojson", "geotiff", "csv"), Main::openQuickData));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "guardar", "Guardar layout", "Guardar el layout actual",
+                java.util.List.of("guardar", "salvar"), Main::saveLayout));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "guardar-como", "Guardar como", "Guardar el layout en otro archivo",
+                java.util.List.of("guardar", "como"), Main::saveLayoutAs));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "configurar-pagina", "Configurar pagina",
+                "Tamano de hoja, orientacion y margenes",
+                java.util.List.of("pagina", "hoja", "a3", "a4", "margen"),
+                Main::configureLayoutPage));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "agregar-pagina", "Agregar pagina", "Añadir una pagina al documento",
+                java.util.List.of("pagina", "agregar"), Main::addLayoutPage));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "pagina-anterior", "Pagina anterior", "Ir a la pagina anterior",
+                java.util.List.of("pagina", "anterior"), () -> navigateLayoutPage(-1)));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "pagina-siguiente", "Pagina siguiente", "Ir a la pagina siguiente",
+                java.util.List.of("pagina", "siguiente"), () -> navigateLayoutPage(1)));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "plantillas", "Plantillas", "Galeria de plantillas y QPT",
+                java.util.List.of("plantilla", "qpt", "galeria"), Main::openTemplateGallery));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "atlas", "Generar atlas", "Serie de paginas por entidad",
+                java.util.List.of("atlas", "serie", "pdf"), Main::showAtlasDialog));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-pdf", "Exportar PDF", "PDF vectorial multipagina",
+                java.util.List.of("exportar", "pdf", "documento"), Main::exportPdf));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-png", "Exportar PNG", "Pagina como imagen PNG",
+                java.util.List.of("exportar", "png", "imagen"), Main::exportPng));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-svg", "Exportar SVG", "SVG vectorial editable",
+                java.util.List.of("exportar", "svg", "vector"), Main::exportSvg));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "exportar-imagen", "Exportar imagen", "PNG, JPG o GeoTIFF segun el sufijo",
+                java.util.List.of("exportar", "imagen", "jpg", "geotiff"), Main::exportImage));
+        commands.add(new ar.com.catgis.catmap.ui.CommandPaletteIndex.Command(
+                "imprimir", "Imprimir", "Imprimir todas las paginas del documento",
+                java.util.List.of("imprimir", "impresora"), Main::printLayout));
+        ar.com.catgis.catmap.ui.CommandPaletteDialog.show(mainFrame, commands);
+    }
     /** Quick map: choose a data file and open it without a previous project. */
     private static void openQuickData() {
         JFileChooser chooser = new JFileChooser();
@@ -1258,10 +1344,22 @@ public class Main {
                         + "*.tif, *.tiff, *.png, *.jpg, *.csv)",
                 "shp", "geojson", "json", "kml", "kmz", "gpkg", "fgb", "gpx",
                 "tif", "tiff", "png", "jpg", "jpeg", "csv"));
+        chooser.setMultiSelectionEnabled(true);
         if (chooser.showOpenDialog(mainFrame) != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        File file = chooser.getSelectedFile();
+        File[] files = chooser.getSelectedFiles();
+        if (files.length == 0 && chooser.getSelectedFile() != null) {
+            files = new File[]{chooser.getSelectedFile()};
+        }
+        if (files.length == 0) {
+            return;
+        }
+        if (files.length > 1) {
+            openQuickDataBulk(files);
+            return;
+        }
+        File file = files[0];
         String csvCrs = null;
         if (file.getName().toLowerCase(Locale.ROOT).endsWith(".csv")) {
             Object chosen = JOptionPane.showInputDialog(mainFrame,
@@ -1278,11 +1376,39 @@ public class Main {
         openQuickDataFile(file, csvCrs);
     }
 
+    /** Bulk quick map: one toast summary instead of one modal per file. */
+    private static void openQuickDataBulk(File[] files) {
+        int loaded = 0;
+        java.util.List<String> failures = new java.util.ArrayList<>();
+        for (File file : files) {
+            try {
+                if (QuickMapService.open(file, null, null)) {
+                    loaded++;
+                } else {
+                    failures.add(file.getName() + ": formato no reconocido");
+                }
+            } catch (Exception ex) {
+                failures.add(file.getName() + ": " + ex.getMessage());
+            }
+        }
+        refreshMap();
+        String summary = QuickMapService.bulkSummary(loaded, failures.size());
+        statusLabel.setText(summary);
+        if (failures.isEmpty()) {
+            ar.com.catgis.NotificationManager.toastSuccess(summary);
+        } else {
+            ar.com.catgis.NotificationManager.error(mainFrame, "Abrir datos",
+                    summary + "\n\n" + String.join("\n", failures));
+        }
+    }
+
     private static void openQuickDataFile(File file, String csvCrs) {
         statusLabel.setText("Abriendo datos: " + file.getName() + "...");
         try {
             if (QuickMapService.open(file, mainFrame, csvCrs)) {
                 statusLabel.setText("Datos cargados: " + file.getName());
+                ar.com.catgis.NotificationManager.toastSuccess(
+                        "Datos cargados: " + file.getName());
                 refreshMap();
             } else {
                 statusLabel.setText("No se pudieron cargar los datos");
@@ -1326,39 +1452,49 @@ public class Main {
 
     private static File currentFile = null;
 
-    private static void saveLayout() {
+    private static boolean saveLayout() {
         if (currentFile == null) {
-            saveLayoutAs();
-            return;
+            return saveLayoutAs();
         }
         try {
             CatmapDocumentIO.save(layoutModel, currentFile);
+            layoutModel.markSaved();
             statusLabel.setText("Layout guardado: " + currentFile.getName());
+            ar.com.catgis.NotificationManager.toastSuccess(
+                    "Layout guardado: " + currentFile.getName());
+            return true;
         } catch (Exception ex) {
             NotificationManager.error(mainFrame,
                     "Error",
                     "Error al guardar:\n" + ex.getMessage());
+            return false;
         }
     }
 
-    private static void saveLayoutAs() {
+    private static boolean saveLayoutAs() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("CATMAP Layout (*.catmap)", "catmap"));
-        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
-            if (!file.getName().endsWith(".catmap")) {
-                file = new File(file.getAbsolutePath() + ".catmap");
-            }
-            try {
-                CatmapDocumentIO.save(layoutModel, file);
-                currentFile = file;
-                mainFrame.setTitle("CATMAP - " + file.getName());
-                statusLabel.setText("Layout guardado: " + file.getName());
-            } catch (Exception ex) {
-                NotificationManager.error(mainFrame,
-                        "Error",
-                        "Error al guardar:\n" + ex.getMessage());
-            }
+        if (chooser.showSaveDialog(mainFrame) != JFileChooser.APPROVE_OPTION) {
+            return false;
+        }
+        File file = chooser.getSelectedFile();
+        if (!file.getName().endsWith(".catmap")) {
+            file = new File(file.getAbsolutePath() + ".catmap");
+        }
+        try {
+            CatmapDocumentIO.save(layoutModel, file);
+            currentFile = file;
+            layoutModel.markSaved();
+            mainFrame.setTitle("CATMAP - " + file.getName());
+            statusLabel.setText("Layout guardado: " + file.getName());
+            ar.com.catgis.NotificationManager.toastSuccess(
+                    "Layout guardado: " + file.getName());
+            return true;
+        } catch (Exception ex) {
+            NotificationManager.error(mainFrame,
+                    "Error",
+                    "Error al guardar:\n" + ex.getMessage());
+            return false;
         }
     }
 
@@ -1829,6 +1965,7 @@ public class Main {
     private static void loadLayoutFile(File file) {
         try {
             layoutModel = CatmapDocumentIO.load(file);
+            layoutModel.markSaved();
             currentFile = file;
             mainFrame.setTitle("CATMAP - " + file.getName());
             installPreviewForActiveModel();
@@ -2018,14 +2155,6 @@ public class Main {
     }
 
     private static void installLookAndFeel() {
-        try {
-            Class<?> themeClass = Class.forName("com.formdev.flatlaf.intellijthemes.FlatArcIJTheme");
-            Object laf = themeClass.getDeclaredConstructor().newInstance();
-            UIManager.setLookAndFeel((javax.swing.LookAndFeel) laf);
-        } catch (Throwable ignored) {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored2) {}
-        }
+        ar.com.catgis.catmap.ui.ThemeSupport.initialize();
     }
 }

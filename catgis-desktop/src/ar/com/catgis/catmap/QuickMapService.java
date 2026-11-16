@@ -39,6 +39,17 @@ public final class QuickMapService {
 
     private QuickMapService() {}
 
+    /** Human-readable summary of a bulk quick-map load (non-modal toast). */
+    public static String bulkSummary(int loaded, int failed) {
+        if (failed <= 0) {
+            return loaded + " conjunto(s) de datos cargados";
+        }
+        if (loaded <= 0) {
+            return "No se pudo cargar ningun conjunto (" + failed + " con error)";
+        }
+        return loaded + " conjunto(s) cargados, " + failed + " con error";
+    }
+
     /** A CSV converted into a point layer, ready to be added to a project. */
     public record CsvPointLayer(Layer layer, ShapefileData data) {}
 

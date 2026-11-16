@@ -28,8 +28,9 @@ public class Main {
                 app.setVisible(true);
                 SwingUtilities.invokeLater(() -> {
                     app.showStartupProjectCrsPromptIfNeeded();
-                    // Show welcome page on first launch
-                    if (AppBranding.isShowWelcomePage() && AppContext.project() == null) {
+                    // Welcome page is reachable on startup regardless of an
+                    // implicitly created default project (T30 dead-UI fix).
+                    if (AppBranding.isShowWelcomePage()) {
                         WelcomePageDialog.open();
                     }
                 });

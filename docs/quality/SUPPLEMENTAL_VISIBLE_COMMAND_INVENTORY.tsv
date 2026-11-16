@@ -12,6 +12,8 @@ CatgisDesktopApp.java	JBUTTON	Iniciar edicion	1
 catmap/Main.java	ADDMENUITEM	Abrir layout...	1
 catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	1
 catmap/Main.java	ADDMENUITEM	Abrir datos...	1
+catmap/Main.java	ADDMENUITEM	Buscar comando...	1
+catmap/Main.java	ADDMENUITEM	Cambiar tema (claro/oscuro)	1
 catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	1
 catmap/Main.java	ADDMENUITEM	Agregar página	1
 catmap/Main.java	ADDMENUITEM	Actualizar desde CATGIS	1
@@ -31,9 +33,9 @@ catmap/Main.java	ADDMENUITEM	Elipse	1
 catmap/Main.java	ADDMENUITEM	Escala gráfica	1
 catmap/Main.java	ADDMENUITEM	Exportar imagen...	1
 catmap/Main.java	ADDMENUITEM	Exportar JPG	1
-catmap/Main.java	ADDMENUITEM	Exportar PDF	2
-catmap/Main.java	ADDMENUITEM	Exportar PNG	2
-catmap/Main.java	ADDMENUITEM	Exportar SVG	2
+catmap/Main.java	ADDMENUITEM	Exportar PDF	1
+catmap/Main.java	ADDMENUITEM	Exportar PNG	1
+catmap/Main.java	ADDMENUITEM	Exportar SVG	1
 catmap/Main.java	ADDMENUITEM	Fijar extent del mapa	1
 catmap/Main.java	ADDMENUITEM	Generar atlas desde layout...	1
 catmap/Main.java	ADDMENUITEM	Guardar	1

@@ -11,6 +11,8 @@ CatgisDesktopApp.java	JBUTTON	Iniciar edicion	ALIAS_EXISTING	SEM-VECTOR-EDIT
 catmap/Main.java	ADDMENUITEM	Abrir layout...	ACTION	SEM-CATMAP-LAYOUT-OPEN
 catmap/Main.java	ADDMENUITEM	Abrir proyecto .catgis...	ALIAS_EXISTING	SEM-CMD-ABRIR-PROYECTO-E7D8EE72
 catmap/Main.java	ADDMENUITEM	Abrir datos...	ACTION	SEM-CATMAP-QUICKMAP
+catmap/Main.java	ADDMENUITEM	Buscar comando...	ACTION	SEM-CATMAP-COMMAND-PALETTE
+catmap/Main.java	ADDMENUITEM	Cambiar tema (claro/oscuro)	ACTION	SEM-CATMAP-THEME-TOGGLE
 catmap/Main.java	ADDMENUITEM	Acerca de CATMAP	ACTION	SEM-CATMAP-ABOUT
 catmap/Main.java	ADDMENUITEM	Agregar página	ACTION	SEM-CATMAP-PAGE-ADD
 catmap/Main.java	ADDMENUITEM	Actualizar desde CATGIS	ACTION	SEM-CATMAP-REFRESH-FROM-CATGIS

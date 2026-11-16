@@ -1097,7 +1097,10 @@ public class MainMenuBar extends JMenuBar {
         englishItem.setSelected(I18n.getCurrentLanguage() == I18n.Language.ENGLISH);
 
         spanishItem.addActionListener(e -> updateLanguage(I18n.Language.SPANISH));
-        englishItem.addActionListener(e -> updateLanguage(I18n.Language.ENGLISH));
+        // English coverage is partial: keep it visible but not selectable.
+        englishItem.setEnabled(I18n.isLanguageSelectable(I18n.Language.ENGLISH));
+        englishItem.setToolTipText(
+                "La traduccion al ingles esta incompleta; se retiro del selector.");
 
         languageMenu.add(spanishItem);
         languageMenu.add(englishItem);
