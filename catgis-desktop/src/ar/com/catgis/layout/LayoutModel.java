@@ -13,6 +13,8 @@ public class LayoutModel {
     // --- Undo / Redo ---
 
     private static final int MAX_UNDO = 100;
+    /** True when the model changed since the last save/open. */
+    private boolean dirty;
     // History belongs to an individual page. A switch cannot allow undo
     // to alter a different page's elements.
     private final List<List<String>> pageUndoStacks = new ArrayList<>();
@@ -35,6 +37,7 @@ public class LayoutModel {
      * addElement / removeElement call it automatically.
      */
     public void saveSnapshot() {
+        dirty = true;
         List<String> undo = undoStack();
         undo.add(serializeElements());
         if (undo.size() > MAX_UNDO) undo.remove(0);
@@ -69,6 +72,7 @@ public class LayoutModel {
     }
 
     private void restoreFromSnapshot(String data) {
+        dirty = true;
         List<LayoutElement> active = activeElements();
         active.clear();
         for (String line : data.split("\n")) {
@@ -320,8 +324,22 @@ public class LayoutModel {
     }
 
     /** Replace the document page geometry. Null restores the legacy A4 landscape. */
+    /** True when unsaved layout changes exist (asks for confirmation on exit). */
+    public boolean isDirty() {
+        return dirty;
+    }
+
+    /** Called after save/open so the document is considered clean again. */
+    public void markSaved() {
+        dirty = false;
+    }
+
     public void setPageSpec(LayoutPageSpec newPageSpec) {
-        pageSpec = newPageSpec != null ? newPageSpec : LayoutPageSpec.A4_LANDSCAPE;
+        LayoutPageSpec updated = newPageSpec != null ? newPageSpec : LayoutPageSpec.A4_LANDSCAPE;
+        if (!updated.equals(pageSpec)) {
+            dirty = true;
+        }
+        pageSpec = updated;
     }
 
     public String getAtlasCoverageLayer() {

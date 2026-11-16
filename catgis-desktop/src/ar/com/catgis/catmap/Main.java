@@ -103,7 +103,13 @@ public class Main {
 
     private static JFrame createMainWindow() {
         JFrame frame = new JFrame("CATMAP - Cartographic Layout Composer");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent event) {
+                requestExit();
+            }
+        });
         frame.setLayout(new BorderLayout());
 
         // Initialize layout model
@@ -162,7 +168,7 @@ public class Main {
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Imprimir...", KeyEvent.VK_P, e -> printLayout());
         menuArchivo.addSeparator();
-        addMenuItem(menuArchivo, "Salir", KeyEvent.VK_X, e -> System.exit(0));
+        addMenuItem(menuArchivo, "Salir", KeyEvent.VK_X, e -> requestExit());
         menuBar.add(menuArchivo);
 
         // --- Edición ---
@@ -1233,6 +1239,24 @@ public class Main {
         showActivePage();
     }
 
+    /** Safe exit: dirty layouts ask to save, discard or cancel. */
+    private static void requestExit() {
+        ar.com.catgis.catmap.ExitGuard.Choice choice =
+                ar.com.catgis.catmap.ExitGuard.confirm(mainFrame,
+                        layoutModel != null && layoutModel.isDirty());
+        if (choice == ar.com.catgis.catmap.ExitGuard.Choice.CANCEL) {
+            return;
+        }
+        if (choice == ar.com.catgis.catmap.ExitGuard.Choice.SAVE_AND_EXIT
+                && !saveLayout()) {
+            return;
+        }
+        if (mainFrame != null) {
+            mainFrame.dispose();
+        }
+        System.exit(0);
+    }
+
     private static void newLayout() {
         layoutModel = new LayoutModel();
         currentFile = null;
@@ -1318,10 +1342,22 @@ public class Main {
                         + "*.tif, *.tiff, *.png, *.jpg, *.csv)",
                 "shp", "geojson", "json", "kml", "kmz", "gpkg", "fgb", "gpx",
                 "tif", "tiff", "png", "jpg", "jpeg", "csv"));
+        chooser.setMultiSelectionEnabled(true);
         if (chooser.showOpenDialog(mainFrame) != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        File file = chooser.getSelectedFile();
+        File[] files = chooser.getSelectedFiles();
+        if (files.length == 0 && chooser.getSelectedFile() != null) {
+            files = new File[]{chooser.getSelectedFile()};
+        }
+        if (files.length == 0) {
+            return;
+        }
+        if (files.length > 1) {
+            openQuickDataBulk(files);
+            return;
+        }
+        File file = files[0];
         String csvCrs = null;
         if (file.getName().toLowerCase(Locale.ROOT).endsWith(".csv")) {
             Object chosen = JOptionPane.showInputDialog(mainFrame,
@@ -1338,11 +1374,39 @@ public class Main {
         openQuickDataFile(file, csvCrs);
     }
 
+    /** Bulk quick map: one toast summary instead of one modal per file. */
+    private static void openQuickDataBulk(File[] files) {
+        int loaded = 0;
+        java.util.List<String> failures = new java.util.ArrayList<>();
+        for (File file : files) {
+            try {
+                if (QuickMapService.open(file, null, null)) {
+                    loaded++;
+                } else {
+                    failures.add(file.getName() + ": formato no reconocido");
+                }
+            } catch (Exception ex) {
+                failures.add(file.getName() + ": " + ex.getMessage());
+            }
+        }
+        refreshMap();
+        String summary = QuickMapService.bulkSummary(loaded, failures.size());
+        statusLabel.setText(summary);
+        if (failures.isEmpty()) {
+            ar.com.catgis.NotificationManager.toastSuccess(summary);
+        } else {
+            ar.com.catgis.NotificationManager.error(mainFrame, "Abrir datos",
+                    summary + "\n\n" + String.join("\n", failures));
+        }
+    }
+
     private static void openQuickDataFile(File file, String csvCrs) {
         statusLabel.setText("Abriendo datos: " + file.getName() + "...");
         try {
             if (QuickMapService.open(file, mainFrame, csvCrs)) {
                 statusLabel.setText("Datos cargados: " + file.getName());
+                ar.com.catgis.NotificationManager.toastSuccess(
+                        "Datos cargados: " + file.getName());
                 refreshMap();
             } else {
                 statusLabel.setText("No se pudieron cargar los datos");
@@ -1386,39 +1450,49 @@ public class Main {
 
     private static File currentFile = null;
 
-    private static void saveLayout() {
+    private static boolean saveLayout() {
         if (currentFile == null) {
-            saveLayoutAs();
-            return;
+            return saveLayoutAs();
         }
         try {
             CatmapDocumentIO.save(layoutModel, currentFile);
+            layoutModel.markSaved();
             statusLabel.setText("Layout guardado: " + currentFile.getName());
+            ar.com.catgis.NotificationManager.toastSuccess(
+                    "Layout guardado: " + currentFile.getName());
+            return true;
         } catch (Exception ex) {
             NotificationManager.error(mainFrame,
                     "Error",
                     "Error al guardar:\n" + ex.getMessage());
+            return false;
         }
     }
 
-    private static void saveLayoutAs() {
+    private static boolean saveLayoutAs() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("CATMAP Layout (*.catmap)", "catmap"));
-        if (chooser.showSaveDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            File file = chooser.getSelectedFile();
-            if (!file.getName().endsWith(".catmap")) {
-                file = new File(file.getAbsolutePath() + ".catmap");
-            }
-            try {
-                CatmapDocumentIO.save(layoutModel, file);
-                currentFile = file;
-                mainFrame.setTitle("CATMAP - " + file.getName());
-                statusLabel.setText("Layout guardado: " + file.getName());
-            } catch (Exception ex) {
-                NotificationManager.error(mainFrame,
-                        "Error",
-                        "Error al guardar:\n" + ex.getMessage());
-            }
+        if (chooser.showSaveDialog(mainFrame) != JFileChooser.APPROVE_OPTION) {
+            return false;
+        }
+        File file = chooser.getSelectedFile();
+        if (!file.getName().endsWith(".catmap")) {
+            file = new File(file.getAbsolutePath() + ".catmap");
+        }
+        try {
+            CatmapDocumentIO.save(layoutModel, file);
+            currentFile = file;
+            layoutModel.markSaved();
+            mainFrame.setTitle("CATMAP - " + file.getName());
+            statusLabel.setText("Layout guardado: " + file.getName());
+            ar.com.catgis.NotificationManager.toastSuccess(
+                    "Layout guardado: " + file.getName());
+            return true;
+        } catch (Exception ex) {
+            NotificationManager.error(mainFrame,
+                    "Error",
+                    "Error al guardar:\n" + ex.getMessage());
+            return false;
         }
     }
 
@@ -1889,6 +1963,7 @@ public class Main {
     private static void loadLayoutFile(File file) {
         try {
             layoutModel = CatmapDocumentIO.load(file);
+            layoutModel.markSaved();
             currentFile = file;
             mainFrame.setTitle("CATMAP - " + file.getName());
             installPreviewForActiveModel();
