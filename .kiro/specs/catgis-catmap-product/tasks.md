@@ -77,9 +77,18 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
   - Test "preview == export" 96/150/200 DPI con tolerancia declarada.
 - [ ] **T6 — Escala derivada (REQ-PROD-5)**
   - `ScaleResolver` compartido; barra recalculada en pan/zoom y export.
-- [ ] **T7 — Configurar página en UI (REQ-PROD-2)**
+- [x] **T7 — Configurar página en UI (REQ-PROD-2)**
   - Diálogo A3/A4/A5/Carta/Legal/Tabloide/custom + orientación/márgenes/DPI;
     preview, export, atlas y print usan la `PageSpec`.
+  - Evidence (2026-11-16): `catmap/ui/PageSetupDialog` (presets + Personalizado
+    en mm + orientación + márgenes, validación en línea; `buildSpec` puro y
+    testeado headless) y ítem "Páginas → Configurar página…" en `catmap/Main`
+    que aplica la spec al modelo y reconstruye la vista previa; guardar/cargar,
+    export PDF/PNG/SVG y atlas usan la página del documento (T2/T3/T4).
+    Inventarios actualizados en el mismo PR (surface, mapeo semántico,
+    suplementario visible y sus baselines). Tests
+    `PageSetupDialogContractTest` (7); build local **1407 tests / 0 fallos /
+    15 skips**.
 - [ ] **T8 — Impresión profesional (REQ-PROD-3.5)**
   - `LayoutPrintable` con `PageFormat` del documento y `Book` multipágina; sin
     raster fijo 200 DPI.

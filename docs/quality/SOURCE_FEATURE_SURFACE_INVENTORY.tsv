@@ -47,6 +47,7 @@ DIALOG_OR_WINDOW	CadPlacementDialog.java
 DIALOG_OR_WINDOW	CategorizedSymbologyDialog.java
 DIALOG_OR_WINDOW	CatmapItemEditorDialog.java
 DIALOG_OR_WINDOW	CatmapLegendEditorDialog.java
+DIALOG_OR_WINDOW	catmap/ui/PageSetupDialog.java
 DIALOG_OR_WINDOW	CatserverLayerSelectionDialog.java
 DIALOG_OR_WINDOW	climate/ClimateAreaAnalysisDialog.java
 DIALOG_OR_WINDOW	climate/ClimateOnlineDownloadDialog.java
