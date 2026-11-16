@@ -291,7 +291,8 @@ public class UnifiedAnalysisDialog extends JDialog {
 
                     case 2: // Flood
                         var floodResult = RiskAnalysisEngine.analyze(dem,
-                            RiskAnalysisEngine.Scenario.FLOOD, 0, 0, "", null);
+                            RiskAnalysisEngine.Scenario.FLOOD, 0, 0, "",
+                            (java.util.Map<String, Double>) null);
                         resultImage = floodResult.riskMap();
                         resultGrid = floodResult.riskGrid();
                         resultWidth = floodResult.width(); resultHeight = floodResult.height();
@@ -302,7 +303,8 @@ public class UnifiedAnalysisDialog extends JDialog {
 
                     case 3: // Landslide
                         var slideResult = RiskAnalysisEngine.analyze(dem,
-                            RiskAnalysisEngine.Scenario.LANDSLIDE, 0, 0, "", null);
+                            RiskAnalysisEngine.Scenario.LANDSLIDE, 0, 0, "",
+                            (java.util.Map<String, Double>) null);
                         resultImage = slideResult.riskMap();
                         resultGrid = slideResult.riskGrid();
                         resultWidth = slideResult.width(); resultHeight = slideResult.height();
