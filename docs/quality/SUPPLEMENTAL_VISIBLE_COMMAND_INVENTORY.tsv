@@ -111,6 +111,7 @@ catmap/Main.java	JBUTTON	Aplicar	1
 catmap/Main.java	JBUTTON	Cancelar	3
 catmap/Main.java	JBUTTON	Generar	1
 catmap/Main.java	JBUTTON	Refrescar	1
+catmap/ui/DataWorkspacePanel.java	JBUTTON	Refrescar	1
 catmap/Main.java	JCHECKBOXMENUITEM	Mostrar grilla	1
 catmap/Main.java	JCHECKBOXMENUITEM	Mostrar guías	1
 catmap/Main.java	JCHECKBOXMENUITEM	Mostrar panel de capas	1
