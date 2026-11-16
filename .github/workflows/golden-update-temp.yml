@@ -1,6 +1,8 @@
 name: Golden Update (temp)
 
 on:
+  push:
+    branches: [ feat/catmap-render-metrics-scale ]
   workflow_dispatch:
 
 jobs:
