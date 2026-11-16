@@ -75,16 +75,17 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
   - `RenderMetrics` (pt/mm→px `dpi/72`) en labels, escala, leyenda, tabla,
     cartouche y etiquetas del mapa; quitar 96 fijo en `LayoutMap`.
   - Test "preview == export" 96/150/200 DPI con tolerancia declarada.
-  - Evidence (2026-11-16): `layout/RenderMetrics` (points→pixels `size*dpi/72`,
-    `scaledFont`, round-trip px→pt) aplicado a `LayoutLabel` (fuente, halo y
-    subrayado) y `LayoutScaleBar` (etiquetas y ratio con clamp dependiente de
-    DPI); leyenda/tabla/cartouche/graticule ya escalaban con `dpi/72` y quedan
-    consistentes. Contrato `LayoutTextDpiParityContractTest`: el ancho/alto de
-    tinta del texto escala 2× entre 96 y 192 DPI (paridad física preview/export),
-    y `RenderMetricsContractTest` (4). Tras la revisión visual se regeneraron de
-    forma intencional las baselines `label`, `scalebar`, `pipeline`,
-    `pipeline-map` y `catmap-real-data` (el texto pasó a su tamaño físico
-    correcto); la política de tolerancia por OS y el delta no cambiaron.
+  - Evidence (2026-11-16): `layout/RenderMetrics` convierte tamanos de layout
+    (px base 96 DPI, la metrica historica de las plantillas) a pixeles de
+    dispositivo con `size*dpi/96` y expone `scaledFont` y el round-trip px→base;
+    aplicado a `LayoutLabel` (fuente, halo, subrayado) y `LayoutScaleBar`
+    (etiquetas y ratio, con el clamp historico escalado por DPI). Los
+    exportadores vectoriales PDF/SVG convierten px@96 → pt (`×0.75`) para
+    compartir el tamano fisico del raster. Contrato
+    `LayoutTextDpiParityContractTest`: la tinta del texto escala 2× entre 96 y
+    192 DPI (paridad fisica preview/export); `RenderMetricsContractTest` (4).
+    Los goldens existentes no cambian a 96 DPI y la politica de tolerancia por OS
+    queda intacta.
 - [x] **T6 — Escala derivada (REQ-PROD-5)**
   - `ScaleResolver` compartido; barra recalculada en pan/zoom y export.
   - Evidence (2026-11-16): `layout/ScaleResolver` deriva el denominador del

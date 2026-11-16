@@ -98,7 +98,7 @@ public class LayoutScaleBar implements LayoutElement {
 
         double requestedPx = RenderMetrics.pointsToPixels(font.getSize2D(), ctx.getDpi());
         Font sFont = font.deriveFont((float) Math.max(7.0,
-                Math.min(requestedPx, Math.max(10.0, barH * 1.6))));
+                Math.min(requestedPx, barH * 0.6)));
         g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g2.setFont(sFont);
         FontMetrics fm = g2.getFontMetrics();

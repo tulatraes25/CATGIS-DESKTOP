@@ -47,6 +47,8 @@ import java.util.Objects;
 public final class PdfVectorExporter {
 
     private static final double MM_TO_PT = 72.0 / 25.4;
+    /** Layout font sizes are baseline pixels at 96 DPI: 1 px = 0.75 pt. */
+    private static final double LAYOUT_PX_TO_PT = 72.0 / 96.0;
     private static final int RASTER_DPI = 200;
     private static final long MAX_EMBEDDED_PIXELS = 18_000_000L;
 
@@ -124,9 +126,9 @@ public final class PdfVectorExporter {
                                   float pageHeightPt) throws IOException {
         Rectangle2D.Double bounds = label.getBoundsMm();
         Font font = label.getFont();
-        double fontSizePt = font.getSize2D();
+        double fontSizePt = font.getSize2D() * LAYOUT_PX_TO_PT;
         double baselineMm = bounds.y + fontSizePt * MM_TO_PT * 0.95;
-        drawText(content, label.getFont(), safeText(label.getText()),
+        drawText(content, font.deriveFont((float) fontSizePt), safeText(label.getText()),
                 bounds.x + 1.0, baselineMm, label.getColor(), pageHeightPt);
         if (label.isUnderlined()) {
             content.setStrokingColor(label.getColor());
@@ -224,13 +226,14 @@ public final class PdfVectorExporter {
         content.moveTo(pt(bounds.x), yPt(bounds.y, pageHeightPt));
         content.lineTo(pt(bounds.x + bounds.width), yPt(bounds.y, pageHeightPt));
         content.stroke();
-        double fontSizeMm = scaleBar.getFont().getSize2D() * MM_TO_PT;
+        double fontSizeMm = scaleBar.getFont().getSize2D() * LAYOUT_PX_TO_PT * MM_TO_PT;
         for (int i = 0; i <= segments; i++) {
             double x = bounds.x + i * segmentWidth;
             content.moveTo(pt(x), yPt(bounds.y, pageHeightPt));
             content.lineTo(pt(x), yPt(bounds.y + height, pageHeightPt));
             content.stroke();
-            drawText(content, scaleBar.getFont(),
+            drawText(content, scaleBar.getFont().deriveFont(
+                            (float) (scaleBar.getFont().getSize2D() * LAYOUT_PX_TO_PT)),
                     formatDistance(i * step, scaleBar.getUnitLabel()),
                     x - 2.0, bounds.y + height + fontSizeMm + 0.8,
                     scaleBar.getColor(), pageHeightPt);
@@ -256,13 +259,14 @@ public final class PdfVectorExporter {
                     pt(bounds.width), pt(bounds.height));
             content.fill();
         }
-        double titlePt = legend.getTitleFont().getSize2D();
-        double itemPt = legend.getItemFont().getSize2D();
+        double titlePt = legend.getTitleFont().getSize2D() * LAYOUT_PX_TO_PT;
+        double itemPt = legend.getItemFont().getSize2D() * LAYOUT_PX_TO_PT;
         double titleMm = titlePt * MM_TO_PT;
         double itemMm = itemPt * MM_TO_PT;
         double y = bounds.y + titleMm;
         if (legend.getTitle() != null && !legend.getTitle().isBlank()) {
-            drawText(content, legend.getTitleFont(), safeText(legend.getTitle()),
+            drawText(content, legend.getTitleFont().deriveFont((float) titlePt),
+                    safeText(legend.getTitle()),
                     bounds.x + 1.0, y, legend.getTitleColor(), pageHeightPt);
             y += titleMm * 1.4;
         }
@@ -275,7 +279,8 @@ public final class PdfVectorExporter {
             content.setNonStrokingColor(item.color == null ? Color.GRAY : item.color);
             content.addRect(pt(bounds.x + 1.0), yPt(y, pageHeightPt), pt(symbol), pt(symbol));
             content.fill();
-            drawText(content, legend.getItemFont(), safeText(item.label),
+            drawText(content, legend.getItemFont().deriveFont((float) itemPt),
+                    safeText(item.label),
                     bounds.x + 1.0 + symbol + 1.5, y, legend.getItemColor(), pageHeightPt);
             y += itemMm * 1.5;
         }
@@ -288,16 +293,20 @@ public final class PdfVectorExporter {
         content.addRect(pt(bounds.x), yPt(bounds.y + bounds.height, pageHeightPt),
                 pt(bounds.width), pt(bounds.height));
         content.fillAndStroke();
-        double labelMm = cartouche.getLabelFont().getSize2D() * MM_TO_PT;
-        double valueMm = cartouche.getValueFont().getSize2D() * MM_TO_PT;
+        double labelMm = cartouche.getLabelFont().getSize2D() * LAYOUT_PX_TO_PT * MM_TO_PT;
+        double valueMm = cartouche.getValueFont().getSize2D() * LAYOUT_PX_TO_PT * MM_TO_PT;
         double y = bounds.y + 4.0;
         for (var field : cartouche.getFields().entrySet()) {
             if (y > bounds.y + bounds.height - 2.0) {
                 break;
             }
-            drawText(content, cartouche.getLabelFont(), safeText(field.getKey()) + ":",
+            drawText(content, cartouche.getLabelFont().deriveFont(
+                            (float) (cartouche.getLabelFont().getSize2D() * LAYOUT_PX_TO_PT)),
+                    safeText(field.getKey()) + ":",
                     bounds.x + cartouche.getPaddingMm(), y, Color.DARK_GRAY, pageHeightPt);
-            drawText(content, cartouche.getValueFont(), safeText(field.getValue()),
+            drawText(content, cartouche.getValueFont().deriveFont(
+                            (float) (cartouche.getValueFont().getSize2D() * LAYOUT_PX_TO_PT)),
+                    safeText(field.getValue()),
                     bounds.x + cartouche.getPaddingMm() + 22.0, y, Color.BLACK, pageHeightPt);
             y += Math.max(labelMm, valueMm) * 1.6;
         }

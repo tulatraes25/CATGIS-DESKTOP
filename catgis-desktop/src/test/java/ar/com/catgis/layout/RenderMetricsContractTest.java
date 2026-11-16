@@ -11,10 +11,10 @@ class RenderMetricsContractTest {
 
     @Test
     void pointsBecomePixelsAtTheRenderDpi() {
-        assertEquals(12.0, RenderMetrics.pointsToPixels(12.0, 72), 1.0e-9);
-        assertEquals(16.0, RenderMetrics.pointsToPixels(12.0, 96), 1.0e-9);
-        assertEquals(32.0, RenderMetrics.pointsToPixels(12.0, 192), 1.0e-9);
-        assertEquals(0.25, RenderMetrics.pointsToPixels(1.0, 18), 1.0e-9);
+        assertEquals(9.0, RenderMetrics.pointsToPixels(12.0, 72), 1.0e-9);
+        assertEquals(12.0, RenderMetrics.pointsToPixels(12.0, 96), 1.0e-9);
+        assertEquals(24.0, RenderMetrics.pointsToPixels(12.0, 192), 1.0e-9);
+        assertEquals(0.1875, RenderMetrics.pointsToPixels(1.0, 18), 1.0e-9);
     }
 
     @Test
@@ -31,7 +31,10 @@ class RenderMetricsContractTest {
         Font scaled = RenderMetrics.scaledFont(base, 96);
         assertEquals("SansSerif", scaled.getFamily());
         assertEquals(Font.BOLD, scaled.getStyle());
-        assertEquals(16.0 * 96.0 / 72.0, scaled.getSize2D(), 1.0e-6);
+        assertEquals(16.0, scaled.getSize2D(), 1.0e-6,
+                "96 DPI is the baseline: font keeps its size there");
+        Font doubled = RenderMetrics.scaledFont(base, 192);
+        assertEquals(32.0, doubled.getSize2D(), 1.0e-6);
     }
 
     @Test
