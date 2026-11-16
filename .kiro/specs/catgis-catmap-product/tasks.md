@@ -31,10 +31,20 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     preview/alineación de `catmap.Main` usan la página del documento. Tests
     nuevos: `LayoutPageSpecTest` (7) + `CatmapPageGeometryContractTest` (10);
     build local **1378 tests / 0 fallos / 15 skips**.
-- [ ] **T3 — Documento único y IO (REQ-PROD-0/2)**
+- [x] **T3 — Documento único y IO (REQ-PROD-0/2)**
   - `CatmapDocumentIO` reemplaza los dos formatos; migra JSON del compositor y
     líneas del standalone; falla explícito ante formato desconocido.
   - Tests de compatibilidad de ambos legados y de error.
+  - Evidence (2026-11-16): `catmap/CatmapDocumentIO` (detección por contenido,
+    save canónico atómico, lectura del JSON legado vía Jackson) cableado en
+    `catmap.Main`; `LayoutTemplateManager.saveTemplate/loadTemplate` delegan en
+    el IO (el compositor ya no escribe JSON). Migración sin pérdida ampliada en el
+    formato canónico: grilla del mapa (`GRID_*`, `TARGET_SCALE`) y leyenda
+    (`SHOW_BORDER`, tamaños de fuente); `LayoutPageSpec.fromPortraitDimensions`
+    normaliza el legado a preset A4 cuando corresponde. Fallos cerrados:
+    formato desconocido, `format` ajeno, tipo de elemento no soportado o
+    coordenada faltante. Tests `CatmapDocumentIOTest` (10); build local
+    **1388 tests / 0 fallos / 15 skips**.
 - [ ] **T4 — Servicio único de export (REQ-PROD-3)**
   - `LayoutExportService.renderPage(model, pageIndex, pageSpec, metrics)` para
     PDF multipágina, PNG/JPG/ZIP, SVG, print y atlas; verificador parametrizado.
