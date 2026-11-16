@@ -259,9 +259,26 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     `TerrainRasterAlgorithmsContractTest` (6); build local **1492 tests / 0
     fallos / 15 skips**. Las salidas de los diálogos existentes quedan como
     imágenes de preview hasta T20/T21.
-- [ ] **T18 — Resolución nativa y umbrales en área (REQ-PROD-8.2)**
+- [x] **T18 — Resolución nativa y umbrales en área (REQ-PROD-8.2)**
   - Eliminar downsample fijo; umbrales en m²/ha además de celdas; performance
     acotada y cancelable (fuera del EDT).
+  - Evidence (2026-11-16): `AnalysisDetail.NATIVE` (valor por defecto en servicio
+    y diálogos) muestrea el DEM **sin remuestreo** con presupuesto explícito
+    `MAX_NATIVE_CELLS = 4.000.000` celdas y fallo cerrado con mensaje si el DEM
+    lo excede; los modos Rápida/Equilibrada/Detallada quedan como reducciones
+    explícitas. Umbrales en área: sobrecarga
+    `generateDrainage(..., double thresholdAreaM2, ...)` y
+    `resolveThresholdCells` (convierte m² a celdas con el área de celda real,
+    exige ≥2 celdas, degrada a celdas si el área es desconocida), y la capa de
+    salida ahora declara `threshold_cells`, `threshold_area_m2` y
+    `threshold_ha`. Cancelación: `generateDrainageCancellable(..., BooleanSupplier)`
+    con chequeos en el muestreo (cada 32 filas), acondicionamiento, dirección y
+    acumulación que lanzan `CancellationException`; el diálogo de escorrentías
+    ejecuta en `SwingWorker` (fuera del EDT) y el botón Cancelar ahora cancela
+    el trabajo en curso. Tests `DrainageNativeResolutionContractTest` (6:
+    conversión de umbral, presupuesto, resolución nativa igual al DEM,
+    umbral por área aplicado, cancelación y etiqueta del modo); build local
+    **1498 tests / 0 fallos / 15 skips**.
 - [ ] **T19 — Morfometría de cuencas (REQ-PROD-8.3)**
   - Área, perímetro, elevación/pendiente media, Strahler, densidad de drenaje;
     zonal stats reutilizado.

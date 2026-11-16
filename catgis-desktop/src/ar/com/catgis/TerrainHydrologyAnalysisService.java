@@ -116,7 +116,7 @@ public final class TerrainHydrologyAnalysisService {
         }
         Map<String, String> parameters = parseParameterSpec(layer.getDerivedParameters());
         DrainageExtractionService.AnalysisDetail detail = DrainageExtractionService.AnalysisDetail.valueOf(
-                parameters.getOrDefault("detail", DrainageExtractionService.AnalysisDetail.BALANCED.name())
+                parameters.getOrDefault("detail", DrainageExtractionService.AnalysisDetail.NATIVE.name())
         );
         DrainageExtractionService.HydrologicConditioning conditioning = DrainageExtractionService.HydrologicConditioning.valueOf(
                 parameters.getOrDefault("conditioning", DrainageExtractionService.HydrologicConditioning.ROBUST.name())

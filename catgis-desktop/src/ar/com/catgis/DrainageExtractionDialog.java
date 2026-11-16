@@ -30,6 +30,8 @@ public class DrainageExtractionDialog extends JDialog {
     private final JComboBox<DrainageExtractionService.CleanupLevel> cleanupCombo;
     private final JTextField outputNameField;
     private final JLabel technicalHintLabel;
+    private SwingWorker<DrainageExtractionService.GeneratedDrainageLayer, Void> activeWorker;
+    private volatile boolean cancelRequested;
 
     public DrainageExtractionDialog(Frame owner, Layer rasterLayer) {
         super(owner, I18n.t("Generar escorrentias..."), true);
@@ -47,7 +49,7 @@ public class DrainageExtractionDialog extends JDialog {
         thresholdField = new JTextField("30", 14);
         minimumBranchLengthField = new JTextField("150", 14);
         detailCombo = new JComboBox<>(DrainageExtractionService.AnalysisDetail.values());
-        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.BALANCED);
+        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.NATIVE);
         conditioningCombo = new JComboBox<>(DrainageExtractionService.HydrologicConditioning.values());
         conditioningCombo.setSelectedItem(DrainageExtractionService.HydrologicConditioning.ADVANCED);
         cleanupCombo = new JComboBox<>(DrainageExtractionService.CleanupLevel.values());
@@ -129,7 +131,14 @@ public class DrainageExtractionDialog extends JDialog {
     private JPanel buildButtons() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton cancelButton = new JButton(I18n.t("Cancelar"));
-        cancelButton.addActionListener(e -> dispose());
+        cancelButton.addActionListener(e -> {
+            if (activeWorker != null && !activeWorker.isDone()) {
+                cancelRequested = true;
+                activeWorker.cancel(true);
+            } else {
+                dispose();
+            }
+        });
 
         JButton generateButton = new JButton(I18n.t("Generar drenaje"));
         generateButton.addActionListener(e -> startGeneration());
@@ -182,22 +191,32 @@ public class DrainageExtractionDialog extends JDialog {
         final DrainageExtractionService.CleanupLevel cleanupLevel =
                 (DrainageExtractionService.CleanupLevel) cleanupCombo.getSelectedItem();
 
-        new SwingWorker<DrainageExtractionService.GeneratedDrainageLayer, Void>() {
+        cancelRequested = false;
+        activeWorker = new SwingWorker<DrainageExtractionService.GeneratedDrainageLayer, Void>() {
             @Override
             protected DrainageExtractionService.GeneratedDrainageLayer doInBackground() throws Exception {
-                return DrainageExtractionService.generateDrainage(
+                return DrainageExtractionService.generateDrainageCancellable(
                         rasterLayer,
                         threshold,
+                        Double.NaN,
                         outputName,
                         detail,
                         conditioning,
                         minimumBranchLength,
-                        cleanupLevel
+                        cleanupLevel,
+                        () -> cancelRequested
                 );
             }
 
             @Override
             protected void done() {
+                if (isCancelled()) {
+                    NotificationManager.info(DrainageExtractionDialog.this,
+                            I18n.t("Escorrentias"),
+                            I18n.t("Generacion de drenaje cancelada."));
+                    dispose();
+                    return;
+                }
                 try {
                     DrainageExtractionService.GeneratedDrainageLayer result = get();
                     addResultLayer(result);
@@ -211,7 +230,8 @@ public class DrainageExtractionDialog extends JDialog {
                     );
                 }
             }
-        }.execute();
+        };
+        activeWorker.execute();
     }
 
     private void addResultLayer(DrainageExtractionService.GeneratedDrainageLayer result) {

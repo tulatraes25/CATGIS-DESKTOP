@@ -62,7 +62,7 @@ public class BooleanRiskDialog extends JDialog {
         soilCombo = new JComboBox<>(buildSoilModel());
         baseNameField = new JTextField("", 28);
         detailCombo = new JComboBox<>(DrainageExtractionService.AnalysisDetail.values());
-        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.BALANCED);
+        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.NATIVE);
         conditioningCombo = new JComboBox<>(DrainageExtractionService.HydrologicConditioning.values());
         conditioningCombo.setSelectedItem(DrainageExtractionService.HydrologicConditioning.ROBUST);
         slopeModeCombo = new JComboBox<>(BooleanRiskService.ComparisonMode.values());

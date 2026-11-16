@@ -64,7 +64,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
 
         baseNameField = new JTextField(buildDefaultBaseName(), 28);
         detailCombo = new JComboBox<>(DrainageExtractionService.AnalysisDetail.values());
-        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.BALANCED);
+        detailCombo.setSelectedItem(DrainageExtractionService.AnalysisDetail.NATIVE);
         conditioningCombo = new JComboBox<>(DrainageExtractionService.HydrologicConditioning.values());
         conditioningCombo.setSelectedItem(DrainageExtractionService.HydrologicConditioning.ADVANCED);
         thresholdField = new JTextField("30", 12);
@@ -408,6 +408,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             return I18n.t("Equilibrado para trabajo general.");
         }
         return switch (detail) {
+            case NATIVE -> I18n.t("Resolucion nativa del DEM, sin remuestreo; usa DEM recortado y umbrales acordes para tiempos razonables.");
             case FAST -> I18n.t("Rapido y liviano para revisiones regionales o DEM grandes. Suele trabajar mejor con umbrales mas altos.");
             case BALANCED -> I18n.t("Equilibrado para la mayoria de trabajos; buen punto medio entre detalle, limpieza y tiempo.");
             case DETAILED -> I18n.t("Mas fino para sectores chicos o estudios locales; conviene acompañarlo con umbrales mas bajos y areas acotadas.");
@@ -454,6 +455,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             return 30;
         }
         return switch (detail) {
+            case NATIVE -> 12;
             case FAST -> 60;
             case BALANCED -> 30;
             case DETAILED -> 12;
@@ -465,6 +467,7 @@ public class TerrainHydrologyAnalysisDialog extends JDialog {
             return 120;
         }
         return switch (detail) {
+            case NATIVE -> 60;
             case FAST -> 240;
             case BALANCED -> 120;
             case DETAILED -> 60;
