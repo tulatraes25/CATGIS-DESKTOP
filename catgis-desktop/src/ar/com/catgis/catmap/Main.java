@@ -59,22 +59,13 @@ public class Main {
                 }
             }
 
-            // Initialize minimal app context
+            // Initialize the standalone runtime context (no CATGIS shell needed)
             ModuleRegistry.initializeDefaults();
-            AppContext.setCurrentProject(new Project("CATMAP Standalone"));
-            CatgisDesktopApp.mapPanel = new MapPanel();
-            CatgisDesktopApp.layersPanel = new LayersPanel();
-            CatgisDesktopApp.statusBar = new StatusBar();
+            ar.com.catgis.catmap.app.CatmapAppContext.standalone().install();
 
             // Load project if specified
             if (projectPath != null) {
-                try {
-                    LoadProjectAction.loadProjectFile(new File(projectPath));
-                } catch (Exception ex) {
-                    NotificationManager.error(null,
-                            "CATMAP",
-                            "No se pudo cargar el proyecto:\n" + ex.getMessage());
-                }
+                openStandaloneProject(new File(projectPath), null);
             }
 
             // Create and show main window
@@ -1254,15 +1245,29 @@ public class Main {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("CATGIS Project (*.catgis)", "catgis"));
         if (chooser.showOpenDialog(mainFrame) == JFileChooser.APPROVE_OPTION) {
-            try {
-                LoadProjectAction.loadProjectFile(chooser.getSelectedFile());
-                statusLabel.setText("Proyecto cargado: " + chooser.getSelectedFile().getName());
-                refreshMap();
-            } catch (Exception ex) {
-                NotificationManager.error(mainFrame,
-                        "Error",
-                        "Error al cargar proyecto:\n" + ex.getMessage());
+            openStandaloneProject(chooser.getSelectedFile(), mainFrame);
+        }
+    }
+
+    /**
+     * Open a CATGIS project from CATMAP standalone: validate/parse it headlessly
+     * first (no Swing side effects), then apply it to the shared workspace.
+     */
+    private static void openStandaloneProject(File file, java.awt.Component owner) {
+        try {
+            ar.com.catgis.ProjectOpenService.ProjectInspection inspection =
+                    ar.com.catgis.ProjectOpenService.inspect(file);
+            if (!LoadProjectAction.loadProjectFile(file)) {
+                throw new IllegalStateException("No se pudo aplicar el proyecto al espacio de trabajo.");
             }
+            statusLabel.setText("Proyecto cargado: " + inspection.project().getName()
+                    + " | " + inspection.layerCount() + " capas"
+                    + (inspection.viewLoaded() ? " | vista restaurada" : ""));
+            refreshMap();
+        } catch (Exception ex) {
+            NotificationManager.error(owner,
+                    "Error",
+                    "Error al cargar proyecto:\n" + ex.getMessage());
         }
     }
 
