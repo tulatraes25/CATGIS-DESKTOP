@@ -308,8 +308,20 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     la pendiente y geometría nativa, NoData preservado, GeoTIFF reabierto con
     CRS/dimensiones, cancelación y rechazo de capas no raster; build local
     **1507 tests / 0 fallos / 15 skips**.
-- [ ] **T21 — Viewshed en producto (REQ-PROD-8.5)**
+- [x] **T21 — Viewshed en producto (REQ-PROD-8.5)**
   - UI con observador/radio; capa de resultado; test del motor existente.
+  - Evidence (2026-11-16): `catmap/ViewshedRaster` envuelve el motor existente
+    (`TerrainHydrologyAnalysisService.computeViewshed`) sobre `AnalysisRaster`:
+    máscara float (visible=1, oculta=0, fuera del radio/NoData=NO_DATA), overlay
+    ARGB (verde visible, transparente oculto, marcador naranja del observador) y
+    validaciones de observador/altura/radio. `ViewshedDialog` (nuevo) permite
+    elegir DEM, observador X/Y (precargado al centro del DEM), altura y radio en
+    metros, calcula en `SwingWorker` (cancelable) y **agrega la capa de
+    resultado** al proyecto/mapa como raster derivado `viewshed` con parámetros
+    registrados; el menú "Visibilidad / Viewshed..." ahora abre este diálogo en
+    lugar del análisis genérico. Tests `ViewshedRasterContractTest` (4) además
+    del test del motor existente; build local **1517 tests / 0 fallos / 15
+    skips**. Inventario surface/semántico/matriz actualizado con el diálogo.
 - [ ] **T22 — Perfil completo (REQ-PROD-8.6)**
   - Pendiente del perfil, curva hipsométrica, perfil 3D.
 - [ ] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
