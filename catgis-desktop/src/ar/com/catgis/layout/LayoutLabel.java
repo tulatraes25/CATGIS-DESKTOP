@@ -133,21 +133,26 @@ public class LayoutLabel implements LayoutElement {
             g2.drawRect(x, y, w, h);
         }
 
-        g2.setFont(font);
+        // Layout font sizes are points: convert once per DPI so preview and
+        // export share the same physical size.
+        java.awt.Font renderFont = RenderMetrics.scaledFont(font, ctx.getDpi());
+        g2.setFont(renderFont);
         int tx = x + paddingPx;
         int ty = y + g2.getFontMetrics().getAscent() + paddingPx;
 
         // Halo (text outline)
         if (haloWidth > 0 && haloColor.getAlpha() > 0) {
             g2.setColor(haloColor);
-            java.awt.Font haloFont = font.deriveFont(font.getSize2D() + haloWidth * 0.5f);
+            java.awt.Font haloFont = renderFont.deriveFont(
+                    renderFont.getSize2D() + (float) RenderMetrics.pointsToPixels(
+                            haloWidth * 0.5, ctx.getDpi()));
             g2.setFont(haloFont);
             // Draw text in 4 directions for simple outline effect
             g2.drawString(renderText, tx - (int)haloWidth, ty);
             g2.drawString(renderText, tx + (int)haloWidth, ty);
             g2.drawString(renderText, tx, ty - (int)haloWidth);
             g2.drawString(renderText, tx, ty + (int)haloWidth);
-            g2.setFont(font);
+            g2.setFont(renderFont);
         }
 
         g2.setColor(color);
@@ -156,7 +161,8 @@ public class LayoutLabel implements LayoutElement {
         // Underline
         if (underlined) {
             int textW = g2.getFontMetrics().stringWidth(text);
-            g2.setStroke(new java.awt.BasicStroke(Math.max(1, font.getSize2D() / 12f)));
+            g2.setStroke(new java.awt.BasicStroke((float) Math.max(1.0,
+                    RenderMetrics.pointsToPixels(font.getSize2D() / 12f, ctx.getDpi()))));
             g2.drawLine(tx, ty + 2, tx + textW, ty + 2);
         }
     }

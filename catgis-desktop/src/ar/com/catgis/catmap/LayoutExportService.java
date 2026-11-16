@@ -57,7 +57,9 @@ public final class LayoutExportService {
             g2.setColor(Color.WHITE);
             g2.fillRect(0, 0, widthPx, heightPx);
             for (LayoutElement element : model.getVisibleElementsSortedByZ(pageIndex)) {
-                element.render(g2, context);
+                ar.com.catgis.layout.ScaleResolver
+                        .withResolvedScale(element, model, dpi)
+                        .render(g2, context);
             }
         } finally {
             g2.dispose();

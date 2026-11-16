@@ -156,7 +156,10 @@ public final class AtlasEngine {
                     RenderingHints.VALUE_RENDER_QUALITY);
             g2.setColor(Color.WHITE);
             g2.fillRect(0, 0, setup.width(), setup.height());
-            for (LayoutElement element : pageElements) {
+            int atlasDpi = (int) Math.round(setup.context().getDpi());
+        for (LayoutElement element : pageElements) {
+            element = ar.com.catgis.layout.ScaleResolver
+                    .withResolvedScale(element, template, atlasDpi);
                 element.render(g2, setup.context());
             }
         } finally {

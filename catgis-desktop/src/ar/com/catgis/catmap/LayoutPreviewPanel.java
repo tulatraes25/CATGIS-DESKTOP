@@ -213,8 +213,10 @@ public class LayoutPreviewPanel extends JPanel {
             g2.setColor(Color.WHITE);
             g2.fillRect(0, 0, widthPx, heightPx);
 
+            int previewDpi = (int) Math.round(renderContext.getDpi());
             for (LayoutElement element : model.getVisibleElementsSortedByZ()) {
-                element.render(g2, renderContext);
+                ScaleResolver.withResolvedScale(element, model, previewDpi)
+                        .render(g2, renderContext);
             }
         } finally {
             g2.dispose();
