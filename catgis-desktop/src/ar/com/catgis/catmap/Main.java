@@ -160,11 +160,6 @@ public class Main {
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Importar tabla climática...", KeyEvent.VK_T, e -> importTableFromFile());
         menuArchivo.addSeparator();
-        addMenuItem(menuArchivo, "Exportar PDF", 0, e -> exportPdf());
-        addMenuItem(menuArchivo, "Exportar PNG", 0, e -> exportPng());
-        addMenuItem(menuArchivo, "Exportar SVG", 0, e -> exportSvg());
-        addMenuItem(menuArchivo, "Exportar imagen...", 0, e -> exportImage());
-        menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Imprimir...", KeyEvent.VK_P, e -> printLayout());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Salir", KeyEvent.VK_X, e -> requestExit());
@@ -220,15 +215,16 @@ public class Main {
         menuVista.add(showLayers);
         JCheckBoxMenuItem showProps = new JCheckBoxMenuItem("Mostrar panel de propiedades", true);
         menuVista.add(showProps);
-        menuBar.add(menuVista);
-
-        // --- Insertar ---
+        menuVista.addSeparator();
         addMenuItem(menuVista, "Cambiar tema (claro/oscuro)", 0, e -> {
             ar.com.catgis.catmap.ui.ThemeSupport.toggle(mainFrame);
             statusLabel.setText(ar.com.catgis.catmap.ui.ThemeSupport.describe(
                     ar.com.catgis.catmap.ui.ThemeSupport.isDark(),
                     ar.com.catgis.catmap.ui.ThemeSupport.uiScale()));
         });
+        menuBar.add(menuVista);
+
+        // --- Insertar ---
         JMenu menuInsertar = new JMenu("Insertar");
         menuInsertar.setMnemonic(KeyEvent.VK_I);
         addMenuItem(menuInsertar, "Texto", 0, e -> insertText());
@@ -275,6 +271,7 @@ public class Main {
         addMenuItem(menuExportar, "Exportar PNG", 0, e -> exportPng());
         addMenuItem(menuExportar, "Exportar JPG", 0, e -> exportJpg());
         addMenuItem(menuExportar, "Exportar SVG", 0, e -> exportSvg());
+        addMenuItem(menuExportar, "Exportar imagen...", 0, e -> exportImage());
         menuExportar.addSeparator();
         addMenuItem(menuExportar, "Configuración de resolución/DPI...", 0, e -> showDpiConfigDialog());
         menuBar.add(menuExportar);
