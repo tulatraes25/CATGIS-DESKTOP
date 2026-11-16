@@ -261,27 +261,7 @@ public final class SpatiaLiteLoader {
     private static ShapefileData loadFromStore(DataStore store, SpatiaLiteLayer layer)
             throws UnsupportedFormatException, IOException {
         try {
-            String typeName = layer.getTableName();
-            String[] names = store.getTypeNames();
-            if (names == null || names.length == 0) {
-                store.dispose();
-                throw new UnsupportedFormatException(
-                        "No se encontraron tablas en la base de datos.");
-            }
-
-            boolean found = false;
-            for (String n : names) {
-                if (n.equalsIgnoreCase(typeName)) {
-                    typeName = n;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                CatgisLogger.warn("SpatiaLite: table '" + layer.getTableName()
-                        + "' not found, using first available: " + names[0], null);
-                typeName = names[0];
-            }
+            String typeName = requireRequestedTable(store.getTypeNames(), layer.getTableName());
 
             CatgisLogger.debug("SpatiaLite: loading features from table '" + typeName + "'");
 
@@ -303,7 +283,14 @@ public final class SpatiaLiteLoader {
 
             SimpleFeatureType schema = collection.getSchema();
 
-            layer.setSourceCRS("EPSG:4326");
+            String declaredCrs = layer.getSourceCRS();
+            if ((declaredCrs == null || declaredCrs.isBlank())
+                    && layer.getResolvedCrs() != null && !layer.getResolvedCrs().isBlank()) {
+                declaredCrs = layer.getResolvedCrs();
+            }
+            String verifiedSource = requireSourceCrs(schema, declaredCrs);
+            layer.setSourceCRS(verifiedSource);
+            layer.setResolvedCrs(verifiedSource);
             if (schema.getGeometryDescriptor() != null) {
                 layer.setGeometryTypeLabel(
                         schema.getGeometryDescriptor().getType().getBinding().getSimpleName());
@@ -328,6 +315,58 @@ public final class SpatiaLiteLoader {
             throw new UnsupportedFormatException(
                     "Error al cargar la capa SpatiaLite: " + e.getMessage(), e);
         }
+    }
+
+    /** Select the named table only. Never silently substitute another source. */
+    static String requireRequestedTable(String[] tableNames, String requested)
+            throws UnsupportedFormatException {
+        if (tableNames == null || tableNames.length == 0) {
+            throw new UnsupportedFormatException("No se encontraron tablas en la base de datos.");
+        }
+        if (requested == null || requested.isBlank()) {
+            throw new UnsupportedFormatException("SpatiaLite: seleccione una tabla espacial.");
+        }
+        for (String actual : tableNames) {
+            if (actual != null && actual.equalsIgnoreCase(requested.trim())) {
+                return actual;
+            }
+        }
+        throw new UnsupportedFormatException(
+                "La tabla SpatiaLite solicitada no existe: " + requested);
+    }
+
+    /**
+     * SpatiaLite/GeoPackage feature schemas are authoritative about raw geometry
+     * coordinates. Never relabel projected metre coordinates as EPSG:4326.
+     */
+    static String requireSourceCrs(SimpleFeatureType schema, String declared)
+            throws UnsupportedFormatException {
+        String detected = VectorCrsTransformSupport.schemaText(schema);
+        String explicit = declared == null ? "" : declared.trim();
+        if (!detected.isBlank()) {
+            if (!explicit.isBlank()) {
+                try {
+                    if (!VectorCrsTransformSupport.equivalent(explicit, detected)) {
+                        throw new UnsupportedFormatException(
+                                "SpatiaLite: CRS declarado incompatible con el esquema de la tabla.");
+                    }
+                } catch (IllegalArgumentException ex) {
+                    throw new UnsupportedFormatException(
+                            "SpatiaLite: el CRS declarado no es válido.", ex);
+                }
+            }
+            return detected;
+        }
+        if (!explicit.isBlank()) {
+            try {
+                return VectorCrsTransformSupport.canonicalText(explicit);
+            } catch (IllegalArgumentException ex) {
+                throw new UnsupportedFormatException(
+                        "SpatiaLite: el CRS manual no es válido.", ex);
+            }
+        }
+        throw new UnsupportedFormatException(
+                "SpatiaLite: la tabla no declara CRS; asigne explícitamente el CRS de origen.");
     }
 
     // --- SQLite header validation ---
