@@ -359,10 +359,23 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     registrada. Tests `IdwInterpolatorContractTest` (6: plano conocido con error
     acotado, nodos exactos, huecos por radio, validaciones, GeoTIFF de ida y
     vuelta, descripción); build local **1513 tests / 0 fallos / 15 skips**.
-- [ ] **T25 — Riesgo e inundación calibrados (REQ-PROD-9)**
+- [x] **T25 — Riesgo e inundación calibrados (REQ-PROD-9)**
   - Quitar 30 m/111320; clases de susceptibilidad, exposición, parámetros
     persistidos; `WILDFIRE` implementado o retirado; periodo de retorno
     documentado; trazabilidad de algoritmo/parámetros/CRS.
+  - Evidence (2026-11-16): `climate/GeographicMetrics` reemplaza el 111320 fijo
+    con fórmulas WGS84 (radios de curvatura y metros/grado por latitud);
+    `RiskAnalysisEngine` recibe `RiskParameters` explícitos y persistibles
+    (`cellSizeMeters` con fallback documentado `DEFAULT_CELL_SIZE_METERS`,
+    `returnPeriodYears` con `DEFAULT_RETURN_PERIOD_YEARS` documentado y
+    `exposureFactor` aplicado antes de normalizar), expone 5 **clases de
+    susceptibilidad** (Muy baja…Muy alta) con `classifySusceptibility`, y cada
+    `RiskResult` incluye `parameterSpec` con **trazabilidad** (algoritmo
+    `risk-analysis/1`, CRS `EPSG:4326`, escenario, celda, periodo de retorno,
+    exposición, clases y `wildfire=withdrawn`). El escenario **WILDFIRE fue
+    retirado** del enum por no tener modelo calibrado (documentado). Tests
+    `RiskAnalysisEngineCalibrationTest` (5) + suite previa del motor; build
+    local **1532 tests / 0 fallos / 15 skips**.
 
 ## Fase P5 — UX "Filmora del GIS"
 
