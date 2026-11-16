@@ -93,6 +93,16 @@ class QuickMapServiceContractTest {
     }
 
     @Test
+    void bulkSummaryIsSingleLineForToasts() {
+        assertEquals("3 conjunto(s) de datos cargados",
+                QuickMapService.bulkSummary(3, 0));
+        assertEquals("No se pudo cargar ningun conjunto (2 con error)",
+                QuickMapService.bulkSummary(0, 2));
+        assertEquals("2 conjunto(s) cargados, 1 con error",
+                QuickMapService.bulkSummary(2, 1));
+    }
+
+    @Test
     void installingTheCsvLayerCreatesTheQuickProject() throws Exception {
         AppContext.get().setMapPanel(null);
         AppContext.setCurrentProject(new Project("CATMAP Standalone"));
