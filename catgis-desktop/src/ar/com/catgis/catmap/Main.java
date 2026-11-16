@@ -262,6 +262,18 @@ public class Main {
         addMenuItem(menuMapa, "Fijar extent del mapa", 0, e -> toggleMapExtentLock());
         addMenuItem(menuMapa, "Ajustar mapa al extent de capas visibles", 0, e -> fitToVisibleLayers());
         addMenuItem(menuMapa, "Refrescar mapa", KeyEvent.VK_F5, e -> refreshMap());
+        menuMapa.addSeparator();
+        addMenuItem(menuMapa, "Agregar servicio WMS...", 0,
+                e -> OgcServiceActions.openWms(mainFrame));
+        addMenuItem(menuMapa, "Agregar servicio WFS...", 0,
+                e -> OgcServiceActions.openWfs(mainFrame));
+        addMenuItem(menuMapa, "Agregar servicio WMTS...", 0,
+                e -> OgcServiceActions.reportWmtsUnavailable(mainFrame));
+        addMenuItem(menuMapa, "Agregar capa PostGIS...", 0, e -> {
+            if (OgcServiceActions.openPostgis(mainFrame)) {
+                refreshFromCatgis();
+            }
+        });
         menuBar.add(menuMapa);
 
         // --- Exportar ---
