@@ -235,6 +235,14 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     **1482 tests / 0 fallos / 15 skips**.
 - [ ] **T15 — Servicios OGC y PostGIS opcional (REQ-PROD-1.2)**
   - WFS/WMS/WMTS y PostGIS conectables desde standalone; PostGIS sigue opcional.
+  - Progreso (2026-11-16): `catmap/OgcServiceSupport` normaliza URLs GetCapabilities
+    por servicio/version y declara explicitamente que **WMTS aun no esta
+    soportado**; `catmap/OgcServiceActions` abre los dialogos existentes de
+    **WMS**, **WFS** y **PostGIS** (opcional, solo bajo demanda) desde el menu
+    Mapa de CATMAP standalone ("Agregar servicio WMS/WFS/WMTS", "Agregar capa
+    PostGIS"), con refresco del mapa al aceptar. Tests
+    `OgcServiceSupportContractTest` (5). WMTS queda como brecha honesta
+    declarada (no se simula soporte).
 - [ ] **T16 — Workspace de datos (REQ-PROD-10 parcial)**
   - Panel proyecto/datos, capas con simbología, jobs/resultados; sin modales por
     archivo.
