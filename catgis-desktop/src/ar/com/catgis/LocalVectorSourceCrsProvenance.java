@@ -1,6 +1,7 @@
 package ar.com.catgis;
 
 import ar.com.catgis.core.model.Layer;
+import ar.com.catgis.data.vector.ShapefileData;
 import java.util.Locale;
 
 /**
@@ -8,7 +9,7 @@ import java.util.Locale;
  *
  * A vector layer is reprojected into the project coordinate system before
  * rendering; its mutable sourceCRS then describes the in-memory geometry.
- * The project file must instead retain the original local vector file-source CRS (FGB or LAS)
+ * The project file must instead retain the original local vector file-source CRS (FGB, LAS, SHP, GeoJSON, KML)
  * so reopening the same on-disk file does not treat its coordinates as
  * already projected. This marker is transient: only the authoritative
  * original CRS is written to the existing project-file sourceCRS field.
@@ -24,6 +25,15 @@ final class LocalVectorSourceCrsProvenance {
     }
 
     static void rememberBeforeProjection(Layer layer) {
+        rememberBeforeProjection(layer, null);
+    }
+
+    /**
+     * Shapefile sources may have a valid WKT .prj that cannot be represented
+     * as an EPSG code. Capture the schema CRS before the geometry projection
+     * overwrites the in-memory layer's sourceCRS with the project target.
+     */
+    static void rememberBeforeProjection(Layer layer, ShapefileData data) {
         if (!isSourceReferencedFile(layer)) {
             return;
         }
@@ -34,6 +44,9 @@ final class LocalVectorSourceCrsProvenance {
             return;
         }
         String source = layer.getSourceCRS();
+        if ((source == null || source.isBlank()) && isShapefile(layer) && data != null) {
+            source = VectorCrsTransformSupport.schemaText(data.getSchema());
+        }
         if (source != null && !source.isBlank()) {
             layer.putUserData(SOURCE_FILE_CRS_KEY, new Origin(layer.getPath(), source.trim()));
         }
@@ -58,6 +71,13 @@ final class LocalVectorSourceCrsProvenance {
             return false;
         }
         String path = layer.getPath().toLowerCase(Locale.ROOT);
-        return path.endsWith(".fgb") || path.endsWith(".las") || path.endsWith(".laz");
+        return path.endsWith(".fgb") || path.endsWith(".las") || path.endsWith(".laz")
+                || path.endsWith(".shp") || path.endsWith(".geojson")
+                || path.endsWith(".json") || path.endsWith(".kml") || path.endsWith(".kmz");
+    }
+
+    private static boolean isShapefile(Layer layer) {
+        return layer != null && layer.getPath() != null
+                && layer.getPath().toLowerCase(Locale.ROOT).endsWith(".shp");
     }
 }
