@@ -119,9 +119,21 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     `GeoTiffLayoutExporterContractTest` (5: CRS/extent/tamaño, reemplazo con
     cabecera TIFF, fallo cerrado sin marco y sin CRS, marco inválido); build local
     **1419 tests / 0 fallos / 15 skips**.
-- [ ] **T12 — Atlas v2 (REQ-PROD-4)**
+- [x] **T12 — Atlas v2 (REQ-PROD-4)**
   - Encuadre centro+buffer+aspecto, orden/nombre, `{page}`/`{feature}`,
     configuración persistida, PDF/PNG/SVG.
+  - Evidence (2026-11-16): `catmap/AtlasFraming` (centro del feature + buffer %
+    + ajuste al aspecto del marco sin deformar; punto degenerado con span
+    mínimo) aplicado por `AtlasEngine` a cada copia del marco (la plantilla no se
+    muta); tokens `{page}`/`{feature}` sustituidos en texto y expresión dinámica
+    de cada página; `AtlasEngine.exportPdf` multipágina con hoja del documento,
+    publicación atómica y `verifyPdf` parametrizado; orden asc/desc de features
+    y buffer configurables; configuración del atlas persistida en `.catmap`
+    (`ATLAS_COVERAGE_LAYER`, `ATLAS_NAME_FIELD`, `ATLAS_BUFFER_PERCENT`,
+    `ATLAS_ORDER`) con defaults seguros y fallo cerrado ante valores corruptos;
+    UI de atlas con PNG/PDF, margen y orden. Tests `AtlasFramingContractTest`
+    (6), `AtlasV2ContractTest` (8) y safety test actualizado; build local
+    **1433 tests / 0 fallos / 15 skips**.
 - [ ] **T13 — Plantillas en standalone (REQ-PROD-6)**
   - Galería por categorías + QPT con página/orientación.
 
