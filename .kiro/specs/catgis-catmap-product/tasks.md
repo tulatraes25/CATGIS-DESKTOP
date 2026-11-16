@@ -484,6 +484,15 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     el CI vuelva (OSGeo caido); no se declara verificacion runtime.
 - [ ] **T33 — Empaquetado y launcher CATMAP independiente (REQ-PROD-0)**
   - App image propio, iconos, splash, actualización de `build.gradle` y docs.
+  - Progreso (2026-11-16): el launcher CATMAP ya existia para Windows
+    (`--add-launcher` con `catmap-launcher.properties`); se agrego al app-image
+    Linux (`generateLinuxInstallerAssets` genera las properties,
+    `packageLinuxAppImage` usa `--add-launcher CATMAP=...` y
+    `verifyLinuxAppImage` exige `bin/CATMAP` ejecutable). Nueva guia
+    `docs/CATMAP_STANDALONE.md` (launcher propio, flujo sin CATGIS, formatos,
+    capacidades P4, requisitos y comandos). Iconos compartidos con CATGIS;
+    splash propio pendiente. Verificacion real del app-image pendiente de CI
+    Linux (OSGeo caido); no se declara empaquetado certificado.
 
 ## Dependencias
 
