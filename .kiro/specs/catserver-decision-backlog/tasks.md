@@ -13,6 +13,11 @@ exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
 
 ## Pending
 
+> Fichas de decisión preparadas (2026-11-16):
+> `docs/quality/SQL_DECISION_RECORDS_20261116.md` con opciones, recomendación,
+> impacto y criterios de aceptación para DC-6/DC-7/DC-8. T2–T4 siguen
+> bloqueadas hasta que el owner registre la decisión en esta spec.
+
 - [ ] **T1 — DC-5: producer for `catastro.ejido_urbano_mask`**
   - Needs: authoritative source (survey export, CAD/DWG pipeline or GIS service)
     and the role that runs the publisher.
