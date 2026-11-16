@@ -1194,7 +1194,7 @@ public class Main {
             return;
         }
         try {
-            CatmapSerializer.save(layoutModel, currentFile);
+            CatmapDocumentIO.save(layoutModel, currentFile);
             statusLabel.setText("Layout guardado: " + currentFile.getName());
         } catch (Exception ex) {
             NotificationManager.error(mainFrame,
@@ -1212,7 +1212,7 @@ public class Main {
                 file = new File(file.getAbsolutePath() + ".catmap");
             }
             try {
-                CatmapSerializer.save(layoutModel, file);
+                CatmapDocumentIO.save(layoutModel, file);
                 currentFile = file;
                 mainFrame.setTitle("CATMAP - " + file.getName());
                 statusLabel.setText("Layout guardado: " + file.getName());
@@ -1661,7 +1661,7 @@ public class Main {
 
     private static void loadLayoutFile(File file) {
         try {
-            layoutModel = CatmapSerializer.load(file);
+            layoutModel = CatmapDocumentIO.load(file);
             currentFile = file;
             mainFrame.setTitle("CATMAP - " + file.getName());
             installPreviewForActiveModel();

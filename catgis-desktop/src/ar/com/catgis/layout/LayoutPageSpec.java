@@ -57,6 +57,22 @@ public final class LayoutPageSpec {
                 orientation, 0, 0, 0, 0);
     }
 
+    /**
+     * Build the closest spec for a stored portrait sheet size: a standard preset
+     * when the millimetres match it, otherwise a custom sheet.
+     */
+    public static LayoutPageSpec fromPortraitDimensions(double portraitWidthMm,
+                                                        double portraitHeightMm,
+                                                        PageOrientation orientation) {
+        for (PageSizePreset preset : PageSizePreset.values()) {
+            if (Math.abs(preset.widthMm - portraitWidthMm) <= 0.01
+                    && Math.abs(preset.heightMm - portraitHeightMm) <= 0.01) {
+                return preset(preset, orientation);
+            }
+        }
+        return custom(portraitWidthMm, portraitHeightMm, orientation);
+    }
+
     public static LayoutPageSpec custom(double widthMm, double heightMm,
                                         PageOrientation orientation) {
         return custom(widthMm, heightMm, orientation, 0, 0, 0, 0);

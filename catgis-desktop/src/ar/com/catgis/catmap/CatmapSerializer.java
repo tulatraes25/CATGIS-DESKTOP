@@ -485,6 +485,14 @@ public final class CatmapSerializer {
             sb.append("|FRAME_COLOR=").append(colorToHex(map.getFrameColor()));
             sb.append("|FRAME_WIDTH=").append(map.getFrameWidth());
             sb.append("|ASSIGNED_LAYERS=").append(encodeText(String.join(";", map.getAssignedLayerKeys())));
+            sb.append("|GRID_COLS=").append(map.getGridCols());
+            sb.append("|GRID_ROWS=").append(map.getGridRows());
+            sb.append("|GRID_BY_DISTANCE=").append(map.isGridByDistance());
+            sb.append("|GRID_INTERVAL_X=").append(map.getGridIntervalX());
+            sb.append("|GRID_INTERVAL_Y=").append(map.getGridIntervalY());
+            sb.append("|GRID_UNIT=").append(encodeText(map.getGridUnit()));
+            sb.append("|GRID_COLOR=").append(colorToHex(map.getGridColor()));
+            sb.append("|TARGET_SCALE=").append(map.getTargetScaleDenominator());
             sb.append("|OWN_EXTENT=").append(map.isOwnExtent());
             if (map.isOwnExtent()) {
                 sb.append("|VIEW_MIN_X=").append(map.getOwnViewMinX());
@@ -494,7 +502,10 @@ public final class CatmapSerializer {
         } else if (el instanceof LayoutLegend legend) {
             sb.append("|AUTO_HEIGHT=").append(legend.isAutoHeight());
             sb.append("|SHOW_BACKGROUND=").append(legend.isShowBackground());
+            sb.append("|SHOW_BORDER=").append(legend.isShowBorder());
             sb.append("|TITLE=").append(encodeText(legend.getTitle()));
+            sb.append("|TITLE_FONT_SIZE=").append(legend.getTitleFont().getSize2D());
+            sb.append("|ITEM_FONT_SIZE=").append(legend.getItemFont().getSize2D());
         } else if (el instanceof LayoutScaleBar scale) {
             sb.append("|SCALE_DENOMINATOR=").append(scale.getMapScaleDenominator());
             sb.append("|SEGMENTS=").append(scale.getSegments());
@@ -691,6 +702,54 @@ public final class CatmapSerializer {
             } else if (part.startsWith("OWN_EXTENT=")) {
                 if (element instanceof LayoutMap map) {
                     map.setOwnExtent(parseBoolean(part.substring(11)));
+                }
+            } else if (part.startsWith("GRID_COLS=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridCols(parseInt(part.substring(10)));
+                }
+            } else if (part.startsWith("GRID_ROWS=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridRows(parseInt(part.substring(10)));
+                }
+            } else if (part.startsWith("GRID_BY_DISTANCE=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridByDistance(parseBoolean(part.substring(17)));
+                }
+            } else if (part.startsWith("GRID_INTERVAL_X=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridIntervalX(parseDouble(part.substring(16)));
+                }
+            } else if (part.startsWith("GRID_INTERVAL_Y=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridIntervalY(parseDouble(part.substring(16)));
+                }
+            } else if (part.startsWith("GRID_UNIT=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridUnit(decodeText(part.substring(10)));
+                }
+            } else if (part.startsWith("GRID_COLOR=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setGridColor(parseColor(part.substring(11)));
+                }
+            } else if (part.startsWith("TARGET_SCALE=")) {
+                if (element instanceof LayoutMap map) {
+                    map.setTargetScaleDenominator(parseDouble(part.substring(13)));
+                }
+            } else if (part.startsWith("SHOW_BORDER=")) {
+                if (element instanceof LayoutLegend legend) {
+                    legend.setShowBorder(parseBoolean(part.substring(12)));
+                }
+            } else if (part.startsWith("TITLE_FONT_SIZE=")) {
+                if (element instanceof LayoutLegend legend) {
+                    int size = parseInt(part.substring(16));
+                    legend.setTitleFont(new Font(legend.getTitleFont().getFamily(),
+                            legend.getTitleFont().getStyle(), size));
+                }
+            } else if (part.startsWith("ITEM_FONT_SIZE=")) {
+                if (element instanceof LayoutLegend legend) {
+                    int size = parseInt(part.substring(15));
+                    legend.setItemFont(new Font(legend.getItemFont().getFamily(),
+                            legend.getItemFont().getStyle(), size));
                 }
             } else if (part.startsWith("VIEW_MIN_X=")) {
                 if (element instanceof LayoutMap map) {
