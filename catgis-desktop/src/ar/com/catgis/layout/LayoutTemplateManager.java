@@ -31,8 +31,8 @@ public class LayoutTemplateManager {
         java.util.List<LayoutElement> rm = new java.util.ArrayList<>(model.getElements());
         for (LayoutElement e : rm) model.removeElement(e.getId());
         internalApply(key, model);
-        ar.com.catgis.core.model.Project p = ar.com.catgis.AppContext.get().getProject();
-        if (p == null) p = ar.com.catgis.AppContext.project();
+        ar.com.catgis.core.model.Project p = LayoutRenderHosts.get().project();
+        if (p == null) p = LayoutRenderHosts.get().project();
         // Auto-populate legend from project layers
         for (LayoutElement el : model.getElements()) {
             if (el instanceof LayoutMap) {
@@ -81,7 +81,7 @@ public class LayoutTemplateManager {
 
     private static String resolveType(ar.com.catgis.core.model.Layer l) {
         try {
-            ar.com.catgis.MapPanel mp = ar.com.catgis.AppContext.mapPanel();
+            ar.com.catgis.MapPanel mp = LayoutRenderHosts.get().mapPanel();
             if (mp != null) {
                 ar.com.catgis.data.vector.ShapefileData d = mp.getShapefileData(l);
                 if (d != null) { String f = ar.com.catgis.data.vector.VectorLayerUtils.resolveGeometryFamily(d); if (f != null) return f; }

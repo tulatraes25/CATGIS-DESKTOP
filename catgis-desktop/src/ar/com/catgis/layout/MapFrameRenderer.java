@@ -86,7 +86,7 @@ public class MapFrameRenderer {
     public BufferedImage render(int widthPx, int heightPx, int dpi) {
         if (widthPx < 10 || heightPx < 10) return null;
 
-        Project project = AppContext.project();
+        Project project = LayoutRenderHosts.get().project();
         if (project == null) return null;
 
         // Check if there are online/raster layers — MapFrameRenderer only handles vectors.
@@ -103,7 +103,7 @@ public class MapFrameRenderer {
         }
         if (hasOnlineOrRaster) {
             // Try to delegate to MapPanel (works in standalone and integrated mode)
-            ar.com.catgis.MapPanel map = ar.com.catgis.AppContext.mapPanel();
+            ar.com.catgis.MapPanel map = LayoutRenderHosts.get().mapPanel();
             if (map != null) {
                 double vpWidth = Math.max(viewport.getWidth(), 1);
                 final double zoomFactor = (double) widthPx / vpWidth;
@@ -560,7 +560,7 @@ public class MapFrameRenderer {
     }
 
     private ShapefileData getShapefileData(Layer layer) {
-        MapPanel mapPanel = AppContext.mapPanel();
+        MapPanel mapPanel = LayoutRenderHosts.get().mapPanel();
         ShapefileData data = mapPanel != null ? mapPanel.getShapefileData(layer) : null;
         if (data != null) {
             return data;
