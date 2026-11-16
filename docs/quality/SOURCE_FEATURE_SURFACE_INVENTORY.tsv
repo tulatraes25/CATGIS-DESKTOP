@@ -150,6 +150,7 @@ SERVICE	catmap/LayoutExportService.java
 SERVICE	catmap/print/LayoutPrintService.java
 SERVICE	catmap/TemplateApplicationService.java
 EXPORT_SURFACE	catmap/SvgVectorExporter.java
+EXPORT_SURFACE	catmap/PdfVectorExporter.java
 SERVICE	analysis/vector/GeoprocessingService.java
 SERVICE	BooleanRiskService.java
 SERVICE	climate/ClimateOnlineDownloadService.java
