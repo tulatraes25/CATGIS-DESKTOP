@@ -56,6 +56,11 @@ class CatmapVisualTest {
         BufferedImage actual = LayoutExportEngine.renderLayout(model, DPI);
         assertNotNull(actual);
 
+        if (System.getenv("CATGIS_GOLDEN_UPDATE") != null) {
+            GoldenImageAssert.saveGoldenImage(actual, java.nio.file.Path.of(
+                    "src/test/resources/ar/com/catgis/catmap/golden/" + GOLDEN));
+            return;
+        }
         BufferedImage expected = GoldenImageAssert.loadGoldenImage(
                 "ar/com/catgis/catmap/golden/" + GOLDEN);
         // Independent macOS Intel and Apple Silicon runners BOTH measured a
