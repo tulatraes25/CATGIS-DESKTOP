@@ -1314,11 +1314,12 @@ public class Main {
             }
             statusLabel.setText("Exportando PDF...");
             try {
-                LayoutExportEngine.exportPdf(layoutModel, file, exportResolution);
-                statusLabel.setText("PDF exportado: " + file.getName());
+                PdfVectorExporter.export(layoutModel, file);
+                statusLabel.setText("PDF vectorial exportado: " + file.getName());
                 NotificationManager.info(mainFrame,
                         "Exportar PDF",
-                        "PDF exportado correctamente:\n" + file.getAbsolutePath());
+                        "PDF vectorial exportado (texto y formas editables; el mapa va como imagen).\nArchivo: "
+                                + file.getAbsolutePath());
             } catch (Exception ex) {
                 NotificationManager.error(mainFrame,
                         "Error",
