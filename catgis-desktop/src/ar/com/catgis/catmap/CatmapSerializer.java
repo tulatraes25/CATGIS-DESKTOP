@@ -555,6 +555,9 @@ public final class CatmapSerializer {
             sb.append("|TITLE=").append(encodeText(legend.getTitle()));
             sb.append("|TITLE_FONT_SIZE=").append(legend.getTitleFont().getSize2D());
             sb.append("|ITEM_FONT_SIZE=").append(legend.getItemFont().getSize2D());
+            for (LayoutLegend.LegendItem item : legend.getItems()) {
+                sb.append("|LEGEND_ITEM=").append(encodeLegendItem(item));
+            }
         } else if (el instanceof LayoutScaleBar scale) {
             sb.append("|SCALE_DENOMINATOR=").append(scale.getMapScaleDenominator());
             sb.append("|SEGMENTS=").append(scale.getSegments());
@@ -564,6 +567,14 @@ public final class CatmapSerializer {
             for (var entry : cartouche.getFields().entrySet()) {
                 sb.append("|FIELD_").append(entry.getKey()).append("=").append(encodeText(entry.getValue()));
             }
+        } else if (el instanceof LayoutLine line) {
+            sb.append("|LINE_X1=").append(line.getX1Mm());
+            sb.append("|LINE_Y1=").append(line.getY1Mm());
+            sb.append("|LINE_X2=").append(line.getX2Mm());
+            sb.append("|LINE_Y2=").append(line.getY2Mm());
+            sb.append("|LINE_WIDTH=").append(line.getLineWidth());
+            sb.append("|LINE_DASHED=").append(line.isDashed());
+            sb.append("|COLOR=").append(colorToHex(line.getColor()));
         } else if (el instanceof LayoutImage image) {
             BufferedImage bi = image.getImage();
             if (bi != null) {
@@ -611,6 +622,33 @@ public final class CatmapSerializer {
         int height = java.nio.ByteBuffer.wrap(bytes, 20, 4).getInt();
         if (width <= 0 || height <= 0 || (long) width * height > MAX_EMBEDDED_IMAGE_PIXELS) {
             throw new IOException("CATMAP embedded PNG dimensions exceed safety limits.");
+        }
+    }
+
+    private static String encodeLegendItem(LayoutLegend.LegendItem item) {
+        String payload = item.label + "\u0000"
+                + colorToHex(item.color) + "\u0000"
+                + (item.geometryType == null ? "" : item.geometryType) + "\u0000"
+                + item.included;
+        return Base64.getEncoder().encodeToString(
+                payload.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static LayoutLegend.LegendItem decodeLegendItem(String encoded) {
+        try {
+            String payload = new String(Base64.getDecoder().decode(encoded),
+                    java.nio.charset.StandardCharsets.UTF_8);
+            String[] fields = payload.split("\u0000", -1);
+            if (fields.length < 4) {
+                return null;
+            }
+            LayoutLegend.LegendItem item = new LayoutLegend.LegendItem(
+                    fields[0], parseColor(fields[1]), fields[2]);
+            item.included = Boolean.parseBoolean(fields[3]);
+            return item;
+        } catch (Exception invalid) {
+            CatgisLogger.warn("CatmapSerializer: leyenda invalida", invalid);
+            return null;
         }
     }
 
@@ -673,7 +711,9 @@ public final class CatmapSerializer {
                 yield ellipse;
             }
             case "LayoutLine" -> {
-                LayoutLine ln = new LayoutLine(id, x, y, w, h);
+                // Legacy documents only stored bounds: approximate the diagonal;
+                // new documents carry LINE_* endpoints below.
+                LayoutLine ln = new LayoutLine(id, x, y, x + w, y + h);
                 yield ln;
             }
             case "LayoutImage" -> {
@@ -693,6 +733,11 @@ public final class CatmapSerializer {
         element.setZOrder(zOrder);
         element.setVisible(visible);
         element.setLocked(locked);
+
+        Double lineX1 = null;
+        Double lineY1 = null;
+        Double lineX2 = null;
+        Double lineY2 = null;
 
         // Parse type-specific properties
         for (int i = 11; i < parts.length; i++) {
@@ -719,6 +764,24 @@ public final class CatmapSerializer {
             } else if (part.startsWith("COLOR=")) {
                 if (element instanceof LayoutLabel label) {
                     label.setColor(parseColor(part.substring(6)));
+                } else if (element instanceof LayoutLine lineElement) {
+                    lineElement.setColor(parseColor(part.substring(6)));
+                }
+            } else if (part.startsWith("LINE_X1=")) {
+                lineX1 = parseDouble(part.substring(8));
+            } else if (part.startsWith("LINE_Y1=")) {
+                lineY1 = parseDouble(part.substring(8));
+            } else if (part.startsWith("LINE_X2=")) {
+                lineX2 = parseDouble(part.substring(8));
+            } else if (part.startsWith("LINE_Y2=")) {
+                lineY2 = parseDouble(part.substring(8));
+            } else if (part.startsWith("LINE_WIDTH=")) {
+                if (element instanceof LayoutLine lineElement) {
+                    lineElement.setLineWidth((float) parseDouble(part.substring(11)));
+                }
+            } else if (part.startsWith("LINE_DASHED=")) {
+                if (element instanceof LayoutLine lineElement) {
+                    lineElement.setDashed(parseBoolean(part.substring(12)));
                 }
             } else if (part.startsWith("SHOW_GRID=")) {
                 if (element instanceof LayoutMap map) {
@@ -790,13 +853,13 @@ public final class CatmapSerializer {
                 }
             } else if (part.startsWith("TITLE_FONT_SIZE=")) {
                 if (element instanceof LayoutLegend legend) {
-                    int size = parseInt(part.substring(16));
+                    int size = Math.max(1, (int) Math.round(parseDouble(part.substring(16))));
                     legend.setTitleFont(new Font(legend.getTitleFont().getFamily(),
                             legend.getTitleFont().getStyle(), size));
                 }
             } else if (part.startsWith("ITEM_FONT_SIZE=")) {
                 if (element instanceof LayoutLegend legend) {
-                    int size = parseInt(part.substring(15));
+                    int size = Math.max(1, (int) Math.round(parseDouble(part.substring(15))));
                     legend.setItemFont(new Font(legend.getItemFont().getFamily(),
                             legend.getItemFont().getStyle(), size));
                 }
@@ -823,6 +886,13 @@ public final class CatmapSerializer {
             } else if (part.startsWith("TITLE=")) {
                 if (element instanceof LayoutLegend legend) {
                     legend.setTitle(decodeText(part.substring(6)));
+                }
+            } else if (part.startsWith("LEGEND_ITEM=")) {
+                if (element instanceof LayoutLegend legend) {
+                    LayoutLegend.LegendItem item = decodeLegendItem(part.substring(12));
+                    if (item != null) {
+                        legend.getItems().add(item);
+                    }
                 }
             } else if (part.startsWith("SCALE_DENOMINATOR=")) {
                 if (element instanceof LayoutScaleBar scale) {
@@ -864,6 +934,12 @@ public final class CatmapSerializer {
                     }
                 }
             }
+        }
+
+        if (element instanceof LayoutLine lineElement
+                && lineX1 != null && lineY1 != null
+                && lineX2 != null && lineY2 != null) {
+            lineElement.setEndpoints(lineX1, lineY1, lineX2, lineY2);
         }
 
         return element;

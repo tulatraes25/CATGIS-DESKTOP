@@ -1,6 +1,6 @@
 # CATSERVER Decision Backlog — Tasks
 
-Status: ACTIVE (decision-gated; T1–T8 pending user decision)
+Status: ACTIVE (T2–T4 DECIDED 2026-11-16 option A; implementation pending GitHub CI; T1 still needs decision)
 Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)
 Origin: transferred from `.kiro/specs/repository-audit-remediation/` at its
 CLOSED_CERTIFIED closure (2026-11-15).
@@ -13,6 +13,11 @@ exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
 
 ## Pending
 
+> Fichas de decisión preparadas (2026-11-16):
+> `docs/quality/SQL_DECISION_RECORDS_20261116.md` con opciones, recomendación,
+> impacto y criterios de aceptación para DC-6/DC-7/DC-8. T2–T4 siguen
+> bloqueadas hasta que el owner registre la decisión en esta spec.
+
 - [ ] **T1 — DC-5: producer for `catastro.ejido_urbano_mask`**
   - Needs: authoritative source (survey export, CAD/DWG pipeline or GIS service)
     and the role that runs the publisher.
@@ -21,18 +26,25 @@ exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
   - Acceptance: REQ-AR-16.
 
 - [ ] **T2 — DC-6: canonical `circunscripcion_sector` object**
+  - **Decisión (2026-11-16, owner): A — vista canónica sobre la tabla cruda
+    renombrada.** Implementación pendiente de CI; plan en
+    `docs/quality/SQL_DECISION_RECORDS_20261116.md`.
   - Needs: table vs view decision (recommended: view canonical, raw table renamed).
   - Deliverable: `sql/04`/`sql/18`/`sql/19`/catalog updated, full 00→21 sequence
     runs in the PostGIS job without collision.
   - Acceptance: REQ-AR-17.
 
 - [ ] **T3 — DC-7: single ownership/privilege model**
+  - **Decisión (2026-11-16, owner): A — rol DDL dueño + rol de import con GRANT
+    explícitos y ALTER DEFAULT PRIVILEGES.** Implementación pendiente de CI.
   - Needs: DDL role and import role decided; default-privilege targets confirmed.
   - Deliverable: `sql/02`/`sql/12`/`sql/19` aligned, CI role provisioning
     documented, PostGIS test proving defaults apply to a newly created table.
   - Acceptance: REQ-AR-18.
 
 - [ ] **T4 — DC-8: destructive-path policy**
+  - **Decisión (2026-11-16, owner): A — stage+swap obligatorio en reescrituras y
+    `--allow-destructive` sólo para borrados.** Implementación pendiente de CI.
   - Needs: policy for overwrite/delete per script (stage+swap vs explicit flag).
   - Deliverable: shared guard/parameter in `scripts/07/10/12/14/16`, docs updated,
     static contract in the safety job.

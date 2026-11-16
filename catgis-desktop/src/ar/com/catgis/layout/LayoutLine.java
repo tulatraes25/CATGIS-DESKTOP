@@ -31,6 +31,10 @@ public class LayoutLine implements LayoutElement {
     }
 
     public void setEndpoints(double x1, double y1, double x2, double y2) { x1Mm=x1; y1Mm=y1; x2Mm=x2; y2Mm=y2; updateBounds(); }
+    public double getX1Mm() { return x1Mm; }
+    public double getY1Mm() { return y1Mm; }
+    public double getX2Mm() { return x2Mm; }
+    public double getY2Mm() { return y2Mm; }
     public Color getColor() { return color; }
     public void setColor(Color c) { if (c != null) color = c; }
     public float getLineWidth() { return lineWidth; }

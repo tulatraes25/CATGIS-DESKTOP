@@ -440,6 +440,11 @@ tasks.register('generateLinuxInstallerAssets') {
         if (!ImageIO.write(createBrandIconImage(256), 'png', iconFile)) {
             throw new GradleException('No PNG writer available for CATGIS Linux icon.')
         }
+        // CATMAP standalone launcher (same Linux app-image, independent entry).
+        new File(resourcesDir, 'catmap-launcher.properties').text = """
+app-name=CATMAP Standalone
+main-class=ar.com.catgis.catmap.Main
+""".stripIndent().trim()
     }
 }
 
@@ -469,12 +474,16 @@ tasks.register('packageLinuxAppImage') {
         File jpackageExe = new File(javaHomeProvider.get(), 'bin/jpackage')
         File mainJar = new File(inputDir, "${project.name}-${version}.jar")
         File iconFile = new File(resourcesDir, 'catgis-desktop.png')
+        File catmapLauncher = new File(resourcesDir, 'catmap-launcher.properties')
 
         if (!jpackageExe.isFile()) {
             throw new GradleException("Linux jpackage was not found in ${jpackageExe.absolutePath}")
         }
         if (!mainJar.isFile() || !iconFile.isFile()) {
             throw new GradleException('CATGIS Linux input main JAR or PNG icon is missing.')
+        }
+        if (!catmapLauncher.isFile()) {
+            throw new GradleException('CATMAP standalone launcher properties are missing.')
         }
 
         delete outputDir
@@ -487,6 +496,7 @@ tasks.register('packageLinuxAppImage') {
                 '--name', installerDisplayName,
                 '--main-jar', mainJar.name,
                 '--main-class', 'ar.com.catgis.Main',
+                '--add-launcher', "CATMAP=${catmapLauncher.absolutePath}",
                 '--app-version', installerVersion,
                 '--vendor', installerVendor,
                 '--description', installerDescription,
@@ -511,10 +521,14 @@ tasks.register('verifyLinuxAppImage') {
         File imageDir = new File(layout.buildDirectory.dir('installer/linux/app-image')
                 .get().asFile, installerDisplayName)
         File launcher = new File(imageDir, "bin/${installerDisplayName}")
+        File catmapLauncher = new File(imageDir, 'bin/CATMAP')
         File runtimeJava = new File(imageDir, 'lib/runtime/bin/java')
         File mainJar = new File(imageDir, "lib/app/${project.name}-${version}.jar")
         if (!launcher.isFile() || !launcher.canExecute()) {
             throw new GradleException("Linux CATGIS launcher missing or not executable: ${launcher}")
+        }
+        if (!catmapLauncher.isFile() || !catmapLauncher.canExecute()) {
+            throw new GradleException("Linux CATMAP standalone launcher missing: ${catmapLauncher}")
         }
         if (!runtimeJava.isFile() || !runtimeJava.canExecute()) {
             throw new GradleException("Bundled Linux Java runtime missing: ${runtimeJava}")
@@ -1233,4 +1247,13 @@ void writeLeInt(ByteArrayOutputStream out, int value) {
     out.write((value >> 8) & 0xFF)
     out.write((value >> 16) & 0xFF)
     out.write((value >> 24) & 0xFF)
+}
+
+// T32: UI snapshot harness (run under xvfb-run in Actions; no runtime claim).
+tasks.register('uiSnapshot', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'ar.com.catgis.catmap.UiSnapshotHarness'
+    systemProperty 'java.awt.headless', 'false'
+    args = ['build/ui-snapshots']
 }

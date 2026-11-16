@@ -130,6 +130,23 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
 - [ ] **A0.5 — Architecture debt burn-down**
   - Zero unresolved CRITICAL/HIGH architecture findings.
+  - Progreso (2026-11-16): los dos hallazgos de fuente de
+    `a0-critical-gate-evidence-20261017.md` estan corregidos: CRS
+    `sourceCRS=EPSG:4326` por defecto en `.fgb`/`.las` **fail-closed**, y el
+    prefijo silencioso de LAS reemplazado por **rechazo con procedencia
+    completa** (`requireCompleteLasDataset`, conteo igual al declarado y
+    "N/N puntos completos"; el LiDAR grande queda como limitacion documentada,
+    no como exito parcial). Detalle en
+    `a0-critical-gate-evidence-20261116.md`.
+  - Evidencia original de CRS: `.fgb`/`.las` **corregido y fail-closed** en
+    `LayerVectorDataSupport`
+    (CRS verificado del header FlatGeobuf, CRS declarado obligatorio para
+    LAS/LAZ, sin inventar WGS84) con contratos
+    `FlatGeobufCrsFailClosedContractTest`, `LasHeaderIntegrityContractTest`,
+    `LasSourceCrsProjectRoundTripContractTest` y
+    `OpenFileFlatGeobufCrsContractTest` verdes en local. Evidencia:
+    `a0-critical-gate-evidence-20261116.md`. A0.5 sigue **NOT_CERTIFIED** hasta
+    revisar el resto de hallazgos y certificar el SHA exacto en GitHub.
 - [ ] **A0.6 — Full Linux + Windows regression on architecture candidate**
   - Exact SHA, all GitHub blocking jobs green.
 - [ ] **A0.7 — Declare ARCHITECTURE_STATUS=CLOSED_CERTIFIED**
