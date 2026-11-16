@@ -43,6 +43,7 @@ public class Main {
             String projectPath = null;
             String layoutPath = null;
             String importTablePath = null;
+            String quickDataPath = null;
 
             // Parse arguments
             for (int i = 0; i < args.length; i++) {
@@ -56,6 +57,8 @@ public class Main {
                     projectPath = args[i];
                 } else if (args[i].endsWith(".catmap")) {
                     layoutPath = args[i];
+                } else if ("--open".equals(args[i]) && i + 1 < args.length) {
+                    quickDataPath = args[++i];
                 }
             }
 
@@ -78,6 +81,11 @@ public class Main {
                 syncFromCatgis();
             } else {
                 statusLabel.setText("CATMAP Standalone (sin conexión a CATGIS)");
+            }
+
+            // Quick map: open a data file without a previous project
+            if (quickDataPath != null) {
+                openQuickDataFile(new File(quickDataPath), null);
             }
 
             // Load layout if specified
@@ -139,6 +147,7 @@ public class Main {
         addMenuItem(menuArchivo, "Nuevo layout", KeyEvent.VK_N, e -> newLayout());
         addMenuItem(menuArchivo, "Abrir layout...", KeyEvent.VK_O, e -> openLayout());
         addMenuItem(menuArchivo, "Abrir proyecto .catgis...", 0, e -> openProject());
+        addMenuItem(menuArchivo, "Abrir datos...", 0, e -> openQuickData());
         menuArchivo.addSeparator();
         addMenuItem(menuArchivo, "Guardar", KeyEvent.VK_S, e -> saveLayout());
         addMenuItem(menuArchivo, "Guardar como...", 0, e -> saveLayoutAs());
@@ -1241,6 +1250,50 @@ public class Main {
         }
     }
 
+    /** Quick map: choose a data file and open it without a previous project. */
+    private static void openQuickData() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "Datos (*.shp, *.geojson, *.json, *.kml, *.kmz, *.gpkg, *.fgb, *.gpx, "
+                        + "*.tif, *.tiff, *.png, *.jpg, *.csv)",
+                "shp", "geojson", "json", "kml", "kmz", "gpkg", "fgb", "gpx",
+                "tif", "tiff", "png", "jpg", "jpeg", "csv"));
+        if (chooser.showOpenDialog(mainFrame) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = chooser.getSelectedFile();
+        String csvCrs = null;
+        if (file.getName().toLowerCase(Locale.ROOT).endsWith(".csv")) {
+            Object chosen = JOptionPane.showInputDialog(mainFrame,
+                    "CRS de las coordenadas X/Y del CSV:", "Abrir datos CSV",
+                    JOptionPane.QUESTION_MESSAGE, null,
+                    new String[]{"EPSG:4326", "EPSG:3857", "EPSG:32719", "EPSG:32720",
+                            "EPSG:22181", "EPSG:5347"},
+                    "EPSG:4326");
+            if (chosen == null) {
+                return;
+            }
+            csvCrs = chosen.toString();
+        }
+        openQuickDataFile(file, csvCrs);
+    }
+
+    private static void openQuickDataFile(File file, String csvCrs) {
+        statusLabel.setText("Abriendo datos: " + file.getName() + "...");
+        try {
+            if (QuickMapService.open(file, mainFrame, csvCrs)) {
+                statusLabel.setText("Datos cargados: " + file.getName());
+                refreshMap();
+            } else {
+                statusLabel.setText("No se pudieron cargar los datos");
+            }
+        } catch (Exception ex) {
+            NotificationManager.error(mainFrame,
+                    "Abrir datos",
+                    "Error al abrir los datos:\n" + ex.getMessage());
+            statusLabel.setText("Error al abrir datos");
+        }
+    }
     private static void openProject() {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new FileNameExtensionFilter("CATGIS Project (*.catgis)", "catgis"));

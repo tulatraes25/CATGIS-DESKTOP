@@ -216,9 +216,22 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 
 ## Fase P3 — Datos del usuario (local-first)
 
-- [ ] **T14 — Mapa rápido en CATMAP (REQ-PROD-1.1)**
+- [x] **T14 — Mapa rápido en CATMAP (REQ-PROD-1.1)**
   - Abrir SHP/GeoJSON/KML/KMZ/GeoPackage/GeoTIFF/CSV sin proyecto previo, CRS
     explícito y fallo cerrado.
+  - Evidence (2026-11-16): `catmap/QuickMapService` acepta SHP/GeoJSON/KML/KMZ/
+    GeoPackage/SpatiaLite/FGB/GPX/DXF/DWG/Parquet/GeoParquet, GeoTIFF y rasters
+    (TIFF/PNG/JPG/BMP/GIF/IMG), NetCDF/GRIB y CSV; los formatos vectoriales y
+    raster reutilizan el flujo endurecido `OpenFileAction` (CRS del formato,
+    fallo cerrado); el CSV se convierte en capa de puntos con
+    `CsvTableReader` + `TablePointLayerBuilder`, detectando columnas X/Y
+    (x/lon/longitud/este y y/lat/latitud/norte) y **exigiendo CRS explícito**
+    salvo columnas lat/lon (EPSG:4326), creando el proyecto mínimo "Mapa rápido"
+    e instalando capa en AppContext/MapPanel. UI "Archivo → Abrir datos…" con
+    selector que pide CRS para CSV, y arranque `--open <archivo>`. Inventarios
+    actualizados (`SERVICE QuickMapService`, comando suplementario
+    `SEM-CATMAP-QUICKMAP`). Tests `QuickMapServiceContractTest` (6); build local
+    **1482 tests / 0 fallos / 15 skips**.
 - [ ] **T15 — Servicios OGC y PostGIS opcional (REQ-PROD-1.2)**
   - WFS/WMS/WMTS y PostGIS conectables desde standalone; PostGIS sigue opcional.
 - [ ] **T16 — Workspace de datos (REQ-PROD-10 parcial)**
