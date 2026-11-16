@@ -81,8 +81,10 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     DPI); leyenda/tabla/cartouche/graticule ya escalaban con `dpi/72` y quedan
     consistentes. Contrato `LayoutTextDpiParityContractTest`: el ancho/alto de
     tinta del texto escala 2× entre 96 y 192 DPI (paridad física preview/export),
-    y `RenderMetricsContractTest` (4). Los goldens existentes pasan con su
-    tolerancia declarada; tras la revisión visual se regeneraron de forma
+    y `RenderMetricsContractTest` (4). Tras la revisión visual se regeneraron de
+    forma intencional las baselines `label`, `scalebar`, `pipeline`,
+    `pipeline-map` y `catmap-real-data` (el texto pasó a su tamaño físico
+    correcto); la política de tolerancia por OS y el delta no cambiaron.
 - [x] **T6 — Escala derivada (REQ-PROD-5)**
   - `ScaleResolver` compartido; barra recalculada en pan/zoom y export.
   - Evidence (2026-11-16): `layout/ScaleResolver` deriva el denominador del
