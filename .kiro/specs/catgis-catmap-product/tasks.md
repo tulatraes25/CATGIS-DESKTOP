@@ -313,8 +313,19 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 - [ ] **T22 — Perfil completo (REQ-PROD-8.6)**
   - Pendiente del perfil, curva hipsométrica, perfil 3D.
 - [ ] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
-- [ ] **T24 — Interpolación desde puntos (REQ-PROD-8.8)**
+- [x] **T24 — Interpolación desde puntos (REQ-PROD-8.8)**
   - IDW propio; evaluar kriging con dependencia verificable.
+  - Evidence (2026-11-16): `catmap/IdwInterpolator` implementa IDW propio
+    (muestras finitas, potencia, vecinos máximos y radio de búsqueda
+    configurables, sin dependencia externa) sobre la grilla `AnalysisRaster`
+    float con NoData, límite de `4.000.000` celdas y CRS explícito; las celdas
+    sin muestras en el radio quedan NoData y un nodo exacto conserva su valor.
+    `describe(...)` reporta parámetros para trazabilidad. Kriging: se evaluó y
+    **no se incorpora** porque requeriría una dependencia externa con licencia y
+    estabilidad verificables; IDW cubre el requisito y la decisión queda
+    registrada. Tests `IdwInterpolatorContractTest` (6: plano conocido con error
+    acotado, nodos exactos, huecos por radio, validaciones, GeoTIFF de ida y
+    vuelta, descripción); build local **1513 tests / 0 fallos / 15 skips**.
 - [ ] **T25 — Riesgo e inundación calibrados (REQ-PROD-9)**
   - Quitar 30 m/111320; clases de susceptibilidad, exposición, parámetros
     persistidos; `WILDFIRE` implementado o retirado; periodo de retorno
