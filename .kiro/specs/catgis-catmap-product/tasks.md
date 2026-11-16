@@ -476,6 +476,12 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 - [ ] **T32 — Verificación runtime cuando A0.7 lo permita (REQ-PROD-12.3)**
   - Snapshot de UI en Actions/Xvfb y/o Codespaces; sin claims hasta que A0.7/F3
     estén certificados.
+  - Progreso (2026-11-16): harness `catmap/UiSnapshotHarness` listo (crea la
+    ventana real de CATMAP standalone, la pinta a PNG, no hace claims y sale
+    `UI_SNAPSHOT_SKIP` en headless), tarea Gradle `uiSnapshot` y workflow manual
+    `.github/workflows/ui-snapshot.yml` con `xvfb-run` que sube el artefacto.
+    Contrato `UiSnapshotHarnessContractTest` (2). Ejecucion real pendiente de que
+    el CI vuelva (OSGeo caido); no se declara verificacion runtime.
 - [ ] **T33 — Empaquetado y launcher CATMAP independiente (REQ-PROD-0)**
   - App image propio, iconos, splash, actualización de `build.gradle` y docs.
 
