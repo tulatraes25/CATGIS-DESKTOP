@@ -324,7 +324,18 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     skips**. Inventario surface/semántico/matriz actualizado con el diálogo.
 - [ ] **T22 — Perfil completo (REQ-PROD-8.6)**
   - Pendiente del perfil, curva hipsométrica, perfil 3D.
-- [ ] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
+- [x] **T23 — Volumen/corte-relleno (REQ-PROD-8.7)**
+  - Evidence (2026-11-16): `catmap/VolumeCalculator` calcula corte/relleno sobre
+    `AnalysisRaster` float: `againstPlane` (DEM contra cota de referencia) y
+    `between` (DEM existente vs propuesto) con `VolumeResult` (celdas válidas,
+    área m², corte m³, relleno m³, neto, mínimo/máximo/media del delta); las
+    celdas NoData se excluyen y los rasters deben compartir grilla, extensión y
+    CRS (tolerancia relativa). `differenceRaster` produce el raster de diferencia
+    de elevación exportable a GeoTIFF/ASCII con NoData preservado. Tests
+    `VolumeCalculatorContractTest` (5: corte exacto contra plano, neto entre DEMs
+    y signo invertido, exclusión de NoData, raster de diferencia con NoData y
+    validaciones de geometría/entradas); build local **1522 tests / 0 fallos /
+    15 skips**. La integración visual (diálogo de volumen) queda para P5/T26+.
 - [x] **T24 — Interpolación desde puntos (REQ-PROD-8.8)**
   - IDW propio; evaluar kriging con dependencia verificable.
   - Evidence (2026-11-16): `catmap/IdwInterpolator` implementa IDW propio
