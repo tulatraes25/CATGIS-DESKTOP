@@ -382,8 +382,19 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
 - [ ] **T26 — Salida segura y notificaciones (REQ-PROD-10.1/10.2)**
   - Confirmación universal de cambios (incluye `catmap.Main`); toasts para carga
     masiva en lugar de N modales.
-- [ ] **T27 — Paleta de comandos (REQ-PROD-10.3)**
+- [x] **T27 — Paleta de comandos (REQ-PROD-10.3)**
   - Búsqueda por tarea sobre comandos registrados; integración con inventarios.
+  - Evidence (2026-11-16): `catmap/ui/CommandPaletteIndex` (modelo puro:
+    comandos con id/etiqueta/descripción/keywords/acción; búsqueda por tokens con
+    normalización de acentos y ranking etiqueta > keywords > descripción) y
+    `catmap/ui/CommandPaletteDialog` (búsqueda incremental, navegación con
+    flechas/Enter/ESC y ejecución de la acción). `catmap.Main` registra **18
+    comandos reales** (layout, proyecto, datos, guardar, páginas, plantillas,
+    atlas, exportaciones, impresión) y suma "Archivo → Buscar comando..." a los
+    inventarios (surface + semántico + suplementario) con baselines actualizados.
+    Tests `CommandPaletteIndexContractTest` (5: ranking, acentos/mayúsculas,
+    tareas por keywords, sin resultados y validaciones); build local **1538
+    tests / 0 fallos / 15 skips**.
 - [ ] **T28 — HiDPI y temas (REQ-PROD-10.4)**
 - [ ] **T29 — i18n honesta (REQ-PROD-10.5)**
   - Sin traducción automática parcial; completar inglés o retirar del selector;
