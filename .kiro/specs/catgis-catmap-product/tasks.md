@@ -19,6 +19,15 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     `AppContext` estático. Ciclo `layout`↔`catmap` resuelto con
     `LayoutElementCodec`.
   - Test: apertura de proyecto y render de página headless sin app principal.
+  - Progreso T1a (2026-11-16): **host de render entregado** — `layout/LayoutRenderHost`
+    (proyecto + mapPanel) y `layout/LayoutRenderHosts` con adaptador CATGIS por
+    defecto (comportamiento legado idéntico), `install/reset` para el host
+    standalone y tests; migradas **todas** las lecturas estáticas de `layout/`:
+    `LayoutLabel`, `LayoutMap`, `MapFrameRenderer`, `MapFrameViewport`,
+    `LayoutTemplateManager` y `LayoutContext`. Tests `LayoutRenderHostTest` (5);
+    build local **1400 tests / 0 fallos / 15 skips**. Falta T1b
+    (`CatmapAppContext`/`ProjectOpenService` y quitar la fábrica de estáticos de
+    `catmap.Main`) y T1c (codec del ciclo `layout`↔`catmap`).
 - [x] **T2 — Página como estado del documento (REQ-PROD-2)**
   - `LayoutPageSpec` (preset/CUSTOM mm, orientación, márgenes, DPI) en el modelo
     y en el serializador; migración de `.catmap` v1/v2.
