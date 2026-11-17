@@ -4,7 +4,7 @@ package ar.com.catgis;
 public final class AppVersion {
 
     /** Semantic version of the beta (X.Y.Z-beta.N). */
-    public static final String VERSION = "1.0.0-beta.1";
+    public static final String VERSION = "1.0.0-beta.2";
     /** Release channel shown in CLI and documentation. */
     public static final String CHANNEL = "beta";
     public static final String PRODUCT = "CATGIS Desktop";

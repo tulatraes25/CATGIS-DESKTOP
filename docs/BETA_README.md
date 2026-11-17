@@ -5,7 +5,7 @@ no declara GUI ni runtime nativo certificados.
 
 ## Descarga
 
-Pre-release: https://github.com/tulatraes25/CATGIS-DESKTOP/releases/tag/v1.0.0-beta.1
+Pre-release: https://github.com/tulatraes25/CATGIS-DESKTOP/releases/tag/v1.0.0-beta.2
 (Linux tar.gz, Windows zip, macOS Apple Silicon zip; sin firma).
 
 ## Requisitos

@@ -1,0 +1,74 @@
+name: F3 runtime smoke (manual, no GUI claim)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  packaged-runtime:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            package_task: verifyLinuxAppImage
+            launcher: build/installer/linux/app-image/CATGIS Desktop/bin/CATGIS Desktop
+            catmap: build/installer/linux/app-image/CATGIS Desktop/bin/CATMAP
+          - os: windows-latest
+            platform: windows
+            package_task: verifyWindowsAppImage
+            launcher: build/installer/windows/app-image/CATGIS Desktop/CATGIS Desktop.exe
+            catmap: build/installer/windows/app-image/CATGIS Desktop/CATMAP.exe
+          - os: macos-15
+            platform: macos-arm64
+            package_task: verifyMacAppImage
+            launcher: build/installer/macos/app-image/CATGIS Desktop.app/Contents/MacOS/CATGIS Desktop
+            catmap: build/installer/macos/app-image/CATGIS Desktop.app/Contents/MacOS/catmap
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build and verify packaged app-image
+        shell: bash
+        run: |
+          cd catgis-desktop
+          chmod +x gradlew || true
+          ./gradlew --no-daemon "${{ matrix.package_task }}"
+      - name: Packaged launcher --version/--self-test (headless)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd catgis-desktop
+          test -x "${{ matrix.launcher }}" || test -f "${{ matrix.launcher }}"
+          "${{ matrix.launcher }}" --version | tee version.txt
+          "${{ matrix.launcher }}" --self-test | tee selftest.txt
+          grep -F 'SELFTEST_OK' selftest.txt
+          test -x "${{ matrix.catmap }}" || test -f "${{ matrix.catmap }}"
+          "${{ matrix.catmap }}" --version | tee catmap-version.txt
+      - name: Record evidence
+        shell: bash
+        run: |
+          {
+            echo "### F3 runtime smoke — ${{ matrix.platform }}"
+            echo '```'
+            cat catgis-desktop/version.txt catgis-desktop/catmap-version.txt
+            tail -n 3 catgis-desktop/selftest.txt
+            echo '```'
+            echo '- Packaged launcher smoke only; interactive GUI remains NOT_CERTIFIED.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: f3-runtime-${{ matrix.platform }}
+          path: |
+            catgis-desktop/version.txt
+            catgis-desktop/catmap-version.txt
+            catgis-desktop/selftest.txt
+          if-no-files-found: error

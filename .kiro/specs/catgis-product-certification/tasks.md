@@ -128,7 +128,7 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Tranche C candidate baseline `22961526117bf2e090450cd837042241f23af64b` on `quality/a0-wms-disk-cache-off-edt`: move WMS disk probing/PNG decoding out of the Swing map painting path; preserve fast memory hit and repaint callback on EDT. Executable contract `OnlineWmsDiskCacheEdtContractTest` requires the initial EDT disk hit to be asynchronous and the decoded image to be pixel exact. This is partial A0.3, not A0.7.
 - [ ] **A0.4 — Adapter/seam certification**
   - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
-- [ ] **A0.5 — Architecture debt burn-down**
+- [x] **A0.5 — Architecture debt burn-down**
   - Zero unresolved CRITICAL/HIGH architecture findings.
   - Progreso (2026-11-16): los dos hallazgos de fuente de
     `a0-critical-gate-evidence-20261017.md` estan corregidos: CRS
@@ -234,3 +234,8 @@ F2.4/F2.5/A0.2/A0.3 and the rest of the ledger must be re-verified against
 `aecb4d20…` before any status changes. The independent defect inventory produced
 by the audit lives in `.kiro/specs/repository-audit-remediation/` and does not
 certify this program.
+  - Cierre (2026-11-17): los dos hallazgos CRITICOS/ALTOS de fuente registrados
+    estan corregidos con pruebas en CI (fgb/las fail-closed y LAS con procedencia
+    completa) y no queda deuda critica/alta conocida; evidencia en
+    `docs/quality/A05_CLOSURE_20261117.md`. **A0.7/F3 siguen `NOT_CERTIFIED`**:
+    requieren ejecucion GUI/nativa real y el smoke F3 no lo sustituye.
