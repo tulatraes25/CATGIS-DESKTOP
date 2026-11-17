@@ -26,3 +26,22 @@ Notas:
   iniciar (runner retirado); se corrigio a `macos-15` en PR #248.
 - Limitaciones declaradas: WMTS no soportado, splash simple, instaladores sin
   firma, T2–T4 SQL fuera de esta beta, A0.5/A0.7/F3 `NOT_CERTIFIED`.
+
+## Cierre de pendientes (2026-11-17)
+
+| PR | Tranche | Head exacto | Post-main | Attestation |
+|---|---|---|---|---|
+| #251 | WMTS real (T15) | `fcd52f0` | `a0afcd5` cert/identity/CI/GeoParquet SUCCESS (rerun por 429 externo) | SUCCESS (`44066024785`) |
+| #252 | Politicas SQL T2-T4 (DC-6/7/8) | `fdd805e` | `48b008a` cert/identity SUCCESS (PostGIS valido `_tests/dc6_*` y `_tests/dc7_*`) | SUCCESS (`44075755840`) |
+| #253 | Beta.2 + firma opcional + F3 smoke + A0.5 cerrado | `4562457` | `86cebe0` cert/identity/CI/GeoParquet SUCCESS | SUCCESS (`44080125892`) |
+
+- **F3 runtime smoke** (`f3-runtime-smoke.yml`, run `44080222592`): app-image
+  empaquetado + launcher `--version`/`--self-test` en Linux, Windows y macOS =
+  3/3 SUCCESS (evidencia runtime **sin claim GUI**; A0.7/F3 siguen
+  `NOT_CERTIFIED`).
+- **Beta.2 publicada**: `v1.0.0-beta.2` (run `44080227739`, 4/4 jobs SUCCESS)
+  con `linux.tar.gz`, `windows.zip`, `macos-arm64.zip` y sus `.sha256`.
+- **A0.5 cerrado** con evidencia (`docs/quality/A05_CLOSURE_20261117.md`).
+- **T2-T4 SQL implementados y certificados** (PostGIS + tests estaticos).
+- Firma/notarizacion: workflow listo, sin certificados configurados (artefactos
+  sin firma declarados).

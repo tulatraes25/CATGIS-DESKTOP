@@ -13,7 +13,7 @@
     `07/10/12/14/16`; stage+swap en reescrituras; contrato estático
     `DestructiveScriptPolicyTest`.
 
-- [ ] **S4 — Certificación**
+- [x] **S4 — Certificación**
   - PR/CI exactos, PostGIS Real Integration PASS, merge con expected head,
     post-main y attestation; evidencia en `docs/quality/` y en el backlog
     `catserver-decision-backlog`.
@@ -39,3 +39,7 @@
   tabla viva en transaccion; `DestructiveScriptPolicyTest` (4) lo verifica.
 - Validacion real pendiente del PR CI (PostGIS Real Integration + static tests);
   sin claim de bases reales fuera de CI.
+  - Evidence (2026-11-17): PR #252 (head `fdd805e`) con PostGIS Real
+    Integration PASS (`_tests/dc6_*`, `_tests/dc7_*`) y checks completos; merge
+    `48b008a` con Certification/CI/Runtime Identity/GeoParquet SUCCESS y
+    attestation `44075755840`. Sin claim de bases del operador fuera de CI.

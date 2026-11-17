@@ -66,3 +66,8 @@ Cada tarea se certifica con el mismo gate GitHub-first.
 - B2–B3 dependen de B1 (version/canal para About y splash).
 - B6 depende de B4 (notas) y B2 (launcher/splash).
 - B5 puede ir con B1 o B3; B7 cierra todo.
+  - Cierre extendido (2026-11-17): **v1.0.0-beta.2** publicada (run
+    `44080227739`) con WMTS, politicas SQL T2-T4 implementadas, checksums
+    `.sha256` y firma opcional documentada; **F3 runtime smoke** 3/3 SUCCESS
+    (`44080222592`) sobre app-images empaquetados (`--version`/`--self-test`).
+    A0.5 cerrado con evidencia; A0.7/F3 siguen `NOT_CERTIFIED` (sin claim GUI).
