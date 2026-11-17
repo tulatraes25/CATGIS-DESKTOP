@@ -88,10 +88,14 @@ class ArchitectureCertificationTest {
 
     @Test
     void productionDiagnosticsUseLoggerInsteadOfConsoleOrStackTrace() throws Exception {
+        // `--version`/`--self-test` are a documented CLI contract, not diagnostics:
+        // the single console surface is BetaCli; everything else must use CatgisLogger.
+        Set<String> cliConsoleSurface = Set.of("BetaCli.java");
         Set<String> offenders = new LinkedHashSet<>();
         offenders.addAll(filesContaining(PROD_ROOT, "System.out."));
         offenders.addAll(filesContaining(PROD_ROOT, "System.err."));
         offenders.addAll(filesContaining(PROD_ROOT, "printStackTrace("));
+        offenders.removeAll(cliConsoleSurface);
         assertTrue(offenders.isEmpty(), "Production diagnostics bypass CatgisLogger: " + offenders);
     }
 

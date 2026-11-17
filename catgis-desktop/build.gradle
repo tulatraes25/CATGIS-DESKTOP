@@ -28,7 +28,7 @@ plugins {
 }
 
 group = 'ar.com.catgis'
-version = '1.0'
+version = '1.0.0-beta.1'
 
 def javaVersionProperty = (findProperty('catgisJavaVersion') ?: '').toString().trim()
 def targetJavaVersion = javaVersionProperty.isInteger() ? javaVersionProperty.toInteger() : 17

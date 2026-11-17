@@ -6,10 +6,20 @@ import javax.swing.UIManager;
 public class Main {
 
     public static void main(String[] args) {
-        if (isCatmapStandaloneLaunch(args)) {
-            ar.com.catgis.catmap.Main.main(stripStandaloneFlag(args));
+        BetaCli.Options cli = BetaCli.parse(args);
+        if (cli.version()) {
+            BetaCli.printVersion(cli.catmapStandalone());
             return;
         }
+        if (cli.selfTest()) {
+            System.exit(BetaCli.printSelfTest());
+            return;
+        }
+        if (cli.catmapStandalone()) {
+            ar.com.catgis.catmap.Main.main(cli.remaining());
+            return;
+        }
+        args = cli.remaining();
 
         SwingUtilities.invokeLater(() -> {
             installLookAndFeel();
