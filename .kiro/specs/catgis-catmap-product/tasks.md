@@ -500,8 +500,16 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     **ejecutado con exito** (run `43960374643`, artefacto `catmap-ui-snapshot`)
     sobre `main` `9edac76`; contrato `UiSnapshotHarnessContractTest` (2). Se
     mantiene **sin claim** de GUI/runtime: A0.7/F3 siguen `NOT_CERTIFIED`.
-- [ ] **T33 — Empaquetado y launcher CATMAP independiente (REQ-PROD-0)**
+- [x] **T33 — Empaquetado y launcher CATMAP independiente (REQ-PROD-0)**
   - App image propio, iconos, splash, actualización de `build.gradle` y docs.
+  - Evidence certificada (2026-11-17): launcher CATMAP en app-image Linux
+    (`bin/CATMAP` con `--add-launcher`) y Windows/macOS (`--add-launcher`), iconos
+    de marca compartidos, **splash propio** `catmap/ui/CatmapSplash` (B2), guia
+    `docs/CATMAP_STANDALONE.md` y `build.gradle` en `1.0.0-beta.1`; CI
+    Linux/Windows/macOS App Image Package Contract PASS. Pre-release
+    `v1.0.0-beta.1` publicada con 3 artefactos (`release-beta.yml` run
+    `44003466861`) sobre `main` `ac82b3e`; bookkeeping final en `main` `5246dfb`
+    con Certification + Attestation SUCCESS.
   - Certificacion de empaquetado (2026-11-16): PR #241 (head `bf1408a`) con todos
     los checks PASS incluyendo Linux/Windows App Image Package Contract; `main`
     `9edac76` cert + attestation SUCCESS. Falta splash propio (T33 sigue parcial).

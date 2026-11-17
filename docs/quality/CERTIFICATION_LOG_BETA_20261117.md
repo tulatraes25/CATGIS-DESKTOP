@@ -8,6 +8,10 @@ Estado: tranches B1–B6 certificadas; B7 cierra con la pre-release verificada.
 | #246 | B2 splash + B3 menu Analisis + B4 docs + B5 smoke + B6 release workflow | `4999afe` | `5803ecb` cert/identity/CI/GeoParquet SUCCESS (cert rerun por HTTP 429 externo) | SUCCESS (`43996181703`) |
 | #247 | B7 log/workflow de pre-release | `136c1b9` | `e93dc47` cert/identity/CI/GeoParquet SUCCESS (rerun por timeout externo de Gradle) | SUCCESS (`43999907468`) |
 | #248 | fix runner macOS de pre-release | `713c860` | `ac82b3e` cert/identity/CI/GeoParquet SUCCESS | SUCCESS (`44003370669`) |
+| #249 | cierre documental B7 | `df35adb` | `5246dfb` cert/identity/CI/GeoParquet SUCCESS | SUCCESS (`44007483911`) |
+
+**Estado final de la beta (2026-11-17):** `main` `5246dfb`, 0 PRs abiertos,
+pre-release `v1.0.0-beta.1` con 3 artefactos, T33 cerrado en la spec de producto.
 
 Notas:
 
