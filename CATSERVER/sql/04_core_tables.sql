@@ -44,7 +44,25 @@ CREATE TABLE IF NOT EXISTS catastro.parcela (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS catastro.circunscripcion_sector (
+-- DC-6 (T2): la tabla canonica pasa a ser privada. Si una instalacion legada
+-- tiene una TABLA con el nombre canonico, se renombra antes de que el script 18
+-- cree la vista publica. Idempotente.
+DO $catgis_circ_sector_canonical$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'catastro'
+          AND c.relname = 'circunscripcion_sector'
+          AND c.relkind = 'r'
+    ) THEN
+        ALTER TABLE catastro.circunscripcion_sector RENAME TO circunscripcion_sector_raw;
+    END IF;
+END
+$catgis_circ_sector_canonical$;
+
+CREATE TABLE IF NOT EXISTS catastro.circunscripcion_sector_raw (
     circunscripcion_sector_id bigserial PRIMARY KEY,
     source_asset_id uuid REFERENCES admin.source_asset(source_asset_id),
     import_batch_id bigint REFERENCES admin.import_batch(import_batch_id),
@@ -108,7 +126,7 @@ CREATE TABLE IF NOT EXISTS hidrologia.drenaje (
 CREATE INDEX IF NOT EXISTS ejido_geom_gix ON catastro.ejido_municipal USING gist (geom);
 CREATE INDEX IF NOT EXISTS barrio_geom_gix ON catastro.barrio USING gist (geom);
 CREATE INDEX IF NOT EXISTS parcela_geom_gix ON catastro.parcela USING gist (geom);
-CREATE INDEX IF NOT EXISTS circ_sector_geom_gix ON catastro.circunscripcion_sector USING gist (geom);
+CREATE INDEX IF NOT EXISTS circ_sector_geom_gix ON catastro.circunscripcion_sector_raw USING gist (geom);
 CREATE INDEX IF NOT EXISTS zonificacion_geom_gix ON planeamiento.zonificacion_ordenanza USING gist (geom);
 CREATE INDEX IF NOT EXISTS linea_electrica_geom_gix ON infraestructura.linea_electrica USING gist (geom);
 CREATE INDEX IF NOT EXISTS reservorio_geom_gix ON infraestructura.reservorio USING gist (geom);
@@ -129,9 +147,9 @@ CREATE TRIGGER trg_parcela_updated_at
 BEFORE UPDATE ON catastro.parcela
 FOR EACH ROW EXECUTE FUNCTION admin.set_row_timestamp();
 
-DROP TRIGGER IF EXISTS trg_circ_sector_updated_at ON catastro.circunscripcion_sector;
+DROP TRIGGER IF EXISTS trg_circ_sector_updated_at ON catastro.circunscripcion_sector_raw;
 CREATE TRIGGER trg_circ_sector_updated_at
-BEFORE UPDATE ON catastro.circunscripcion_sector
+BEFORE UPDATE ON catastro.circunscripcion_sector_raw
 FOR EACH ROW EXECUTE FUNCTION admin.set_row_timestamp();
 
 DROP TRIGGER IF EXISTS trg_zonificacion_updated_at ON planeamiento.zonificacion_ordenanza;
@@ -182,13 +200,19 @@ SELECT
     sa.imported_table_name
 FROM admin.source_asset sa;
 
-GRANT SELECT ON catastro.ejido_municipal, catastro.barrio, catastro.parcela, catastro.circunscripcion_sector
+GRANT SELECT ON catastro.ejido_municipal, catastro.barrio, catastro.parcela
     TO catserver_admin, catserver_read, catserver_publish;
+
+-- DC-6: la tabla cruda es privada; la vista canonica se crea en 18.
+GRANT SELECT, INSERT, UPDATE, DELETE ON catastro.circunscripcion_sector_raw
+    TO catserver_admin, catserver_etl;
+GRANT USAGE, SELECT ON SEQUENCE catastro.circunscripcion_sector_raw_circunscripcion_sector_id_seq
+    TO catserver_admin, catserver_etl;
 
 GRANT SELECT ON planeamiento.zonificacion_ordenanza, infraestructura.linea_electrica, infraestructura.reservorio, hidrologia.drenaje
     TO catserver_admin, catserver_read, catserver_publish;
 
-GRANT INSERT, UPDATE, DELETE ON catastro.ejido_municipal, catastro.barrio, catastro.parcela, catastro.circunscripcion_sector
+GRANT INSERT, UPDATE, DELETE ON catastro.ejido_municipal, catastro.barrio, catastro.parcela
     TO catserver_admin, catserver_edit;
 
 GRANT INSERT, UPDATE, DELETE ON planeamiento.zonificacion_ordenanza, infraestructura.linea_electrica, infraestructura.reservorio, hidrologia.drenaje

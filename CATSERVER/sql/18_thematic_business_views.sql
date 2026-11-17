@@ -82,7 +82,7 @@ FROM hidrologia.drenaje_etiquetas_src;
 
 COMMENT ON VIEW catastro.barrios IS 'Vista operativa oficial de barrios para CATSERVER.';
 COMMENT ON VIEW catastro.parcelas IS 'Vista operativa oficial de parcelas para CATSERVER.';
-COMMENT ON VIEW catastro.circunscripcion_sector IS 'Vista operativa de circunscripcion y sector.';
+COMMENT ON VIEW catastro.circunscripcion_sector IS 'Vista canonica de circunscripcion y sector (DC-6); la tabla cruda privada es circunscripcion_sector_raw.';
 COMMENT ON VIEW catastro.cad_barrios_lineas IS 'Lineas CAD barriales filtradas al ejido urbano.';
 COMMENT ON VIEW catastro.cad_barrios_rotulos IS 'Rotulos CAD barriales filtrados al ejido urbano.';
 COMMENT ON VIEW catastro.cad_barrios_control IS 'Puntos de control tecnico de CAD barrial.';

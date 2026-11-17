@@ -681,6 +681,11 @@ jobs:
           $PSQL -d catserver -f CATSERVER/sql/02_roles_and_privileges.sql
           $PSQL -d catserver -f CATSERVER/sql/12_security_roles_current.sql
 
+          # DC-6/DC-7 (T2/T3): vista canonica sin colision y herencia de
+          # privilegios para tablas nuevas (defaults del rol DDL real).
+          $PSQL -d "CATSERVER" -f CATSERVER/sql/_tests/dc6_canonical_view.sql
+          $PSQL -d "CATSERVER" -f CATSERVER/sql/_tests/dc7_privileges.sql
+
           # The shared guard must reject an unrelated database explicitly.
           if output=$($PSQL -d catgis_test -f CATSERVER/sql/07_kml_html_helpers.sql 2>&1); then
             echo "GUARD_FAILED: unrelated database was accepted" >&2

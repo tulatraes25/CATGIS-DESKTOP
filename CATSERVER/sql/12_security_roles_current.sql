@@ -91,3 +91,16 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA staging
 
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA staging
     GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO catserver_edit;
+
+-- DC-6 (T2): la tabla cruda de circunscripcion_sector es privada. Los GRANT
+-- masivos de este script no deben reabrirla; solo admin/etl la usan. Se ejecuta
+-- condicionalmente porque este script tambien corre antes de 04 en instalaciones
+-- existentes.
+DO $catgis_private_raw_tables$
+BEGIN
+    IF to_regclass('catastro.circunscripcion_sector_raw') IS NOT NULL THEN
+        EXECUTE 'REVOKE ALL ON catastro.circunscripcion_sector_raw FROM PUBLIC, catserver_read, catserver_publish, catserver_edit';
+        EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON catastro.circunscripcion_sector_raw TO catserver_admin, catserver_etl';
+    END IF;
+END
+$catgis_private_raw_tables$;

@@ -8,8 +8,11 @@ param(
     [string]$PsqlPath = "C:\Program Files\PostgreSQL\18\bin\psql.exe",
     [string]$Shp2PgsqlPath = "C:\Program Files\PostgreSQL\18\bin\shp2pgsql.exe",
     [int]$Srid = 4326,
-    [string]$Encoding = "LATIN1"
+    [string]$Encoding = "LATIN1",
+    [switch]$AllowDestructive
 )
+
+. (Join-Path $PSScriptRoot "_common\DestructiveGuard.ps1")
 
 function Invoke-PsqlCommand {
     param(
@@ -33,16 +36,20 @@ function Import-Category {
         return [PSCustomObject]@{ Suffix = $Suffix; Count = 0; Table = $TargetTable }
     }
 
-    Invoke-PsqlCommand "DROP TABLE IF EXISTS $TargetTable;"
+    # DC-8: reescritura con stage+swap. Se importa a una tabla _stage y el
+    # reemplazo se hace en una transaccion (rollback conserva la tabla previa).
+    $stageTable = $TargetTable + "_stage"
+    Clear-CatserverStaleBackups -PathPattern (Join-Path $SourceRoot "*.bak-*") -AllowDestructive:$AllowDestructive
+    Invoke-PsqlCommand "DROP TABLE IF EXISTS $stageTable;"
 
     $createFile = $files[0]
-    & $Shp2PgsqlPath -c -I -s $Srid -W $Encoding -- $createFile.FullName $TargetTable | & $PsqlPath -U $User -d $Database -v ON_ERROR_STOP=1 | Out-Null
+    & $Shp2PgsqlPath -c -I -s $Srid -W $Encoding -- $createFile.FullName $stageTable | & $PsqlPath -U $User -d $Database -v ON_ERROR_STOP=1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        throw "Fallo creando $TargetTable desde $($createFile.Name)"
+        throw "Fallo creando $stageTable desde $($createFile.Name)"
     }
 
     Invoke-PsqlCommand @"
-ALTER TABLE $TargetTable
+ALTER TABLE $stageTable
     ADD COLUMN IF NOT EXISTS source_file text,
     ADD COLUMN IF NOT EXISTS barrio_key text,
     ADD COLUMN IF NOT EXISTS export_group text,
@@ -51,9 +58,9 @@ ALTER TABLE $TargetTable
 
     foreach ($file in $files) {
         if ($file.FullName -ne $createFile.FullName) {
-            & $Shp2PgsqlPath -a -s $Srid -W $Encoding -- $file.FullName $TargetTable | & $PsqlPath -U $User -d $Database -v ON_ERROR_STOP=1 | Out-Null
+            & $Shp2PgsqlPath -a -s $Srid -W $Encoding -- $file.FullName $stageTable | & $PsqlPath -U $User -d $Database -v ON_ERROR_STOP=1 | Out-Null
             if ($LASTEXITCODE -ne 0) {
-                throw "Fallo importando $($file.Name) en $TargetTable"
+                throw "Fallo importando $($file.Name) en $stageTable"
             }
         }
 
@@ -63,7 +70,7 @@ ALTER TABLE $TargetTable
         $safeGroup = $Suffix.Replace("'", "''")
 
         Invoke-PsqlCommand @"
-UPDATE $TargetTable
+UPDATE $stageTable
 SET
     source_file = '$safeFile',
     barrio_key = '$safeBarrio',
@@ -71,6 +78,10 @@ SET
 WHERE source_file IS NULL;
 "@
     }
+
+    $targetLeaf = ($TargetTable -split '\.')[-1]
+    Invoke-PsqlCommand ("BEGIN; DROP TABLE IF EXISTS $TargetTable; " +
+        "ALTER TABLE $stageTable RENAME TO $targetLeaf; COMMIT;")
 
     return [PSCustomObject]@{ Suffix = $Suffix; Count = $files.Count; Table = $TargetTable }
 }
