@@ -304,7 +304,8 @@ jobs:
           catgis="$app/Contents/MacOS/CATGIS Desktop"
           catmap="$app/Contents/MacOS/catmap"
           runtime="$app/Contents/runtime/Contents/Home/bin/java"
-          jar="$app/Contents/app/catgis-desktop-1.0.jar"
+          jar="$(find "$app/Contents/app" -maxdepth 1 -name 'catgis-desktop-*.jar' -type f | head -n 1)"
+          test -n "$jar"
           test -x "$catgis"
           test -x "$catmap"
           test -x "$runtime"
@@ -415,8 +416,8 @@ jobs:
         shell: pwsh
         run: |
           $app = Join-Path (Get-Location) 'build/installer/windows/app-image/CATGIS Desktop'
-          $jar = Join-Path $app 'app/catgis-desktop-1.0.jar'
-          if (-not (Test-Path -LiteralPath $jar -PathType Leaf)) { throw 'CATGIS Windows main JAR absent.' }
+          $jar = (Get-ChildItem -LiteralPath (Join-Path $app 'app') -Filter 'catgis-desktop-*.jar' -File | Select-Object -First 1).FullName
+          if (-not $jar -or -not (Test-Path -LiteralPath $jar -PathType Leaf)) { throw 'CATGIS Windows main JAR absent.' }
           $bytes = (Get-ChildItem -LiteralPath $app -Recurse -File | Measure-Object -Property Length -Sum).Sum
           $sizeMb = [Math]::Round($bytes / 1MB, 1)
           $hash = (Get-FileHash -LiteralPath $jar -Algorithm SHA256).Hash.ToLowerInvariant()
