@@ -35,6 +35,16 @@ public class Main {
     private static int exportResolution = 200; // default DPI for exports
 
     public static void main(String[] args) {
+        ar.com.catgis.BetaCli.Options cli = ar.com.catgis.BetaCli.parse(args);
+        if (cli.version()) {
+            ar.com.catgis.BetaCli.printVersion(true);
+            return;
+        }
+        if (cli.selfTest()) {
+            System.exit(ar.com.catgis.BetaCli.printSelfTest());
+            return;
+        }
+        final String[] launchArgs = cli.remaining();
         SwingUtilities.invokeLater(() -> {
             installLookAndFeel();
             I18n.initialize();
@@ -45,19 +55,19 @@ public class Main {
             String quickDataPath = null;
 
             // Parse arguments
-            for (int i = 0; i < args.length; i++) {
-                if ("--project".equals(args[i]) && i + 1 < args.length) {
-                    projectPath = args[++i];
-                } else if ("--catmap".equals(args[i]) && i + 1 < args.length) {
-                    layoutPath = args[++i];
-                } else if ("--import-table".equals(args[i]) && i + 1 < args.length) {
-                    importTablePath = args[++i];
+            for (int i = 0; i < launchArgs.length; i++) {
+                if ("--project".equals(launchArgs[i]) && i + 1 < launchArgs.length) {
+                    projectPath = launchArgs[++i];
+                } else if ("--catmap".equals(launchArgs[i]) && i + 1 < launchArgs.length) {
+                    layoutPath = launchArgs[++i];
+                } else if ("--import-table".equals(launchArgs[i]) && i + 1 < launchArgs.length) {
+                    importTablePath = launchArgs[++i];
                 } else if (args[i].endsWith(".catgis")) {
                     projectPath = args[i];
                 } else if (args[i].endsWith(".catmap")) {
                     layoutPath = args[i];
-                } else if ("--open".equals(args[i]) && i + 1 < args.length) {
-                    quickDataPath = args[++i];
+                } else if ("--open".equals(launchArgs[i]) && i + 1 < launchArgs.length) {
+                    quickDataPath = launchArgs[++i];
                 }
             }
 
@@ -2082,12 +2092,7 @@ public class Main {
     private static void showAbout() {
         NotificationManager.info(mainFrame,
                 "Acerca de CATMAP",
-                "CATMAP - Cartographic Layout Composer\n" +
-                "Version 1.0\n\n" +
-                "Parte de CATGIS Desktop\n" +
-                "Copyright 2026\n\n" +
-                "Herramienta de composición cartográfica\n" +
-                "para mapas técnicos y ambientales.");
+                ar.com.catgis.AppVersion.catmapAboutText());
     }
 
     private static void addDefaultElements(LayoutModel model) {
