@@ -50,6 +50,7 @@ DIALOG_OR_WINDOW	CatmapLegendEditorDialog.java
 DIALOG_OR_WINDOW	catmap/ui/PageSetupDialog.java
 DIALOG_OR_WINDOW	catmap/ui/TemplateGalleryDialog.java
 DIALOG_OR_WINDOW	catmap/ui/CommandPaletteDialog.java
+DIALOG_OR_WINDOW	catmap/ui/WmtsDialog.java
 DIALOG_OR_WINDOW	ViewshedDialog.java
 DIALOG_OR_WINDOW	CatserverLayerSelectionDialog.java
 DIALOG_OR_WINDOW	climate/ClimateAreaAnalysisDialog.java

@@ -37,23 +37,25 @@ class OgcServiceSupportContractTest {
     }
 
     @Test
-    void onlyWmsAndWfsAreSupported() {
-        assertEquals(List.of(OgcServiceSupport.Protocol.WMS, OgcServiceSupport.Protocol.WFS),
+    void allThreeOgcProtocolsAreSupported() {
+        assertEquals(List.of(OgcServiceSupport.Protocol.WMS, OgcServiceSupport.Protocol.WFS,
+                        OgcServiceSupport.Protocol.WMTS),
                 OgcServiceSupport.supportedProtocols());
         assertTrue(OgcServiceSupport.supports(OgcServiceSupport.Protocol.WMS));
         assertTrue(OgcServiceSupport.supports(OgcServiceSupport.Protocol.WFS));
-        assertFalse(OgcServiceSupport.supports(OgcServiceSupport.Protocol.WMTS));
+        assertTrue(OgcServiceSupport.supports(OgcServiceSupport.Protocol.WMTS));
         assertFalse(OgcServiceSupport.supports(null));
     }
 
     @Test
-    void wmtsIsReportedHonestly() {
-        assertTrue(OgcServiceSupport.unsupportedMessage(OgcServiceSupport.Protocol.WMTS)
-                .contains("WMTS"));
-        assertTrue(OgcServiceSupport.unsupportedMessage(OgcServiceSupport.Protocol.WMTS)
-                .contains("no"));
+    void wmtsCapabilitiesAndVersionsAreDeclared() {
+        String message = OgcServiceSupport.unsupportedMessage(
+                OgcServiceSupport.Protocol.WMTS);
+        assertTrue(message.contains("WMTS"));
+        assertTrue(message.contains("válida"));
         assertEquals(OgcServiceSupport.Protocol.WFS.version(), "2.0.0");
         assertEquals(OgcServiceSupport.Protocol.WMTS.version(), "1.0.0");
+        assertEquals("WMTS", OgcServiceSupport.Protocol.WMTS.serviceName());
     }
 
     @Test

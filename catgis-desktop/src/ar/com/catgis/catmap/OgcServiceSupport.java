@@ -7,8 +7,9 @@ import java.util.Locale;
  * OGC service entry points for CATMAP standalone (REQ-PROD-1.2). PostGIS stays
  * optional: it is only reached through the existing browser dialog.
  * <p>
- * WMS and WFS are wired to the existing CATGIS dialogs. WMTS is declared as
- * <strong>not supported yet</strong> instead of pretending to handle it.
+ * WMS/WFS are wired to the existing CATGIS dialogs and WMTS is supported through
+ * the online-tile template pipeline ({@link WmtsSupport}); the supported matrix
+ * sets are those aligned with the web-mercator XYZ grid.
  */
 public final class OgcServiceSupport {
 
@@ -42,19 +43,20 @@ public final class OgcServiceSupport {
 
     /** Protocols CATMAP can open today. */
     public static List<Protocol> supportedProtocols() {
-        return List.of(Protocol.WMS, Protocol.WFS);
+        return List.of(Protocol.WMS, Protocol.WFS, Protocol.WMTS);
     }
 
     public static boolean supports(Protocol protocol) {
         return protocol != null && supportedProtocols().contains(protocol);
     }
 
+    /** Message for malformed or unsupported service requests. */
     public static String unsupportedMessage(Protocol protocol) {
         if (protocol == null) {
             return "Servicio OGC desconocido.";
         }
         return protocol.label() + " (" + protocol.serviceName()
-                + ") no está soportado todavía en CATMAP standalone; usa WMS o WFS.";
+                + ") requiere una URL/plantilla válida; revisa la configuración.";
     }
 
     /**
