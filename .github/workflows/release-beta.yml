@@ -39,14 +39,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
       - name: Build and verify app-image
         shell: bash
         run: |
           cd catgis-desktop
-          case "${{ matrix.platform }}" in
-            windows) ./gradlew.bat --offline --no-daemon "${{ matrix.package_task }}" ;;
-            *) ./gradlew --offline --no-daemon "${{ matrix.package_task }}" ;;
-          esac
+          chmod +x gradlew || true
+          ./gradlew --no-daemon "${{ matrix.package_task }}"
       - name: Package app-image archive
         shell: bash
         run: |
@@ -58,7 +58,7 @@ jobs:
               tar -C "${{ matrix.artifact_dir }}" -czf "release-out/${{ matrix.archive }}" .
               ;;
             windows)
-              (cd "${{ matrix.artifact_dir }}" && 7z a -tzip "${{ github.workspace }}/catgis-desktop/release-out/${{ matrix.archive }}" .)
+              tar -a -c -f "$PWD/release-out/${{ matrix.archive }}" -C "${{ matrix.artifact_dir }}" .
               ;;
             macos-arm64)
               ditto -c -k --sequesterRsrc --keepParent "${{ matrix.artifact_dir }}/CATGIS Desktop.app" "release-out/${{ matrix.archive }}"
