@@ -131,7 +131,8 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - Cierre (2026-11-17): inventario de seams con contratos ejecutables en
     `docs/quality/A04_SEAM_EVIDENCE_20261117.md` (atomic export/publish, project
     read budget/integrity, HTTP/WMS/WCS, GDAL portable resolver, PostGIS real).
-    A0.7/F3 siguen `NOT_CERTIFIED`.
+    A0.7/F3 siguen `NOT_CERTIFIED`. Certificado en `main` `6e4b077`
+    (attestation `44200096397`).
 - [x] **A0.5 — Architecture debt burn-down**
   - Zero unresolved CRITICAL/HIGH architecture findings.
   - Progreso (2026-11-16): los dos hallazgos de fuente de
@@ -243,7 +244,9 @@ certify this program.
     completa) y no queda deuda critica/alta conocida; evidencia en
     `docs/quality/A05_CLOSURE_20261117.md`. **A0.7/F3 siguen `NOT_CERTIFIED`**:
     requieren ejecucion GUI/nativa real y el smoke F3 no lo sustituye.
-  - Evidencia parcial (2026-11-17): `docs/quality/F3_RUNTIME_EVIDENCE_20261117.md`
+  - Evidencia parcial certificada (2026-11-17, main `6e4b077`): runs
+    `44200187527` (UI snapshots 3/3) y `44200192526` (launcher + E2E 3/3,
+    `E2E_OK checks=13`); `docs/quality/F3_RUNTIME_EVIDENCE_20261117.md`.
     (launcher packaged 3/3, UI snapshot, E2E headless 13/13); pasos 1/4/5/6/8/13
     de REQ-PC-3 siguen pendientes de sesion GUI interactiva. **F3 sigue
     NOT_CERTIFIED**.
