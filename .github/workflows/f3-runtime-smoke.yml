@@ -53,6 +53,11 @@ jobs:
           grep -F 'SELFTEST_OK' selftest.txt
           test -x "${{ matrix.catmap }}" || test -f "${{ matrix.catmap }}"
           "${{ matrix.catmap }}" --version | tee catmap-version.txt
+      - name: Canonical headless beta E2E (project/data/analysis/CATMAP exports)
+        shell: bash
+        run: |
+          cd catgis-desktop
+          ./gradlew --no-daemon --console=plain e2eBetaHarness
       - name: Record evidence
         shell: bash
         run: |
@@ -71,4 +76,5 @@ jobs:
             catgis-desktop/version.txt
             catgis-desktop/catmap-version.txt
             catgis-desktop/selftest.txt
+            catgis-desktop/build/e2e-beta/**
           if-no-files-found: error

@@ -5,22 +5,39 @@ on:
 
 jobs:
   ui-snapshot:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            command: xvfb-run -a ./gradlew --no-daemon --console=plain uiSnapshot
+          - os: windows-latest
+            platform: windows
+            command: ./gradlew --no-daemon --console=plain uiSnapshot
+          - os: macos-15
+            platform: macos-arm64
+            command: ./gradlew --no-daemon --console=plain uiSnapshot
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-      - name: Build CATMAP and capture a UI snapshot under Xvfb
+      - name: Install Xvfb (Linux)
+        if: ${{ matrix.platform == 'linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
+      - name: Build CATMAP and capture a UI snapshot
+        shell: bash
+        run: |
           cd catgis-desktop
-          chmod +x gradlew
-          xvfb-run -a ./gradlew --no-daemon --console=plain uiSnapshot
+          chmod +x gradlew || true
+          ${{ matrix.command }}
       - uses: actions/upload-artifact@v4
         with:
-          name: catmap-ui-snapshot
+          name: catmap-ui-snapshot-${{ matrix.platform }}
           path: catgis-desktop/build/ui-snapshots/*.png
           if-no-files-found: error
