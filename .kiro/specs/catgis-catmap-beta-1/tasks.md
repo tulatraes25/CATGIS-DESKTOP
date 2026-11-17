@@ -49,13 +49,17 @@ Cada tarea se certifica con el mismo gate GitHub-first.
   - Evidence: workflow agregado; ejecucion manual pendiente de merge (se corre en
     la tranche B7).
 
-- [ ] **B7 — Certificacion y cierre**
+- [x] **B7 — Certificacion y cierre**
   - Cada tranche con PR/checks/merge expected head/post-main/attestation; log de
     certificacion de beta y cierre del objetivo.
-  - Progreso (2026-11-17): B1 (`main` `a8f9674`, attestation `43991875801`) y
-    B2-B6 (`main` `5803ecb`, Certification rerun SUCCESS tras un 429 externo de
-    Maven Central y attestation `43996181703`) certificados. Falta ejecutar/verificar
-    la pre-release (workflow corregido para no usar `--offline` en runners nuevos).
+  - Evidence (2026-11-17): B1 `main` `a8f9674` (attestation `43991875801`);
+    B2-B6 `main` `5803ecb` (attestation `43996181703`); fix macos-15 `main`
+    `ac82b3e` (attestation `44003370669`). **Pre-release `v1.0.0-beta.1`
+    publicada** por `release-beta.yml` run `44003466861` (4/4 jobs SUCCESS) con
+    artefactos Linux tar.gz, Windows zip y macOS arm64 zip:
+    https://github.com/tulatraes25/CATGIS-DESKTOP/releases/tag/v1.0.0-beta.1
+    Limitaciones declaradas: WMTS, splash simple, sin firma, T2-T4 SQL fuera de
+    beta y A0.5/A0.7/F3 `NOT_CERTIFIED`.
 
 ## Dependencias
 
