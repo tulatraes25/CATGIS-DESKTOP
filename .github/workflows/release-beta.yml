@@ -1,0 +1,98 @@
+name: Release Beta (manual, unsigned pre-release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag de la pre-release (por defecto v1.0.0-beta.1)'
+        required: false
+        default: 'v1.0.0-beta.1'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            package_task: verifyLinuxAppImage
+            artifact_dir: build/installer/linux/app-image
+            archive: catgis-catmap-beta-linux.tar.gz
+          - os: windows-latest
+            platform: windows
+            package_task: verifyWindowsAppImage
+            artifact_dir: build/installer/windows/app-image
+            archive: catgis-catmap-beta-windows.zip
+          - os: macos-14
+            platform: macos-arm64
+            package_task: verifyMacAppImage
+            artifact_dir: build/installer/macos/app-image
+            archive: catgis-catmap-beta-macos-arm64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build and verify app-image
+        shell: bash
+        run: |
+          cd catgis-desktop
+          case "${{ matrix.platform }}" in
+            windows) ./gradlew.bat --offline --no-daemon "${{ matrix.package_task }}" ;;
+            *) ./gradlew --offline --no-daemon "${{ matrix.package_task }}" ;;
+          esac
+      - name: Package app-image archive
+        shell: bash
+        run: |
+          cd catgis-desktop
+          set -euo pipefail
+          mkdir -p release-out
+          case "${{ matrix.platform }}" in
+            linux)
+              tar -C "${{ matrix.artifact_dir }}" -czf "release-out/${{ matrix.archive }}" .
+              ;;
+            windows)
+              (cd "${{ matrix.artifact_dir }}" && 7z a -tzip "${{ github.workspace }}/catgis-desktop/release-out/${{ matrix.archive }}" .)
+              ;;
+            macos-arm64)
+              ditto -c -k --sequesterRsrc --keepParent "${{ matrix.artifact_dir }}/CATGIS Desktop.app" "release-out/${{ matrix.archive }}"
+              ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: beta-${{ matrix.platform }}
+          path: catgis-desktop/release-out/${{ matrix.archive }}
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Create unsigned beta pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; uploading assets."
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            gh release create "$TAG" release-assets/* \
+              --title "CATGIS/CATMAP $TAG (beta)" \
+              --notes-file docs/release/BETA_NOTES.md \
+              --prerelease
+          fi
+          gh release view "$TAG" --json tagName,isPrerelease,assets \
+            --template '{{.tagName}} prerelease={{.isPrerelease}} assets={{len .assets}}'

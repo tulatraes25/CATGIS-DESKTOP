@@ -1,4 +1,4 @@
-# CATMAP standalone
+# CATMAP standalone (beta 1.0.0-beta.1)
 
 CATMAP es el compositor cartografico de CATGIS Desktop y se puede abrir como
 aplicacion propia, sin cargar un proyecto CATGIS.

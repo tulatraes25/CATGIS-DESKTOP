@@ -13,29 +13,41 @@ Cada tarea se certifica con el mismo gate GitHub-first.
     arquitectura permite solo a `BetaCli` la salida de consola documentada.
     Build local **1576 tests / 0 fallos / 15 skips**. Certificacion CI en curso.
 
-- [ ] **B2 — Splash propio y cierre de T33**
+- [x] **B2 — Splash propio y cierre de T33**
   - `catmap/ui/CatmapSplash` tolerante a headless; arranque de CATMAP lo muestra
     y cierra; docs de empaquetado actualizadas.
   - Tests: `CatmapSplashContractTest`; launcher `bin/CATMAP` sigue verificado por
     `verifyLinuxAppImage`.
+  - Evidence local: splash pintado determinista, `CatmapSplashContractTest` (2);
+    cierre automatico (350 ms al finalizar arranque/4 s maximo) y tolerancia a
+    headless.
 
-- [ ] **B3 — Menu Analisis en CATMAP standalone**
+- [x] **B3 — Menu Analisis en CATMAP standalone**
   - Curvas de nivel, drenaje, cuencas, inundacion, riesgo, viewshed y perfil con
     los dialogos existentes; inventarios/baselines actualizados.
   - Tests de inventario + contrato de acciones (sin duplicar dialogos).
+  - Evidence local: `AnalysisActions` + menu "Analisis" con 7 comandos; inventarios
+    suplementarios/semanticos actualizados (ocurrencias 218, ACTION 94, features
+    85); `AnalysisActionsContractTest` (1) e inventarios verdes.
 
-- [ ] **B4 — Documentacion de beta**
+- [x] **B4 — Documentacion de beta**
   - `docs/BETA_README.md`, `docs/release/BETA_NOTES.md`, `docs/CATMAP_STANDALONE.md`
     actualizado (requisitos, flujo, capacidades y limitaciones declaradas).
+  - Evidence local: `docs/BETA_README.md` y `docs/release/BETA_NOTES.md` escritos;
+    verificacion con `--version`/`--self-test` documentada.
 
-- [ ] **B5 — Smoke de beta en CI**
+- [x] **B5 — Smoke de beta en CI**
   - Paso `--self-test` en el workflow de certificacion/CI para Linux, Windows y
     macOS (headless), con salida `SELFTEST_OK` y codigo 0.
+  - Evidence local: pasos agregados a `certification.yml` (macOS/Linux/Windows);
+    se verifican al correr el PR.
 
-- [ ] **B6 — Pre-release de GitHub**
+- [x] **B6 — Pre-release de GitHub**
   - `release-beta.yml` (workflow_dispatch, `contents: write`): app-images
     Linux/Windows/macOS, artefactos adjuntos y `gh release create --prerelease`
     con las notas de B4. Ejecucion manual verificada.
+  - Evidence: workflow agregado; ejecucion manual pendiente de merge (se corre en
+    la tranche B7).
 
 - [ ] **B7 — Certificacion y cierre**
   - Cada tranche con PR/checks/merge expected head/post-main/attestation; log de
