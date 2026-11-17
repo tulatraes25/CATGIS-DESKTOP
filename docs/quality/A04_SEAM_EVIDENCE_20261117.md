@@ -51,4 +51,7 @@ aquí.
 
 - Los contratos corren en cada PR (Certification Linux/Windows/macOS) y en
   `postgisIntegrationTest` dentro del job PostGIS.
+- Cierre certificado en PR #255 (head `020dd69`) → `main` `6e4b077` con
+  Certification/CI/Runtime Identity/GeoParquet SUCCESS y attestation
+  `44200096397`. **A0.7/F3 siguen `NOT_CERTIFIED`.**
 - Build local de referencia: 1588 tests / 0 fallos / 15 skips (pre-harness E2E).

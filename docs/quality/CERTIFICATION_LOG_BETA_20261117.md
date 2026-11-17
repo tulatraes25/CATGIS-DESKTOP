@@ -45,3 +45,17 @@ Notas:
 - **T2-T4 SQL implementados y certificados** (PostGIS + tests estaticos).
 - Firma/notarizacion: workflow listo, sin certificados configurados (artefactos
   sin firma declarados).
+
+## Evidencia runtime final (2026-11-17)
+
+| PR | Tranche | Head exacto | Post-main | Attestation |
+|---|---|---|---|---|
+| #255 | E2E canonico + UI snapshots multiplataforma + A0.4/F3 evidencia | `020dd69` | `6e4b077` cert/identity/CI/GeoParquet SUCCESS | SUCCESS (`44200096397`) |
+
+- **UI snapshot 3/3** (run `44200187527`): Linux Xvfb, Windows y macOS Apple
+  Silicon pintan la ventana real de CATMAP a PNG.
+- **F3 runtime smoke + E2E 3/3** (run `44200192526`): launcher empaquetado
+  `--version/--self-test` + E2E canonico; reporte Linux `E2E_OK checks=13`
+  (proyecto/CRS, SHP+GeoTIFF, terreno, CATMAP PNG/PDF/SVG/GeoTIFF, roundtrip).
+- **A0.4 cerrado** con inventario de seams; **A0.7/F3 completo siguen
+  `NOT_CERTIFIED`** (pasos interactivos 1/4/5/6/8/13 de REQ-PC-3 pendientes).

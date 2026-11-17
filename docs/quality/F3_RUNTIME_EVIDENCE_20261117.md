@@ -9,7 +9,18 @@ no los sustituye ni declara GUI interactiva certificada.
 |---|---|---|
 | Launcher empaquetado `--version`/`--self-test` en Linux/Windows/macOS | `f3-runtime-smoke.yml` (app-image jpackage + ejecución del launcher) | 3/3 jobs SUCCESS (run `44080222592`) |
 | UI real CATMAP en Linux Xvfb | `ui-snapshot.yml` → `uiSnapshot` (ventana Swing pintada a PNG) | SUCCESS (run `43960374643`) |
-| E2E canónico headless CATMAP/CATGIS | `BetaE2EHarness` (`e2eBetaHarness`): proyecto guardado/reabierto con CRS y metadatos, lectura de SHP+GeoTIFF representativos, pendiente/hillshade + GeoTIFF/ASCII, CATMAP A3 con PNG/PDF/SVG/GeoTIFF reabiertos y roundtrip `.catmap` con hash | **E2E_OK checks=13** (local; CI en `f3-runtime-smoke.yml`) |
+| E2E canónico headless CATMAP/CATGIS | `BetaE2EHarness` (`e2eBetaHarness`): proyecto guardado/reabierto con CRS y metadatos, lectura de SHP+GeoTIFF representativos, pendiente/hillshade + GeoTIFF/ASCII, CATMAP A3 con PNG/PDF/SVG/GeoTIFF reabiertos y roundtrip `.catmap` con hash | **E2E_OK checks=13** (local y CI Linux; jobs Windows/macOS también SUCCESS) |
+
+## Evidencia CI (main `6e4b077`)
+
+- `ui-snapshot.yml` run **`44200187527`**: 3/3 jobs SUCCESS (Linux Xvfb,
+  Windows, macOS Apple Silicon); artefactos `catmap-ui-snapshot-*` con la
+  ventana real de CATMAP pintada a PNG.
+- `f3-runtime-smoke.yml` run **`44200192526`**: 3/3 jobs SUCCESS; artefactos
+  `f3-runtime-*` con `--version`, `--self-test` y el E2E. Reporte Linux
+  descargado: **`E2E_OK checks=13`** con `plancheta.png/pdf/svg`,
+  `plancheta-mapa.tif`, `pendiente.tif`, `hillshade.asc`, `e2e.catgis`,
+  `layout.catmap`, `checksums.sha256`.
 
 ## Cobertura REQ-PC-3
 
