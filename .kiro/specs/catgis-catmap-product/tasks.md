@@ -233,8 +233,14 @@ Regla: cada tranche se entrega en una rama desde `main` vivo y se **certifica**
     actualizados (`SERVICE QuickMapService`, comando suplementario
     `SEM-CATMAP-QUICKMAP`). Tests `QuickMapServiceContractTest` (6); build local
     **1482 tests / 0 fallos / 15 skips**.
-- [ ] **T15 — Servicios OGC y PostGIS opcional (REQ-PROD-1.2)**
+- [x] **T15 — Servicios OGC y PostGIS opcional (REQ-PROD-1.2)**
   - WFS/WMS/WMTS y PostGIS conectables desde standalone; PostGIS sigue opcional.
+  - Cierre WMTS (2026-11-17): `catmap/WmtsSupport` construye plantillas WMTS REST y
+    KVP GetTile (`TILEMATRIX/TILEROW/TILECOL` → `{z}/{y}/{x}`) con validacion,
+    defaults y clamp de zoom; `catmap/ui/WmtsDialog` agrega la capa al mapa via el
+    pipeline de tiles online (matrix sets compatibles con la grilla XYZ, p. ej.
+    GoogleMapsCompatible/EPSG:3857). El menu Mapa abre el dialogo real en vez de
+    solo informar; tests `WmtsSupportContractTest` (5) y OGC actualizados.
   - Progreso (2026-11-16): `catmap/OgcServiceSupport` normaliza URLs GetCapabilities
     por servicio/version y declara explicitamente que **WMTS aun no esta
     soportado**; `catmap/OgcServiceActions` abre los dialogos existentes de

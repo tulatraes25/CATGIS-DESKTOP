@@ -28,9 +28,14 @@ public final class OgcServiceActions {
         return PostgisBrowserDialog.open(owner);
     }
 
-    /** WMTS is not implemented; report it honestly instead of failing silently. */
-    public static void reportWmtsUnavailable(Window owner) {
+    /** WMTS: opens the tile-template dialog (REST or KVP GetTile). */
+    public static void openWmts(Window owner) {
+        ar.com.catgis.catmap.ui.WmtsDialog.open(owner);
+    }
+
+    /** Report a malformed OGC request without pretending support. */
+    public static void reportUnsupported(Window owner, OgcServiceSupport.Protocol protocol) {
         NotificationManager.warn(owner, "Servicios OGC",
-                OgcServiceSupport.unsupportedMessage(OgcServiceSupport.Protocol.WMTS));
+                OgcServiceSupport.unsupportedMessage(protocol));
     }
 }

@@ -53,7 +53,7 @@ java -jar catgis-desktop-1.0.0-beta.1.jar --self-test
 
 ## Limitaciones declaradas de esta beta
 
-- WMTS no soportado (se informa honestamente; WMS/WFS/PostGIS si funcionan).
+- WMTS soportado como plantilla REST o KVP GetTile para matrix sets compatibles con la grilla XYZ (p. ej. GoogleMapsCompatible/EPSG:3857); otros matrix sets requieren adaptacion del operador.
 - Splash propio de CATMAP es simple (sin arte grafico dedicado).
 - Sin instaladores firmados/notarizados; artefactos de pre-release sin firma.
 - T2–T4 SQL tienen decision del owner registrada; su implementacion es otra

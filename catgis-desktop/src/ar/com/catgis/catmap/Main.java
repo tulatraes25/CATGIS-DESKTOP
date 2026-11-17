@@ -284,7 +284,7 @@ public class Main {
         addMenuItem(menuMapa, "Agregar servicio WFS...", 0,
                 e -> OgcServiceActions.openWfs(mainFrame));
         addMenuItem(menuMapa, "Agregar servicio WMTS...", 0,
-                e -> OgcServiceActions.reportWmtsUnavailable(mainFrame));
+                e -> OgcServiceActions.openWmts(mainFrame));
         addMenuItem(menuMapa, "Agregar capa PostGIS...", 0, e -> {
             if (OgcServiceActions.openPostgis(mainFrame)) {
                 refreshFromCatgis();
