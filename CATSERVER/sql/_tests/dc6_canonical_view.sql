@@ -47,6 +47,6 @@ BEGIN
 END
 $dc6_assertions$;
 
-DROP TABLE IF EXISTS catastro.circsect_shape_src;
 DROP VIEW IF EXISTS catastro.circunscripcion_sector;
+DROP TABLE IF EXISTS catastro.circsect_shape_src;
 DROP TABLE IF EXISTS catastro.circunscripcion_sector_raw CASCADE;
