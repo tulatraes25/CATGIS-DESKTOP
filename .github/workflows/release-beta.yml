@@ -27,7 +27,7 @@ jobs:
             package_task: verifyWindowsAppImage
             artifact_dir: build/installer/windows/app-image
             archive: catgis-catmap-beta-windows.zip
-          - os: macos-14
+          - os: macos-15
             platform: macos-arm64
             package_task: verifyMacAppImage
             artifact_dir: build/installer/macos/app-image
