@@ -1,12 +1,12 @@
-name: Release Beta (manual, unsigned pre-release)
+name: Release Beta (manual, optional signing)
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag de la pre-release (por defecto v1.0.0-beta.1)'
+        description: 'Tag de la pre-release (por defecto v1.0.0-beta.2)'
         required: false
-        default: 'v1.0.0-beta.1'
+        default: 'v1.0.0-beta.2'
 
 permissions:
   contents: write
@@ -33,6 +33,15 @@ jobs:
             artifact_dir: build/installer/macos/app-image
             archive: catgis-catmap-beta-macos-arm64.zip
     runs-on: ${{ matrix.os }}
+    env:
+      WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      MACOS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.MACOS_SIGNING_CERTIFICATE_BASE64 }}
+      MACOS_SIGNING_PASSWORD: ${{ secrets.MACOS_SIGNING_PASSWORD }}
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      MACOS_NOTARY_APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+      MACOS_NOTARY_TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+      MACOS_NOTARY_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -47,6 +56,56 @@ jobs:
           cd catgis-desktop
           chmod +x gradlew || true
           ./gradlew --no-daemon "${{ matrix.package_task }}"
+      - name: Sign Windows app-image (optional)
+        if: ${{ matrix.platform == 'windows' }}
+        shell: pwsh
+        run: |
+          if (-not $env:WINDOWS_CERT_PFX_BASE64) {
+            Write-Host 'UNSIGNED_BETA: WINDOWS_CERT_PFX_BASE64 not configured.'
+            exit 0
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'catgis-sign.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool.exe not found on runner.' }
+          Get-ChildItem 'build/installer/windows/app-image' -Recurse -Filter '*.exe' | ForEach-Object {
+            & $signtool.FullName sign /f $pfx /p $env:WINDOWS_CERT_PASSWORD `
+              /tr http://timestamp.digicert.com /td sha256 /fd sha256 $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $($_.FullName)" }
+          }
+          Remove-Item -LiteralPath $pfx -Force
+          Write-Host 'SIGNED_BETA_OK windows'
+      - name: Sign and notarize macOS app (optional)
+        if: ${{ matrix.platform == 'macos-arm64' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${MACOS_SIGNING_CERTIFICATE_BASE64:-}" ]; then
+            echo 'UNSIGNED_BETA: MACOS_SIGNING_CERTIFICATE_BASE64 not configured.'
+            exit 0
+          fi
+          cert="$RUNNER_TEMP/catgis-sign.p12"
+          echo "$MACOS_SIGNING_CERTIFICATE_BASE64" | base64 --decode > "$cert"
+          security create-keychain -p "$MACOS_SIGNING_PASSWORD" build.keychain
+          security import "$cert" -k build.keychain -P "$MACOS_SIGNING_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -s build.keychain
+          security unlock-keychain -p "$MACOS_SIGNING_PASSWORD" build.keychain
+          app="build/installer/macos/app-image/CATGIS Desktop.app"
+          codesign --force --deep --options runtime --timestamp \
+            --sign "$MACOS_SIGNING_IDENTITY" "$app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          if [ -n "${MACOS_NOTARY_APPLE_ID:-}" ]; then
+            ditto -c -k --sequesterRsrc --keepParent "$app" "$RUNNER_TEMP/catgis-notarize.zip"
+            xcrun notarytool submit "$RUNNER_TEMP/catgis-notarize.zip" \
+              --apple-id "$MACOS_NOTARY_APPLE_ID" \
+              --team-id "$MACOS_NOTARY_TEAM_ID" \
+              --password "$MACOS_NOTARY_PASSWORD" --wait
+            xcrun stapler staple "$app"
+          else
+            echo 'SIGNED_BETA_NO_NOTARIZATION: notary secrets not configured.'
+          fi
+          echo 'SIGNED_BETA_OK macos'
       - name: Package app-image archive
         shell: bash
         run: |
@@ -64,10 +123,20 @@ jobs:
               ditto -c -k --sequesterRsrc --keepParent "${{ matrix.artifact_dir }}/CATGIS Desktop.app" "release-out/${{ matrix.archive }}"
               ;;
           esac
+      - name: Checksums
+        shell: bash
+        run: |
+          cd catgis-desktop/release-out
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${{ matrix.archive }}" > "${{ matrix.archive }}.sha256"
+          else
+            shasum -a 256 "${{ matrix.archive }}" > "${{ matrix.archive }}.sha256"
+          fi
+          cat "${{ matrix.archive }}.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: beta-${{ matrix.platform }}
-          path: catgis-desktop/release-out/${{ matrix.archive }}
+          path: catgis-desktop/release-out/${{ matrix.archive }}*
           if-no-files-found: error
 
   publish:
@@ -79,7 +148,7 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
-      - name: Create unsigned beta pre-release
+      - name: Create beta pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ inputs.tag }}

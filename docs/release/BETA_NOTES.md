@@ -1,4 +1,4 @@
-# CATMAP / CATGIS Desktop 1.0.0-beta.1 — Notas de la primera beta
+# CATMAP / CATGIS Desktop 1.0.0-beta.2 — Notas de la beta
 
 Fecha: 2026-11-16. Canal: `beta` (pre-release).
 
@@ -7,9 +7,9 @@ Fecha: 2026-11-16. Canal: `beta` (pre-release).
 - **CATMAP standalone** utilizable sin CATGIS: launcher propio, splash y menu
   **Analisis** con curvas de nivel, drenaje, cuencas, inundacion, riesgo,
   viewshed y perfil.
-- **OGC y PostGIS opcional** desde CATMAP (WMS/WFS; WMTS declarado no soportado).
+- **OGC y PostGIS opcional** desde CATMAP (WMS/WFS y **WMTS** por plantilla REST/KVP GetTile para matrix sets compatibles XYZ).
 - **Workspace de datos** con simbologia y trabajos/resultados.
-- **Beta identity/CLI**: `1.0.0-beta.1`, `--version`, `--self-test` (13 checks
+- **Beta identity/CLI**: `1.0.0-beta.2`, `--version`, `--self-test` (13 checks
   headless) y "Acerca de" con la version real.
 - Capacidades certificadas previamente en esta linea: PDF vectorial multipagina,
   SVG vectorial, GeoTIFF, atlas, plantillas, rasters analiticos, drenaje nativo,
@@ -31,6 +31,19 @@ Fecha: 2026-11-16. Canal: `beta` (pre-release).
 - Sin firmas/notarizacion de instaladores.
 - A0.5/A0.7/F3 `NOT_CERTIFIED`: no se declara GUI/runtime nativo verificado.
 - T2–T4 SQL: decision A/A/A registrada; implementacion en tranche posterior.
+
+## Politicas SQL del servidor (T2-T4)
+
+Las decisiones DC-6/DC-7/DC-8 (vista canónica, ownership/default privileges y
+rutas destructivas con stage+swap) estan implementadas en CATSERVER y validadas
+por el job PostGIS de CI (`_tests/dc6_*`, `_tests/dc7_*`,
+`DestructiveScriptPolicyTest`).
+
+## Firma opcional y checksums
+
+Los artefactos se publican sin firma salvo que el repositorio configure los
+secretos de firma (`docs/RELEASE_SIGNING.md`). Cada artefacto incluye su
+`.sha256` para verificacion.
 
 ## Artefactos
 
