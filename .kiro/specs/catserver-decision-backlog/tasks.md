@@ -27,8 +27,11 @@ exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
 
 - [ ] **T2 — DC-6: canonical `circunscripcion_sector` object**
   - **Decisión (2026-11-16, owner): A — vista canónica sobre la tabla cruda
-    renombrada.** Implementación pendiente de CI; plan en
-    `docs/quality/SQL_DECISION_RECORDS_20261116.md`.
+    renombrada.**
+  - Implementacion (2026-11-17): `sql/04` migra la tabla legada a
+    `circunscripcion_sector_raw` y crea la cruda privada; `sql/18` mantiene la
+    vista canonica; test PostGIS `_tests/dc6_canonical_view.sql`. Pendiente
+    certificacion CI.
   - Needs: table vs view decision (recommended: view canonical, raw table renamed).
   - Deliverable: `sql/04`/`sql/18`/`sql/19`/catalog updated, full 00→21 sequence
     runs in the PostGIS job without collision.
@@ -36,7 +39,10 @@ exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
 
 - [ ] **T3 — DC-7: single ownership/privilege model**
   - **Decisión (2026-11-16, owner): A — rol DDL dueño + rol de import con GRANT
-    explícitos y ALTER DEFAULT PRIVILEGES.** Implementación pendiente de CI.
+    explícitos y ALTER DEFAULT PRIVILEGES.**
+  - Implementacion (2026-11-17): `sql/02` aplica defaults para el rol DDL real y
+    DML del owner, con grants de import en raw/staging; test PostGIS
+    `_tests/dc7_privileges.sql`. Pendiente certificacion CI.
   - Needs: DDL role and import role decided; default-privilege targets confirmed.
   - Deliverable: `sql/02`/`sql/12`/`sql/19` aligned, CI role provisioning
     documented, PostGIS test proving defaults apply to a newly created table.
@@ -44,7 +50,10 @@ exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
 
 - [ ] **T4 — DC-8: destructive-path policy**
   - **Decisión (2026-11-16, owner): A — stage+swap obligatorio en reescrituras y
-    `--allow-destructive` sólo para borrados.** Implementación pendiente de CI.
+    `--allow-destructive` sólo para borrados.**
+  - Implementacion (2026-11-17): helper `DestructiveGuard.ps1`; `07/10/12/14/16`
+    con backup/swap y switch; `14` cambia la tabla viva en transaccion; contrato
+    `DestructiveScriptPolicyTest`. Pendiente certificacion CI.
   - Needs: policy for overwrite/delete per script (stage+swap vs explicit flag).
   - Deliverable: shared guard/parameter in `scripts/07/10/12/14/16`, docs updated,
     static contract in the safety job.

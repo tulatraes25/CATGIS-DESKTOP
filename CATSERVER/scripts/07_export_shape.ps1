@@ -10,8 +10,11 @@ param(
     [string]$GeometryColumn = "geom",
     [string]$Table = "",
     [string]$Query = "",
-    [string]$Pgsql2ShpPath = "C:\Program Files\PostgreSQL\18\bin\pgsql2shp.exe"
+    [string]$Pgsql2ShpPath = "C:\Program Files\PostgreSQL\18\bin\pgsql2shp.exe",
+    [switch]$AllowDestructive
 )
+
+. (Join-Path $PSScriptRoot "_common\DestructiveGuard.ps1")
 
 if (-not (Test-Path -LiteralPath $Pgsql2ShpPath)) {
     throw "No se encontro pgsql2shp en: $Pgsql2ShpPath"
@@ -29,8 +32,13 @@ $targetDir = Split-Path -Parent $OutputPath
 New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 
 $baseName = [System.IO.Path]::GetFileNameWithoutExtension($OutputPath)
-$existing = Join-Path $targetDir ($baseName + ".*")
-Get-ChildItem -Path $existing -ErrorAction SilentlyContinue | Remove-Item -Force
+Clear-CatserverStaleBackups -PathPattern (Join-Path $targetDir ($baseName + ".*.bak-*")) -AllowDestructive:$AllowDestructive
+$backups = @()
+Get-ChildItem -Path (Join-Path $targetDir ($baseName + ".*")) -ErrorAction SilentlyContinue |
+    ForEach-Object {
+        $backup = Move-CatserverToBackup -Path $_.FullName
+        if ($backup) { $backups += $backup }
+    }
 
 $previousPassword = $env:PGPASSWORD
 if ($Password) {
@@ -56,10 +64,24 @@ try {
         $pgsql2shpArgs += $Query
     }
 
-    & $Pgsql2ShpPath @pgsql2shpArgs
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "Fallo pgsql2shp al exportar a $OutputPath"
+    try {
+        & $Pgsql2ShpPath @pgsql2shpArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Fallo pgsql2shp al exportar a $OutputPath"
+        }
+    }
+    catch {
+        Get-ChildItem -Path (Join-Path $targetDir ($baseName + ".*")) -ErrorAction SilentlyContinue |
+            Where-Object { $backups -notcontains $_.FullName } |
+            ForEach-Object { Remove-CatserverTransientBackup -Path $_.FullName }
+        foreach ($backup in $backups) {
+            $original = $backup -replace '\.bak-[0-9a-f]{8}$', ''
+            Restore-CatserverBackup -BackupPath $backup -OriginalPath $original
+        }
+        throw
+    }
+    foreach ($backup in $backups) {
+        Remove-CatserverTransientBackup -Path $backup
     }
 }
 finally {

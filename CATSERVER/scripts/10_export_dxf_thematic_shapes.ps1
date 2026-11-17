@@ -8,8 +8,11 @@ param(
     [string]$Ogr2OgrPath = "C:\Program Files\PostgreSQL\18\bin\ogr2ogr.exe",
     [string]$OgrInfoPath = "C:\Program Files\PostgreSQL\18\bin\ogrinfo.exe",
     [int]$SourceSrid = 22182,
-    [int]$TargetSrid = 4326
+    [int]$TargetSrid = 4326,
+    [switch]$AllowDestructive
 )
+
+. (Join-Path $PSScriptRoot "_common\DestructiveGuard.ps1")
 
 function New-WhereClause {
     param(
@@ -31,9 +34,21 @@ function Export-Category {
     $base22182 = Join-Path $OutputDir ($BaseName + "_22182.shp")
     $base4326 = Join-Path $OutputDir ($BaseName + "_4326.shp")
 
+    $backups = @()
     foreach ($target in @($base22182, $base4326)) {
         $stem = [System.IO.Path]::GetFileNameWithoutExtension($target)
-        Get-ChildItem -Path (Join-Path $OutputDir ($stem + ".*")) -ErrorAction SilentlyContinue | Remove-Item -Force
+        Clear-CatserverStaleBackups -PathPattern (Join-Path $OutputDir ($stem + ".*.bak-*")) -AllowDestructive:$AllowDestructive
+        Get-ChildItem -Path (Join-Path $OutputDir ($stem + ".*")) -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                $backup = Move-CatserverToBackup -Path $_.FullName
+                if ($backup) { $backups += $backup }
+            }
+    }
+    function Restore-ExportBackups {
+        foreach ($backup in $backups) {
+            $original = $backup -replace '\.bak-[0-9a-f]{8}$', ''
+            Restore-CatserverBackup -BackupPath $backup -OriginalPath $original
+        }
     }
 
     & $Ogr2OgrPath `
@@ -47,6 +62,7 @@ function Export-Category {
         -nlt $GeometryType
 
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $base22182)) {
+        Restore-ExportBackups
         return $null
     }
 
@@ -57,6 +73,7 @@ function Export-Category {
         -t_srs ("EPSG:" + $TargetSrid)
 
     if ($LASTEXITCODE -ne 0) {
+        Restore-ExportBackups
         throw "No se pudo reproyectar $BaseName a EPSG:$TargetSrid"
     }
 
@@ -66,9 +83,14 @@ function Export-Category {
     if ($infoText -match 'Feature Count:\s+0') {
         foreach ($target in @($base22182, $base4326)) {
             $stem = [System.IO.Path]::GetFileNameWithoutExtension($target)
-            Get-ChildItem -Path (Join-Path $OutputDir ($stem + ".*")) -ErrorAction SilentlyContinue | Remove-Item -Force
+            Get-ChildItem -Path (Join-Path $OutputDir ($stem + ".*")) -ErrorAction SilentlyContinue |
+                ForEach-Object { Remove-CatserverTransientBackup -Path $_.FullName }
         }
+        Restore-ExportBackups
         return "EMPTY"
+    }
+    foreach ($backup in $backups) {
+        Remove-CatserverTransientBackup -Path $backup
     }
     return $infoText
 }

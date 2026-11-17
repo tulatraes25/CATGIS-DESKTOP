@@ -3,8 +3,11 @@ param(
     [string]$SourceRoot,
     [string]$OutputRoot = "",
     [string]$InventoryRoot = "",
-    [string]$PackageDate = ""
+    [string]$PackageDate = "",
+    [switch]$AllowDestructive
 )
+
+. (Join-Path $PSScriptRoot "_common\DestructiveGuard.ps1")
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path (Split-Path -Parent $SourceRoot) "deliveries"
@@ -52,6 +55,7 @@ $packageDir = Join-Path $OutputRoot $packageName
 $controlDir = Join-Path $packageDir "99_control"
 $inventoryDir = Join-Path $controlDir "inventarios"
 
+$packageBackup = $null
 if (Test-Path -LiteralPath $packageDir) {
     $resolvedOutputRoot = [System.IO.Path]::GetFullPath($OutputRoot)
     $resolvedPackageDir = [System.IO.Path]::GetFullPath($packageDir)
@@ -60,7 +64,8 @@ if (Test-Path -LiteralPath $packageDir) {
         throw "La carpeta de salida queda fuera del arbol permitido: $packageDir"
     }
 
-    Get-ChildItem -LiteralPath $packageDir -Force | Remove-Item -Recurse -Force
+    # DC-8: reescritura con backup; el paquete anterior se conserva hasta publicar.
+    $packageBackup = Move-CatserverToBackup -Path $packageDir
 }
 
 New-Item -ItemType Directory -Force -Path $packageDir, $controlDir, $inventoryDir | Out-Null
@@ -439,3 +444,8 @@ Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath $zipPath -Fo
 Write-Host "Paquete generado: $packageDir"
 Write-Host "Zip generado: $zipPath"
 Write-Host "Manifest: $manifestPath"
+
+# DC-8: publicado el nuevo paquete, se libera el backup temporal.
+if ($packageBackup) {
+    Remove-CatserverTransientBackup -Path $packageBackup
+}
