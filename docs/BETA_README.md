@@ -3,6 +3,11 @@
 Estado: **beta** (`1.0.0-beta.1`). A0.5/A0.7/F3 siguen `NOT_CERTIFIED`: esta beta
 no declara GUI ni runtime nativo certificados.
 
+## Descarga
+
+Pre-release: https://github.com/tulatraes25/CATGIS-DESKTOP/releases/tag/v1.0.0-beta.1
+(Linux tar.gz, Windows zip, macOS Apple Silicon zip; sin firma).
+
 ## Requisitos
 
 - Java 21 (los app-images incluyen su propio runtime).
