@@ -47,6 +47,8 @@ public class Main {
         final String[] launchArgs = cli.remaining();
         SwingUtilities.invokeLater(() -> {
             installLookAndFeel();
+            ar.com.catgis.catmap.ui.CatmapSplash splash =
+                    ar.com.catgis.catmap.ui.CatmapSplash.open();
             I18n.initialize();
 
             String projectPath = null;
@@ -62,10 +64,10 @@ public class Main {
                     layoutPath = launchArgs[++i];
                 } else if ("--import-table".equals(launchArgs[i]) && i + 1 < launchArgs.length) {
                     importTablePath = launchArgs[++i];
-                } else if (args[i].endsWith(".catgis")) {
-                    projectPath = args[i];
-                } else if (args[i].endsWith(".catmap")) {
-                    layoutPath = args[i];
+                } else if (launchArgs[i].endsWith(".catgis")) {
+                    projectPath = launchArgs[i];
+                } else if (launchArgs[i].endsWith(".catmap")) {
+                    layoutPath = launchArgs[i];
                 } else if ("--open".equals(launchArgs[i]) && i + 1 < launchArgs.length) {
                     quickDataPath = launchArgs[++i];
                 }
@@ -82,6 +84,7 @@ public class Main {
 
             // Create and show main window
             mainFrame = createMainWindow();
+            AppContext.get().setMainFrame(mainFrame);
             mainFrame.setVisible(true);
 
             // Try to connect to CATGIS
@@ -107,6 +110,9 @@ public class Main {
                 importClimateTable(new File(importTablePath));
             }
             checkPendingCatmapTable();
+            if (splash != null) {
+                splash.closeAfter(350);
+            }
         });
     }
 
@@ -297,6 +303,24 @@ public class Main {
         menuExportar.addSeparator();
         addMenuItem(menuExportar, "Configuración de resolución/DPI...", 0, e -> showDpiConfigDialog());
         menuBar.add(menuExportar);
+
+        // --- Análisis ---
+        JMenu menuAnalisis = new JMenu("Análisis");
+        addMenuItem(menuAnalisis, "Curvas de nivel...", 0,
+                e -> AnalysisActions.openContours());
+        addMenuItem(menuAnalisis, "Red de drenaje...", 0,
+                e -> AnalysisActions.openDrainage());
+        addMenuItem(menuAnalisis, "Cuencas...", 0,
+                e -> AnalysisActions.openBasins());
+        addMenuItem(menuAnalisis, "Área inundable...", 0,
+                e -> AnalysisActions.openFlood());
+        addMenuItem(menuAnalisis, "Riesgo...", 0,
+                e -> AnalysisActions.openRisk());
+        addMenuItem(menuAnalisis, "Viewshed...", 0,
+                e -> AnalysisActions.openViewshed());
+        addMenuItem(menuAnalisis, "Perfil topográfico...", 0,
+                e -> AnalysisActions.openProfile());
+        menuBar.add(menuAnalisis);
 
         // --- Ayuda ---
         JMenu menuAyuda = new JMenu("Ayuda");

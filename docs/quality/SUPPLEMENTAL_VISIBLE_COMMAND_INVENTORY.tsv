@@ -15,6 +15,13 @@ catmap/Main.java	ADDMENUITEM	Abrir datos...	1
 catmap/Main.java	ADDMENUITEM	Buscar comando...	1
 catmap/Main.java	ADDMENUITEM	Agregar servicio WMS...	1
 catmap/Main.java	ADDMENUITEM	Agregar servicio WFS...	1
+catmap/Main.java	ADDMENUITEM	Curvas de nivel...	1
+catmap/Main.java	ADDMENUITEM	Red de drenaje...	1
+catmap/Main.java	ADDMENUITEM	Cuencas...	1
+catmap/Main.java	ADDMENUITEM	Área inundable...	1
+catmap/Main.java	ADDMENUITEM	Riesgo...	1
+catmap/Main.java	ADDMENUITEM	Viewshed...	1
+catmap/Main.java	ADDMENUITEM	Perfil topográfico...	1
 catmap/Main.java	ADDMENUITEM	Agregar servicio WMTS...	1
 catmap/Main.java	ADDMENUITEM	Agregar capa PostGIS...	1
 catmap/Main.java	ADDMENUITEM	Cambiar tema (claro/oscuro)	1
