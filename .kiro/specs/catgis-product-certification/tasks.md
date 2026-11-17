@@ -126,8 +126,12 @@ Baseline: `bb5d854d17510a1c2518993a0c2120461f9d92a3`
   - `ExternalToolTimeoutContractTest` proves that open stdout cannot bypass timeout, nonzero exit codes surface their output, and large output is capped. A0.3 is still OPEN until every network/disk/process EDT path is reviewed.
   - Tranches A and B merged as PR #34 `d860bdcea233307eb4378145b7dccdf00105f5ae` and PR #35 `22961526117bf2e090450cd837042241f23af64b`; both post-main CI and Certification succeeded.
   - Tranche C candidate baseline `22961526117bf2e090450cd837042241f23af64b` on `quality/a0-wms-disk-cache-off-edt`: move WMS disk probing/PNG decoding out of the Swing map painting path; preserve fast memory hit and repaint callback on EDT. Executable contract `OnlineWmsDiskCacheEdtContractTest` requires the initial EDT disk hit to be asynchronous and the decoded image to be pixel exact. This is partial A0.3, not A0.7.
-- [ ] **A0.4 — Adapter/seam certification**
+- [x] **A0.4 — Adapter/seam certification**
   - Network/PostGIS/GDAL/filesystem operations have deterministic test seams.
+  - Cierre (2026-11-17): inventario de seams con contratos ejecutables en
+    `docs/quality/A04_SEAM_EVIDENCE_20261117.md` (atomic export/publish, project
+    read budget/integrity, HTTP/WMS/WCS, GDAL portable resolver, PostGIS real).
+    A0.7/F3 siguen `NOT_CERTIFIED`.
 - [x] **A0.5 — Architecture debt burn-down**
   - Zero unresolved CRITICAL/HIGH architecture findings.
   - Progreso (2026-11-16): los dos hallazgos de fuente de
@@ -239,3 +243,7 @@ certify this program.
     completa) y no queda deuda critica/alta conocida; evidencia en
     `docs/quality/A05_CLOSURE_20261117.md`. **A0.7/F3 siguen `NOT_CERTIFIED`**:
     requieren ejecucion GUI/nativa real y el smoke F3 no lo sustituye.
+  - Evidencia parcial (2026-11-17): `docs/quality/F3_RUNTIME_EVIDENCE_20261117.md`
+    (launcher packaged 3/3, UI snapshot, E2E headless 13/13); pasos 1/4/5/6/8/13
+    de REQ-PC-3 siguen pendientes de sesion GUI interactiva. **F3 sigue
+    NOT_CERTIFIED**.

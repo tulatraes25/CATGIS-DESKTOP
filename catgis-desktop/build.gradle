@@ -1257,3 +1257,12 @@ tasks.register('uiSnapshot', JavaExec) {
     systemProperty 'java.awt.headless', 'false'
     args = ['build/ui-snapshots']
 }
+
+// F3.1 evidence: canonical headless beta E2E (no GUI claim).
+tasks.register('e2eBetaHarness', JavaExec) {
+    dependsOn testClasses
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'ar.com.catgis.beta.BetaE2EHarness'
+    systemProperty 'java.awt.headless', 'true'
+    args = ['build/e2e-beta']
+}
