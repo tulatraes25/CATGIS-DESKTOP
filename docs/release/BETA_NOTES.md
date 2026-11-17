@@ -34,5 +34,5 @@ Fecha: 2026-11-16. Canal: `beta` (pre-release).
 
 ## Artefactos
 
-Esta pre-release adjunta app-images de Linux/Windows/macOS construidos por el
+Esta pre-release adjunta app-images de Linux/Windows/macOS Apple Silicon construidos por el
 workflow `release-beta.yml`. No se publican binarios firmados.

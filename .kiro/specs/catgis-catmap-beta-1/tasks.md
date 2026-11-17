@@ -52,6 +52,10 @@ Cada tarea se certifica con el mismo gate GitHub-first.
 - [ ] **B7 — Certificacion y cierre**
   - Cada tranche con PR/checks/merge expected head/post-main/attestation; log de
     certificacion de beta y cierre del objetivo.
+  - Progreso (2026-11-17): B1 (`main` `a8f9674`, attestation `43991875801`) y
+    B2-B6 (`main` `5803ecb`, Certification rerun SUCCESS tras un 429 externo de
+    Maven Central y attestation `43996181703`) certificados. Falta ejecutar/verificar
+    la pre-release (workflow corregido para no usar `--offline` en runners nuevos).
 
 ## Dependencias
 
