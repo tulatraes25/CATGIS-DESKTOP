@@ -42,3 +42,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   único (`a_b.shp`, `a_b_2.shp`, ...), sin sobreescribir archivos ajenos y
   reutilizando el archivo propio de la capa. Tests
   `VectorAutosaveCollisionContractTest` (4). Restan #144/#146/#148/#149/#155.
+- T1 avance 2 (2026-11-17): **#144** corregido (PR en curso): apertura en dos
+  fases, `stageProject` detached (raster/vector contra el proyecto candidato,
+  remoto pendiente explícito) y commit atómico; un fallo obligatorio deja la
+  sesión previa intacta y no hay éxito parcial. Tests
+  `ProjectOpenAtomicCommitContractTest` (2: raster corrupto conserva sesión,
+  proyecto válido commitea raster adjunto). Restan #146/#148/#149/#155.

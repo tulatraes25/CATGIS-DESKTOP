@@ -20,12 +20,27 @@ final class LayerVectorDataSupport {
         if (layer == null) {
             return null;
         }
-
         ShapefileData cached = AppContext.mapPanel() != null
                 ? AppContext.mapPanel().getShapefileData(layer)
                 : null;
         if (cached != null) {
             return cached;
+        }
+        return attachPrepared(layer, prepareData(layer, owner, postgisPasswordPrompt,
+                promptForCadReference));
+    }
+
+    /**
+     * Detached load stage for project open: reads and projects the layer data but
+     * does not touch the live MapPanel. The caller commits prepared data only
+     * after every mandatory layer staged successfully.
+     */
+    static ShapefileData prepareData(Layer layer,
+                                     Component owner,
+                                     String postgisPasswordPrompt,
+                                     boolean promptForCadReference) throws Exception {
+        if (layer == null) {
+            return null;
         }
 
         ShapefileData data;
@@ -42,17 +57,17 @@ final class LayerVectorDataSupport {
                 }
             }
             data = PostgisLoader.loadLayerData(postgisLayer, info);
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         if (layer instanceof GeoPackageLayer geoPackageLayer) {
             data = GeoPackageLoader.loadLayerData(geoPackageLayer);
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         if (layer instanceof OnlineWfsLayer onlineWfsLayer) {
             data = WfsFeatureLoader.loadLayerData(onlineWfsLayer);
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         if (layer instanceof GpxLayer gpxLayer) {
@@ -61,7 +76,7 @@ final class LayerVectorDataSupport {
                 return null;
             }
             data = GpxLoader.load(new File(path), gpxLayer.getContentKind());
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         if (layer instanceof SpatiaLiteLayer slLayer) {
@@ -77,7 +92,7 @@ final class LayerVectorDataSupport {
                 AppErrorSupport.logFailure("No se pudo cargar la capa SpatiaLite: " + slLayer.getTableName(), e);
                 return null;
             }
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         String path = layer.getPath() != null ? layer.getPath().trim() : "";
@@ -88,7 +103,7 @@ final class LayerVectorDataSupport {
         if (TopographyWorkflowSupport.isTransientTopographyVector(layer)
                 && !ExportVectorLayerAction.hasSupportedVectorPath(layer)) {
             data = TopographyWorkflowSupport.tryRestoreTransientTopographyVectorLayer(layer);
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         String lowerPath = path.toLowerCase();
@@ -98,11 +113,11 @@ final class LayerVectorDataSupport {
             if (isBlank(layer.getSourceCRS())) {
                 layer.setSourceCRS(ShapefileLoader.getCRSCode(new File(path)));
             }
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
         if (lowerPath.endsWith(".dxf")) {
             data = DxfLoader.load(new File(path));
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
         if (lowerPath.endsWith(".dwg")) {
             DwgImportSupport.ResolvedCadReference resolvedCad = DwgImportSupport.resolveDwgReference(
@@ -115,7 +130,7 @@ final class LayerVectorDataSupport {
             }
             layer.setSourceName(resolvedCad.resolutionMessage());
             data = DxfLoader.load(resolvedCad.dxfFile());
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
         if (lowerPath.endsWith(".geojson") || lowerPath.endsWith(".json")) {
             data = invokeLoader(GeoJsonLoader.class, path,
@@ -123,7 +138,7 @@ final class LayerVectorDataSupport {
             if (isBlank(layer.getSourceCRS())) {
                 layer.setSourceCRS("EPSG:4326");
             }
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
         if (lowerPath.endsWith(".kml") || lowerPath.endsWith(".kmz")) {
             data = invokeLoader(KmlLoader.class, path,
@@ -131,7 +146,7 @@ final class LayerVectorDataSupport {
             if (isBlank(layer.getSourceCRS())) {
                 layer.setSourceCRS("EPSG:4326");
             }
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
         if (lowerPath.endsWith(".fgb")) {
             File fgbFile = new File(path);
@@ -160,14 +175,14 @@ final class LayerVectorDataSupport {
             if (isBlank(layer.getSourceCRS())) {
                 layer.setSourceCRS(schemaCrs);
             }
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
         if (lowerPath.endsWith(".las") || lowerPath.endsWith(".laz")) {
             // LAS/LAZ CRS VLR/EVLR metadata is not yet parsed by the reader.
             // Reject before reading potentially large data, never invent WGS84.
             requireDeclaredLasSourceCrs(layer.getSourceCRS());
             data = loadLasFile(path, layer);
-            return projectAndAttach(layer, data);
+            return prepareProjection(layer, data);
         }
 
         return null;
@@ -264,7 +279,8 @@ final class LayerVectorDataSupport {
         AppErrorSupport.showErrorDialog(owner, title, genericIntro, ex);
     }
 
-    private static ShapefileData projectAndAttach(Layer layer, ShapefileData data) {
+    /** Projects (and remembers provenance) without attaching to the live map. */
+    private static ShapefileData prepareProjection(Layer layer, ShapefileData data) {
         if (layer == null || data == null) {
             return data;
         }
@@ -272,10 +288,18 @@ final class LayerVectorDataSupport {
         ShapefileData projected = TopographyWorkflowSupport.projectVectorDataToCurrentProject(layer, data);
         layer.setSourceName(projected.getSourceName());
         layer.setFeatureCount(projected.getFeatureCount());
-        if (AppContext.mapPanel() != null) {
-            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, projected);
-        }
         return projected;
+    }
+
+    /** Commit stage: attach already prepared vector data to the live map. */
+    static ShapefileData attachPrepared(Layer layer, ShapefileData prepared) {
+        if (layer == null || prepared == null) {
+            return prepared;
+        }
+        if (AppContext.mapPanel() != null) {
+            AppContext.mapPanel().addOrUpdateShapefileLayer(layer, prepared);
+        }
+        return prepared;
     }
 
     private static ShapefileData invokeLoader(Class<?> clazz, String path, String[] methodNames) throws Exception {
