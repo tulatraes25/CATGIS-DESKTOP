@@ -30,7 +30,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | WMS / WFS / PostGIS | SUPPORTED_VERIFIED | contratos + PostGIS CI real |
 | WMTS (REST/KVP, matrix sets XYZ) | SUPPORTED_VERIFIED | `WmtsSupportContractTest`; otros matrix sets requieren adaptación |
 | XYZ/online tiles | SUPPORTED_VERIFIED | contratos de caché/EDT |
-| WCS | SUPPORTED_VERIFIED (payload) | validación TIFF/CRS/dims + tests; #108 (ejes WCS2) abierto |
+| WCS | SUPPORTED_VERIFIED (payload) / BETA_LIMITED (ejes WCS2) | payload validado (#43); parser de ejes DescribeCoverage (#108 parcial, integración pendiente) |
 | STAC | BETA_LIMITED | pendiente aceptación OGC |
 | DEM/suelo/clima online (OpenTopography, SoilGrids, WorldClim/Open-Meteo) | BETA_LIMITED | TIFF+sidecar atomicos (#161); georreferencia embebida #128 abierto |
 | FlatGeobuf | BETA_LIMITED | frames en ventanas acotadas + cancelación (#175 parcial); lector indexado >100k pendiente |

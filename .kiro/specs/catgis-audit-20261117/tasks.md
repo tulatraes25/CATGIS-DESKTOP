@@ -138,3 +138,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   cubiertos por 34+ tests existentes. Evidencia en
   `docs/quality/WCS_PAYLOAD_INTEGRITY_EVIDENCE_20261117.md`. **#108 (ejes WCS2/
   DescribeCoverage) sigue OPEN**; A0.7/F3 NOT_CERTIFIED.
+- T4 avance 4 (2026-11-17): **#108** núcleo implementado (PR en curso):
+  `WcsDescribeCoverageAxes` parsea DescribeCoverage seguro (<=4 MiB), exige
+  srsName y exactamente 2 ejes, mapea x/y por significado (lon/lat/e/n/...) y
+  falla cerrado ante ambigüedad; genera SUBSET/SCALESIZE con etiquetas nativas.
+  Tests `WcsDescribeCoverageAxesContractTest` (5). **#108 sigue OPEN** hasta
+  integrar fetch DescribeCoverage + flujo de descarga/UI. A0.7/F3 NOT_CERTIFIED.
