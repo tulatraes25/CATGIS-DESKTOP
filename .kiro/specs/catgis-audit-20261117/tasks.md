@@ -164,3 +164,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   #163/#176/#256/#257/#258/#259/#260/#262 (+#43/#108 previos). Quedan abiertos
   #112 (M3 ingesta), #175 (indexado), #139 (UI), #261 (OS vault), #150/#151/
   #153/#193/#195, #164 y gates CATMAP/A0.7. Ver reconciliacion seccion 8.
+- Gobernanza (2026-11-17, cont.): cierre verificado adicional de #174
+  (ruleset activo exige 25 checks incl. Verify exact main push certification),
+  #193 (LocalVectorSourceCrsProvenance + LasSourceCrsProjectRoundTripContractTest)
+  y #164 (UserVisibleTextEncodingContractTest sin sentinelas). #195 sigue
+  parcial (SHP cubierto; GeoJSON/KML pendientes).
