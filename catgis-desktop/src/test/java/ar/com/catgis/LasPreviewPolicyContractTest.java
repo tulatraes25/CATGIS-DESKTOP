@@ -96,6 +96,27 @@ class LasPreviewPolicyContractTest {
                 () -> LasPreviewPolicy.requireCompleteForExport(complete));
     }
 
+    @Test
+    void previewStatusIsVisibleAndProfessionalAnalysisIsBlocked() {
+        Layer partial = new Layer("preview", "/data/big.las", "VECTOR");
+        partial.setPartialPreview(true);
+        partial.setTotalSourceFeatures(90_000);
+        partial.setLoadedSourceFeatures(30_000);
+        String status = LasPreviewPolicy.statusLabel(partial);
+        assertTrue(status.contains("PREVIEW"), status);
+        assertTrue(status.contains("30000"), status);
+        assertTrue(status.contains("90000"), status);
+
+        IllegalStateException blocked = assertThrows(IllegalStateException.class,
+                () -> LasPreviewPolicy.requireCompleteForAnalysis(partial, "validar topologia"));
+        assertTrue(blocked.getMessage().contains("validar topologia"), blocked.getMessage());
+
+        Layer complete = new Layer("complete", "/data/small.las", "VECTOR");
+        assertEquals("", LasPreviewPolicy.statusLabel(complete));
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+                () -> LasPreviewPolicy.requireCompleteForAnalysis(complete, "validar topologia"));
+    }
+
     /** Uncompressed LAS 1.2 with 20-byte point format 0 and a wide declared extent. */
     private Path fixture(long declaredPoints) throws Exception {
         int headerSize = 227;

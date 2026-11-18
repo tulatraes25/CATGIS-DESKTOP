@@ -39,9 +39,18 @@ estado en la línea de proyecto y guarda de exportación.
 
 Suite local: 1676 tests, 0 fallos, 15 skips.
 
+## Estado UI/analítica
+
+- **Tabla de atributos**: título, subtítulo y barra de estado muestran
+  `PREVIEW - N de TOTAL puntos (muestra estratificada)`; indica que los análisis
+  profesionales están bloqueados.
+- **Validación topológica**: `requireCompleteForAnalysis` bloquea ejecutar sobre
+  una capa preview con aviso al usuario.
+- **Exportación**: ya bloqueada (`requireCompleteForExport`).
+
 ## Límite declarado
 
-- Quedan pendientes etiquetas persistentes en toda la UI (tabla de atributos,
-  simbología, diálogos de análisis) y el bloqueo de **todos** los flujos
-  profesionales (clasificación, métricas). Por eso **#176 sigue abierto**.
+- Quedan pendientes el resto de diálogos analíticos (calculadora de campos,
+  geoprocesamiento, clasificación) y las etiquetas de simbología; por eso
+  **#176 sigue abierto**.
 - Dataset completo >50k requiere lector indexado; no se declara soporte completo.

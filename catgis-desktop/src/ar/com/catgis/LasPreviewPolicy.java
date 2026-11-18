@@ -24,12 +24,32 @@ public final class LasPreviewPolicy {
      * complete dataset. Callers surface the reason to the user.
      */
     public static void requireCompleteForExport(Layer layer) {
+        requireComplete(layer, "exportar");
+    }
+
+    /** Blocks professional analysis on a sampled LiDAR preview. */
+    public static void requireCompleteForAnalysis(Layer layer, String operation) {
+        requireComplete(layer, operation == null || operation.isBlank()
+                ? "analizar" : operation);
+    }
+
+    private static void requireComplete(Layer layer, String operation) {
         if (layer != null && layer.isPartialPreview()) {
             throw new IllegalStateException("La capa LiDAR es una vista previa ("
                     + layer.getLoadedSourceFeatures() + " de " + layer.getTotalSourceFeatures()
-                    + " puntos). No se exporta ni analiza como dataset completo; "
-                    + "carga el dataset completo con un lector PDAL/indexado.");
+                    + " puntos); no se puede " + operation
+                    + " como dataset completo. Carga el dataset completo con un lector "
+                    + "PDAL/indexado.");
         }
+    }
+
+    /** User-visible persistent badge for a preview layer ("" when complete). */
+    public static String statusLabel(Layer layer) {
+        if (layer == null || !layer.isPartialPreview()) {
+            return "";
+        }
+        return "PREVIEW - " + layer.getLoadedSourceFeatures() + " de "
+                + layer.getTotalSourceFeatures() + " puntos (muestra estratificada)";
     }
 
     public static Plan plan(long totalPoints, int maxPoints) {
