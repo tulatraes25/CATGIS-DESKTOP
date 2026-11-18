@@ -52,12 +52,17 @@ class ExternalToolTimeoutContractTest {
     void veryLargeOutputIsFullyDrainedButStoredWithinMemoryBudget() {
         byte[] largeOutput = new byte[1_200_000];
         Arrays.fill(largeOutput, (byte) 'x');
-        ExternalToolService.ToolResult result = ExternalToolService.collectProcess(
-                new CompletedProcess(new ByteArrayInputStream(largeOutput), 0), 2000L);
+        // Repeated to catch the previous 1s-join race deterministically.
+        for (int attempt = 0; attempt < 5; attempt++) {
+            ExternalToolService.ToolResult result = ExternalToolService.collectProcess(
+                    new CompletedProcess(new ByteArrayInputStream(largeOutput), 0), 2000L);
 
-        assertTrue(result.success());
-        assertTrue(result.output().length() < 1_049_000);
-        assertTrue(result.output().contains("[tool output truncated]"));
+            assertTrue(result.success(), "attempt " + attempt + ": " + result.error());
+            assertTrue(result.output().length() < 1_049_000);
+            assertTrue(result.output().contains("[tool output truncated]"));
+            assertFalse(result.error().contains("could not be fully drained"),
+                    "attempt " + attempt + ": drain must reach EOF");
+        }
     }
 
     private static final class HangingProcess extends Process {

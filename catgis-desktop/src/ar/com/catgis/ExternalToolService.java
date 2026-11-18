@@ -78,12 +78,18 @@ public final class ExternalToolService {
         try {
             if (!process.waitFor(Math.max(1L, timeoutMillis), TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
-                drainThread.join(1000L);
+                drainBounded(output);
                 return new ToolResult(false, output.snapshot(),
                         "Timeout after " + timeoutMillis + " ms", -1);
             }
 
-            drainThread.join(1000L);
+            // A slow CI runner must not snapshot a half-drained stream: wait for
+            // EOF deterministically and fail closed if the child (or a grandchild)
+            // keeps stdout open beyond the bounded budget.
+            if (!drainBounded(output)) {
+                return new ToolResult(false, output.snapshot(),
+                        "External tool output could not be fully drained", -1);
+            }
             String captured = output.snapshot();
             int exitCode = process.exitValue();
             return new ToolResult(exitCode == 0, captured,
@@ -99,9 +105,19 @@ public final class ExternalToolService {
         }
     }
 
+    private static boolean drainBounded(OutputDrain output) {
+        if (output.awaitCompletion(5000L)) {
+            return true;
+        }
+        output.closeQuietly();
+        return output.awaitCompletion(500L);
+    }
+
     private static final class OutputDrain implements Runnable {
         private final InputStream stream;
         private final StringBuilder collected = new StringBuilder();
+        private final java.util.concurrent.CountDownLatch completed =
+                new java.util.concurrent.CountDownLatch(1);
         private boolean truncated;
 
         private OutputDrain(InputStream stream) {
@@ -126,6 +142,25 @@ public final class ExternalToolService {
                 }
             } catch (IOException ignored) {
                 // A timed-out process is killed and its stdout can close abruptly.
+            } finally {
+                completed.countDown();
+            }
+        }
+
+        private boolean awaitCompletion(long millis) {
+            try {
+                return completed.await(millis, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+
+        private void closeQuietly() {
+            try {
+                stream.close();
+            } catch (IOException ignored) {
+                // Stream already closed/aborted by the child or timeout watchdog.
             }
         }
 
