@@ -35,8 +35,10 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | LAS/LAZ | BETA_LIMITED | rechazo >50k, sin LAZ (#176) |
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |
 | NetCDF | BETA_LIMITED | CF/grid_mapping pendiente (#162) |
-| Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes científicos T2 (#256–#258/#262) |
+| Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes T2 aplicados (#257/#258/#262); restan #162/#139 |
 | IDW / volumen / morfometría | BETA_LIMITED | #257/#258 abiertos |
+| Calculadora raster (float/NoData, GeoTIFF, preview 8-bit separado) | BETA_LIMITED | #256 API científica + tests; UI exporta GeoTIFF float |
+| Catálogo CRS argentino (POSGAR 94, Campo Inchauspe, POSGAR 2007) | SUPPORTED_VERIFIED | validado contra EPSG/GeoTools (#259) |
 | Paleta de comandos, temas, workspace, quick data, OGC opcional | SUPPORTED_VERIFIED | contratos + inventarios |
 | GUI interactiva / HiDPI real / impresión | NOT_CERTIFIED | A0.7/F3 |
 | Instaladores firmados/notarizados | UNSUPPORTED | secretos de firma no configurados |

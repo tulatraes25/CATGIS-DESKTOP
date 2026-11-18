@@ -274,9 +274,9 @@ public class CRSDefinitions {
             // Argentine POSGAR 94: 22181-22187
             if (epsg >= 22181 && epsg <= 22187)
                 return argentineFajaBounds(normalized, epsg - 22180, "POSGAR 94");
-            // Argentine POSGAR 98: 22191-22197
+            // Argentine Campo Inchauspe: 22191-22197
             if (epsg >= 22191 && epsg <= 22197)
-                return argentineFajaBounds(normalized, epsg - 22190, "POSGAR 98");
+                return argentineFajaBounds(normalized, epsg - 22190, "Campo Inchauspe");
             // Argentine POSGAR 2007: 5343-5349
             if (epsg >= 5343 && epsg <= 5349)
                 return argentineFajaBounds(normalized, epsg - 5342, "POSGAR 2007");
@@ -437,6 +437,8 @@ public class CRSDefinitions {
                 "WGS 84 / Pseudo-Mercator", "EPSG:3857 wgs 84 pseudo mercator world web"));
         entries.add(CrsCatalogEntry.featured("EPSG:4269", "EPSG:4269 - NAD83 | North America (by country)",
                 "NAD83", "EPSG:4269 nad83 north america"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22181", "EPSG:22181 - POSGAR 94 / Argentina 1 | Argentina",
+                "POSGAR 94 / Argentina 1", "EPSG:22181 posgar 94 argentina 1"));
         entries.add(CrsCatalogEntry.featured("EPSG:22182", "EPSG:22182 - POSGAR 94 / Argentina 2 | Argentina",
                 "POSGAR 94 / Argentina 2", "EPSG:22182 posgar 94 argentina 2"));
         entries.add(CrsCatalogEntry.featured("EPSG:22183", "EPSG:22183 - POSGAR 94 / Argentina 3 | Argentina",
@@ -449,18 +451,34 @@ public class CRSDefinitions {
                 "POSGAR 94 / Argentina 6", "EPSG:22186 posgar 94 argentina 6"));
         entries.add(CrsCatalogEntry.featured("EPSG:22187", "EPSG:22187 - POSGAR 94 / Argentina 7 | Argentina",
                 "POSGAR 94 / Argentina 7", "EPSG:22187 posgar 94 argentina 7"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22192", "EPSG:22192 - POSGAR 2007 / Argentina 2 | Argentina",
-                "POSGAR 2007 / Argentina 2", "EPSG:22192 posgar 2007 argentina 2"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22193", "EPSG:22193 - POSGAR 2007 / Argentina 3 | Argentina",
-                "POSGAR 2007 / Argentina 3", "EPSG:22193 posgar 2007 argentina 3"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22194", "EPSG:22194 - POSGAR 2007 / Argentina 4 | Argentina",
-                "POSGAR 2007 / Argentina 4", "EPSG:22194 posgar 2007 argentina 4"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22195", "EPSG:22195 - POSGAR 2007 / Argentina 5 | Argentina",
-                "POSGAR 2007 / Argentina 5", "EPSG:22195 posgar 2007 argentina 5"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22196", "EPSG:22196 - POSGAR 2007 / Argentina 6 | Argentina",
-                "POSGAR 2007 / Argentina 6", "EPSG:22196 posgar 2007 argentina 6"));
-        entries.add(CrsCatalogEntry.featured("EPSG:22197", "EPSG:22197 - POSGAR 2007 / Argentina 7 | Argentina",
-                "POSGAR 2007 / Argentina 7", "EPSG:22197 posgar 2007 argentina 7"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22191", "EPSG:22191 - Campo Inchauspe / Argentina 1 | Argentina",
+                "Campo Inchauspe / Argentina 1", "EPSG:22191 campo inchauspe argentina 1"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22192", "EPSG:22192 - Campo Inchauspe / Argentina 2 | Argentina",
+                "Campo Inchauspe / Argentina 2", "EPSG:22192 campo inchauspe argentina 2"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22193", "EPSG:22193 - Campo Inchauspe / Argentina 3 | Argentina",
+                "Campo Inchauspe / Argentina 3", "EPSG:22193 campo inchauspe argentina 3"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22194", "EPSG:22194 - Campo Inchauspe / Argentina 4 | Argentina",
+                "Campo Inchauspe / Argentina 4", "EPSG:22194 campo inchauspe argentina 4"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22195", "EPSG:22195 - Campo Inchauspe / Argentina 5 | Argentina",
+                "Campo Inchauspe / Argentina 5", "EPSG:22195 campo inchauspe argentina 5"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22196", "EPSG:22196 - Campo Inchauspe / Argentina 6 | Argentina",
+                "Campo Inchauspe / Argentina 6", "EPSG:22196 campo inchauspe argentina 6"));
+        entries.add(CrsCatalogEntry.featured("EPSG:22197", "EPSG:22197 - Campo Inchauspe / Argentina 7 | Argentina",
+                "Campo Inchauspe / Argentina 7", "EPSG:22197 campo inchauspe argentina 7"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5343", "EPSG:5343 - POSGAR 2007 / Argentina 1 | Argentina",
+                "POSGAR 2007 / Argentina 1", "EPSG:5343 posgar 2007 argentina 1"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5344", "EPSG:5344 - POSGAR 2007 / Argentina 2 | Argentina",
+                "POSGAR 2007 / Argentina 2", "EPSG:5344 posgar 2007 argentina 2"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5345", "EPSG:5345 - POSGAR 2007 / Argentina 3 | Argentina",
+                "POSGAR 2007 / Argentina 3", "EPSG:5345 posgar 2007 argentina 3"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5346", "EPSG:5346 - POSGAR 2007 / Argentina 4 | Argentina",
+                "POSGAR 2007 / Argentina 4", "EPSG:5346 posgar 2007 argentina 4"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5347", "EPSG:5347 - POSGAR 2007 / Argentina 5 | Argentina",
+                "POSGAR 2007 / Argentina 5", "EPSG:5347 posgar 2007 argentina 5"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5348", "EPSG:5348 - POSGAR 2007 / Argentina 6 | Argentina",
+                "POSGAR 2007 / Argentina 6", "EPSG:5348 posgar 2007 argentina 6"));
+        entries.add(CrsCatalogEntry.featured("EPSG:5349", "EPSG:5349 - POSGAR 2007 / Argentina 7 | Argentina",
+                "POSGAR 2007 / Argentina 7", "EPSG:5349 posgar 2007 argentina 7"));
         entries.add(CrsCatalogEntry.featured("EPSG:32719", "EPSG:32719 - WGS 84 / UTM zone 19S | Argentina",
                 "WGS 84 / UTM zone 19S", "EPSG:32719 wgs 84 utm zone 19s argentina"));
         entries.add(CrsCatalogEntry.featured("EPSG:32720", "EPSG:32720 - WGS 84 / UTM zone 20S | Argentina",
