@@ -122,3 +122,20 @@ Runtime Identity post-main SUCCESS; attestation `44391736517`):
 
 **Importante:** estos cierres son de implementación y tests headless/CI. **A0.7/F3
 (interacción GUI física, HiDPI, focus, owner gestures) siguen NOT_CERTIFIED.**
+## 10. Gates WCS / XYZ / GDAL cerrados (2026-11-17)
+
+Cerrados en GitHub con evidencia en `main = f4d8067` (attestation `44407049092`):
+
+| Issue | Evidencia |
+|---|---|
+| #86 presupuesto bytes/tiempo WCS | `WcsAtomicStreamDownloadContractTest`: presupuesto configurable, Content-Length temprano, agregado v2->v1, deadline compartido, abort/limpieza. |
+| #87 publicacion atomica/concurrencia WCS | `publishStagedCoverage` solo ATOMIC_MOVE, fallo cerrado sin fallback, symlink/directorio rechazados, lock de destino. |
+| #91 WCS decode fuera del EDT | `WcsRasterAsyncLoadContractTest` (worker async, cancelacion unica, fallo de callback, cierre sin import). |
+| #94 dimensiones/preflight WCS | `WcsDimensionsPreflightContractTest` (6): sin clamp 512, overflow, presupuesto real, mensajes. |
+| #50 cache XYZ con presupuesto de bytes | `OnlineTileCache` 128 MiB + contabilidad; `OnlineTileByteBudgetIntegrityContractTest` y suites asociadas. |
+| #64 GDAL portable macOS/Linux | `GdalSupport` resolucion confiable por plataforma; `GdalSupportPortableResolverContractTest` (9). |
+| #67 gdal2tiles moderno/XYZ-TMS | `Gdal2TilesCommandContractTest` (7) + `Gdal2TilesRealXyzIntegrationTest` real. |
+| #70 publicacion transaccional de tiles GDAL | `GdalTileOutputTransactionContractTest` (14) + lock/journal. |
+| #152 SpatiaLite sin primera tabla automatica | `SpatiaLiteSourceCrsTruthContractTest.selectedTableMustExistAndCannotBeSubstitutedByFirstAvailable`. |
+
+**Alcance:** evidencia headless/CI; **A0.7/F3 (GUI/runtime fisico) sigue NOT_CERTIFIED**.
