@@ -86,3 +86,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   (incluido el fallback por CRS de capa). Tests
   `GeoreferencePrecedenceContractTest` (4) con oracle de pixeles; decisión en
   `docs/quality/GEOREFERENCE_PRECEDENCE_20261117.md`.
+- T3 avance 3 (2026-11-17): **#162** corregido (PR en curso): `NetCdfCfSupport`
+  resuelve CRS por `grid_mapping` (`epsg_code`/`spatial_ref`/
+  `latitude_longitude`/grados) y falla cerrado en grids rotados sin CRS; el
+  fallback UCAR ya no asume EPSG:4326, aplica packaging CF
+  (scale/offset/fill/valid) y convierte unidades (radianes, 0..360).
+  `NetCdfCfSupportContractTest` (9); politica en
+  `docs/quality/NETCDF_CF_POLICY_20261117.md`.
