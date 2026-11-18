@@ -204,3 +204,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   `f3-runtime-smoke.yml` (run 44414260382, 3/3 SUCCESS: app-image + launcher +
   E2E). Manifiesto/F3 doc actualizados; A0.7/F3 siguen NOT_CERTIFIED por falta
   de matriz interactiva humana/HiDPI/foco/impresión física.
+- T4 avance (2026-11-17): #261 `OsKeyProtector` envuelve el secreto de
+  instalacion con DPAPI (Windows, PowerShell stdin) o Secret Service (Linux
+  secret-tool), formato de archivo versionado C G O S 1, migracion unica del
+  key raw, fail-closed ante tamper/backend distinto/ausente; ejecucion via
+  ExternalToolService.runBounded (sin ProcessBuilder nuevo). Tests
+  OsKeyProtectorContractTest (5) + vault (7). 1695 tests ok. #261 SIGUE
+  ABIERTO por Keychain macOS y matriz nativa de sesiones.

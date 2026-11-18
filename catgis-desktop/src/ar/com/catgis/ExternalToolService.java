@@ -113,6 +113,60 @@ public final class ExternalToolService {
         return output.awaitCompletion(500L);
     }
 
+    /**
+     * T4/#261: bounded one-shot process with stdin (OS credential stores).
+     * Secrets travel through stdin, never argv; stdout/stderr are bounded and
+     * the child is killed on timeout/interruption.
+     */
+    static byte[] runBounded(String[] command, byte[] stdinBytes, long timeoutMillis)
+            throws java.io.IOException {
+        if (command == null || command.length == 0) {
+            throw new java.io.IOException("External tool command is required.");
+        }
+        Process process = new ProcessBuilder(command).redirectErrorStream(false).start();
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        Thread reader = new Thread(() -> {
+            try (java.io.InputStream stream = process.getInputStream()) {
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = stream.read(buffer)) != -1) {
+                    if (stdout.size() + count > 1024 * 1024) {
+                        return;
+                    }
+                    stdout.write(buffer, 0, count);
+                }
+            } catch (java.io.IOException ignored) {
+                // Bounded diagnostic read only.
+            }
+        }, "catgis-tool-stdout");
+        reader.setDaemon(true);
+        reader.start();
+        try (java.io.OutputStream input = process.getOutputStream()) {
+            if (stdinBytes != null && stdinBytes.length > 0) {
+                input.write(stdinBytes);
+            }
+        } catch (java.io.IOException brokenPipe) {
+            // The child may close stdin early; exit status decides the outcome.
+        }
+        try {
+            if (!process.waitFor(Math.max(1L, timeoutMillis), TimeUnit.MILLISECONDS)) {
+                process.destroyForcibly();
+                reader.join(500L);
+                throw new java.io.IOException("External tool did not answer in time.");
+            }
+            reader.join(2000L);
+            if (process.exitValue() != 0) {
+                throw new java.io.IOException("External tool failed with exit code "
+                        + process.exitValue() + ".");
+            }
+            return stdout.toByteArray();
+        } catch (InterruptedException interrupted) {
+            process.destroyForcibly();
+            Thread.currentThread().interrupt();
+            throw new java.io.IOException("External tool interrupted.", interrupted);
+        }
+    }
+
     private static final class OutputDrain implements Runnable {
         private final InputStream stream;
         private final StringBuilder collected = new StringBuilder();

@@ -28,12 +28,16 @@ class PostgisCredentialsVaultContractTest {
 
     @BeforeEach
     void setUp() {
+        // Legacy tests assert the raw 32-byte key file; OS wrapping is covered
+        // separately by OsKeyProtectorContractTest with a fake backend.
+        System.setProperty(OsKeyProtector.PROPERTY, "off");
         keyFile = directory.resolve("postgis.key");
         PostgisCredentialVault.overrideKeyFileForTest(keyFile);
     }
 
     @AfterEach
     void tearDown() {
+        System.clearProperty(OsKeyProtector.PROPERTY);
         PostgisCredentialVault.overrideKeyFileForTest(null);
     }
 

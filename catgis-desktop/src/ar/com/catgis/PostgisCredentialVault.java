@@ -7,6 +7,7 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,7 +38,9 @@ final class PostgisCredentialVault {
     private static final String AAD = "CATGIS_POSTGIS_V2";
 
     private static volatile Path keyFileOverride;
+    private static volatile OsKeyProtector.Protector protectorOverride;
     private static volatile byte[] cachedSecret;
+    private static final byte[] OS_FRAME_MAGIC = {'C', 'G', 'O', 'S', '1'};
 
     private PostgisCredentialVault() {}
 
@@ -109,6 +112,16 @@ final class PostgisCredentialVault {
         cachedSecret = null;
     }
 
+    /** Test seam: injects a fake OS protector; null restores platform selection. */
+    static void overrideProtectorForTest(OsKeyProtector.Protector protector) {
+        protectorOverride = protector;
+        cachedSecret = null;
+    }
+
+    private static OsKeyProtector.Protector protector() {
+        return protectorOverride != null ? protectorOverride : OsKeyProtector.selected();
+    }
+
     private static byte[] installationSecret() {
         Path keyFile = keyFileOverride != null ? keyFileOverride : keyFile();
         byte[] cached = cachedSecret;
@@ -116,11 +129,19 @@ final class PostgisCredentialVault {
             return cached;
         }
         try {
+            OsKeyProtector.Protector active = protector();
             if (Files.isRegularFile(keyFile)) {
                 byte[] existing = Files.readAllBytes(keyFile);
-                if (existing.length == KEY_BYTES) {
-                    cachedSecret = existing;
-                    return existing;
+                byte[] decoded = decodeKeyFile(existing, active);
+                if (decoded != null) {
+                    if (existing.length == KEY_BYTES && active != null) {
+                        // Transparent one-time migration of the legacy raw key
+                        // to OS-backed protection; ciphertext in Preferences is
+                        // unchanged because only the wrapping key changes.
+                        writeKeyFile(keyFile, decoded);
+                    }
+                    cachedSecret = decoded;
+                    return decoded;
                 }
             }
             byte[] secret = random(KEY_BYTES);
@@ -134,13 +155,74 @@ final class PostgisCredentialVault {
         }
     }
 
+    private static byte[] decodeKeyFile(byte[] existing, OsKeyProtector.Protector active)
+            throws IOException {
+        if (existing.length == KEY_BYTES) {
+            return existing;
+        }
+        if (existing.length < OS_FRAME_MAGIC.length + 4) {
+            return null;
+        }
+        for (int i = 0; i < OS_FRAME_MAGIC.length; i++) {
+            if (existing[i] != OS_FRAME_MAGIC[i]) {
+                return null;
+            }
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(existing, OS_FRAME_MAGIC.length,
+                existing.length - OS_FRAME_MAGIC.length);
+        if (buffer.remaining() < 4) {
+            return null;
+        }
+        int nameLength = buffer.getInt();
+        if (nameLength <= 0 || nameLength > 128 || buffer.remaining() < nameLength + 1) {
+            return null;
+        }
+        byte[] nameBytes = new byte[nameLength];
+        buffer.get(nameBytes);
+        String name = new String(nameBytes, StandardCharsets.UTF_8);
+        byte[] protectedSecret = new byte[buffer.remaining()];
+        buffer.get(protectedSecret);
+        if (active == null) {
+            throw new IllegalStateException("El secreto PostGIS esta protegido por '"
+                    + name + "' pero el almacen OS no esta disponible en esta sesion.");
+        }
+        if (!name.equals(active.name())) {
+            throw new IllegalStateException("El secreto PostGIS fue protegido por '"
+                    + name + "' y el backend actual es '" + active.name()
+                    + "'; no se intentara degradar a cifrado local.");
+        }
+        byte[] secret = active.unprotect(protectedSecret);
+        if (secret == null || secret.length != KEY_BYTES) {
+            throw new IllegalStateException("El almacen OS devolvio un secreto PostGIS invalido.");
+        }
+        return secret;
+    }
+
+    private static byte[] encodeKeyFile(byte[] secret) throws IOException {
+        OsKeyProtector.Protector active = protector();
+        if (active == null) {
+            return secret.clone();
+        }
+        byte[] protectedSecret = active.protect(secret);
+        if (protectedSecret == null || protectedSecret.length == 0) {
+            throw new IOException("El almacen OS devolvio una proteccion vacia.");
+        }
+        byte[] name = active.name().getBytes(StandardCharsets.UTF_8);
+        return ByteBuffer.allocate(OS_FRAME_MAGIC.length + 4 + name.length + protectedSecret.length)
+                .put(OS_FRAME_MAGIC)
+                .putInt(name.length)
+                .put(name)
+                .put(protectedSecret)
+                .array();
+    }
+
     private static void writeKeyFile(Path keyFile, byte[] secret) throws IOException {
         Path parent = keyFile.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
         }
         Path temp = keyFile.resolveSibling("." + keyFile.getFileName() + ".tmp");
-        Files.write(temp, secret);
+        Files.write(temp, encodeKeyFile(secret));
         try {
             Files.setPosixFilePermissions(temp,
                     PosixFilePermissions.fromString("rw-------"));
