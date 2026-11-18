@@ -48,9 +48,16 @@ Suite local: 1676 tests, 0 fallos, 15 skips.
   una capa preview con aviso al usuario.
 - **Exportación**: ya bloqueada (`requireCompleteForExport`).
 
-## Límite declarado
+## Cobertura de guards (cierre funcional)
 
-- Quedan pendientes el resto de diálogos analíticos (calculadora de campos,
-  geoprocesamiento, clasificación) y las etiquetas de simbología; por eso
-  **#176 sigue abierto**.
-- Dataset completo >50k requiere lector indexado; no se declara soporte completo.
+- **Lista de capas**: sufijo `[PREVIEW]` en el nombre.
+- **Tabla de atributos**: título/subtítulo/estado con `PREVIEW - N de TOTAL`.
+- **Análisis profesionales bloqueados** con aviso accionable:
+  exportación (`requireCompleteForExport`), validación topológica,
+  calculadora de campos, geoprocesamiento y clasificación ML
+  (`requireCompleteForAnalysis`).
+- La guarda es central en `LasPreviewPolicy`: cualquier nuevo flujo profesional
+  debe llamarla antes de consumir una capa.
+- **Límite**: dataset completo >50k requiere lector indexado; LAZ y formatos de
+  punto 4–10 siguen fallando cerrados con guía PDAL/GDAL. No se declara soporte
+  de dataset LAS completo >50k.

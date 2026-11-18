@@ -169,6 +169,13 @@ public class SmileClassificationDialog extends JDialog {
         }
 
         String layerName = (String) layerCombo.getSelectedItem();
+        try {
+            LasPreviewPolicy.requireCompleteForAnalysis(findLayer(layerName),
+                    "clasificar");
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(this, "LiDAR", preview.getMessage());
+            return;
+        }
         String featureField = (String) featureFieldCombo.getSelectedItem();
         String labelField = (String) labelFieldCombo.getSelectedItem();
 

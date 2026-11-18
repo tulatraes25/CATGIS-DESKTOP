@@ -211,6 +211,11 @@ public class AttributeTableWindow extends JFrame {
         });
     }
 
+    /** Layer whose attributes are shown (used by preview analysis guards). */
+    public Layer getLayer() {
+        return layer;
+    }
+
     private JPanel buildTopPanel() {
         JPanel topPanel = new JPanel(new BorderLayout(4, 2));
         topPanel.setBorder(BorderFactory.createEmptyBorder(0, 1, 1, 1));

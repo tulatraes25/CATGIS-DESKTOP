@@ -154,3 +154,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   bloqueo de validación topológica sobre preview; exportación ya bloqueada.
   Tests `LasPreviewPolicyContractTest` (5). Siguen pendientes calculadora de
   campos/geoprocesamiento/clasificación y simbología: #176 ABIERTO.
+- T3 cierre de #176 (2026-11-17): badge `[PREVIEW]` en lista de capas y estado
+  `PREVIEW - N de TOTAL` en tabla; guards centrales bloquean exportacion,
+  topologia, calculadora de campos, geoprocesamiento y clasificacion ML sobre
+  previews. Tests de politica (5). Dataset completo >50k y LAZ siguen fuera de
+  alcance declarado.
