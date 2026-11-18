@@ -44,3 +44,14 @@ crear ventanas, el job falla de forma visible y no se declara evidencia.
 - Evidencia de ejecución, no certificación de GUI: A0.7 exige los gates de
   arquitectura y una matriz CORE ejecutada.
 - El E2E headless omite interacción humana; no reemplaza F3.2/F3.3/F3.4.
+## Refresh 2026-11-17 (main `21bd9a6`)
+
+- `ui-snapshot.yml` run **`44414255394`**: **3/3 jobs SUCCESS** (Linux Xvfb,
+  Windows, macOS Apple Silicon) — la ventana real de CATMAP se pintó a PNG en
+  cada runner.
+- `f3-runtime-smoke.yml` run **`44414260382`**: **3/3 jobs SUCCESS**
+  (app-image jpackage + launcher `--version`/`--self-test` + E2E) en Linux,
+  Windows y macOS Apple Silicon.
+- Esto **no** certifica A0.7/F3: falta la matriz interactiva humana (F3.2/F3.3/
+  F3.4), HiDPI/foco reales, gestos del owner y validación física de impresión.
+  `NOT_CERTIFIED` se mantiene.

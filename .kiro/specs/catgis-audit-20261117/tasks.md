@@ -199,3 +199,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   XYZ/GDAL (#50/#64/#67/#70) y SpatiaLite (#152) con tests certificados en main.
   Quedan abiertos #263, #261, #175, #143, #132, #114, #113, #112, #109, #82,
   #74 y #73; A0.7/F3 NOT_CERTIFIED.
+- T5 evidencia (2026-11-17, main 21bd9a6): refresco real de `ui-snapshot.yml`
+  (run 44414255394, 3/3 SUCCESS: Linux Xvfb/Windows/macOS ARM) y
+  `f3-runtime-smoke.yml` (run 44414260382, 3/3 SUCCESS: app-image + launcher +
+  E2E). Manifiesto/F3 doc actualizados; A0.7/F3 siguen NOT_CERTIFIED por falta
+  de matriz interactiva humana/HiDPI/foco/impresión física.
