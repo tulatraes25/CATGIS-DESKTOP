@@ -105,29 +105,120 @@ public final class RasterCoverageSupport {
         }
     }
 
+    /** Provenance of the georeference used to open a raster. */
+    public enum GeoreferenceSource {
+        EMBEDDED_GEOTIFF,
+        SIDECAR,
+        CONFLICT_KEPT_EMBEDDED,
+        NONE
+    }
+
+    /** Explicit georeference decision: never invents a CRS when data lacks one. */
+    public record GeoreferenceDecision(GeoreferenceSource source, String crsCode,
+                                       ReferencedEnvelope envelope, boolean conflict,
+                                       String detail) {
+        public boolean hasGeoreference() {
+            return source != GeoreferenceSource.NONE && envelope != null;
+        }
+    }
+
+    /**
+     * Precedence for raster georeference: embedded GeoTIFF GeoKeys win over the
+     * sidecar; a sidecar that contradicts the embedded CRS is vetoed (the raster
+     * is still usable with its embedded georeference). Sidecar metadata is only
+     * applied when the TIFF has no embedded georeference and the sidecar
+     * declares a decodable CRS; missing CRS never becomes an invented EPSG:4326.
+     */
+    public static GeoreferenceDecision decideGeoreference(File file, GridCoverage2D coverage) {
+        if (file == null) {
+            return new GeoreferenceDecision(GeoreferenceSource.NONE, "", null, false,
+                    "sin archivo raster");
+        }
+        // CRSDefinitions.normalizeCode(blank) returns EPSG:4326 by design for UI
+        // defaults; georeference provenance must never turn a missing CRS into an
+        // invented WGS84 code (#128).
+        String embeddedCode = declaredCode(readCrsCodeFromTiffMetadata(file));
+        RasterSidecarSupport.Metadata metadata = RasterSidecarSupport.read(file);
+        String sidecarCode = metadata != null ? declaredCode(metadata.sourceCrs()) : "";
+        boolean sidecarUsable = metadata != null && metadata.envelope() != null
+                && !metadata.envelope().isNull() && !sidecarCode.isBlank();
+        if (!embeddedCode.isBlank()) {
+            ReferencedEnvelope embeddedEnvelope = embeddedEnvelope(coverage, embeddedCode);
+            if (sidecarUsable && !sameCrs(embeddedCode, sidecarCode)) {
+                return new GeoreferenceDecision(GeoreferenceSource.CONFLICT_KEPT_EMBEDDED,
+                        embeddedCode, embeddedEnvelope, true,
+                        "GeoTIFF embebido " + embeddedCode + " prevalece sobre sidecar "
+                                + sidecarCode + " (conflicto vetado)");
+            }
+            return new GeoreferenceDecision(GeoreferenceSource.EMBEDDED_GEOTIFF,
+                    embeddedCode, embeddedEnvelope, false, "GeoTIFF embebido " + embeddedCode);
+        }
+        if (!sidecarUsable) {
+            String detail = metadata == null
+                    ? "sin georreferencia embebida ni sidecar"
+                    : "sidecar sin CRS declarado o sin extension; no se inventa CRS";
+            return new GeoreferenceDecision(GeoreferenceSource.NONE, "", null, false, detail);
+        }
+        try {
+            CoordinateReferenceSystem crs = CRSDefinitions.decode(sidecarCode, true);
+            return new GeoreferenceDecision(GeoreferenceSource.SIDECAR, sidecarCode,
+                    new ReferencedEnvelope(metadata.envelope(), crs), false,
+                    "sidecar " + sidecarCode);
+        } catch (Exception invalid) {
+            return new GeoreferenceDecision(GeoreferenceSource.NONE, "", null, false,
+                    "sidecar con CRS no decodable: " + sidecarCode);
+        }
+    }
+
+    /** Applies only the sidecar provenance; embedded GeoKeys are never replaced. */
     public static GridCoverage2D applySidecarMetadataIfPresent(File file, GridCoverage2D coverage) {
         if (file == null || coverage == null || coverage.getRenderedImage() == null) {
             return coverage;
         }
-
-        try {
-            RasterSidecarSupport.Metadata metadata = RasterSidecarSupport.read(file);
-            if (metadata == null || metadata.envelope() == null || metadata.envelope().isNull()) {
-                return coverage;
-            }
-            String sourceCrs = CRSDefinitions.normalizeCode(metadata.sourceCrs());
-            if (sourceCrs.isBlank()) {
-                sourceCrs = resolveCoverageIdentifier(coverage);
-            }
-            if (sourceCrs.isBlank()) {
-                return coverage;
-            }
-            CoordinateReferenceSystem crs = CRSDefinitions.decode(sourceCrs, true);
-            ReferencedEnvelope referencedEnvelope = new ReferencedEnvelope(metadata.envelope(), crs);
-            return new GridCoverageFactory().create(file.getName(), coverage.getRenderedImage(), referencedEnvelope);
-        } catch (Exception ignored) {
-            return coverage;
+        GeoreferenceDecision decision = decideGeoreference(file, coverage);
+        if (decision.conflict()) {
+            CatgisLogger.warn("[GEO] " + decision.detail(), null);
         }
+        if (decision.source() == GeoreferenceSource.SIDECAR) {
+            try {
+                return new GridCoverageFactory().create(file.getName(),
+                        coverage.getRenderedImage(), decision.envelope());
+            } catch (Exception invalid) {
+                return coverage;
+            }
+        }
+        // EMBEDDED_GEOTIFF / CONFLICT_KEPT_EMBEDDED / NONE: keep the coverage as
+        // read (GeoKeys preserved, no fabricated CRS).
+        return coverage;
+    }
+
+    private static ReferencedEnvelope embeddedEnvelope(GridCoverage2D coverage, String crsCode) {
+        if (coverage == null || coverage.getRenderedImage() == null || crsCode.isBlank()) {
+            return null;
+        }
+        try {
+            CoordinateReferenceSystem crs = CRSDefinitions.decode(crsCode, true);
+            var envelope2D = coverage.getEnvelope2D();
+            if (envelope2D == null || envelope2D.isEmpty()) {
+                return null;
+            }
+            return new ReferencedEnvelope(envelope2D, crs);
+        } catch (Exception invalid) {
+            return null;
+        }
+    }
+
+    /** Normalizes a declared CRS code, preserving blank instead of defaulting. */
+    public static String declaredCode(String code) {
+        if (code == null || code.isBlank()) {
+            return "";
+        }
+        return CRSDefinitions.normalizeCode(code);
+    }
+
+    private static boolean sameCrs(String first, String second) {
+        return first != null && second != null
+                && first.trim().equalsIgnoreCase(second.trim());
     }
 
     private static GridCoverage2D readCoverageFromSidecar(File file) {
@@ -151,8 +242,8 @@ public final class RasterCoverageSupport {
     private static GridCoverage2D readCoverageUsingLayerCrsFallback(File file,
                                                                     Layer layer,
                                                                     IOException primaryFailure) throws IOException {
-        String forcedSourceCrs = layer != null ? CRSDefinitions.normalizeCode(layer.getSourceCRS()) : "";
-        String extractedSourceCrs = CRSDefinitions.normalizeCode(readCrsCodeFromTiffMetadata(file));
+        String forcedSourceCrs = layer != null ? declaredCode(layer.getSourceCRS()) : "";
+        String extractedSourceCrs = declaredCode(readCrsCodeFromTiffMetadata(file));
         String effectiveSourceCrs = !extractedSourceCrs.isBlank() ? extractedSourceCrs : forcedSourceCrs;
         if (effectiveSourceCrs.isBlank()) {
             throw primaryFailure;

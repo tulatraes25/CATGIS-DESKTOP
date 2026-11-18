@@ -79,3 +79,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   verificacion de imagen/sidecar, restauracion ante fallo, deletion de sidecar
   obsoleto si no hay georreferencia) y se usa en OpenTopography, SoilGrids y
   Climate (WorldClim/Open-Meteo). Tests `RasterBundlePublisherContractTest` (6).
+- T3 avance 2 (2026-11-17): **#128** corregido (PR en curso): precedencia
+  GeoKeys embebidas > sidecar, veto de conflicto con warning de provenance,
+  sidecar sólo si no hay GeoKeys y declara CRS decodable, y
+  `declaredCode()` evita inventar EPSG:4326 en decisiones de georreferencia
+  (incluido el fallback por CRS de capa). Tests
+  `GeoreferencePrecedenceContractTest` (4) con oracle de pixeles; decisión en
+  `docs/quality/GEOREFERENCE_PRECEDENCE_20261117.md`.
