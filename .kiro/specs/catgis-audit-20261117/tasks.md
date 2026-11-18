@@ -48,3 +48,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   sesión previa intacta y no hay éxito parcial. Tests
   `ProjectOpenAtomicCommitContractTest` (2: raster corrupto conserva sesión,
   proyecto válido commitea raster adjunto). Restan #146/#148/#149/#155.
+- T1 avance 3 (2026-11-17): **#148** corregido (PR en curso): formato `.catgis`
+  v2 con marcador `PROJECT_FORMAT|2` y codec reversible (`%`, `|`, CR/LF
+  escapados; Unicode y backslashes verbatim) en guardado/carga canonicos,
+  `ProjectOpenService.inspect`, grupos y codec legacy; archivos v1 siguen
+  abriendo. Tests `ProjectCodecRoundTripContractTest` (4). Restan
+  #146/#149/#155.

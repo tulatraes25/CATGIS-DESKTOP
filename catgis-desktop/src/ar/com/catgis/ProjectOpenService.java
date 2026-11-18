@@ -49,6 +49,7 @@ public final class ProjectOpenService {
             double viewMinY = 0;
             double viewZoomFactor = 1.0;
             boolean hasProjectPayload = false;
+            boolean encodedProjects = false;
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -56,17 +57,23 @@ public final class ProjectOpenService {
                 if (line.trim().isEmpty()) {
                     continue;
                 }
-                if (line.startsWith("PROJECT_CRS|")) {
+                if (ProjectRecordCodec.isV2Header(line)) {
+                    hasProjectPayload = true;
+                    encodedProjects = true;
+                } else if (line.startsWith("PROJECT_CRS|")) {
                     hasProjectPayload = true;
                     String[] crsParts = line.split("\\|", -1);
                     ProjectOpenRecordIntegrity.requireProjectCrs(crsParts);
-                    project.setProjectCRS(crsParts[1].trim());
+                    project.setProjectCRS(encodedProjects
+                            ? ProjectRecordCodec.unescape(crsParts[1]) : crsParts[1].trim());
                 } else if (line.startsWith("PROJECT_META|")) {
                     hasProjectPayload = true;
                     String[] metaParts = line.split("\\|", -1);
                     ProjectOpenRecordIntegrity.requireMetadata(metaParts);
                     LoadProjectAction.applyProjectMetadata(project,
-                            metaParts[1].trim(), metaParts[2].trim());
+                            metaParts[1].trim(),
+                            encodedProjects ? ProjectRecordCodec.unescape(metaParts[2])
+                                    : metaParts[2].trim());
                 } else if (line.startsWith("PROJECT_LAYOUT_ITEM|")) {
                     hasProjectPayload = true;
                     project.addCatmapItem(ProjectOpenRecordIntegrity.parseLayoutItem(line));
@@ -77,7 +84,9 @@ public final class ProjectOpenService {
                     hasProjectPayload = true;
                     String[] groupParts = line.split("\\|", -1);
                     ProjectOpenRecordIntegrity.requireGroup(groupParts);
-                    LayerGroup group = new LayerGroup(groupParts[1].trim());
+                    LayerGroup group = new LayerGroup(encodedProjects
+                            ? ProjectRecordCodec.unescape(groupParts[1])
+                            : groupParts[1].trim());
                     if (groupParts.length >= 3) {
                         group.setVisible(Boolean.parseBoolean(groupParts[2].trim()));
                     }
@@ -93,7 +102,7 @@ public final class ProjectOpenService {
                     viewZoomFactor = view[2];
                     viewLoaded = true;
                 } else {
-                    Layer layer = LoadProjectAction.parseLayer(line);
+                    Layer layer = LoadProjectAction.parseLayer(line, encodedProjects);
                     if (layer == null) {
                         ProjectOpenRecordIntegrity.rejectMalformedLayerRecord(line);
                         continue;

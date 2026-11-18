@@ -88,6 +88,7 @@ public class LoadProjectAction extends AbstractAction {
             double savedViewMinY = 0;
             double savedZoomFactor = 1.0;
             boolean hasProjectPayload = false;
+            boolean encodedProjects = false;
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -96,11 +97,18 @@ public class LoadProjectAction extends AbstractAction {
                     continue;
                 }
 
+                if (ProjectRecordCodec.isV2Header(line)) {
+                    hasProjectPayload = true;
+                    encodedProjects = true;
+                    continue;
+                }
+
                 if (line.startsWith("PROJECT_CRS|")) {
                     hasProjectPayload = true;
                     String[] crsParts = line.split("\\|", -1);
                     ProjectOpenRecordIntegrity.requireProjectCrs(crsParts);
-                    loadedProject.setProjectCRS(crsParts[1].trim());
+                    loadedProject.setProjectCRS(encodedProjects
+                            ? ProjectRecordCodec.unescape(crsParts[1]) : crsParts[1].trim());
                     continue;
                 }
 
@@ -108,7 +116,9 @@ public class LoadProjectAction extends AbstractAction {
                     hasProjectPayload = true;
                     String[] metaParts = line.split("\\|", -1);
                     ProjectOpenRecordIntegrity.requireMetadata(metaParts);
-                    applyProjectMetadata(loadedProject, metaParts[1].trim(), metaParts[2].trim());
+                    String metaValue = encodedProjects
+                            ? ProjectRecordCodec.unescape(metaParts[2]) : metaParts[2].trim();
+                    applyProjectMetadata(loadedProject, metaParts[1].trim(), metaValue);
                     continue;
                 }
 
@@ -129,7 +139,9 @@ public class LoadProjectAction extends AbstractAction {
                     String[] groupParts = line.split("\\|", -1);
                     ProjectOpenRecordIntegrity.requireGroup(groupParts);
                     if (groupParts.length >= 2) {
-                        LayerGroup group = new LayerGroup(groupParts[1].trim());
+                        String groupName = encodedProjects
+                                ? ProjectRecordCodec.unescape(groupParts[1]) : groupParts[1].trim();
+                        LayerGroup group = new LayerGroup(groupName);
                         if (groupParts.length >= 3) {
                             group.setVisible(Boolean.parseBoolean(groupParts[2].trim()));
                         }
@@ -151,7 +163,7 @@ public class LoadProjectAction extends AbstractAction {
                     continue;
                 }
 
-                Layer layer = parseLayer(line);
+                Layer layer = parseLayer(line, encodedProjects);
                 if (layer == null) {
                     ProjectOpenRecordIntegrity.rejectMalformedLayerRecord(line);
                     continue;
@@ -391,8 +403,17 @@ public class LoadProjectAction extends AbstractAction {
 
     // Package-visible seam for deterministic project layer parse/serialize contracts.
     public static Layer parseLayer(String line) {
+        return parseLayer(line, false);
+    }
+
+    public static Layer parseLayer(String line, boolean encoded) {
         try {
             String[] parts = line.split("\\|", -1);
+            if (encoded) {
+                for (int i = 0; i < parts.length; i++) {
+                    parts[i] = ProjectRecordCodec.unescape(parts[i]);
+                }
+            }
             if (parts.length < 3) {
                 return null;
             }

@@ -96,6 +96,8 @@ public class SaveProjectAction extends AbstractAction {
                         staging, StandardCharsets.UTF_8)) {
             writer.write("CATGIS_PROJECT");
             writer.newLine();
+            writer.write(ProjectRecordCodec.FORMAT_LINE);
+            writer.newLine();
 
             writer.write("PROJECT_CRS|" + safe(AppContext.project().getProjectCRS()));
             writer.newLine();
@@ -124,13 +126,13 @@ public class SaveProjectAction extends AbstractAction {
             writer.newLine();
             for (CatmapLayoutItem item : AppContext.project().getCatmapItems()) {
                 if (item != null) {
-                    writer.write("PROJECT_LAYOUT_ITEM|" + safe(item.encode()));
+                    writer.write("PROJECT_LAYOUT_ITEM|" + item.encode());
                     writer.newLine();
                 }
             }
             for (CatmapLegendItem item : AppContext.project().getCatmapLegendItems()) {
                 if (item != null) {
-                    writer.write("PROJECT_LEGEND_ITEM|" + safe(item.encode()));
+                    writer.write("PROJECT_LEGEND_ITEM|" + item.encode());
                     writer.newLine();
                 }
             }
@@ -492,7 +494,7 @@ public class SaveProjectAction extends AbstractAction {
     }
 
     private static String safe(String value) {
-        return value == null ? "" : value.replace("|", " ");
+        return ProjectRecordCodec.escape(value);
     }
 
     private static String safeOrPlaceholder(String value) {
