@@ -119,3 +119,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   `PostgisRealIntegrationTest` (job PostGIS CI). #261 se registra como
   **PARCIAL/MITIGADO**: vault v2 con secreto local, pero DPAPI/Keychain/Secret
   Service completo sigue pendiente.
+- T3 avance 6 (2026-11-17): **#175** parcial/mejorado (PR en curso):
+  `FlatGeobufFrameReader` transmite frames size-prefixed en ventanas acotadas
+  (sin buffer directo del payload completo), completa lecturas cortas, falla
+  cerrado ante truncamiento/tamaño inválido/conteo incongruente y cancela por
+  interrupción; el loader mantiene límites de 100k features en RAM. Tests
+  `FlatGeobufFrameReaderContractTest` (7). **Sigue pendiente** el lector
+  indexado para >100k features: #175 no se considera cerrado.

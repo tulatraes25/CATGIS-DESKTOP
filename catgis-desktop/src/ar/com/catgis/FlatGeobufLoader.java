@@ -25,8 +25,9 @@ import java.util.List;
 /**
  * Loader for FlatGeobuf (.fgb) files using the org.wololo.flatgeobuf library.
  * <p>
- * Bounded eager import with fail-closed record validation. A streaming or indexed
- * large-dataset reader and fully verified property decoding are separate gates.
+ * Windowed streaming import with fail-closed record validation and bounded
+ * per-frame memory. An indexed random-access reader for >100k feature datasets
+ * is still a separate gate.
  * <p>
  * Validation is strict: corrupt or unsupported files throw
  * {@link UnsupportedFormatException} with a clear user-facing message.
@@ -42,7 +43,6 @@ public final class FlatGeobufLoader {
 
     // Temporary bounded eager-read containment until indexed lazy viewport support.
     static final int MAX_HEADER_BYTES = 4 * 1024 * 1024;
-    static final int MAX_EAGER_DATA_BYTES = 128 * 1024 * 1024;
     static final long MAX_EAGER_FEATURES = 100_000;
 
     // FlatGeobuf magic bytes as read by wololo library (legacy)
@@ -170,10 +170,8 @@ public final class FlatGeobufLoader {
                 throw new IOException("FlatGeobuf supera el máximo de entidades para lectura en memoria. "
                         + "Se requiere un lector indexado.");
             }
-            if (dataOffset < headerOffset || dataSize < 0
-                    || dataSize > MAX_EAGER_DATA_BYTES) {
-                throw new IOException("FlatGeobuf supera 128 MiB de datos o tiene índice inválido. "
-                        + "Se requiere un lector indexado.");
+            if (dataOffset < headerOffset || dataSize < 0) {
+                throw new IOException("FlatGeobuf tiene un rango de datos invalido.");
             }
             if (dataSize == 0) {
                 if (featuresCount != 0) {
@@ -185,49 +183,37 @@ public final class FlatGeobufLoader {
                 throw new IOException("FlatGeobuf truncado antes del primer tamaño de entidad.");
             }
 
-            int capacity = (int) dataSize;
             List<SimpleFeature> features = new ArrayList<>();
 
+            // Stream size-prefixed frames in bounded windows: no whole-payload
+            // buffer, short reads completed, truncation/corruption/cancel fail closed.
             try (FileInputStream dataFis = new FileInputStream(file);
                  FileChannel dataChannel = dataFis.getChannel()) {
-                dataChannel.position(dataOffset);
-                ByteBuffer dataBuf = ByteBuffer.allocateDirect(capacity);
-                readFully(dataChannel, dataBuf, "datos de entidades FlatGeobuf");
-                dataBuf.flip();
-                dataBuf.order(ByteOrder.LITTLE_ENDIAN);
-
-                while (dataBuf.remaining() >= 4) {
-                    if (features.size() >= MAX_EAGER_FEATURES) {
-                        throw new IOException("FlatGeobuf requiere visor indexado: máximo de entidades en RAM.");
-                    }
-                    int featureSize = dataBuf.getInt();
-                    requireFeatureFrameSize(featureSize, dataBuf.remaining());
-
-                    int pos = dataBuf.position();
-                    dataBuf.limit(pos + featureSize);
-
-                    try {
-                        Feature fbFeature = Feature.getRootAsFeature(dataBuf);
-                        if (fbFeature == null) {
-                            throw new IllegalStateException("Entidad FlatGeobuf nula.");
-                        }
-                        features.add(convertFeature(fbFeature, builder, header, features.size()));
-                    } catch (RuntimeException invalid) {
-                        throw new IOException("Entidad FlatGeobuf corrupta en índice "
-                                + features.size() + ": carga completa rechazada.", invalid);
-                    }
-
-                    dataBuf.position(pos + featureSize);
-                    dataBuf.limit(dataBuf.capacity());
-                }
-
-                if (dataBuf.hasRemaining()) {
-                    throw new IOException("FlatGeobuf truncado: bytes sobrantes después de entidades.");
-                }
-                if (featuresCount > 0 && features.size() != featuresCount) {
-                    throw new IOException("Conteo FlatGeobuf incongruente: declarado "
-                            + featuresCount + " leído " + features.size() + ".");
-                }
+                FlatGeobufFrameReader.stream(dataChannel, dataOffset, dataSize,
+                        featuresCount, (frameBytes, frameIndex) -> {
+                            if (features.size() >= MAX_EAGER_FEATURES) {
+                                throw new IOException("FlatGeobuf requiere visor indexado: "
+                                        + "maximo de entidades en RAM.");
+                            }
+                            Feature fbFeature;
+                            try {
+                                fbFeature = Feature.getRootAsFeature(
+                                        ByteBuffer.wrap(frameBytes).order(ByteOrder.LITTLE_ENDIAN));
+                            } catch (RuntimeException invalid) {
+                                throw new IOException("Entidad FlatGeobuf corrupta en indice "
+                                        + frameIndex + ": carga completa rechazada.", invalid);
+                            }
+                            if (fbFeature == null) {
+                                throw new IOException("Entidad FlatGeobuf nula en indice "
+                                        + frameIndex + ".");
+                            }
+                            try {
+                                features.add(convertFeature(fbFeature, builder, header, frameIndex));
+                            } catch (RuntimeException invalid) {
+                                throw new IOException("Entidad FlatGeobuf corrupta en indice "
+                                        + frameIndex + ": carga completa rechazada.", invalid);
+                            }
+                        });
             }
 
             Envelope envelope = computeEnvelope(header, features);

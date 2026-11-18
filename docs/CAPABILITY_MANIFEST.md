@@ -32,7 +32,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | XYZ/online tiles | SUPPORTED_VERIFIED | contratos de caché/EDT |
 | WCS / STAC | BETA_LIMITED | issues de aceptación OGC (#108/#43) |
 | DEM/suelo/clima online (OpenTopography, SoilGrids, WorldClim/Open-Meteo) | BETA_LIMITED | TIFF+sidecar atomicos (#161); georreferencia embebida #128 abierto |
-| FlatGeobuf | BETA_LIMITED | acotado; sin streaming grande (#175) |
+| FlatGeobuf | BETA_LIMITED | frames en ventanas acotadas + cancelación (#175 parcial); lector indexado >100k pendiente |
 | LAS/LAZ | BETA_LIMITED | rechazo >50k, sin LAZ (#176) |
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |
 | NetCDF | BETA_LIMITED | CF grid_mapping/packaging implementado (#162); fixtures .nc reales pendientes |
