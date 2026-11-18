@@ -245,7 +245,10 @@ public class SpectralIndexDialog extends JDialog {
                         + "Capa: " + layerName + "\n"
                         + "Banda A: " + bandA + ", Banda B: " + bandB + "\n"
                         + "Dimensiones: " + result.getWidth() + " x " + result.getHeight() + "\n\n"
-                        + "Se agrego como nueva capa: " + resultName);
+                        + "Se agrego como nueva capa: " + resultName + "\n\n"
+                + "AVISO: esta vista previa usa valores de visualizacion sin calibracion "
+                + "ni NoData; no es un indice profesional. Para NDVI/EVI/BSI calibrados "
+                + "usa bandas de reflectancia con scale_factor/add_offset y NoData declarados.");
     }
 
 }

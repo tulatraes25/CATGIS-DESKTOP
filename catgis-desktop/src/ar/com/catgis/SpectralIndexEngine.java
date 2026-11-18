@@ -1,5 +1,8 @@
 package ar.com.catgis;
 
+import ar.com.catgis.catmap.AnalysisRaster;
+import ar.com.catgis.catmap.TerrainRasterAlgorithms;
+
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
@@ -71,6 +74,200 @@ public final class SpectralIndexEngine {
         };
     }
 
+    /**
+     * T3/#139: calibration for a spectral band. A professional index MUST use
+     * declared reflectance calibration (scale/offset) and NoData semantics; the
+     * byte preview API is explicitly not a calibrated product.
+     */
+    public record BandCalibration(boolean calibrated, double scaleFactor, double addOffset,
+                                  Float noData, String source) {
+        public static BandCalibration uncalibrated(String reason) {
+            return new BandCalibration(false, 1.0, 0.0, null,
+                    reason == null || reason.isBlank() ? "sin metadata de calibracion" : reason);
+        }
+
+        public static BandCalibration reflectance(double scaleFactor, double addOffset,
+                                                  Float noData, String source) {
+            if (!Double.isFinite(scaleFactor) || scaleFactor == 0.0) {
+                throw new IllegalArgumentException(
+                        "La calibracion espectral requiere un scale_factor finito y distinto de cero.");
+            }
+            if (!Double.isFinite(addOffset)) {
+                throw new IllegalArgumentException(
+                        "La calibracion espectral requiere un add_offset finito.");
+            }
+            return new BandCalibration(true, scaleFactor, addOffset, noData,
+                    source == null || source.isBlank() ? "reflectancia declarada" : source);
+        }
+
+        boolean isNoData(double raw) {
+            if (!Double.isFinite(raw)) {
+                return true;
+            }
+            return noData != null && Math.abs(raw - noData) < 1.0e-9;
+        }
+
+        double decode(double raw) {
+            return raw * scaleFactor + addOffset;
+        }
+    }
+
+    /** Reflectance domain required for a certified index: 0..1 (+ tolerance). */
+    public static final double REFLECTANCE_TOLERANCE = 0.05;
+
+    /**
+     * Scientific two-band index as a float {@link AnalysisRaster}: calibration is
+     * mandatory, NoData propagates, non-reflectance or out-of-range samples become
+     * NoData and the result keeps the source grid/CRS.
+     */
+    public static AnalysisRaster computeAnalysis(AnalysisRaster bandA, AnalysisRaster bandB,
+                                                 String indexId, BandCalibration calibrationA,
+                                                 BandCalibration calibrationB) {
+        requireArity(indexId, 2);
+        requireCalibrated(calibrationA, "A");
+        requireCalibrated(calibrationB, "B");
+        requireSameGrid(bandA, bandB, "A", "B");
+        int width = bandA.width();
+        int height = bandA.height();
+        float[] values = new float[width * height];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                Double a = reflectance(bandA, x, y, calibrationA);
+                Double b = reflectance(bandB, x, y, calibrationB);
+                if (a == null || b == null) {
+                    values[index] = TerrainRasterAlgorithms.NO_DATA;
+                    continue;
+                }
+                double value = computeRaw2(a, b, indexId);
+                values[index] = Double.isFinite(value)
+                        ? (float) value : TerrainRasterAlgorithms.NO_DATA;
+            }
+        }
+        return analysisRaster(bandA, indexId, width, height, values);
+    }
+
+    /** Scientific three-band index (EVI). */
+    public static AnalysisRaster computeAnalysis(AnalysisRaster bandA, AnalysisRaster bandB,
+                                                 AnalysisRaster bandC, String indexId,
+                                                 BandCalibration calibrationA,
+                                                 BandCalibration calibrationB,
+                                                 BandCalibration calibrationC) {
+        requireArity(indexId, 3);
+        requireCalibrated(calibrationA, "A");
+        requireCalibrated(calibrationB, "B");
+        requireCalibrated(calibrationC, "C");
+        requireSameGrid(bandA, bandB, "A", "B");
+        requireSameGrid(bandA, bandC, "A", "C");
+        int width = bandA.width();
+        int height = bandA.height();
+        float[] values = new float[width * height];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                Double a = reflectance(bandA, x, y, calibrationA);
+                Double b = reflectance(bandB, x, y, calibrationB);
+                Double c = reflectance(bandC, x, y, calibrationC);
+                if (a == null || b == null || c == null) {
+                    values[index] = TerrainRasterAlgorithms.NO_DATA;
+                    continue;
+                }
+                double value = computeRaw3(a, b, c, indexId);
+                values[index] = Double.isFinite(value)
+                        ? (float) value : TerrainRasterAlgorithms.NO_DATA;
+            }
+        }
+        return analysisRaster(bandA, indexId, width, height, values);
+    }
+
+    /** Scientific four-band index (BSI). */
+    public static AnalysisRaster computeAnalysis(AnalysisRaster bandA, AnalysisRaster bandB,
+                                                 AnalysisRaster bandC, AnalysisRaster bandD,
+                                                 String indexId, BandCalibration calibrationA,
+                                                 BandCalibration calibrationB,
+                                                 BandCalibration calibrationC,
+                                                 BandCalibration calibrationD) {
+        requireArity(indexId, 4);
+        requireCalibrated(calibrationA, "A");
+        requireCalibrated(calibrationB, "B");
+        requireCalibrated(calibrationC, "C");
+        requireCalibrated(calibrationD, "D");
+        requireSameGrid(bandA, bandB, "A", "B");
+        requireSameGrid(bandA, bandC, "A", "C");
+        requireSameGrid(bandA, bandD, "A", "D");
+        int width = bandA.width();
+        int height = bandA.height();
+        float[] values = new float[width * height];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                Double a = reflectance(bandA, x, y, calibrationA);
+                Double b = reflectance(bandB, x, y, calibrationB);
+                Double c = reflectance(bandC, x, y, calibrationC);
+                Double d = reflectance(bandD, x, y, calibrationD);
+                if (a == null || b == null || c == null || d == null) {
+                    values[index] = TerrainRasterAlgorithms.NO_DATA;
+                    continue;
+                }
+                double value = computeRaw4(a, b, c, d, indexId);
+                values[index] = Double.isFinite(value)
+                        ? (float) value : TerrainRasterAlgorithms.NO_DATA;
+            }
+        }
+        return analysisRaster(bandA, indexId, width, height, values);
+    }
+
+    private static Double reflectance(AnalysisRaster band, int x, int y,
+                                      BandCalibration calibration) {
+        if (band == null || calibration == null || !calibration.calibrated()
+                || band.isNoData(x, y)) {
+            return null;
+        }
+        double raw = band.valueAt(x, y);
+        if (calibration.isNoData(raw)) {
+            return null;
+        }
+        double decoded = calibration.decode(raw);
+        if (!Double.isFinite(decoded)
+                || decoded < -REFLECTANCE_TOLERANCE
+                || decoded > 1.0 + REFLECTANCE_TOLERANCE) {
+            return null;
+        }
+        return decoded;
+    }
+
+    private static void requireCalibrated(BandCalibration calibration, String bandName) {
+        if (calibration == null || !calibration.calibrated()) {
+            String reason = calibration == null ? "sin calibracion" : calibration.source();
+            throw new IllegalArgumentException("El indice profesional requiere calibracion de la banda "
+                    + bandName + ": " + reason
+                    + ". Declara scale_factor/add_offset y NoData antes de operar.");
+        }
+    }
+
+    private static void requireSameGrid(AnalysisRaster reference, AnalysisRaster other,
+                                        String first, String second) {
+        if (reference == null || other == null) {
+            throw new IllegalArgumentException("El indice espectral requiere ambas bandas.");
+        }
+        if (reference.width() != other.width() || reference.height() != other.height()
+                || !reference.crsCode().equalsIgnoreCase(other.crsCode())
+                || Math.abs(reference.minX() - other.minX()) > 1.0e-9
+                || Math.abs(reference.minY() - other.minY()) > 1.0e-9
+                || Math.abs(reference.maxX() - other.maxX()) > 1.0e-9
+                || Math.abs(reference.maxY() - other.maxY()) > 1.0e-9) {
+            throw new IllegalArgumentException("Las bandas " + first + " y " + second
+                    + " no comparten grilla/CRS; no se aplica resample implicito.");
+        }
+    }
+
+    private static AnalysisRaster analysisRaster(AnalysisRaster reference, String indexId,
+                                                 int width, int height, float[] values) {
+        return new AnalysisRaster(indexId, "indice", width, height, values,
+                TerrainRasterAlgorithms.NO_DATA,
+                reference.minX(), reference.minY(), reference.maxX(), reference.maxY(),
+                reference.crsCode());
+    }
     public static BufferedImage computeIndex(BufferedImage bandA, BufferedImage bandB,
                                              String indexId) {
         if (bandA == null || bandB == null) return null;

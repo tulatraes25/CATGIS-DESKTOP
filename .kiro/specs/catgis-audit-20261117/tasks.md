@@ -93,3 +93,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   (scale/offset/fill/valid) y convierte unidades (radianes, 0..360).
   `NetCdfCfSupportContractTest` (9); politica en
   `docs/quality/NETCDF_CF_POLICY_20261117.md`.
+- T3 avance 4 (2026-11-17): **#139** corregido en su núcleo (PR en curso):
+  API `computeAnalysis` con calibración obligatoria (scale/offset/NoData),
+  dominio de reflectancia validado, propagación de NoData y grilla/CRS
+  compartidos; el preview 8-bit del diálogo queda marcado no profesional.
+  Tests `SpectralCalibrationContractTest` (6); política en
+  `docs/quality/SPECTRAL_CALIBRATION_POLICY_20261117.md`.
