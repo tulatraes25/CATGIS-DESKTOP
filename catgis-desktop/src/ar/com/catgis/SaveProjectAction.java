@@ -17,7 +17,11 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 public class SaveProjectAction extends AbstractAction {
 
@@ -345,6 +349,11 @@ public class SaveProjectAction extends AbstractAction {
             return true;
         }
 
+        // Preflight every transient vector output before writing anything: two
+        // layers named "A B" and "A_B" sanitize to the same file, so physical
+        // names are reserved uniquely (and foreign files are never overwritten).
+        Map<Layer, File> autoFiles = planAutoVectorFiles(projectFile);
+
         for (Layer layer : AppContext.project().getLayers()) {
             if (layer == null || layer instanceof RasterLayer || VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
                 continue;
@@ -358,7 +367,10 @@ public class SaveProjectAction extends AbstractAction {
             if (ExportVectorLayerAction.hasSupportedVectorPath(layer)) {
                 ok = ExportVectorLayerAction.saveLayerToCurrentPath(layer, CatgisDesktopApp.getMainFrameSafe(), false);
             } else if (TopographyWorkflowSupport.isTransientTopographyVector(layer)) {
-                File autoFile = buildAutoVectorFile(projectFile, layer, ".shp");
+                File autoFile = autoFiles.get(layer);
+                if (autoFile == null) {
+                    autoFile = buildAutoVectorFile(projectFile, layer, ".shp", new HashSet<>());
+                }
                 ok = ExportVectorLayerAction.saveLayerDataToFile(
                         layer,
                         data,
@@ -392,7 +404,38 @@ public class SaveProjectAction extends AbstractAction {
         return true;
     }
 
-    private static File buildAutoVectorFile(File projectFile, Layer layer, String extension) {
+    /** Physical outputs planned for transient vector layers, keyed by layer. */
+    private static Map<Layer, File> planAutoVectorFiles(File projectFile) {
+        Map<Layer, File> plan = new LinkedHashMap<>();
+        Set<String> reserved = new HashSet<>();
+        if (AppContext.project() == null || AppContext.mapPanel() == null) {
+            return plan;
+        }
+        for (Layer layer : AppContext.project().getLayers()) {
+            if (layer == null || layer instanceof RasterLayer
+                    || VectorLayerUtils.isReadOnlyVectorLayer(layer)) {
+                continue;
+            }
+            ShapefileData data = AppContext.mapPanel().getShapefileData(layer);
+            if (!ExportVectorLayerAction.hasExportableVectorData(data)
+                    || ExportVectorLayerAction.hasSupportedVectorPath(layer)
+                    || !TopographyWorkflowSupport.isTransientTopographyVector(layer)) {
+                continue;
+            }
+            File planned = buildAutoVectorFile(projectFile, layer, ".shp", reserved);
+            plan.put(layer, planned);
+            reserved.add(autoFileKey(planned));
+        }
+        return plan;
+    }
+
+    /**
+     * Auto file for a transient vector layer: unique within the run and never
+     * overwriting a file that belongs to another layer. Deterministic order
+     * (project layer order) keeps save/reopen stable.
+     */
+    static File buildAutoVectorFile(File projectFile, Layer layer, String extension,
+                                    Set<String> reserved) {
         File projectDir = projectFile != null && projectFile.getParentFile() != null
                 ? projectFile.getParentFile()
                 : new File(".");
@@ -404,7 +447,32 @@ public class SaveProjectAction extends AbstractAction {
         String layerName = layer != null && layer.getName() != null && !layer.getName().isBlank()
                 ? layer.getName()
                 : "capa_vectorial";
-        return new File(layersDir, sanitizeFileName(layerName) + extension);
+        String base = sanitizeFileName(layerName);
+        Set<String> used = reserved != null ? reserved : new HashSet<>();
+        String currentPath = layer != null ? layer.getPath() : null;
+        File candidate = new File(layersDir, base + extension);
+        int suffix = 2;
+        while (used.contains(autoFileKey(candidate))
+                || (candidate.exists() && !sameFile(candidate, currentPath))) {
+            candidate = new File(layersDir, base + "_" + suffix + extension);
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private static String autoFileKey(File file) {
+        return file.getAbsolutePath().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean sameFile(File candidate, String currentPath) {
+        if (currentPath == null || currentPath.isBlank()) {
+            return false;
+        }
+        try {
+            return candidate.getCanonicalFile().equals(new File(currentPath).getCanonicalFile());
+        } catch (Exception notComparable) {
+            return candidate.getAbsoluteFile().equals(new File(currentPath).getAbsoluteFile());
+        }
     }
 
     private static String sanitizeFileName(String value) {

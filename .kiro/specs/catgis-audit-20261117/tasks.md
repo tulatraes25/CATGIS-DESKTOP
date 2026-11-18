@@ -5,7 +5,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
 - [ ] **T0 — Reconciliación y gobernanza**
   - Spec Kiro, manifiesto de capacidad, conciliación de docs/ledger, ruleset
     reforzado, snapshot de runs.
-- [ ] **T1 — No perder trabajo**
+- [ ] **T1 — No perder trabajo** (en curso)
   - #144 #146 #155 #260 #148 #149 #153 #151 #150 #195 #193 #175 #176.
 - [x] **T2 — Ciencia básica fiable (PRs #266 + este)**
   - #258 IDW, #262 ASCII/stats, #257 métrica/signos, #256 raster calculator,
@@ -36,3 +36,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   preview separado) y #259 (favoritos POSGAR 94 / Campo Inchauspe / POSGAR 2007
   validados contra la base EPSG de GeoTools) en el PR T2-2. Suite local **1602
   tests / 0 fallos / 15 skips**.
+
+- T1 avance (2026-11-17): **#260** corregido (PR en curso): preflight de todas
+  las salidas de capas vectoriales transitorias con reserva de nombre físico
+  único (`a_b.shp`, `a_b_2.shp`, ...), sin sobreescribir archivos ajenos y
+  reutilizando el archivo propio de la capa. Tests
+  `VectorAutosaveCollisionContractTest` (4). Restan #144/#146/#148/#149/#155.
