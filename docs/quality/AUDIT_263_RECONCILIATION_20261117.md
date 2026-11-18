@@ -54,7 +54,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #149 | **CORREGIDO en PR T1-6** (snapshots aislados/versionados + restauración) | T1 |
 | #260 | **CORREGIDO en PR T1-1** (pendiente gates) | T1 |
 | #175 | **PARCIAL** (lector indexado >100k pendiente) | T1/T3 |
-| #195 | **PARCIAL** (SHP cubierto; GeoJSON/KML pendientes) | T1 |
+| #195 | **CORREGIDO/VERIFICADO** (SHP/GeoJSON/KML con fixtures reales y roundtrip) | T1 |
 | #256, #257, #258, #259, #262 | **CORREGIDO en PRs T2** (#257/#258/#262 en `6cd043d`; #256/#259 en el PR T2-2) | T2 |
 | #161 | **CORREGIDO en PR T3-1** (TIFF+sidecar atomicos en proveedores) | T3 |
 | #128 | **CORREGIDO en PR T3-2** (GeoKeys > sidecar + veto de conflicto) | T3 |
@@ -67,7 +67,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |
 | #43 | **ACEPTACIÓN VERIFICADA** (evidencia WCS payload) | T4 |
 | #108 | **INTEGRADO/VERIFICADO** (DescribeCoverage en descarga real; A0.7 GUI física aparte) | T4 |
-| #164, #167 | **PENDIENTE** (mojibake/WCS race) | T1/T3 |
+| #164 | **CORREGIDO/VERIFICADO** (contrato de encoding) | T1 |
 | #95–#102, #82/#113/#114/#132, web | **PARCIAL** (CATMAP/GUI/web) | T5 |
 
 ## 5. T0 — criterios cumplidos
@@ -91,8 +91,8 @@ se cerraron en GitHub con comentario de evidencia apuntando al PR, al test y a
 `main = 0acd7052ec9238dd1cdf8a49c1f2de1d7f6adb02` (Certification post-main +
 attestation `44356056579`):
 
-`#128, #144, #146, #148, #149, #150, #151, #153, #155, #156, #161, #162, #163, #174, #176,
-#193, #256, #257, #258, #259, #260, #262`, y previamente `#43`, `#108` y `#164`.
+`#128, #144, #146, #148, #149, #150, #151, #153, #155, #156, #161, #162, #163, #164, #167,
+#174, #176, #193, #195, #256, #257, #258, #259, #260, #262`, y previamente `#43` y `#108`.
 
 ### Issues que permanecen ABIERTOS (trabajo real pendiente o decisión)
 
@@ -103,7 +103,7 @@ attestation `44356056579`):
 | #175 | FlatGeobuf: streaming por ventanas/cancelación certificado; **lector indexado >100k pendiente**. |
 | #139 | Núcleo de calibración espectral certificado; **UI de índices calibrados pendiente**. |
 | #261 | Vault v2 mitigado; **DPAPI/Keychain/Secret Service pendiente**. |
-| #195 | CRS fuente/persistencia: parcial (SHP cubierto; GeoJSON/KML y otros adaptadores siguen pendientes). |
+
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
-| #167, #174, #143, #132, #114, #113 | CI/mojibake/gobernanza/procesamiento/QA. |
+| #143, #132, #114, #113 | Ledger/scripting/procesamiento/QA (residuales declarados). |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |

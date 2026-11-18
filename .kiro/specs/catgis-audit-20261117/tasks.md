@@ -181,3 +181,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   `SpatiaLiteSourceCrsTruthContractTest`, `FlatGeobufCrsFailClosedContractTest`,
   `LasSourceCrsProjectRoundTripContractTest`, `ProjectAuthorityContractTest`.
   1690 tests ok.
+- T1/T3 cierres (2026-11-17): #195 provenance source-vs-display para SHP/
+  GeoJSON/KML con fixtures reales, roundtrip de proyecto, bytes originales
+  intactos, CRS-null y path-change invalidation; #167 contrato WCS shared
+  deadline con headroom determinista (1500 ms vs stream 3 s, requests==1 sin
+  fallback). Ambos verificados en main certificado (attestation 44384865579).
