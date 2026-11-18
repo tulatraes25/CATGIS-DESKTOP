@@ -118,41 +118,58 @@ public final class PostgisConnectionStore {
             return "";
         }
         String stored = ROOT.get(passwordKey(info), "");
-        if (stored.isBlank()) return "";
-        // Try new AES-GCM format first, fall back to legacy XOR
-        String decrypted = deobfuscate(stored);
-        if (!decrypted.isBlank()) return decrypted;
-        String legacy = deobfuscateLegacy(stored);
+        if (stored.isBlank()) {
+            return "";
+        }
+        String decrypted = PostgisCredentialVault.decrypt(stored);
+        if (!decrypted.isBlank()) {
+            return decrypted;
+        }
+        String legacy = migrateLegacySecret(stored);
         if (!legacy.isBlank()) {
-            // Migrate legacy XOR password to AES-GCM
+            // v1 PBKDF2 / XOR -> v2 migration; never keep the weak format.
             info.setPassword(legacy);
             rememberPassword(info);
             return legacy;
         }
+        CatgisLogger.warn("PostgisConnectionStore: credencial guardada ilegible o corrupta; "
+                + "se solicitara la clave de nuevo", null);
         return "";
     }
 
-    private static String obfuscate(String value) {
-        try {
-            byte[] plaintext = value.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-            byte[] salt = new byte[16];
-            new SecureRandom().nextBytes(salt);
-            byte[] key = deriveKey(salt);
-            SecretKeySpec keySpec = new SecretKeySpec(key, "AES");
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            byte[] iv = new byte[12];
-            new SecureRandom().nextBytes(iv);
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec, new GCMParameterSpec(128, iv));
-            byte[] ciphertext = cipher.doFinal(plaintext);
-            byte[] combined = new byte[salt.length + iv.length + ciphertext.length];
-            System.arraycopy(salt, 0, combined, 0, salt.length);
-            System.arraycopy(iv, 0, combined, salt.length, iv.length);
-            System.arraycopy(ciphertext, 0, combined, salt.length + iv.length, ciphertext.length);
-            return java.util.Base64.getEncoder().encodeToString(combined);
-        } catch (Exception e) {
-            CatgisLogger.error("PostgisConnectionStore: fallo al encriptar credenciales", e);
-            throw new RuntimeException("Error al proteger las credenciales PostGIS", e);
+    /**
+     * Decrypts legacy v1/XOR values for migration only. Any invalid or
+     * non-printable result fails closed with "" instead of throwing or teaching a
+     * corrupt password to the user (#261).
+     */
+    static String migrateLegacySecret(String stored) {
+        if (stored == null || stored.isBlank() || stored.startsWith(PostgisCredentialVault.PREFIX)) {
+            return "";
         }
+        String v1 = deobfuscate(stored);
+        if (!v1.isBlank()) {
+            return v1;
+        }
+        String xor = deobfuscateLegacy(stored);
+        return looksLikePrintableSecret(xor) ? xor : "";
+    }
+
+    private static boolean looksLikePrintableSecret(String value) {
+        if (value == null || value.isEmpty() || value.length() > 512) {
+            return false;
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (ch < 0x20 || ch == 0x7F) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String obfuscate(String value) {
+        // v2: random per-installation secret + AES-GCM (#261).
+        return PostgisCredentialVault.encrypt(value);
     }
 
     private static byte[] deriveKey(byte[] salt) throws Exception {
@@ -194,7 +211,7 @@ public final class PostgisConnectionStore {
     }
 
     private static String deobfuscate(String encoded) {
-        if (encoded == null || encoded.isBlank()) {
+        if (encoded == null || encoded.isBlank() || encoded.startsWith(PostgisCredentialVault.PREFIX)) {
             return "";
         }
         try {
@@ -211,14 +228,13 @@ public final class PostgisConnectionStore {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, keySpec, new GCMParameterSpec(128, iv));
             return new String(cipher.doFinal(ciphertext), java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            CatgisLogger.error("PostgisConnectionStore: fallo al encriptar credenciales", e);
-            throw new RuntimeException("Error al proteger las credenciales PostGIS", e);
+        } catch (Exception invalidLegacy) {
+            return "";
         }
     }
 
     private static String deobfuscateLegacy(String encoded) {
-        if (encoded == null || encoded.isBlank()) {
+        if (encoded == null || encoded.isBlank() || encoded.startsWith(PostgisCredentialVault.PREFIX)) {
             return "";
         }
         try {
@@ -228,9 +244,20 @@ public final class PostgisConnectionStore {
                 bytes[i] ^= key[i % key.length];
             }
             return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            CatgisLogger.error("PostgisConnectionStore: fallo al encriptar credenciales", e);
-            throw new RuntimeException("Error al proteger las credenciales PostGIS", e);
+        } catch (Exception invalidLegacy) {
+            return "";
+        }
+    }
+
+    /** Test seam: encrypts with the v2 vault without touching Preferences. */
+    static String encryptForTest(String plaintext) {
+        return PostgisCredentialVault.encrypt(plaintext);
+    }
+
+    /** Test seam: removes the stored password for a connection fingerprint. */
+    static void clearStoredPasswordForTest(PostgisConnectionInfo info) {
+        if (info != null && !info.buildFingerprint().isBlank()) {
+            ROOT.remove(passwordKey(info));
         }
     }
 
@@ -310,7 +337,20 @@ public final class PostgisConnectionStore {
     }
 
     private static String passwordKey(PostgisConnectionInfo info) {
-        return "password." + info.buildFingerprint();
+        String fingerprint = info.buildFingerprint();
+        String legacyKey = "password." + fingerprint;
+        // java.util.prefs rejects keys over 80 chars; hash only the too-long ones
+        // so short, already-saved keys keep working.
+        if (legacyKey.length() <= 80) {
+            return legacyKey;
+        }
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(
+                    fingerprint.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return "password.h." + java.util.HexFormat.of().formatHex(hash);
+        } catch (Exception impossible) {
+            throw new IllegalStateException("SHA-256 no disponible", impossible);
+        }
     }
 
     private static String safe(String value) {
