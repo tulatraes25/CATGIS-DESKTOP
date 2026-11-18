@@ -250,3 +250,13 @@ certify this program.
     (launcher packaged 3/3, UI snapshot, E2E headless 13/13); pasos 1/4/5/6/8/13
     de REQ-PC-3 siguen pendientes de sesion GUI interactiva. **F3 sigue
     NOT_CERTIFIED**.
+
+## Audit #263 — remediación SPEC/Kiro (2026-11-17)
+
+- Backlog integral recibido (issue #263, base `3998ee1`, hoy `main` `c0484a1`).
+- Spec: `.kiro/specs/catgis-audit-20261117/` (T0–T5).
+- T0 reconciliación: `docs/CAPABILITY_MANIFEST.md`,
+  `docs/quality/AUDIT_263_RECONCILIATION_20261117.md`, ruleset endurecido a 25
+  required checks (snapshot previo `docs/quality/ruleset-before-20261117.json`).
+- **A0.7/F3 siguen `NOT_CERTIFIED`**; no se cierra por snapshots/E2E.
+- T1 (pérdida de trabajo) y T2 (ciencia) inician en PRs siguientes.

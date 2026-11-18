@@ -26,6 +26,11 @@ Fecha: 2026-11-16. Canal: `beta` (pre-release).
 
 ## Limitaciones declaradas
 
+El detalle por capacidad vive en `docs/CAPABILITY_MANIFEST.md`. Resumen: WMTS
+soportado para matrix sets XYZ; splash simple; instaladores sin firma; A0.5/A0.7/
+F3 GUI `NOT_CERTIFIED`; T2–T4 SQL implementados y certificados (DC-5 sigue
+pendiente de decisión).
+
 - WMTS soportado (REST o KVP GetTile) para matrix sets compatibles con XYZ; otros requieren adaptacion.
 - Splash de CATMAP simple, sin arte dedicado.
 - Sin firmas/notarizacion de instaladores.

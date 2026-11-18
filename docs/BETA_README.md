@@ -1,6 +1,6 @@
 # CATGIS / CATMAP — Primera beta usable
 
-Estado: **beta** (`1.0.0-beta.1`). A0.5/A0.7/F3 siguen `NOT_CERTIFIED`: esta beta
+Estado: **beta** (`1.0.0-beta.2`). A0.5/A0.7/F3 siguen `NOT_CERTIFIED`: esta beta
 no declara GUI ni runtime nativo certificados.
 
 ## Descarga
@@ -45,8 +45,8 @@ Pre-release: https://github.com/tulatraes25/CATGIS-DESKTOP/releases/tag/v1.0.0-b
 ## Verificacion rapida
 
 ```bash
-java -jar catgis-desktop-1.0.0-beta.1.jar --version
-java -jar catgis-desktop-1.0.0-beta.1.jar --self-test
+java -jar catgis-desktop-1.0.0-beta.2.jar --version
+java -jar catgis-desktop-1.0.0-beta.2.jar --self-test
 ```
 
 `--self-test` no abre ventanas y verifica version/canal y las capacidades clave.
@@ -56,8 +56,8 @@ java -jar catgis-desktop-1.0.0-beta.1.jar --self-test
 - WMTS soportado como plantilla REST o KVP GetTile para matrix sets compatibles con la grilla XYZ (p. ej. GoogleMapsCompatible/EPSG:3857); otros matrix sets requieren adaptacion del operador.
 - Splash propio de CATMAP es simple (sin arte grafico dedicado).
 - Sin instaladores firmados/notarizados; artefactos de pre-release sin firma.
-- T2–T4 SQL tienen decision del owner registrada; su implementacion es otra
-  tranche del servidor.
+- T2–T4 SQL implementados y certificados en CATSERVER (PR #252); ver
+  `docs/CAPABILITY_MANIFEST.md` para el estado por capacidad.
 - GUI/runtime no certificados (A0.7/F3 `NOT_CERTIFIED`); la evidencia es
   CI/Certification + snapshot Xvfb sin claim.
 
@@ -65,3 +65,10 @@ java -jar catgis-desktop-1.0.0-beta.1.jar --self-test
 
 Incluir version (`--version`), sistema operativo, pasos y el resultado de
 `--self-test`. No adjuntar datos personales ni credenciales.
+
+## Manifiesto de capacidad
+
+El estado exacto por capacidad (SUPPORTED_VERIFIED, BETA_LIMITED,
+REQUIRES_DEPENDENCY, INSPECTION_ONLY, UNSUPPORTED) y la version vigente se
+mantienen en **`docs/CAPABILITY_MANIFEST.md`**; ante cualquier discrepancia,
+ese manifiesto prevalece sobre este README.
