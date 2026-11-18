@@ -144,3 +144,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   falla cerrado ante ambigüedad; genera SUBSET/SCALESIZE con etiquetas nativas.
   Tests `WcsDescribeCoverageAxesContractTest` (5). **#108 sigue OPEN** hasta
   integrar fetch DescribeCoverage + flujo de descarga/UI. A0.7/F3 NOT_CERTIFIED.
+- T4 cierre de #108 (2026-11-17): `DescribeCoverage` integrado en la descarga
+  real (`downloadCoverageToFileNegotiated` + WcsDialog), con caché LRU, URL de
+  ejes nativos y fallback v2->v1 sin adivinar x/y; tests
+  `WcsNegotiatedDownloadContractTest` (3) con URL capturada. A0.7/F3 siguen
+  NOT_CERTIFIED.

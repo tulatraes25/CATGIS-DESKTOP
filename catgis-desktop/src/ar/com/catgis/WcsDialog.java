@@ -251,7 +251,7 @@ public class WcsDialog extends JDialog {
         SwingWorker<Void, Void> download = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                WcsClient.downloadCoverageToFile(url, coverage.name(), bbox, crs, width, height, outputFile);
+                WcsClient.downloadCoverageToFileNegotiated(url, coverage.name(), bbox, crs, width, height, outputFile);
                 return null;
             }
 

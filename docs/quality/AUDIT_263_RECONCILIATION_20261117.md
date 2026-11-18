@@ -65,7 +65,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |
 | #43 | **ACEPTACIÓN VERIFICADA** (evidencia WCS payload) | T4 |
-| #108 | **PARCIAL en PR T4-4** (parser/URL de ejes; integración de descarga pendiente) | T4 |
+| #108 | **INTEGRADO/VERIFICADO** (DescribeCoverage en descarga real; A0.7 GUI física aparte) | T4 |
 | #164, #167 | **PENDIENTE** (mojibake/WCS race) | T1/T3 |
 | #95–#102, #82/#113/#114/#132, web | **PARCIAL** (CATMAP/GUI/web) | T5 |
 
