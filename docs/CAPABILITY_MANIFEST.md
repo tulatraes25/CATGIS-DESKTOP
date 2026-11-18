@@ -26,7 +26,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Export PDF vectorial multipágina / PNG / SVG / GeoTIFF | SUPPORTED_VERIFIED | E2E 13/13 + contratos |
 | Impresión física | BETA_LIMITED | sin impresora real certificada |
 | Proyecto `.catgis` guardar/abrir | BETA_LIMITED | apertura fail-closed/atómica (#144) y codec v2 reversible (#148); #146 abierto |
-| Shapefile / GeoJSON / KML / GPX / CSV / GeoPackage | BETA_LIMITED | imports verificados; roundtrip y CRS con issues abiertos (#195/#150) |
+| Shapefile / GeoJSON / KML / GPX / CSV / GeoPackage | BETA_LIMITED | import/export verificados; familia SHP con journal atomico (#155); roundtrip/CRS con #146/#195/#150 |
 | WMS / WFS / PostGIS | SUPPORTED_VERIFIED | contratos + PostGIS CI real |
 | WMTS (REST/KVP, matrix sets XYZ) | SUPPORTED_VERIFIED | `WmtsSupportContractTest`; otros matrix sets requieren adaptación |
 | XYZ/online tiles | SUPPORTED_VERIFIED | contratos de caché/EDT |
