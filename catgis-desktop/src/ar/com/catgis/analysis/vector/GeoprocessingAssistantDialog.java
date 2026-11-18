@@ -4,6 +4,7 @@ import ar.com.catgis.data.vector.VectorLayerUtils;
 
 import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.CRSDefinitions;
+import ar.com.catgis.LasPreviewPolicy;
 import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.CatgisDesktopApp;
 import ar.com.catgis.AppErrorSupport;
@@ -440,6 +441,15 @@ public class GeoprocessingAssistantDialog extends JDialog {
         }
         if (needsSecondLayer(operation) && layerB == null) {
             NotificationManager.warn(this, null, "Selecciona una capa B para ejecutar la operacion.");
+            return;
+        }
+        try {
+            LasPreviewPolicy.requireCompleteForAnalysis(layerA.layer, "geoprocesar");
+            if (layerB != null) {
+                LasPreviewPolicy.requireCompleteForAnalysis(layerB.layer, "geoprocesar");
+            }
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(this, "LiDAR", preview.getMessage());
             return;
         }
         if (outputName.isBlank()) {

@@ -387,6 +387,14 @@ public class FieldCalculatorDialog extends JDialog {
     }
 
     private void applyCalculation() {
+        try {
+            LasPreviewPolicy.requireCompleteForAnalysis(
+                    tableWindow != null ? tableWindow.getLayer() : null,
+                    "calcular campos");
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(this, "LiDAR", preview.getMessage());
+            return;
+        }
         if (targetField == null) {
             NotificationManager.warn(this, null, "Elige primero un campo destino.");
             return;

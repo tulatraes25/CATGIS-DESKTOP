@@ -135,7 +135,8 @@ public class LayerCellRenderer extends DefaultListCellRenderer {
 
         visibleCheck.setSelected(layer.isVisible());
         iconLabel.setIcon(resolveLayerIcon(layer));
-        nameLabel.setText((layerInGroup ? "  - " : "") + layer.getName());
+        nameLabel.setText((layerInGroup ? "  - " : "") + layer.getName()
+                + (layer.isPartialPreview() ? " [PREVIEW]" : ""));
         nameLabel.setForeground(effectiveVisible ? fg : new Color(120, 120, 120));
         String metaText = buildMetaText(layer);
         if (layerInGroup && layer.getGroupName() != null && !layer.getGroupName().isBlank()) {
