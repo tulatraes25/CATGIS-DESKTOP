@@ -132,3 +132,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   (PARTIAL_PREVIEW/TOTAL/LOADED), envelope de muestra y guarda de exportación.
   Tests `LasPreviewPolicyContractTest` (4). **Pendiente** etiquetas UI extendidas
   y bloqueo de todos los flujos profesionales: #176 sigue abierto.
+- T4 avance 3 (2026-11-17): **#43** aceptación verificada (PR docs en curso):
+  WCS valida firmas TIFF/BigTIFF, ImageIO, dimensiones, CRS/extent, strips y
+  muestras de píxel antes del rename atómico; staging/presupuesto/fallback y EDT
+  cubiertos por 34+ tests existentes. Evidencia en
+  `docs/quality/WCS_PAYLOAD_INTEGRITY_EVIDENCE_20261117.md`. **#108 (ejes WCS2/
+  DescribeCoverage) sigue OPEN**; A0.7/F3 NOT_CERTIFIED.
