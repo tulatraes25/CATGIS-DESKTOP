@@ -149,3 +149,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   ejes nativos y fallback v2->v1 sin adivinar x/y; tests
   `WcsNegotiatedDownloadContractTest` (3) con URL capturada. A0.7/F3 siguen
   NOT_CERTIFIED.
+- T3 avance 8 (2026-11-17): #176 UI/analítica parcial: badge persistente
+  `PREVIEW - N de TOTAL` en tabla de atributos (título/subtítulo/estado) y
+  bloqueo de validación topológica sobre preview; exportación ya bloqueada.
+  Tests `LasPreviewPolicyContractTest` (5). Siguen pendientes calculadora de
+  campos/geoprocesamiento/clasificación y simbología: #176 ABIERTO.

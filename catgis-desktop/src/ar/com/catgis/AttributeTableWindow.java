@@ -55,7 +55,9 @@ public class AttributeTableWindow extends JFrame {
         this.data = data;
         this.rawColumnNames = new ArrayList<>(columnNames);
 
-        setTitle("Tabla de atributos - " + (layer != null ? layer.getName() : "Capa"));
+        String previewStatus = LasPreviewPolicy.statusLabel(layer);
+        setTitle("Tabla de atributos - " + (layer != null ? layer.getName() : "Capa")
+                + (previewStatus.isBlank() ? "" : " | " + previewStatus));
         setSize(540, 220);
         setMinimumSize(new Dimension(460, 190));
         setLocationRelativeTo(null);
@@ -67,7 +69,9 @@ public class AttributeTableWindow extends JFrame {
         statusLabel.setForeground(new Color(65, 75, 90));
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 10f));
 
-        statusLabel.setText("Modo lectura. Activa edicion solo si vas a cambiar datos.");
+        statusLabel.setText(previewStatus.isBlank()
+                ? "Modo lectura. Activa edicion solo si vas a cambiar datos."
+                : previewStatus + " - los analisis profesionales estan bloqueados.");
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 9f));
 
         JPanel topPanel = buildTopPanel();
@@ -214,7 +218,9 @@ public class AttributeTableWindow extends JFrame {
 
         String layerName = layer != null ? layer.getName() : "Capa";
         String featureCount = data != null ? String.valueOf(data.getFeatureCount()) : "-";
-        JLabel subTitle = new JLabel(layerName + " | " + featureCount + " registros");
+        JLabel subTitle = new JLabel(layerName + " | " + featureCount + " registros"
+                + (LasPreviewPolicy.statusLabel(layer).isBlank()
+                        ? "" : " | " + LasPreviewPolicy.statusLabel(layer)));
         subTitle.setForeground(new Color(70, 80, 95));
         subTitle.setFont(subTitle.getFont().deriveFont(Font.BOLD, 10f));
 

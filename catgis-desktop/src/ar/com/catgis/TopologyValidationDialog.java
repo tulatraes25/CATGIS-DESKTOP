@@ -187,6 +187,12 @@ public class TopologyValidationDialog extends JDialog {
             NotificationManager.warn(this, null, "Seleccione una capa vectorial.");
             return;
         }
+        try {
+            LasPreviewPolicy.requireCompleteForAnalysis(layer, "validar topologia");
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(this, "LiDAR", preview.getMessage());
+            return;
+        }
 
         ShapefileData data = VectorLayerUtils.ensureVectorData(layer);
         if (data == null) {
