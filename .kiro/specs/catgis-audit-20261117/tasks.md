@@ -99,3 +99,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   compartidos; el preview 8-bit del diálogo queda marcado no profesional.
   Tests `SpectralCalibrationContractTest` (6); política en
   `docs/quality/SPECTRAL_CALIBRATION_POLICY_20261117.md`.
+- T3 avance 5 (2026-11-17): **#163** corregido (PR en curso):
+  `normalizeExplicit` conserva vacío y `normalizeCode` mantiene el default
+  UI EPSG:4326 delegando en aquel; migradas rutas sensibles (transforms,
+  BooleanRisk, vector CRS, FlatGeobuf, declaredCode raster). Tests
+  `CrsNormalizationSplitContractTest` (4); política en
+  `docs/quality/CRS_NORMALIZATION_POLICY_20261117.md`.

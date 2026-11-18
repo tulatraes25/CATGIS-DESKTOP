@@ -134,7 +134,7 @@ final class FlatGeobufCrsSupport {
         try {
             String code = CRS.toSRS(crs, true);
             if (code != null && !code.isBlank()) {
-                return CRSDefinitions.normalizeCode(code);
+                return CRSDefinitions.normalizeExplicit(code);
             }
         } catch (Exception ignored) {
             // A WKT-only CRS can intentionally have no authority identifier.

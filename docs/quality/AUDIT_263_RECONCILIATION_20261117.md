@@ -59,7 +59,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #128 | **CORREGIDO en PR T3-2** (GeoKeys > sidecar + veto de conflicto) | T3 |
 | #162 | **CORREGIDO en PR T3-3** (CF grid_mapping/packaging, sin WGS84 asumido) | T3 |
 | #139 | **CORREGIDO núcleo en PR T3-4** (calibración obligatoria; UI calibrada pendiente) | T3 |
-| #163 | **CONFIRMADO/PARCIAL** (normalización CRS) | T3 |
+| #163 | **CORREGIDO en PR T3-5** (normalización explícita vs default UI) | T3 |
 | #156, #261 | **CONFIRMADO** (PostGIS/credenciales) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |

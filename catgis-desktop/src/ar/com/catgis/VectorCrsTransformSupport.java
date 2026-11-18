@@ -88,7 +88,7 @@ final class VectorCrsTransformSupport {
             String srs = CRS.toSRS(crs, true);
             if (srs != null && !srs.isBlank()) {
                 CRSDefinitions.decode(srs, true);
-                return CRSDefinitions.normalizeCode(srs);
+                return CRSDefinitions.normalizeExplicit(srs);
             }
         } catch (Exception ignored) {
             // Fall through to exact WKT; no default CRS is invented.
@@ -107,7 +107,7 @@ final class VectorCrsTransformSupport {
             String srs = CRS.toSRS(crs, true);
             if (srs != null && !srs.isBlank()) {
                 CRSDefinitions.decode(srs, true);
-                return CRSDefinitions.normalizeCode(srs);
+                return CRSDefinitions.normalizeExplicit(srs);
             }
         } catch (Exception ignored) {
             // WKT-only CRS remains WKT rather than a fabricated authority code.
