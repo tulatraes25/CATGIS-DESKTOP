@@ -255,7 +255,127 @@ public final class WcsClient {
                                                String format, File outputFile) throws Exception {
         downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
                 width, height, format, outputFile, configuredWcsByteLimit(),
-                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured());
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured(), false);
+    }
+
+    /**
+     * T4/#108: WCS 2.0.1 download using DescribeCoverage-advertised native axis
+     * labels. Ambiguous/missing axes fall back to the standards WCS 1.0.0
+     * request instead of guessing x/y. The previous output is never replaced on
+     * failure and the delivered GeoTIFF is validated before publication.
+     */
+    public static void downloadCoverageToFileNegotiated(String serviceUrl, String coverageName,
+                                                         String bbox, String crs,
+                                                         int width, int height,
+                                                         File outputFile) throws Exception {
+        downloadCoverageToFile(serviceUrl, coverageName, bbox, crs, width, height,
+                null, outputFile, configuredWcsByteLimit(),
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured(), true);
+    }
+
+    public static void downloadCoverageToFileNegotiated(String serviceUrl, String coverageName,
+                                                         String bbox, String crs,
+                                                         int width, int height,
+                                                         String format, File outputFile)
+            throws Exception {
+        downloadCoverageToFile(serviceUrl, coverageName, bbox, crs, width, height,
+                format, outputFile, configuredWcsByteLimit(),
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured(), true);
+    }
+
+    private static final int MAX_DESCRIBE_COVERAGE_BYTES = 4 * 1024 * 1024;
+    private static final java.util.Map<String, WcsDescribeCoverageAxes.Plan> AXIS_PLAN_CACHE =
+            java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(
+                        java.util.Map.Entry<String, WcsDescribeCoverageAxes.Plan> eldest) {
+                    return size() > 64;
+                }
+            });
+
+    /** Test seam: clears the per-process DescribeCoverage cache. */
+    static void clearAxisPlanCacheForTesting() {
+        AXIS_PLAN_CACHE.clear();
+    }
+
+    static WcsDescribeCoverageAxes.Plan describeCoverageAxes(String serviceUrl,
+                                                              String coverageName)
+            throws IOException {
+        String key = (serviceUrl == null ? "" : serviceUrl.trim()) + "|"
+                + (coverageName == null ? "" : coverageName.trim());
+        WcsDescribeCoverageAxes.Plan cached = AXIS_PLAN_CACHE.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        String url = buildDescribeCoverageUrl(serviceUrl, coverageName);
+        byte[] document = fetchBoundedOgcDocument(url, MAX_DESCRIBE_COVERAGE_BYTES,
+                "WCS DescribeCoverage");
+        WcsDescribeCoverageAxes.Plan plan = WcsDescribeCoverageAxes.parse(document);
+        AXIS_PLAN_CACHE.put(key, plan);
+        return plan;
+    }
+
+    private static String buildDescribeCoverageUrl(String serviceUrl, String coverageName)
+            throws IOException {
+        if (serviceUrl == null || serviceUrl.isBlank() || coverageName == null
+                || coverageName.isBlank()) {
+            throw new IOException("WCS DescribeCoverage requires service URL and coverage name.");
+        }
+        if (serviceUrl.toLowerCase(java.util.Locale.ROOT).contains("request=")) {
+            throw new IOException("WCS DescribeCoverage requires a base service URL "
+                    + "without a REQUEST parameter.");
+        }
+        String sep = serviceUrl.contains("?") ? "&" : "?";
+        return serviceUrl + sep + "SERVICE=WCS&VERSION=2.0.1&REQUEST=DescribeCoverage"
+                + "&COVERAGEID=" + java.net.URLEncoder.encode(coverageName,
+                        java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private static byte[] fetchBoundedOgcDocument(String urlString, int maxBytes, String label)
+            throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(urlString).openConnection();
+        try {
+            connection.setRequestProperty("User-Agent", "CATGIS-Desktop/1.0");
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(30000);
+            int status = connection.getResponseCode();
+            if (status != 200) {
+                throw new IOException(label + " returned HTTP " + status + ".");
+            }
+            long declared = connection.getContentLengthLong();
+            if (declared > maxBytes) {
+                throw new IOException(label + " exceeds " + maxBytes + " bytes.");
+            }
+            byte[] document;
+            try (InputStream input = connection.getInputStream()) {
+                document = input.readNBytes(maxBytes + 1);
+            }
+            if (document.length == 0 || document.length > maxBytes) {
+                throw new IOException(label + " is empty or exceeds " + maxBytes + " bytes.");
+            }
+            if (declared >= 0L && declared != document.length) {
+                throw new IOException(label + " has incomplete Content-Length.");
+            }
+            return document;
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private static String buildGetCoverageUrl20WithPlan(String serviceUrl, String coverageName,
+                                                         String bbox, int width, int height,
+                                                         String format,
+                                                         WcsDescribeCoverageAxes.Plan plan)
+            throws IOException {
+        String sep = serviceUrl.contains("?") ? "&" : "?";
+        String effectiveFormat = format == null || format.isBlank() ? "image/tiff" : format;
+        return serviceUrl + sep
+                + "SERVICE=WCS&VERSION=2.0.1&REQUEST=GetCoverage"
+                + "&COVERAGEID=" + java.net.URLEncoder.encode(coverageName,
+                        java.nio.charset.StandardCharsets.UTF_8)
+                + "&" + WcsDescribeCoverageAxes.dimensionParameters(plan, bbox, width, height)
+                + "&FORMAT=" + java.net.URLEncoder.encode(effectiveFormat,
+                        java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @FunctionalInterface
@@ -303,7 +423,7 @@ public final class WcsClient {
                                        String format, File outputFile, long maxReceivedBytes) throws Exception {
         downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
                 width, height, format, outputFile, maxReceivedBytes,
-                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured());
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.configured(), false);
     }
 
     /** Test seam: small total deadline without mutating global system properties. */
@@ -313,7 +433,7 @@ public final class WcsClient {
                                        long maxMillis) throws Exception {
         downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
                 width, height, format, outputFile, maxReceivedBytes,
-                WcsClient::moveCoverageAtomically, WcsTransferDeadline.forTesting(maxMillis));
+                WcsClient::moveCoverageAtomically, WcsTransferDeadline.forTesting(maxMillis), false);
     }
 
     /** Test seam to simulate a filesystem refusing atomic replacement. */
@@ -323,7 +443,7 @@ public final class WcsClient {
                                        AtomicCoverageMove mover) throws Exception {
         downloadCoverageToFile(serviceUrl, coverageName, bbox, crs,
                 width, height, format, outputFile, maxReceivedBytes,
-                mover, WcsTransferDeadline.configured());
+                mover, WcsTransferDeadline.configured(), false);
     }
 
     /** One absolute deadline shared by WCS 2.x, 1.x, validation and publish. */
@@ -331,7 +451,8 @@ public final class WcsClient {
                                                String bbox, String crs, int width, int height,
                                                String format, File outputFile, long maxReceivedBytes,
                                                AtomicCoverageMove mover,
-                                               WcsTransferDeadline deadline) throws Exception {
+                                               WcsTransferDeadline deadline,
+                                               boolean negotiatedAxes) throws Exception {
         if (maxReceivedBytes <= 0L || maxReceivedBytes > MAX_WCS_BYTE_LIMIT) {
             throw new IOException("WCS download byte budget is outside the supported range.");
         }
@@ -363,9 +484,19 @@ public final class WcsClient {
             Path staging = Files.createTempFile(destination.getParent(), ".catgis-wcs-", ".part");
             try {
                 try {
-                    streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
-                            width, height, format, WcsVersion.V2_0_1, staging,
-                            remainingBytes, deadline);
+                    if (negotiatedAxes) {
+                        WcsDescribeCoverageAxes.Plan plan =
+                                describeCoverageAxes(serviceUrl, coverageName);
+                        streamCoverageUrl(buildGetCoverageUrl20WithPlan(
+                                        serviceUrl, coverageName, bbox, width, height,
+                                        format, plan),
+                                width, height, format, bbox, crs, staging,
+                                remainingBytes, deadline);
+                    } else {
+                        streamCoverageVersion(serviceUrl, coverageName, bbox, crs,
+                                width, height, format, WcsVersion.V2_0_1, staging,
+                                remainingBytes, deadline);
+                    }
                 } catch (Exception v2Failure) {
                     // A time deadline or user interrupt must never trigger v1 fallback.
                     deadline.checkActive();
@@ -394,8 +525,18 @@ public final class WcsClient {
                                               WcsVersion version, Path staging, long[] remainingBytes,
                                               WcsTransferDeadline deadline) throws Exception {
         deadline.checkActive();
-        URL url = new URL(buildCoverageRequestUrl(
-                serviceUrl, coverageName, bbox, crs, width, height, format, version));
+        streamCoverageUrl(buildCoverageRequestUrl(
+                        serviceUrl, coverageName, bbox, crs, width, height, format, version),
+                width, height, format, bbox, crs, staging, remainingBytes, deadline);
+    }
+
+    private static void streamCoverageUrl(String urlString,
+                                          int width, int height, String format,
+                                          String bbox, String crs, Path staging,
+                                          long[] remainingBytes,
+                                          WcsTransferDeadline deadline) throws Exception {
+        deadline.checkActive();
+        URL url = new URL(urlString);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         WcsTransferDeadline.Guard watchdog = null;
         try {

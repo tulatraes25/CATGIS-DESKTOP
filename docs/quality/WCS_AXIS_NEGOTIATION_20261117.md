@@ -1,8 +1,8 @@
 # WCS 2.x — negociación de ejes DescribeCoverage (issue #108, núcleo) — 2026-11-17
 
-Estado: **NÚCLEO IMPLEMENTADO (PARCIAL)**. El parser/planificador de ejes ya
-existe y está certificado por tests; la integración en el flujo de descarga y UI
-queda para el siguiente tramo. **#108 sigue OPEN**.
+Estado: **INTEGRADO Y VERIFICADO**. El flujo de descarga de la UI usa
+`DescribeCoverage` para direccionar los ejes nativos; el parser/planificador y la
+URL están cubiertos por tests con fixtures de servidor capturados.
 
 ## Problema
 
@@ -36,11 +36,18 @@ etiquetas nativas y BBOX validado, documentos vacíos/malformados/sobre-dimensio
 
 Suite local: 1681 tests, 0 fallos, 15 skips.
 
-## Pendiente para cerrar #108
+## Integración (cierra el alcance funcional de #108)
 
-- `DescribeCoverage` real por `COVERAGEID` (fetch acotado) y caché por
-  cobertura/servicio.
-- Integración en `downloadCoverageToFile`/UI con fallback v2→v1 coherente y
-  validación del GeoTIFF entregado (ya existe en #43).
-- Fixtures de servidor que capturen la URL real de GetCoverage.
-- A0.7/F3 siguen `NOT_CERTIFIED`.
+- `WcsClient.describeCoverageAxes` hace un fetch acotado (máx. 4 MiB) de
+  `DescribeCoverage` por `COVERAGEID`, con caché LRU de 64 entradas por
+  servicio+cobertura y URL base validada (sin `REQUEST=` previo).
+- `downloadCoverageToFileNegotiated` usa la URL WCS 2.0.1 con etiquetas nativas;
+  ante fallo/ambigüedad se negocia a WCS 1.0.0 estándar (BBOX/CRS), **nunca** se
+  emite un `SUBSET=x/y` adivinado. Presupuesto/deadline/lock/staging y validación
+  del GeoTIFF entregado (#43) se comparten con la ruta existente.
+- `WcsDialog` usa la ruta negociada para descargas reales.
+- `WcsNegotiatedDownloadContractTest` (3): URL capturada con `SUBSET=lon/lat` y
+  `SCALESIZE`, caché de DescribeCoverage, ambigüedad → v1 sin V2 GetCoverage,
+  DescribeCoverage inválido → v1, fallo total preserva salida previa.
+- La UI sigue ejecutando la descarga fuera del EDT (`WcsRasterAsyncLoad`).
+- A0.7/F3 siguen `NOT_CERTIFIED` (GUI física residual).
