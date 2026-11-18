@@ -36,6 +36,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | LAS/LAZ | BETA_LIMITED | rechazo >50k, sin LAZ (#176) |
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |
 | NetCDF | BETA_LIMITED | CF/grid_mapping pendiente (#162) |
+| Georreferencia raster (GeoKeys vs sidecar) | SUPPORTED_VERIFIED | precedencia y veto de conflicto (#128) |
 | Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes T2 aplicados (#257/#258/#262); restan #162/#139 |
 | IDW / volumen / morfometría | BETA_LIMITED | #257/#258 abiertos |
 | Calculadora raster (float/NoData, GeoTIFF, preview 8-bit separado) | BETA_LIMITED | #256 API científica + tests; UI exporta GeoTIFF float |
