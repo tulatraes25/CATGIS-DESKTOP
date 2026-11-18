@@ -186,3 +186,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   intactos, CRS-null y path-change invalidation; #167 contrato WCS shared
   deadline con headroom determinista (1500 ms vs stream 3 s, requests==1 sin
   fallback). Ambos verificados en main certificado (attestation 44384865579).
+- T5 avance (2026-11-17): cierre verificado de gates CATMAP A0.x con tests
+  certificados: #95 (save atómico/backup), #99 (exports atómicos + SVG vectorial),
+  #98 (multipágina/v2), #96 (Atlas no muta/streaming), #102 (edición/undo por
+  página). A0.7/F3 GUI física siguen NOT_CERTIFIED; no se sobrepromete.

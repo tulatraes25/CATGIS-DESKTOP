@@ -107,3 +107,18 @@ attestation `44356056579`):
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
 | #143, #132, #114, #113 | Ledger/scripting/procesamiento/QA (residuales declarados). |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |
+## 9. CATMAP A0.x — cierres de implementación (2026-11-17)
+
+Cerrados en GitHub con evidencia de tests en `main = 3e07760` (Certification +
+Runtime Identity post-main SUCCESS; attestation `44391736517`):
+
+| Issue | Evidencia headless/CI |
+|---|---|
+| #95 save atómico .catmap + backup | `CatmapAtomicSaveContractTest` (ATOMIC_MOVE sin fallback, staging único, fallo preserva destino/backup, symlink/directorio). |
+| #99 exports PDF/PNG/SVG atómicos y SVG vectorial honesto | `CatmapAtomicExportContractTest`, `SvgVectorExporterContractTest`, `CatmapSvgAtomicExportContractTest`; UI usa `SvgVectorExporter`. |
+| #98 multipágina persistente + imágenes | `CatmapMultipageImageContractTest` (v2 todas las páginas, v1 compatible, encoder error fail-closed), `CatmapPageGeometryContractTest`. |
+| #96 Atlas sin mutar template y memoria acotada | `AtlasEngineSafetyContractTest` (repetibilidad, límites, streaming, publisher falla sin publicar). |
+| #102 edición/undo por página activa | `CatmapActivePageEditingContractTest` (edición/undo/hit-test por página, roundtrip, drag). |
+
+**Importante:** estos cierres son de implementación y tests headless/CI. **A0.7/F3
+(interacción GUI física, HiDPI, focus, owner gestures) siguen NOT_CERTIFIED.**
