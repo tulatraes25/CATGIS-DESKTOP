@@ -31,6 +31,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | WMTS (REST/KVP, matrix sets XYZ) | SUPPORTED_VERIFIED | `WmtsSupportContractTest`; otros matrix sets requieren adaptación |
 | XYZ/online tiles | SUPPORTED_VERIFIED | contratos de caché/EDT |
 | WCS / STAC | BETA_LIMITED | issues de aceptación OGC (#108/#43) |
+| DEM/suelo/clima online (OpenTopography, SoilGrids, WorldClim/Open-Meteo) | BETA_LIMITED | TIFF+sidecar atomicos (#161); georreferencia embebida #128 abierto |
 | FlatGeobuf | BETA_LIMITED | acotado; sin streaming grande (#175) |
 | LAS/LAZ | BETA_LIMITED | rechazo >50k, sin LAZ (#176) |
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |

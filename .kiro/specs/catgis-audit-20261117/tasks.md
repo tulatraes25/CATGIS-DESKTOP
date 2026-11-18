@@ -74,3 +74,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   prompt de recuperación al inicio; al guardar se descartan los snapshots del
   proyecto. Tests `ProjectRecoveryJournalContractTest` (5). T1 completo:
   #144/#146/#148/#149/#155/#260.
+- T3 avance 1 (2026-11-17): **#161** corregido (PR en curso):
+  `RasterBundlePublisher` publica TIFF+sidecar atomicos (staged, backup de ambos,
+  verificacion de imagen/sidecar, restauracion ante fallo, deletion de sidecar
+  obsoleto si no hay georreferencia) y se usa en OpenTopography, SoilGrids y
+  Climate (WorldClim/Open-Meteo). Tests `RasterBundlePublisherContractTest` (6).

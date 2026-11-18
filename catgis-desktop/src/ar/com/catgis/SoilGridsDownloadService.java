@@ -98,11 +98,13 @@ public final class SoilGridsDownloadService {
             throw new IOException("La respuesta del servicio de suelos no fue un GeoTIFF valido: " + sanitizeError(errorText));
         }
 
-        try (InputStream stream = response.body()) {
-            Files.copy(stream, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        }
         Envelope normalized = latLonEnvelope != null ? normalizeWgs84Envelope(latLonEnvelope) : null;
-        RasterSidecarSupport.write(outputFile, normalized, dataset.getSourceCrsCode());
+        try (InputStream stream = response.body()) {
+            RasterBundlePublisher.publish(outputFile,
+                    staged -> Files.copy(stream, staged.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING),
+                    normalized, dataset.getSourceCrsCode());
+        }
         return new FileDownloadResult(outputFile, normalized, uri, dataset);
     }
 

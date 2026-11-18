@@ -1,5 +1,7 @@
 package ar.com.catgis.climate;
 
+import ar.com.catgis.RasterBundlePublisher;
+
 import ar.com.catgis.CatgisLogger;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.data.raster.RasterCoverageSupport;
@@ -152,14 +154,15 @@ public final class ClimateOnlineDownloadService {
         try {
             // Simply copy the global tile as-is (CATGIS will display the full extent)
             // Recorte futuro: por ahora descargamos el tile completo tal cual
-            Files.copy(tempFile.toPath(), outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            RasterBundlePublisher.publish(outputFile,
+                    staged -> Files.copy(tempFile.toPath(), staged.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING),
+                    normalizedBbox, dataset.getSourceCrsCode());
         } finally {
             try {
                 tempFile.delete();
             } catch (Exception ignored) { CatgisLogger.warn("ClimateOnlineDownloadService: operation failed", ignored); }
         }
-
-        RasterSidecarSupport.write(outputFile, normalizedBbox, dataset.getSourceCrsCode());
         return new FileDownloadResult(outputFile, normalizedBbox, downloadUri, dataset);
     }
 
@@ -275,14 +278,14 @@ public final class ClimateOnlineDownloadService {
         String layerName = dataset.getOutputCode() + "_" + startStr + "_" + endStr;
         GridCoverage2D coverage = new GridCoverageFactory().create(layerName, raster, refEnv);
 
-        GeoTiffWriter writer = new GeoTiffWriter(outputFile);
-        try {
-            writer.write(coverage, (org.geotools.api.parameter.GeneralParameterValue[]) null);
-        } finally {
-            writer.dispose();
-        }
-
-        RasterSidecarSupport.write(outputFile, normalizedBbox, dataset.getSourceCrsCode());
+        RasterBundlePublisher.publish(outputFile, staged -> {
+            GeoTiffWriter writer = new GeoTiffWriter(staged);
+            try {
+                writer.write(coverage, (org.geotools.api.parameter.GeneralParameterValue[]) null);
+            } finally {
+                writer.dispose();
+            }
+        }, normalizedBbox, dataset.getSourceCrsCode());
         return new FileDownloadResult(outputFile, normalizedBbox, URI.create("open-meteo://" + variableCode), dataset);
     }
 

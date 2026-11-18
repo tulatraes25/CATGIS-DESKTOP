@@ -55,7 +55,8 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #260 | **CORREGIDO en PR T1-1** (pendiente gates) | T1 |
 | #150, #151, #195, #193, #175, #176, #153 | **PARCIAL** (CRS fuente/preview/streaming) | T1 |
 | #256, #257, #258, #259, #262 | **CORREGIDO en PRs T2** (#257/#258/#262 en `6cd043d`; #256/#259 en el PR T2-2) | T2 |
-| #162, #139, #163, #128, #161 | **CONFIRMADO/PARCIAL** (datos y proveedores) | T3 |
+| #161 | **CORREGIDO en PR T3-1** (TIFF+sidecar atomicos en proveedores) | T3 |
+| #162, #139, #163, #128 | **CONFIRMADO/PARCIAL** (datos y proveedores) | T3 |
 | #156, #261 | **CONFIRMADO** (PostGIS/credenciales) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |
