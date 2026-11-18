@@ -37,7 +37,8 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |
 | NetCDF | BETA_LIMITED | CF grid_mapping/packaging implementado (#162); fixtures .nc reales pendientes |
 | Georreferencia raster (GeoKeys vs sidecar) | SUPPORTED_VERIFIED | precedencia y veto de conflicto (#128) |
-| Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes T2 aplicados (#257/#258/#262); restan #162/#139 |
+| Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes T2 aplicados (#257/#258/#262) |
+| Índices espectrales profesionales (NDVI/EVI/BSI) | BETA_LIMITED | API calibrada float/NoData certificada (#139); GUI calibrada pendiente |
 | IDW / volumen / morfometría | BETA_LIMITED | #257/#258 abiertos |
 | Calculadora raster (float/NoData, GeoTIFF, preview 8-bit separado) | BETA_LIMITED | #256 API científica + tests; UI exporta GeoTIFF float |
 | Catálogo CRS argentino (POSGAR 94, Campo Inchauspe, POSGAR 2007) | SUPPORTED_VERIFIED | validado contra EPSG/GeoTools (#259) |
