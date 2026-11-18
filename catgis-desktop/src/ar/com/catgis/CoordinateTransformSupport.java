@@ -25,8 +25,8 @@ public final class CoordinateTransformSupport {
     }
 
     public static double[] transformPoint(double x, double y, String sourceCode, String targetCode) {
-        String source = CRSDefinitions.normalizeCode(sourceCode);
-        String target = CRSDefinitions.normalizeCode(targetCode);
+        String source = CRSDefinitions.normalizeExplicit(sourceCode);
+        String target = CRSDefinitions.normalizeExplicit(targetCode);
         if (source.isBlank() || target.isBlank()) {
             return null;
         }
@@ -181,7 +181,7 @@ public final class CoordinateTransformSupport {
     }
 
     private static GeographicPoint toGeographic(double x, double y, String sourceCode) {
-        String normalized = CRSDefinitions.normalizeCode(sourceCode);
+        String normalized = CRSDefinitions.normalizeExplicit(sourceCode);
         if (isGeographic(normalized)) {
             return new GeographicPoint(x, y);
         }
@@ -207,7 +207,7 @@ public final class CoordinateTransformSupport {
     }
 
     private static double[] fromGeographic(double lon, double lat, String targetCode) {
-        String normalized = CRSDefinitions.normalizeCode(targetCode);
+        String normalized = CRSDefinitions.normalizeExplicit(targetCode);
         if (isGeographic(normalized)) {
             return new double[]{lon, lat};
         }
@@ -245,7 +245,7 @@ public final class CoordinateTransformSupport {
     }
 
     private static ProjectedDefinition resolveProjectedDefinition(String code) {
-        String normalized = CRSDefinitions.normalizeCode(code);
+        String normalized = CRSDefinitions.normalizeExplicit(code);
         if (normalized.isBlank()) {
             return null;
         }

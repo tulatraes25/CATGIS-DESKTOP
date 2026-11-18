@@ -210,10 +210,7 @@ public final class RasterCoverageSupport {
 
     /** Normalizes a declared CRS code, preserving blank instead of defaulting. */
     public static String declaredCode(String code) {
-        if (code == null || code.isBlank()) {
-            return "";
-        }
-        return CRSDefinitions.normalizeCode(code);
+        return CRSDefinitions.normalizeExplicit(code);
     }
 
     private static boolean sameCrs(String first, String second) {

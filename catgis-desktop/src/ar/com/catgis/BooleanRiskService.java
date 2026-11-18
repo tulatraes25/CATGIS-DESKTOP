@@ -877,8 +877,8 @@ public final class BooleanRiskService {
         }
 
         private double[] reprojectIfNeeded(double x, double y, String sourceCode, String targetCode) {
-            String normalizedSource = CRSDefinitions.normalizeCode(sourceCode);
-            String normalizedTarget = CRSDefinitions.normalizeCode(targetCode);
+            String normalizedSource = CRSDefinitions.normalizeExplicit(sourceCode);
+            String normalizedTarget = CRSDefinitions.normalizeExplicit(targetCode);
             if (normalizedSource.isBlank() || normalizedTarget.isBlank() || normalizedSource.equalsIgnoreCase(normalizedTarget)) {
                 return new double[]{x, y};
             }
@@ -887,7 +887,7 @@ public final class BooleanRiskService {
         }
 
         private boolean isGeographicCrs(String code) {
-            String normalized = CRSDefinitions.normalizeCode(code);
+            String normalized = CRSDefinitions.normalizeExplicit(code);
             return "EPSG:4326".equalsIgnoreCase(normalized)
                     || "EPSG:84".equalsIgnoreCase(normalized)
                     || "CRS:84".equalsIgnoreCase(normalized)

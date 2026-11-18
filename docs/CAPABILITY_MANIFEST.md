@@ -37,6 +37,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |
 | NetCDF | BETA_LIMITED | CF grid_mapping/packaging implementado (#162); fixtures .nc reales pendientes |
 | Georreferencia raster (GeoKeys vs sidecar) | SUPPORTED_VERIFIED | precedencia y veto de conflicto (#128) |
+| Normalización CRS | SUPPORTED_VERIFIED | explícita vs default UI (#163) |
 | Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes T2 aplicados (#257/#258/#262) |
 | Índices espectrales profesionales (NDVI/EVI/BSI) | BETA_LIMITED | API calibrada float/NoData certificada (#139); GUI calibrada pendiente |
 | IDW / volumen / morfometría | BETA_LIMITED | #257/#258 abiertos |

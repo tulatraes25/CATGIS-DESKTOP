@@ -155,9 +155,14 @@ public class CRSDefinitions {
         }
     }
 
-    public static String normalizeCode(String code) {
+    /**
+     * Explicit normalization: preserves a missing CRS as blank. CRS-sensitive
+     * decisions (transforms, georeference, scientific comparisons) must use this
+     * method; {@link #normalizeCode(String)} keeps the UI default policy (#163).
+     */
+    public static String normalizeExplicit(String code) {
         if (code == null || code.isBlank()) {
-            return DEFAULT_CRS;
+            return "";
         }
         String trimmed = code.trim();
         if (trimmed.toUpperCase(Locale.ROOT).startsWith("EPSG:")) {
@@ -170,6 +175,15 @@ public class CRSDefinitions {
             return "EPSG:" + trimmed;
         }
         return trimmed;
+    }
+
+    /**
+     * UI default policy: a missing code becomes EPSG:4326. Never use it for
+     * provenance/validation decisions where "missing" must stay visible.
+     */
+    public static String normalizeCode(String code) {
+        String explicit = normalizeExplicit(code);
+        return explicit.isBlank() ? DEFAULT_CRS : explicit;
     }
 
     public static String getLabelForCode(String code) {
