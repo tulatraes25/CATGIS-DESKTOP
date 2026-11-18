@@ -159,3 +159,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   topologia, calculadora de campos, geoprocesamiento y clasificacion ML sobre
   previews. Tests de politica (5). Dataset completo >50k y LAZ siguen fuera de
   alcance declarado.
+- Gobernanza (2026-11-17): cierre administrativo de issues con evidencia
+  (PR+test+main certificado): #128/#144/#146/#148/#149/#155/#156/#161/#162/
+  #163/#176/#256/#257/#258/#259/#260/#262 (+#43/#108 previos). Quedan abiertos
+  #112 (M3 ingesta), #175 (indexado), #139 (UI), #261 (OS vault), #150/#151/
+  #153/#193/#195, #164 y gates CATMAP/A0.7. Ver reconciliacion seccion 8.
