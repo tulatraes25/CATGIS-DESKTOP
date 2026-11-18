@@ -59,3 +59,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   por borrado del journal, recuperacion al siguiente guardado, backups huerfanos
   limpiados, lock de identidad con deteccion de stale (15 min) y seam de crash
   inyectado. Tests `VectorFamilyJournalContractTest` (7). Solo resta #146/#149.
+- T1 avance 5 (2026-11-17): **#146** corregido (PR en curso): featureCount y
+  sourceName se persisten/restauran (solo se escribe FEATURE_COUNT si >0 para
+  mantener la forma legacy), el payload keyed usa el codec v2 (pipes preservados)
+  y el decodificador legacy ya no interpreta sufijos KEY=value como campos
+  posicionales. Tests `ProjectLayerRoundtripByTypeContractTest` (GPX, GeoPackage,
+  SpatiaLite, Vector, PostGIS y WFS con tipo/path/CRS/count/source) y ajustes v2
+  en `SpecializedProjectLayerPayloadContractTest`. Solo resta #149.
