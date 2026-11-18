@@ -58,7 +58,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #161 | **CORREGIDO en PR T3-1** (TIFF+sidecar atomicos en proveedores) | T3 |
 | #128 | **CORREGIDO en PR T3-2** (GeoKeys > sidecar + veto de conflicto) | T3 |
 | #162 | **CORREGIDO en PR T3-3** (CF grid_mapping/packaging, sin WGS84 asumido) | T3 |
-| #139 | **CORREGIDO núcleo en PR T3-4** (calibración obligatoria; UI calibrada pendiente) | T3 |
+| #139 | **CORREGIDO/VERIFICADO** (UI con calibración explícita y export analítico; PR T3-9) | T3 |
 | #163 | **CORREGIDO en PR T3-5** (normalización explícita vs default UI) | T3 |
 | #261 | **MITIGADO / PARCIAL** (vault v2 con secreto local; OS-backed DPAPI/Keychain/Secret Service pendiente) | T4 |
 | #156 | **CORREGIDO en PR T4-2** (staging + swap transaccional; verificación CI PostGIS) | T4 |
@@ -103,5 +103,6 @@ attestation `44356056579`):
 | #139 | Núcleo de calibración espectral certificado; **UI de índices calibrados pendiente**. |
 | #261 | Vault v2 mitigado; **DPAPI/Keychain/Secret Service pendiente**. |
 | #150, #151, #153, #195 | CRS fuente/persistencia: parciales (SHP cubierto; GeoJSON/KML y otros adaptadores siguen pendientes). |
+| #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
 | #167, #174, #143, #132, #114, #113 | CI/mojibake/gobernanza/procesamiento/QA. |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |

@@ -40,7 +40,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Georreferencia raster (GeoKeys vs sidecar) | SUPPORTED_VERIFIED | precedencia y veto de conflicto (#128) |
 | Normalización CRS | SUPPORTED_VERIFIED | explícita vs default UI (#163) |
 | Curvas de nivel, drenaje, cuencas, inundación, riesgo, viewshed, perfil | BETA_LIMITED | fixes T2 aplicados (#257/#258/#262) |
-| Índices espectrales profesionales (NDVI/EVI/BSI) | BETA_LIMITED | API calibrada float/NoData certificada (#139); GUI calibrada pendiente |
+| Índices espectrales calibrados (NDVI/SAVI/BSI 2 bandas) | SUPPORTED_VERIFIED | UI con calibración explícita scale/offset/NoData y export GeoTIFF float analítico (#139); EVI 3 bandas bloqueado en este flujo |
 | IDW / volumen / morfometría | BETA_LIMITED | #257/#258 abiertos |
 | Calculadora raster (float/NoData, GeoTIFF, preview 8-bit separado) | BETA_LIMITED | #256 API científica + tests; UI exporta GeoTIFF float |
 | Catálogo CRS argentino (POSGAR 94, Campo Inchauspe, POSGAR 2007) | SUPPORTED_VERIFIED | validado contra EPSG/GeoTools (#259) |
