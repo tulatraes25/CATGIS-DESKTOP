@@ -190,3 +190,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   certificados: #95 (save atómico/backup), #99 (exports atómicos + SVG vectorial),
   #98 (multipágina/v2), #96 (Atlas no muta/streaming), #102 (edición/undo por
   página). A0.7/F3 GUI física siguen NOT_CERTIFIED; no se sobrepromete.
+- CI/QA (2026-11-17): estabilizado `ExternalToolTimeoutContractTest`
+  veryLargeOutput... — ExternalToolService espera EOF del drain con latch
+  (5 s + cierre forzado) y falla cerrado si no drena, en lugar de snapshot tras
+  join(1 s) (causa del flake MacIntel21). Test repite 5 veces y verifica marcador
+  de truncado y ausencia de "could not be fully drained".
