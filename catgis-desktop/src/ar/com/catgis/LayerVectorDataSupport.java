@@ -207,26 +207,15 @@ final class LayerVectorDataSupport {
         }
     }
 
-    static final int MAX_COMPLETE_LAS_FEATURES = 50_000;
-
-    // The current vector model has no typed PREVIEW status and exports/analyses
-    // would treat a prefix as complete. Reject larger sources, never lie.
-    static void requireCompleteLasDataset(long declaredCount) throws java.io.IOException {
-        if (declaredCount < 0 || declaredCount > MAX_COMPLETE_LAS_FEATURES) {
-            throw new java.io.IOException("LiDAR: el archivo declara " + declaredCount
-                    + " puntos y supera los " + MAX_COMPLETE_LAS_FEATURES
-                    + " admitidos para carga íntegra. CATGIS no presentará una"
-                    + " muestra parcial como datos completos. Se requiere lector indexado.");
-        }
-    }
-
     private static ShapefileData loadLasFile(String path, Layer layer) throws Exception {
         File file = new File(path);
         LasReader.LasHeader header = LasReader.readHeader(file);
-        requireCompleteLasDataset(header.pointCount());
-        List<LasReader.LasPoint> lasPoints =
-                LasReader.readPoints(file, MAX_COMPLETE_LAS_FEATURES, header);
-        if (lasPoints.size() != header.pointCount()) {
+        LasPreviewPolicy.Plan plan =
+                LasPreviewPolicy.plan(header.pointCount(), LasPreviewPolicy.MAX_PREVIEW_POINTS);
+        List<LasReader.LasPoint> lasPoints = plan.preview()
+                ? LasReader.readSampledPoints(file, plan.samplePoints(), header)
+                : LasReader.readPoints(file, plan.samplePoints(), header);
+        if (!plan.preview() && lasPoints.size() != header.pointCount()) {
             throw new java.io.IOException("LiDAR: lectura incompleta de puntos declarados.");
         }
 
@@ -242,22 +231,34 @@ final class LayerVectorDataSupport {
                 new org.geotools.feature.simple.SimpleFeatureBuilder(schema);
         List<org.geotools.api.feature.simple.SimpleFeature> features = new java.util.ArrayList<>();
         org.locationtech.jts.geom.GeometryFactory gf = new org.locationtech.jts.geom.GeometryFactory();
+        org.locationtech.jts.geom.Envelope sampleEnvelope = new org.locationtech.jts.geom.Envelope();
 
         for (int i = 0; i < lasPoints.size(); i++) {
             LasReader.LasPoint lp = lasPoints.get(i);
             fb.reset();
-            fb.set("the_geom", gf.createPoint(
-                    new org.locationtech.jts.geom.Coordinate(lp.x(), lp.y())));
+            org.locationtech.jts.geom.Point point = gf.createPoint(
+                    new org.locationtech.jts.geom.Coordinate(lp.x(), lp.y()));
+            fb.set("the_geom", point);
             fb.set("intensity", (double) lp.intensity());
             fb.set("classification", lp.classification());
             features.add(fb.buildFeature(String.valueOf(i)));
+            sampleEnvelope.expandToInclude(point.getEnvelopeInternal());
         }
 
-        org.locationtech.jts.geom.Envelope envelope = new org.locationtech.jts.geom.Envelope(
-                header.minX(), header.maxX(), header.minY(), header.maxY());
+        // A preview must not advertise the full header extent as if it were loaded:
+        // the envelope reflects what the user actually has, while the total count
+        // and full extent remain explicit metadata.
+        org.locationtech.jts.geom.Envelope envelope = plan.preview()
+                ? sampleEnvelope
+                : new org.locationtech.jts.geom.Envelope(
+                        header.minX(), header.maxX(), header.minY(), header.maxY());
+
+        layer.setPartialPreview(plan.preview());
+        layer.setTotalSourceFeatures(header.pointCount());
+        layer.setLoadedSourceFeatures(lasPoints.size());
 
         return new ShapefileData(features, envelope, layer.getName(), features.size(),
-                "LiDAR verificado: " + features.size() + "/" + header.pointCount() + " puntos completos", schema);
+                plan.message(), schema);
     }
 
     static void showLoadFailure(Layer layer,

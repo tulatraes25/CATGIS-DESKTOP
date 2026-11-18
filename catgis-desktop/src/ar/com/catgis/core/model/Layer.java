@@ -194,6 +194,9 @@ public class Layer {
     private String groupName = "";
     private String sourceName;
     private int featureCount;
+    private boolean partialPreview;
+    private long totalSourceFeatures = -1L;
+    private long loadedSourceFeatures = -1L;
 
     // Label configuration (extracted to LabelConfig value object)
     private final LabelConfig labelConfig = new LabelConfig();
@@ -327,6 +330,31 @@ public class Layer {
 
     public void setFeatureCount(int featureCount) {
         this.featureCount = featureCount;
+    }
+
+    /** True when the layer holds an explicit sample (e.g. LiDAR preview). */
+    public boolean isPartialPreview() {
+        return partialPreview;
+    }
+
+    public void setPartialPreview(boolean partialPreview) {
+        this.partialPreview = partialPreview;
+    }
+
+    public long getTotalSourceFeatures() {
+        return totalSourceFeatures;
+    }
+
+    public void setTotalSourceFeatures(long totalSourceFeatures) {
+        this.totalSourceFeatures = totalSourceFeatures;
+    }
+
+    public long getLoadedSourceFeatures() {
+        return loadedSourceFeatures;
+    }
+
+    public void setLoadedSourceFeatures(long loadedSourceFeatures) {
+        this.loadedSourceFeatures = loadedSourceFeatures;
     }
 
     public String getGroupName() {

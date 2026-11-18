@@ -33,17 +33,21 @@ class LasHeaderIntegrityContractTest {
     }
 
     @Test
-    void largeLidarFileCannotBecomeSilentlyTruncatedVectorLayer() {
-        assertThrows(IOException.class,
-                () -> LayerVectorDataSupport.requireCompleteLasDataset(50_001));
-        assertThrows(IOException.class,
-                () -> LayerVectorDataSupport.requireCompleteLasDataset(Long.MAX_VALUE));
-        assertThrows(IOException.class,
-                () -> LayerVectorDataSupport.requireCompleteLasDataset(-1));
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
-                () -> LayerVectorDataSupport.requireCompleteLasDataset(50_000));
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow(
-                () -> LayerVectorDataSupport.requireCompleteLasDataset(0));
+    void largeLidarFileMustBecomeAnExplicitPreviewPlan() {
+        var complete = LasPreviewPolicy.plan(50_000, LasPreviewPolicy.MAX_PREVIEW_POINTS);
+        org.junit.jupiter.api.Assertions.assertFalse(complete.preview());
+        org.junit.jupiter.api.Assertions.assertEquals(50_000, complete.samplePoints());
+
+        var preview = LasPreviewPolicy.plan(50_001, LasPreviewPolicy.MAX_PREVIEW_POINTS);
+        org.junit.jupiter.api.Assertions.assertTrue(preview.preview());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                preview.message().contains("PARTIAL_PREVIEW"), preview.message());
+        org.junit.jupiter.api.Assertions.assertTrue(preview.samplePoints() <= 50_000);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> LasPreviewPolicy.plan(-1, LasPreviewPolicy.MAX_PREVIEW_POINTS));
+        assertThrows(IllegalArgumentException.class,
+                () -> LasPreviewPolicy.plan(10, 0));
     }
 
     @Test

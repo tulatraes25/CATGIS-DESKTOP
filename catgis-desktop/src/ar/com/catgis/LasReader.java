@@ -166,64 +166,104 @@ public final class LasReader {
         List<LasPoint> points = new ArrayList<>();
         long pointsToRead = Math.min(header.pointCount(), maxPoints);
         try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
-            raf.seek(96);
-            long pointOffset = readUInt(raf);
-            if (pointOffset < header.headerSize() || pointOffset > raf.length()) {
-                throw new IOException("Invalid LAS point-data offset: " + pointOffset);
-            }
-            raf.seek(pointOffset);
-
+            long pointOffset = pointDataOffset(raf, header);
             for (long i = 0; i < pointsToRead; i++) {
-                // 20-byte base record: XYZ(12), intensity(2), return flags(1),
-                // classification(1), scan angle(1), user data(1), source ID(2).
-                int rawX = readInt(raf);
-                int rawY = readInt(raf);
-                int rawZ = readInt(raf);
-
-                double x = rawX * header.scaleX() + header.offsetX();
-                double y = rawY * header.scaleY() + header.offsetY();
-                double z = rawZ * header.scaleZ() + header.offsetZ();
-                if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
-                    throw new IOException("LAS: coordenada no finita en punto " + i);
-                }
-                if (!insideDeclaredExtent(x, header.minX(), header.maxX(), header.scaleX())
-                        || !insideDeclaredExtent(y, header.minY(), header.maxY(), header.scaleY())
-                        || !insideDeclaredExtent(z, header.minZ(), header.maxZ(), header.scaleZ())) {
-                    throw new IOException("LAS: punto " + i
-                            + " fuera de la extensión geográfica declarada.");
-                }
-
-                int intensity = readUShort(raf);
-                raf.readUnsignedByte(); // packed return number/return count/flags
-                int classification = raf.readUnsignedByte();
-                raf.readByte();         // scan angle rank
-                raf.readUnsignedByte(); // user data
-                readUShort(raf);        // point source ID
-
-                int bytesRead = 20;
-                if (header.pointFormat() == 1 || header.pointFormat() == 3) {
-                    readDouble(raf);    // GPS time precedes RGB on point format 3
-                    bytesRead += 8;
-                }
-
-                int red = 0;
-                int green = 0;
-                int blue = 0;
-                if (header.pointFormat() == 2 || header.pointFormat() == 3) {
-                    red = readUShort(raf);
-                    green = readUShort(raf);
-                    blue = readUShort(raf);
-                    bytesRead += 6;
-                }
-
-                int remaining = header.recordLength() - bytesRead;
-                if (remaining < 0 || raf.skipBytes(remaining) != remaining) {
-                    throw new IOException("Invalid or truncated LAS point record at index " + i);
-                }
-                points.add(new LasPoint(x, y, z, classification, intensity, red, green, blue));
+                points.add(readPointAt(raf, header, pointOffset, i));
             }
         }
         return points;
+    }
+
+    /**
+     * T3/#176: spatially stratified sample that reads at most {@code maxPoints}
+     * records (stride <= ceil(total/maxPoints)) without loading the whole file.
+     * Unlike a biased prefix, the sample spans the declared point range.
+     */
+    public static List<LasPoint> readSampledPoints(File file, int maxPoints, LasHeader header)
+            throws IOException {
+        if (maxPoints <= 0) {
+            return List.of();
+        }
+        if (header == null) {
+            throw new IllegalArgumentException("LAS header is required.");
+        }
+        List<LasPoint> points = new ArrayList<>();
+        long total = header.pointCount();
+        if (total <= 0) {
+            return points;
+        }
+        long stride = Math.max(1L, (total + maxPoints - 1L) / maxPoints);
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            long pointOffset = pointDataOffset(raf, header);
+            for (long index = 0; index < total; index += stride) {
+                points.add(readPointAt(raf, header, pointOffset, index));
+                if (points.size() >= maxPoints) {
+                    break;
+                }
+            }
+        }
+        return points;
+    }
+
+    private static long pointDataOffset(RandomAccessFile raf, LasHeader header) throws IOException {
+        raf.seek(96);
+        long pointOffset = readUInt(raf);
+        if (pointOffset < header.headerSize() || pointOffset > raf.length()) {
+            throw new IOException("Invalid LAS point-data offset: " + pointOffset);
+        }
+        return pointOffset;
+    }
+
+    private static LasPoint readPointAt(RandomAccessFile raf, LasHeader header,
+                                        long pointOffset, long i) throws IOException {
+        raf.seek(pointOffset + i * header.recordLength());
+        // 20-byte base record: XYZ(12), intensity(2), return flags(1),
+        // classification(1), scan angle(1), user data(1), source ID(2).
+        int rawX = readInt(raf);
+        int rawY = readInt(raf);
+        int rawZ = readInt(raf);
+
+        double x = rawX * header.scaleX() + header.offsetX();
+        double y = rawY * header.scaleY() + header.offsetY();
+        double z = rawZ * header.scaleZ() + header.offsetZ();
+        if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
+            throw new IOException("LAS: coordenada no finita en punto " + i);
+        }
+        if (!insideDeclaredExtent(x, header.minX(), header.maxX(), header.scaleX())
+                || !insideDeclaredExtent(y, header.minY(), header.maxY(), header.scaleY())
+                || !insideDeclaredExtent(z, header.minZ(), header.maxZ(), header.scaleZ())) {
+            throw new IOException("LAS: punto " + i
+                    + " fuera de la extensión geográfica declarada.");
+        }
+
+        int intensity = readUShort(raf);
+        raf.readUnsignedByte(); // packed return number/return count/flags
+        int classification = raf.readUnsignedByte();
+        raf.readByte();         // scan angle rank
+        raf.readUnsignedByte(); // user data
+        readUShort(raf);        // point source ID
+
+        int bytesRead = 20;
+        if (header.pointFormat() == 1 || header.pointFormat() == 3) {
+            readDouble(raf);    // GPS time precedes RGB on point format 3
+            bytesRead += 8;
+        }
+
+        int red = 0;
+        int green = 0;
+        int blue = 0;
+        if (header.pointFormat() == 2 || header.pointFormat() == 3) {
+            red = readUShort(raf);
+            green = readUShort(raf);
+            blue = readUShort(raf);
+            bytesRead += 6;
+        }
+
+        int remaining = header.recordLength() - bytesRead;
+        if (remaining < 0 || raf.skipBytes(remaining) != remaining) {
+            throw new IOException("Invalid or truncated LAS point record at index " + i);
+        }
+        return new LasPoint(x, y, z, classification, intensity, red, green, blue);
     }
 
     public static long getPointCount(File file) throws IOException {

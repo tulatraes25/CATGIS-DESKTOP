@@ -291,6 +291,11 @@ public class SaveProjectAction extends AbstractAction {
         if (layer.getFeatureCount() > 0) {
             sb.append("|").append("FEATURE_COUNT=").append(layer.getFeatureCount());
         }
+        if (layer.isPartialPreview()) {
+            sb.append("|PARTIAL_PREVIEW=true");
+            sb.append("|TOTAL_SOURCE_FEATURES=").append(layer.getTotalSourceFeatures());
+            sb.append("|LOADED_SOURCE_FEATURES=").append(layer.getLoadedSourceFeatures());
+        }
         if (CadLayerSupport.isCadLayer(layer) || layer.hasCadPlacementAdjustment()) {
             sb.append("|").append("CAD_SHIFT_X=").append(layer.getCadOffsetX());
             sb.append("|").append("CAD_SHIFT_Y=").append(layer.getCadOffsetY());

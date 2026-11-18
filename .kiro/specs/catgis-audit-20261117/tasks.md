@@ -126,3 +126,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   interrupción; el loader mantiene límites de 100k features en RAM. Tests
   `FlatGeobufFrameReaderContractTest` (7). **Sigue pendiente** el lector
   indexado para >100k features: #175 no se considera cerrado.
+- T3 avance 7 (2026-11-17): **#176** núcleo implementado (PR en curso):
+  `LasPreviewPolicy` (completo <=50k, muestra estratificada >50k),
+  `LasReader.readSampledPoints`, estado tipado persistente en `Layer`
+  (PARTIAL_PREVIEW/TOTAL/LOADED), envelope de muestra y guarda de exportación.
+  Tests `LasPreviewPolicyContractTest` (4). **Pendiente** etiquetas UI extendidas
+  y bloqueo de todos los flujos profesionales: #176 sigue abierto.
