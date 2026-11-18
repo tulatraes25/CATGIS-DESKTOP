@@ -72,6 +72,28 @@ class IdwInterpolatorContractTest {
     }
 
     @Test
+    void misalignedExtentKeepsAlignedCellCenters() {
+        // Requested 0..10 with cell 4 => 3x3 cells and aligned envelope 0..12.
+        // The samples sit exactly on the aligned centres (2,10), (10,10), (6,2);
+        // a north edge based on the requested maxY (10) would miss every centre.
+        List<IdwInterpolator.Sample> samples = List.of(
+                new IdwInterpolator.Sample(2, 10, 100),
+                new IdwInterpolator.Sample(10, 10, 200),
+                new IdwInterpolator.Sample(6, 2, 300));
+        AnalysisRaster raster = IdwInterpolator.interpolate(samples, "IDW", "m",
+                0, 0, 10, 10, 4, 2.0, 3, 0, "EPSG:32719");
+        assertEquals(3, raster.width());
+        assertEquals(3, raster.height());
+        assertEquals(12.0, raster.maxX(), 1.0e-9,
+                "east edge must be aligned to whole cells");
+        assertEquals(12.0, raster.maxY(), 1.0e-9,
+                "north edge must be aligned to whole cells");
+        assertEquals(100.0, raster.valueAt(0, 0), 1.0e-3);
+        assertEquals(200.0, raster.valueAt(2, 0), 1.0e-3);
+        assertEquals(300.0, raster.valueAt(1, 2), 1.0e-3);
+    }
+
+    @Test
     void boundedRadiusLeavesGapsAsNoData() {
         List<IdwInterpolator.Sample> samples = List.of(
                 new IdwInterpolator.Sample(0, 0, 10),

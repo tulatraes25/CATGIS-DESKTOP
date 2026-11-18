@@ -49,7 +49,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 |---|---|---|
 | #144, #146, #148, #149, #155, #260 | **CONFIRMADO/PARCIAL** (pérdida de trabajo/proyecto) | T1 |
 | #150, #151, #195, #193, #175, #176, #153 | **PARCIAL** (CRS fuente/preview/streaming) | T1 |
-| #256, #257, #258, #259, #262 | **CONFIRMADO** (ciencia; casos RED pendientes) | T2 |
+| #257, #258, #262 | **CORREGIDO en PR T2** (pendiente gates); #256/#259 siguen abiertos | T2 |
 | #162, #139, #163, #128, #161 | **CONFIRMADO/PARCIAL** (datos y proveedores) | T2/T3 |
 | #156, #261 | **CONFIRMADO** (PostGIS/credenciales) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |

@@ -77,8 +77,14 @@ public final class IdwInterpolator {
         }
         boolean bounded = maxSearchRadius > 0 && Double.isFinite(maxSearchRadius);
 
+        // The grid envelope is aligned to whole cells from (minX, minY). The
+        // requested maxX/maxY only define the coverage, so the vertical origin
+        // must be the aligned north edge, not the requested (possibly rounded)
+        // maxY. Otherwise cells shift when the span is not a multiple of cellSize.
+        double north = minY + height * cellSize;
+
         for (int row = 0; row < height; row++) {
-            double cellY = maxY - (row + 0.5) * cellSize;
+            double cellY = north - (row + 0.5) * cellSize;
             for (int col = 0; col < width; col++) {
                 double cellX = minX + (col + 0.5) * cellSize;
                 double[] distances = new double[validSamples.size()];
@@ -116,7 +122,7 @@ public final class IdwInterpolator {
         return new AnalysisRaster(name == null || name.isBlank() ? "IDW" : name.trim(),
                 unit == null ? "" : unit.trim(), width, height, values,
                 TerrainRasterAlgorithms.NO_DATA, minX, minY, minX + width * cellSize,
-                minY + height * cellSize, crsCode.trim());
+                north, crsCode.trim());
     }
 
     /** Indices of the nearest samples (unsorted), limited by count and radius. */

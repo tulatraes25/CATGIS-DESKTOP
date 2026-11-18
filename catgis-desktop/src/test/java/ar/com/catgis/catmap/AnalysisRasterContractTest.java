@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -120,5 +122,33 @@ class AnalysisRasterContractTest {
         AnalysisRaster empty = raster.emptyLike("Vacio", "m");
         assertEquals(12, empty.stats().noDataCount());
         assertEquals("EPSG:32719", empty.crsCode());
+    }
+    @Test
+    void nonSquareAsciiGridFailsClosed() throws Exception {
+        AnalysisRaster raster = new AnalysisRaster("d", "m", 4, 3, new float[12],
+                TerrainRasterAlgorithms.NO_DATA, 0, 0, 40, 20, "EPSG:4326");
+        File file = directory.resolve("non-square.asc").toFile();
+        IOException failure = assertThrows(IOException.class,
+                () -> raster.exportAsciiGrid(file));
+        assertTrue(failure.getMessage().contains("square"), failure.getMessage());
+        assertFalse(Files.exists(file.toPath()), "failed export must not publish a file");
+    }
+
+    @Test
+    void statisticsIgnoreNonFiniteSamples() {
+        float noData = TerrainRasterAlgorithms.NO_DATA;
+        AnalysisRaster raster = new AnalysisRaster("d", "m", 3, 2,
+                new float[]{1f, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY,
+                        Float.NaN, noData, 4f},
+                noData, 0, 0, 30, 20, "EPSG:4326");
+        AnalysisRaster.Stats stats = raster.stats();
+        assertEquals(2, stats.validCount());
+        assertEquals(4, stats.noDataCount());
+        assertEquals(1.0, stats.min(), 1.0e-6);
+        assertEquals(4.0, stats.max(), 1.0e-6);
+        assertEquals(2.5, stats.mean(), 1.0e-6);
+        assertTrue(raster.isNoData(1, 0), "+Infinity must be NoData");
+        assertTrue(raster.isNoData(2, 0), "-Infinity must be NoData");
+        assertTrue(raster.isNoData(0, 1), "NaN must be NoData");
     }
 }
