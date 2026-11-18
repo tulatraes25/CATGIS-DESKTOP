@@ -28,11 +28,18 @@ public final class ProjectDeserializer {
         List<String> warnings = new ArrayList<>();
         List<String> lines = new ArrayList<>();
 
+        boolean encoded = false;
         try (BufferedReader r = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
             String line;
             while ((line = r.readLine()) != null) {
                 String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
+                if (trimmed.isEmpty()) continue;
+                if (trimmed.startsWith("#")) {
+                    if (trimmed.equals("# CATGIS Project v2")) {
+                        encoded = true;
+                    }
+                    continue;
+                }
                 lines.add(trimmed);
             }
         }
@@ -40,7 +47,7 @@ public final class ProjectDeserializer {
         for (String line : lines) {
             if (line.startsWith("LAYER|")) {
                 try {
-                    Layer layer = parseLayer(line);
+                    Layer layer = parseLayer(line, encoded);
                     if (layer != null) project.addLayer(layer);
                 } catch (Exception e) {
                     warnings.add("Linea de capa invalida: " + line.substring(0, Math.min(80, line.length())));
@@ -54,7 +61,16 @@ public final class ProjectDeserializer {
     }
 
     private static Layer parseLayer(String line) {
+        return parseLayer(line, false);
+    }
+
+    private static Layer parseLayer(String line, boolean encoded) {
         String[] parts = line.split("\\|", -1);
+        if (encoded) {
+            for (int i = 0; i < parts.length; i++) {
+                parts[i] = ProjectRecordCodec.unescape(parts[i]);
+            }
+        }
         if (parts.length < 10) return null;
         String name = parts[1].trim();
         String path = parts[2].trim();

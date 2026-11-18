@@ -18,7 +18,7 @@ public final class ProjectSerializer {
 
     public static void serialize(Project project, File file) throws IOException {
         try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-            w.write("# CATGIS Project v1");
+            w.write("# CATGIS Project v2");
             w.newLine();
             w.write("# Layers section");
             w.newLine();
@@ -36,7 +36,7 @@ public final class ProjectSerializer {
 
     private static String formatLayer(Layer layer) {
         StringBuilder sb = new StringBuilder();
-        String path = layer.getPath() != null ? layer.getPath() : "";
+        String path = escape(layer.getPath());
         String name = safe(layer.getName());
         sb.append("LAYER|").append(name).append("|").append(path).append("|");
         sb.append(layer.getPointColor() != null ? colorHex(layer.getPointColor()) : "0,0,255").append("|");
@@ -47,7 +47,7 @@ public final class ProjectSerializer {
         sb.append(layer.isVisible()).append("|");
         sb.append(layer.getOpacity()).append("|");
         sb.append(layer.getPointSymbolStyle().name()).append("|");
-        sb.append(layer.getCatalogSymbolId() != null ? layer.getCatalogSymbolId() : "").append("|");
+        sb.append(escape(layer.getCatalogSymbolId())).append("|");
         // Extended fields: heatmap, clustering, proportional
         sb.append(layer.isHeatmapEnabled()).append("|");
         sb.append(layer.getHeatmapRadius()).append("|");
@@ -55,7 +55,7 @@ public final class ProjectSerializer {
         sb.append(layer.isClusteringEnabled()).append("|");
         sb.append(layer.getClusterRadius()).append("|");
         ProportionalSymbols ps = layer.getProportionalSymbols();
-        sb.append(ps != null && ps.getFieldName() != null ? safe(ps.getFieldName()) : "").append("|");
+        sb.append(ps != null ? escape(ps.getFieldName()) : "").append("|");
         sb.append(ps != null ? ps.getMinSize() : 4).append("|");
         sb.append(ps != null ? ps.getMaxSize() : 40).append("|");
         sb.append(ps != null ? ps.isScaleByArea() : false).append("|");
@@ -89,5 +89,6 @@ public final class ProjectSerializer {
         return c.getRed() + "," + c.getGreen() + "," + c.getBlue();
     }
 
-    private static String safe(String s) { return s != null ? s : ""; }
+    private static String safe(String s) { return ProjectRecordCodec.escape(s); }
+    private static String escape(String s) { return ProjectRecordCodec.escape(s); }
 }

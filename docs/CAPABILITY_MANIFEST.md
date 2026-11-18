@@ -25,7 +25,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Composición CATMAP (página A3/A4/custom, atlas, plantillas) | SUPPORTED_VERIFIED | E2E y contratos CATMAP |
 | Export PDF vectorial multipágina / PNG / SVG / GeoTIFF | SUPPORTED_VERIFIED | E2E 13/13 + contratos |
 | Impresión física | BETA_LIMITED | sin impresora real certificada |
-| Proyecto `.catgis` guardar/abrir | BETA_LIMITED | apertura fail-closed/atómica (#144 corregido); #146/#148 abiertos |
+| Proyecto `.catgis` guardar/abrir | BETA_LIMITED | apertura fail-closed/atómica (#144) y codec v2 reversible (#148); #146 abierto |
 | Shapefile / GeoJSON / KML / GPX / CSV / GeoPackage | BETA_LIMITED | imports verificados; roundtrip y CRS con issues abiertos (#195/#150) |
 | WMS / WFS / PostGIS | SUPPORTED_VERIFIED | contratos + PostGIS CI real |
 | WMTS (REST/KVP, matrix sets XYZ) | SUPPORTED_VERIFIED | `WmtsSupportContractTest`; otros matrix sets requieren adaptación |
