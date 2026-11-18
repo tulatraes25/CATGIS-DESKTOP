@@ -31,7 +31,7 @@ public final class VolumeCalculator {
                 valid[index] = true;
             }
         }
-        return summarize(dem, delta, valid);
+        return summarize(dem, delta, valid, true);
     }
 
     /** Cut/fill between the existing and the proposed DEM (proposed - existing). */
@@ -47,7 +47,7 @@ public final class VolumeCalculator {
                         && !proposed.isNoData(x, y);
             }
         }
-        return summarize(existing, delta, valid);
+        return summarize(existing, delta, valid, false);
     }
 
     /** Delta raster (proposed - existing) preserving NoData; exportable. */
@@ -89,8 +89,9 @@ public final class VolumeCalculator {
     }
 
     private static VolumeResult summarize(AnalysisRaster geometry, double[] delta,
-                                          boolean[] valid) {
-        double cellArea = geometry.cellSizeX() * geometry.cellSizeY();
+                                          boolean[] valid, boolean positiveIsCut) {
+        MetricScale.GridScale scale = MetricScale.forRaster(geometry);
+        double cellArea = scale.cellAreaM2(geometry.cellSizeX(), geometry.cellSizeY());
         long cells = 0;
         double cut = 0;
         double fill = 0;
@@ -103,10 +104,14 @@ public final class VolumeCalculator {
             }
             cells++;
             double value = delta[i];
-            if (value >= 0) {
-                cut += value * cellArea;
+            // againstPlane: positive delta = material above the reference = cut.
+            // between: positive delta = proposed above existing = material to
+            // fill. The flag keeps both conventions explicit and testable.
+            boolean isCut = positiveIsCut ? value >= 0 : value < 0;
+            if (isCut) {
+                cut += Math.abs(value) * cellArea;
             } else {
-                fill += -value * cellArea;
+                fill += Math.abs(value) * cellArea;
             }
             min = Math.min(min, value);
             max = Math.max(max, value);

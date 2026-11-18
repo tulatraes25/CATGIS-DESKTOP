@@ -52,15 +52,16 @@ class VolumeCalculatorContractTest {
         VolumeCalculator.VolumeResult result =
                 VolumeCalculator.between(existing, proposed);
         assertEquals(25, result.validCells());
-        assertEquals(5000.0, result.cutM3(), 1.0e-9);
-        assertEquals(0.0, result.fillM3(), 1.0e-9);
-        assertEquals(5000.0, result.netM3(), 1.0e-9);
+        // proposed - existing = +2 m everywhere => material to FILL, not cut.
+        assertEquals(0.0, result.cutM3(), 1.0e-9);
+        assertEquals(5000.0, result.fillM3(), 1.0e-9);
+        assertEquals(-5000.0, result.netM3(), 1.0e-9);
 
         VolumeCalculator.VolumeResult reversed =
                 VolumeCalculator.between(proposed, existing);
-        assertEquals(0.0, reversed.cutM3(), 1.0e-9);
-        assertEquals(5000.0, reversed.fillM3(), 1.0e-9);
-        assertEquals(-5000.0, reversed.netM3(), 1.0e-9);
+        assertEquals(5000.0, reversed.cutM3(), 1.0e-9);
+        assertEquals(0.0, reversed.fillM3(), 1.0e-9);
+        assertEquals(5000.0, reversed.netM3(), 1.0e-9);
     }
 
     @Test
@@ -95,6 +96,23 @@ class VolumeCalculatorContractTest {
         assertEquals(0.0, difference.valueAt(1, 1), 1.0e-6);
         assertTrue(difference.isNoData(2, 2));
         assertEquals("m", difference.unit());
+    }
+
+    @Test
+    void geographicCellsUseMetricArea() {
+        // 2x2 cells of 0.0005 deg at the equator: ~55.66 m x ~55.29 m each.
+        float[] values = {10f, 10f, 10f, 10f};
+        AnalysisRaster dem = new AnalysisRaster("DEM", "m", 2, 2, values, NO_DATA,
+                0, 0, 0.001, 0.001, "EPSG:4326");
+        VolumeCalculator.VolumeResult result =
+                VolumeCalculator.againstPlane(dem, 0.0);
+        double expectedCellArea = ar.com.catgis.climate.GeographicMetrics
+                .metersPerDegreeLongitude(0.0005) * 0.0005
+                * ar.com.catgis.climate.GeographicMetrics
+                        .metersPerDegreeLatitude(0.0005) * 0.0005;
+        assertEquals(4 * expectedCellArea, result.areaM2(), expectedCellArea * 4 * 1.0e-6);
+        assertTrue(result.areaM2() > 10_000, "degrees must not be treated as metres");
+        assertEquals(10.0 * result.areaM2(), result.cutM3(), 1.0e-3);
     }
 
     @Test

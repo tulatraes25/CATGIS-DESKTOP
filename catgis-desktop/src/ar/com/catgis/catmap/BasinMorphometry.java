@@ -53,8 +53,9 @@ public final class BasinMorphometry {
         boolean[] basin = delineate(direction, dem, outletX, outletY);
         int width = dem.width();
         int height = dem.height();
-        double cellAreaM2 = dem.cellSizeX() * dem.cellSizeY();
-        double cellSizeM = Math.hypot(dem.cellSizeX(), dem.cellSizeY());
+        MetricScale.GridScale scale = MetricScale.forRaster(dem);
+        double cellAreaM2 = scale.cellAreaM2(dem.cellSizeX(), dem.cellSizeY());
+        double cellSizeM = scale.lengthMeters(dem.cellSizeX(), dem.cellSizeY());
 
         long cells = 0;
         double minElevation = Double.POSITIVE_INFINITY;
@@ -78,14 +79,14 @@ public final class BasinMorphometry {
                     slopeSum += slopeRaster.valueAt(x, y);
                     slopeCount++;
                 }
-                perimeterM += boundaryLengthMeters(basin, width, height, x, y, dem);
+                perimeterM += boundaryLengthMeters(basin, width, height, x, y, dem, scale);
             }
         }
         if (cells == 0) {
             throw new IllegalStateException("La cuenca no tiene celdas validas.");
         }
 
-        double[] channel = channelLengths(direction, accumulation, dem, basin, threshold);
+        double[] channel = channelLengths(direction, accumulation, dem, basin, threshold, scale);
         double areaKm2 = cells * cellAreaM2 / 1.0e6;
         double perimeterKm = perimeterM / 1000.0;
         double channelLengthKm = channel[0] / 1000.0;
@@ -146,7 +147,8 @@ public final class BasinMorphometry {
      * upstream-first on the D8 graph restricted to channel cells.
      */
     static double[] channelLengths(AnalysisRaster direction, AnalysisRaster accumulation,
-                                   AnalysisRaster dem, boolean[] basin, int threshold) {
+                                   AnalysisRaster dem, boolean[] basin, int threshold,
+                                   MetricScale.GridScale scale) {
         int width = dem.width();
         int height = dem.height();
         boolean[] channel = new boolean[width * height];
@@ -210,10 +212,15 @@ public final class BasinMorphometry {
 
             int directionCode = Math.round(direction.valueAt(x, y));
             if (directionCode > 0) {
-                double step = (directionCode == 1 || directionCode == 4
-                        || directionCode == 16 || directionCode == 64)
-                        ? Math.min(dem.cellSizeX(), dem.cellSizeY())
-                        : Math.hypot(dem.cellSizeX(), dem.cellSizeY());
+                // ESRI D8: E=1, SE=2, S=4, SW=8, W=16, NW=32, N=64, NE=128.
+                double step;
+                if (directionCode == 1 || directionCode == 16) {
+                    step = Math.abs(dem.cellSizeX()) * scale.metersPerUnitX();
+                } else if (directionCode == 4 || directionCode == 64) {
+                    step = Math.abs(dem.cellSizeY()) * scale.metersPerUnitY();
+                } else {
+                    step = scale.lengthMeters(dem.cellSizeX(), dem.cellSizeY());
+                }
                 lengthMeters += step;
             }
         }
@@ -221,10 +228,11 @@ public final class BasinMorphometry {
     }
 
     private static double boundaryLengthMeters(boolean[] basin, int width, int height,
-                                               int x, int y, AnalysisRaster dem) {
+                                               int x, int y, AnalysisRaster dem,
+                                               MetricScale.GridScale scale) {
         double length = 0;
-        double cellX = dem.cellSizeX();
-        double cellY = dem.cellSizeY();
+        double cellX = Math.abs(dem.cellSizeX()) * scale.metersPerUnitX();
+        double cellY = Math.abs(dem.cellSizeY()) * scale.metersPerUnitY();
         if (x == 0 || !basin[y * width + x - 1]) {
             length += cellY;
         }

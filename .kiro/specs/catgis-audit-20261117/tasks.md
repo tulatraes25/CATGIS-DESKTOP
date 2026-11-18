@@ -22,4 +22,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
 
 ## Progreso
 
-- T0 en ejecución (PR de reconciliación).
+- T0 completado y certificado en `main` `1a51ac0` (PR #265, ruleset 25 checks,
+  manifiesto y reconciliación).
+- T2 parcial (PR en curso): **#258** IDW con norte alineado y centros exactos;
+  **#262** ASCII falla cerrada si dx!=dy y stats ignoran no finitos; **#257**
+  escala métrica por CRS (`MetricScale`) y convención corte/relleno corregida en
+  `VolumeCalculator`/`BasinMorphometry` con oráculos grados/metros. Pendientes
+  T2: #256 raster calculator, #259 CRS favoritos, #162 NetCDF.

@@ -134,7 +134,8 @@ public final class AnalysisRaster {
     }
 
     public boolean isNoData(int x, int y) {
-        return Float.isNaN(values[index(x, y)]) || values[index(x, y)] == noData;
+        float value = values[index(x, y)];
+        return !Float.isFinite(value) || value == noData;
     }
 
     public float valueAt(int x, int y) {
@@ -152,7 +153,7 @@ public final class AnalysisRaster {
         double max = Double.NEGATIVE_INFINITY;
         double sum = 0;
         for (float value : values) {
-            if (Float.isNaN(value) || value == noData) {
+            if (!Float.isFinite(value) || value == noData) {
                 invalid++;
                 continue;
             }
@@ -165,7 +166,7 @@ public final class AnalysisRaster {
         double variance = 0;
         if (valid > 0) {
             for (float value : values) {
-                if (Float.isNaN(value) || value == noData) {
+                if (!Float.isFinite(value) || value == noData) {
                     continue;
                 }
                 double delta = value - mean;
@@ -195,6 +196,16 @@ public final class AnalysisRaster {
     /** ESRI ASCII grid preserving float values and NoData. */
     public void exportAsciiGrid(File file) throws IOException {
         Objects.requireNonNull(file, "AnalysisRaster ASCII destination");
+        double dx = cellSizeX();
+        double dy = cellSizeY();
+        double tolerance = Math.max(1.0e-9, Math.max(Math.abs(dx), Math.abs(dy)) * 1.0e-9);
+        if (Math.abs(dx - dy) > tolerance) {
+            // AAIGrid stores a single cellsize; exporting a non-square grid would
+            // silently distort geometry. Fail closed until a forced square grid
+            // export exists.
+            throw new IOException("AnalysisRaster ASCII grid requires square cells (dx="
+                    + dx + ", dy=" + dy + ").");
+        }
         try {
             CatmapAtomicExport.publish(file,
                     staged -> writeAsciiGrid(staged),
