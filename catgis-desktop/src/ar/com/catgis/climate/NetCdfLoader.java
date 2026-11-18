@@ -145,25 +145,63 @@ public final class NetCdfLoader {
             int width = dims[1]; // lon/x dimension
             int height = dims[0]; // lat/y dimension
 
-            // Try to read lat/lon arrays for georeferencing
+            // CF metadata: grid_mapping, packaging and coordinate units.
+            Object variable = findVariable(ncFile, ncFileClass, selectedVar.name);
+            Map<String, String> variableAttributes = readAttributes(variable);
+            String gridMapping = variableAttributes.getOrDefault("grid_mapping", "").trim();
+            Map<String, String> gridAttributes = variableAttributes;
+            if (!gridMapping.isBlank()) {
+                Object gridVariable = findVariable(ncFile, ncFileClass, gridMapping);
+                if (gridVariable != null) {
+                    gridAttributes = readAttributes(gridVariable);
+                }
+            }
+            String xUnits = coordinateUnits(ncFile, ncFileClass, "lon", "longitude", "x");
+            String yUnits = coordinateUnits(ncFile, ncFileClass, "lat", "latitude", "y");
+            NetCdfCfSupport.CrsResolution crsResolution = NetCdfCfSupport.resolveCrs(
+                    gridAttributes.get("grid_mapping_name"),
+                    gridAttributes.get("epsg_code"),
+                    gridAttributes.get("spatial_ref"),
+                    xUnits, yUnits);
+            if (!crsResolution.hasCrs()) {
+                NotificationManager.error(parent, "Cargar NetCDF",
+                        "El archivo no declara un CRS CF confiable (grid_mapping/epsg_code).\n"
+                                + "CATGIS no asume EPSG:4326 para NetCDF. Defini el CRS en el archivo "
+                                + "o cargalo como raster acompanado de metadata.");
+                ncFileClass.getMethod("close").invoke(ncFile);
+                return null;
+            }
+            String crsCode = crsResolution.crsCode();
+            NetCdfCfSupport.Packaging packaging = NetCdfCfSupport.packaging(
+                    parseDoubleAttribute(variableAttributes, "scale_factor"),
+                    parseDoubleAttribute(variableAttributes, "add_offset"),
+                    parseFloatAttribute(variableAttributes, "_FillValue"),
+                    parseFloatAttribute(variableAttributes, "valid_min"),
+                    parseFloatAttribute(variableAttributes, "valid_max"));
+            for (int i = 0; i < data.length; i++) {
+                data[i] = packaging.isNoData(data[i]) ? Float.NaN : packaging.decode(data[i]);
+            }
+
+            // Try to read lat/lon arrays for georeferencing (CF units aware).
             double minLon = -180, maxLon = 180, minLat = -90, maxLat = 90;
             try {
                 double[] lats = readDoubleArray(ncFile, ncFileClass, "lat", "latitude", "y", "Latitude");
                 double[] lons = readDoubleArray(ncFile, ncFileClass, "lon", "longitude", "x", "Longitude");
                 if (lons != null && lons.length > 0) {
-                    minLon = lons[0];
-                    maxLon = lons[lons.length - 1];
-                    // Handle 0-360 to -180-180
-                    if (maxLon > 180) { minLon -= 180; maxLon -= 180; }
+                    double first = NetCdfCfSupport.normalizeLongitude(
+                            NetCdfCfSupport.toDegrees(lons[0], xUnits));
+                    double last = NetCdfCfSupport.normalizeLongitude(
+                            NetCdfCfSupport.toDegrees(lons[lons.length - 1], xUnits));
+                    minLon = Math.min(first, last);
+                    maxLon = Math.max(first, last);
                 }
                 if (lats != null && lats.length > 0) {
-                    minLat = Math.min(lats[0], lats[lats.length - 1]);
-                    maxLat = Math.max(lats[0], lats[lats.length - 1]);
+                    double first = NetCdfCfSupport.toDegrees(lats[0], yUnits);
+                    double last = NetCdfCfSupport.toDegrees(lats[lats.length - 1], yUnits);
+                    minLat = Math.min(first, last);
+                    maxLat = Math.max(first, last);
                 }
             } catch (Exception ignored) { CatgisLogger.warn("NetCdfLoader: operation failed", ignored); }
-
-            // Determine CRS
-            String crsCode = "EPSG:4326";
 
             // Find min/max for image stretching
             float minVal = Float.POSITIVE_INFINITY;
@@ -202,6 +240,7 @@ public final class NetCdfLoader {
             layer.putUserData("climateVariable", selectedVar.name);
             layer.putUserData("climateVariableType", suggested.name());
             layer.putUserData("climateUnits", selectedVar.units);
+            layer.putUserData("climateCrsProvenance", crsResolution.provenance());
             layer.putUserData("climateMin", minVal);
             layer.putUserData("climateMax", maxVal);
             layer.putUserData("climateTimeStep", timeStep);
@@ -433,6 +472,66 @@ public final class NetCdfLoader {
                 || value < -9e10f; // typical NetCDF fill values
     }
 
+    // ---- CF metadata helpers (#162) ----
+
+    private static Map<String, String> readAttributes(Object variable) {
+        Map<String, String> attributes = new java.util.LinkedHashMap<>();
+        if (variable == null) {
+            return attributes;
+        }
+        try {
+            Object list = variable.getClass().getMethod("getAttributes").invoke(variable);
+            if (list instanceof List<?> attributeList) {
+                for (Object attribute : attributeList) {
+                    String name = String.valueOf(attribute.getClass()
+                            .getMethod("getShortName").invoke(attribute));
+                    Object value = attribute.getClass().getMethod("getValue").invoke(attribute);
+                    if (value instanceof Number || value instanceof String) {
+                        attributes.put(name, String.valueOf(value));
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            CatgisLogger.warn("NetCdfLoader: no se pudieron leer atributos CF", ignored);
+        }
+        return attributes;
+    }
+
+    private static String coordinateUnits(Object ncFile, Class<?> ncFileClass, String... names) {
+        for (String name : names) {
+            Object variable = null;
+            try {
+                variable = findVariable(ncFile, ncFileClass, name);
+            } catch (Exception ignored) {
+                CatgisLogger.warn("NetCdfLoader: operation failed", ignored);
+            }
+            if (variable == null) {
+                continue;
+            }
+            String units = readAttributes(variable).get("units");
+            if (units != null && !units.isBlank()) {
+                return units;
+            }
+        }
+        return "";
+    }
+
+    private static Double parseDoubleAttribute(Map<String, String> attributes, String name) {
+        String value = attributes.get(name);
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException invalid) {
+            return null;
+        }
+    }
+
+    private static Float parseFloatAttribute(Map<String, String> attributes, String name) {
+        Double value = parseDoubleAttribute(attributes, name);
+        return value != null ? value.floatValue() : null;
+    }
     // ---- Common helper methods ----
 
     private static RasterLayer createRasterLayer(File file, BufferedImage image, Envelope envelope, String crsCode) {
