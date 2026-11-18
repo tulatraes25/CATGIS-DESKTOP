@@ -12,18 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PostgisWriteServiceTest {
 
     @Test
-    void unsafeReplaceModeIsBlockedBeforeAnyDatabaseConnection() {
+    void replaceModeIsHiddenInDialogButSupportedThroughTransactionalService() {
         assertFalse(PostgisTableWriteMode.REPLACE_TABLE.isVisibleInExportDialog());
-        assertThrows(UnsupportedOperationException.class, () ->
+        // Invalid request: fails parameter validation before any DB connection.
+        assertThrows(Exception.class, () ->
                 PostgisWriteService.writeLayer(
                         new PostgisWriteService.WriteRequest(
                                 null, null, null, "public", "critical_table",
                                 PostgisTableWriteMode.REPLACE_TABLE, false)));
-        assertThrows(UnsupportedOperationException.class, () ->
-                PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.REPLACE_TABLE));
-        assertDoesNotThrow(() -> PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.CREATE_NEW));
-        assertDoesNotThrow(() -> PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.APPEND_RECORDS));
-        assertDoesNotThrow(() -> PostgisWriteService.rejectUnsafeReplace(PostgisTableWriteMode.OVERWRITE_CONTENT));
     }
 
     @Test

@@ -153,19 +153,7 @@ public final class PostgisWriteService {
         }
     }
 
-    static void rejectUnsafeReplace(PostgisTableWriteMode mode) {
-        if (mode == PostgisTableWriteMode.REPLACE_TABLE) {
-            throw new UnsupportedOperationException(
-                    "Reemplazar tabla PostGIS está deshabilitado por seguridad. "
-                    + "Creá una tabla nueva o anexá registros; "
-                    + "el reemplazo transaccional permanece pendiente de certificación.");
-        }
-    }
-
     public static WriteResult writeLayer(WriteRequest request) throws Exception {
-        // The old drop-then-create mode can destroy the last valid user table.
-        // Block it BEFORE opening a connection until a transactional swap is certified.
-        rejectUnsafeReplace(request != null ? request.mode() : null);
         String validationMessage = validateRequest(request);
         if (!validationMessage.isBlank()) {
             throw new IllegalArgumentException(validationMessage);
@@ -208,8 +196,49 @@ public final class PostgisWriteService {
                     typeNameForWrite = findMatchingTypeName(store.getTypeNames(), schemaName, tableName);
                     break;
                 case REPLACE_TABLE:
-                    throw new UnsupportedOperationException(
-                            "La sustitución PostGIS requiere una transacción de intercambio certificada.");
+                    if (existingTypeName == null || existingSchema == null) {
+                        targetSchema = buildTargetSchema(transformed.featureType, tableName, targetCrsCode);
+                        store.createSchema(targetSchema);
+                        createdTable = true;
+                        typeNameForWrite = findMatchingTypeName(store.getTypeNames(), schemaName, tableName);
+                        break;
+                    }
+                    String stageName = PostgisReplaceSwap.stageTableName(tableName);
+                    try {
+                        SimpleFeatureType stageDraft = buildTargetSchema(
+                                transformed.featureType, stageName, targetCrsCode);
+                        store.createSchema(stageDraft);
+                        String stageTypeName = findMatchingTypeName(
+                                store.getTypeNames(), schemaName, stageName);
+                        if (stageTypeName == null) {
+                            throw new IllegalStateException(
+                                    "No se creo la tabla temporal PostGIS para el reemplazo.");
+                        }
+                        SimpleFeatureType stageSchema = store.getSchema(stageTypeName);
+                        if (stageSchema == null) {
+                            throw new IllegalStateException(
+                                    "No se pudo leer el esquema de la tabla temporal PostGIS.");
+                        }
+                        List<SimpleFeature> stageFeatures =
+                                adaptFeaturesToSchema(transformed.features, stageSchema);
+                        writeFeatures(store, stageTypeName, stageFeatures, stageSchema,
+                                PostgisTableWriteMode.APPEND_RECORDS);
+                        // Release the DataStore before the DDL swap and reopen it
+                        // afterwards so the schema cache is not stale.
+                        store.dispose();
+                        PostgisReplaceSwap.swap(connectionInfo, schemaName, tableName,
+                                stageName, stageFeatures.size());
+                        store = PostgisConnectionFactory.openDataStore(connectionInfo);
+                        typeNameForWrite = findMatchingTypeName(
+                                store.getTypeNames(), schemaName, tableName);
+                        targetSchema = typeNameForWrite != null
+                                ? store.getSchema(typeNameForWrite) : stageSchema;
+                        createdTable = false;
+                    } catch (Exception replaceFailure) {
+                        PostgisReplaceSwap.dropIfExists(connectionInfo, schemaName, stageName);
+                        throw replaceFailure;
+                    }
+                    break;
                 case APPEND_RECORDS:
                     if (existingTypeName == null || existingSchema == null) {
                         throw new IllegalArgumentException("La tabla destino no existe para anexar registros.");

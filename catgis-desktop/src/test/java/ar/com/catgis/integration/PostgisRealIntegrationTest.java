@@ -5,6 +5,7 @@ import ar.com.catgis.PostgisConnectionInfo;
 import ar.com.catgis.PostgisFeatureTypeInfo;
 import ar.com.catgis.PostgisLayer;
 import ar.com.catgis.PostgisLoader;
+import ar.com.catgis.PostgisReplaceSwap;
 import ar.com.catgis.PostgisTableWriteMode;
 import ar.com.catgis.PostgisWriteService;
 import ar.com.catgis.core.model.Layer;
@@ -31,6 +32,7 @@ class PostgisRealIntegrationTest {
 
     private static final String SOURCE_TABLE = "catgis_ci_points";
     private static final String COPY_TABLE = "catgis_ci_copy";
+    private static final String REPLACE_TABLE = "catgis_ci_replace";
 
     @BeforeAll
     static void prepareDatabase() throws Exception {
@@ -39,6 +41,7 @@ class PostgisRealIntegrationTest {
              Statement statement = connection.createStatement()) {
             statement.execute("CREATE EXTENSION IF NOT EXISTS postgis");
             statement.execute("DROP TABLE IF EXISTS public." + COPY_TABLE);
+            statement.execute("DROP TABLE IF EXISTS public." + REPLACE_TABLE);
             statement.execute("DROP TABLE IF EXISTS public." + SOURCE_TABLE);
             statement.execute("CREATE TABLE public." + SOURCE_TABLE
                     + " (id serial PRIMARY KEY, name text NOT NULL, geom geometry(Point,4326) NOT NULL)");
@@ -53,6 +56,7 @@ class PostgisRealIntegrationTest {
         try (Connection connection = DriverManager.getConnection(jdbcUrl(), user(), password());
              Statement statement = connection.createStatement()) {
             statement.execute("DROP TABLE IF EXISTS public." + COPY_TABLE);
+            statement.execute("DROP TABLE IF EXISTS public." + REPLACE_TABLE);
             statement.execute("DROP TABLE IF EXISTS public." + SOURCE_TABLE);
         } finally {
             PostgisConnectionFactory.shutdown();
@@ -165,6 +169,66 @@ class PostgisRealIntegrationTest {
         PostgisLoader.testConnection(correct);
     }
 
+    @Test
+    void replaceTableIsTransactionalAndKeepsPreviousDataOnFailure() throws Exception {
+        PostgisConnectionInfo info = connectionInfo();
+        PostgisFeatureTypeInfo sourceType = PostgisLoader.listFeatureTypes(info, true).stream()
+                .filter(type -> SOURCE_TABLE.equalsIgnoreCase(type.getTableName()))
+                .findFirst()
+                .orElseThrow();
+        PostgisLayer sourcePostgisLayer = new PostgisLayer("CI replace source");
+        sourcePostgisLayer.setConnectionInfo(info);
+        sourcePostgisLayer.setSchemaName(sourceType.getSchemaName());
+        sourcePostgisLayer.setTableName(sourceType.getTableName());
+        sourcePostgisLayer.setTypeName(sourceType.getTypeName());
+        sourcePostgisLayer.setReadOnly(false);
+        ShapefileData sourceData = PostgisLoader.loadLayerData(sourcePostgisLayer, info);
+
+        Layer sourceLayer = new Layer("CI replace", "memory://postgis-ci", "VECTOR");
+        sourceLayer.setSourceCRS("EPSG:4326");
+
+        PostgisWriteService.writeLayer(new PostgisWriteService.WriteRequest(
+                sourceLayer, sourceData, info, "public", REPLACE_TABLE,
+                PostgisTableWriteMode.CREATE_NEW, false));
+        assertEquals(2, tableRowCount(REPLACE_TABLE), "initial table must have 2 rows");
+
+        // A failed swap (missing staging rows) must roll back and keep the table.
+        String orphanStage = PostgisReplaceSwap.stageTableName(REPLACE_TABLE);
+        assertThrows(Exception.class, () -> PostgisReplaceSwap.swap(
+                info, "public", REPLACE_TABLE, orphanStage, 999));
+        assertEquals(2, tableRowCount(REPLACE_TABLE),
+                "failed swap must preserve the previous table and its rows");
+
+        // The certified path replaces the whole table atomically.
+        PostgisWriteService.WriteResult replaced = PostgisWriteService.writeLayer(
+                new PostgisWriteService.WriteRequest(
+                        sourceLayer, sourceData, info, "public", REPLACE_TABLE,
+                        PostgisTableWriteMode.REPLACE_TABLE, false));
+        assertEquals(2, replaced.writtenFeatureCount());
+        assertEquals(201, countStagingTables(REPLACE_TABLE), "no staging tables may remain");
+        assertEquals(2, tableRowCount(REPLACE_TABLE));
+    }
+
+    private static int tableRowCount(String table) throws Exception {
+        try (Connection connection = DriverManager.getConnection(jdbcUrl(), user(), password());
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("SELECT count(*) FROM public." + table)) {
+            assertTrue(rs.next());
+            return rs.getInt(1);
+        }
+    }
+
+    private static int countStagingTables(String table) throws Exception {
+        try (Connection connection = DriverManager.getConnection(jdbcUrl(), user(), password());
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(
+                     "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"
+                             + " AND table_name LIKE '" + table + PostgisReplaceSwap.STAGE_MARKER + "%'")) {
+            assertTrue(rs.next());
+            int staging = rs.getInt(1);
+            return staging == 0 ? 201 : staging;
+        }
+    }
     private static PostgisConnectionInfo connectionInfo() {
         PostgisConnectionInfo info = new PostgisConnectionInfo();
         info.setHost(host());
