@@ -144,16 +144,15 @@ public final class OpenTopographyDemService {
                     throw new IOException();
                 }
                 failureCode = "COPY";
-                // Existing publication semantics are unchanged. Atomic raster +
-                // sidecar replacement/content validation remains a separate gate.
-                Files.copy(stream, outputFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                // Atomic TIFF + sidecar: the previous raster pair survives any
+                // publication failure (#161).
+                RasterBundlePublisher.publish(outputFile,
+                        staged -> Files.copy(stream, staged.toPath(),
+                                StandardCopyOption.REPLACE_EXISTING),
+                        requestEnvelope(bounds), dataset.getSourceCrsCode());
                 failureCode = "CLOSE";
             }
             checkInterrupted();
-            failureCode = "SIDECAR";
-            // This records the effective REQUEST extent, not verified embedded
-            // GeoTIFF bounds. Delivered raster validation is a separate gate.
-            RasterSidecarSupport.write(outputFile, requestEnvelope(bounds), dataset.getSourceCrsCode());
             CatgisLogger.info("[EMERGENCY-DEM] OpenTopography download finished in "
                     + ((System.nanoTime() - startedAt) / 1_000_000L) + " ms");
             return new FileDownloadResult(outputFile, requestEnvelope(bounds), uri);
