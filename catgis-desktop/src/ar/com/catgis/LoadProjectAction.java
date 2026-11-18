@@ -1,5 +1,6 @@
 package ar.com.catgis;
 import ar.com.catgis.data.raster.LocalRasterData;
+import ar.com.catgis.data.vector.ShapefileData;
 import ar.com.catgis.data.online.OnlineWmsLayer;
 import ar.com.catgis.data.raster.RasterCoverageSupport;
 import ar.com.catgis.core.model.LayerGroup;
@@ -17,6 +18,9 @@ import java.awt.event.ActionEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.nio.charset.StandardCharsets;
 
 public class LoadProjectAction extends AbstractAction {
@@ -171,6 +175,11 @@ public class LoadProjectAction extends AbstractAction {
             // Reject missing mandatory local sources before clearing the live workspace.
             ProjectLocalSourcePreflight.requireExistingLocalSources(loadedProject.getLayers());
 
+            // Phase 1: stage every layer detached. Mandatory load failures abort
+            // here, before the live workspace is cleared (fail-closed, #144).
+            List<PreparedLayer> prepared = stageProject(loadedProject);
+
+            // Phase 2: atomic commit of the already staged state.
             if (CatgisDesktopApp.layersPanel != null) {
                 AppContext.clearLayers();
             }
@@ -180,10 +189,13 @@ public class LoadProjectAction extends AbstractAction {
 
             AppContext.setCurrentProject(loadedProject);
             AppContext.get().setProject(loadedProject);
-
-            for (Layer layer : loadedProject.getLayers()) {
-                AppContext.addLayer(layer);
-                loadLayerData(layer);
+            List<String> pending = new ArrayList<>();
+            for (PreparedLayer item : prepared) {
+                AppContext.addLayer(item.layer());
+                attachPreparedLayer(item);
+                if (item.pendingReason() != null && !item.pendingReason().isBlank()) {
+                    pending.add(item.layer().getName() + ": " + item.pendingReason());
+                }
             }
 
             TopographyWorkflowSupport.normalizeTopographyOverlayOrder();
@@ -211,6 +223,13 @@ public class LoadProjectAction extends AbstractAction {
                         "Proyecto cargado | CRS: " + CRSDefinitions.getLabelForCode(AppContext.project().getProjectCRS())
                 );
             }
+            if (!pending.isEmpty()) {
+                String pendingText = "Capas remotas pendientes: " + String.join("; ", pending);
+                AppContext.setStatusMessage(pendingText);
+                if (showDialogs) {
+                    NotificationManager.warn(owner, "Proyecto abierto con pendientes", pendingText);
+                }
+            }
 
             // Track recent file
             MainMenuBar.addRecentFile(file.getAbsolutePath());
@@ -222,91 +241,151 @@ public class LoadProjectAction extends AbstractAction {
         } catch (Exception ex) {
             AppErrorSupport.logFailure("Error al abrir proyecto " + file.getAbsolutePath(), ex);
             if (showDialogs) {
-                AppErrorSupport.showErrorDialog(owner, "Abrir proyecto", "Error al abrir proyecto.", ex);
+                AppErrorSupport.showErrorDialog(owner, "Abrir proyecto",
+                        "No se pudo abrir el proyecto. La sesión actual no fue modificada.", ex);
             }
             return false;
         }
     }
 
-    private static void loadLayerData(Layer layer) {
-        if (layer == null) {
-            return;
-        }
+    /** A layer whose data was read/validated before the live workspace changes. */
+    record PreparedLayer(Layer layer, LocalRasterData rasterData,
+                         ShapefileData vectorData, String pendingReason) {}
 
-        if (layer instanceof OnlineTileLayer) {
-            AppContext.mapPanel().addOrUpdateOnlineTileLayer((OnlineTileLayer) layer);
-            return;
-        }
-        if (layer instanceof OnlineWmsLayer) {
-            AppContext.mapPanel().addOrUpdateOnlineWmsLayer((OnlineWmsLayer) layer);
-            return;
-        }
+    /**
+     * Detached staging for project open: loads every layer against the candidate
+     * project without touching the live MapPanel. Mandatory failures throw;
+     * remote layers may stay pending explicitly (never silent partial success).
+     */
+    static List<PreparedLayer> stageProject(Project candidate) throws IOException {
+        Project previous = AppContext.project();
+        AppContext.setCurrentProject(candidate);
         try {
-            String path = layer.getPath() != null ? layer.getPath().trim().toLowerCase() : "";
-
-            if (isRasterLayer(layer)) {
-                if (path.isBlank()) {
-                    return;
+            List<PreparedLayer> prepared = new ArrayList<>();
+            for (Layer layer : candidate.getLayers()) {
+                if (layer == null) {
+                    continue;
                 }
-                File rasterFile = new File(layer.getPath());
-                LocalRasterData rasterData;
-                String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
-                String sourceCRS = layer.getSourceCRS();
-                if (layer instanceof RasterLayer) {
-                    RasterLayer rasterLayer = (RasterLayer) layer;
-                    if (rasterLayer.isDerivedLayer()) {
-                        if (FloodScenarioService.OP_PRELIMINARY_FLOOD.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
-                            rasterData = FloodScenarioService.regenerateDerivedRasterData(rasterLayer);
-                        } else if (BooleanRiskService.OP_SLOPE_BOOLEAN_MASK.equalsIgnoreCase(rasterLayer.getDerivedOperation())
-                                || BooleanRiskService.OP_SOIL_BOOLEAN_MASK.equalsIgnoreCase(rasterLayer.getDerivedOperation())
-                                || BooleanRiskService.OP_PRELIMINARY_BOOLEAN_RISK.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
-                            rasterData = BooleanRiskService.regenerateDerivedRasterData(rasterLayer);
-                        } else {
-                            rasterData = TerrainHydrologyAnalysisService.regenerateDerivedRasterData(rasterLayer);
+                if (layer instanceof OnlineTileLayer || layer instanceof OnlineWmsLayer) {
+                    prepared.add(new PreparedLayer(layer, null, null, null));
+                    continue;
+                }
+                if (isRasterLayer(layer)) {
+                    LocalRasterData rasterData;
+                    try {
+                        rasterData = prepareRasterData(layer, candidate.getProjectCRS());
+                    } catch (Exception failure) {
+                        throw new IOException("No se pudo reconstruir el raster \""
+                                + layer.getName() + "\".", failure);
+                    }
+                    if (rasterData == null && layer.getPath() != null
+                            && !layer.getPath().isBlank()) {
+                        throw new IOException("No se pudo reconstruir el raster \""
+                                + layer.getName() + "\".");
+                    }
+                    prepared.add(new PreparedLayer(layer, rasterData, null, null));
+                    continue;
+                }
+                if ("VECTOR".equalsIgnoreCase(layer.getType())) {
+                    ShapefileData vectorData = null;
+                    String failureMessage = null;
+                    try {
+                        vectorData = LayerVectorDataSupport.prepareData(
+                                layer,
+                                CatgisDesktopApp.getMainFrameSafe(),
+                                "Ingresá la clave para reconstruir la capa PostGIS guardada en el proyecto.",
+                                false
+                        );
+                    } catch (Exception failure) {
+                        failureMessage = failure.getMessage() != null
+                                ? failure.getMessage() : failure.getClass().getSimpleName();
+                    }
+                    if (vectorData == null && failureMessage == null) {
+                        failureMessage = "no se pudo reconstruir la capa";
+                    }
+                    if (failureMessage != null) {
+                        if (isRemoteVector(layer)) {
+                            prepared.add(new PreparedLayer(layer, null, null, failureMessage));
+                            continue;
                         }
-                    } else {
-                    String mode = rasterLayer.getRasterMode();
-                    if (RasterImageLoader.MODE_REAL.equalsIgnoreCase(mode)) {
-                        rasterData = RasterImageLoader.loadReal(rasterFile, projectCRS, sourceCRS);
-                    } else if (RasterImageLoader.MODE_VIRTUAL.equalsIgnoreCase(mode)) {
-                        rasterData = RasterImageLoader.loadVirtual(rasterFile, projectCRS, sourceCRS);
-                    } else {
-                        rasterData = RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
-                        rasterLayer.setRasterMode(rasterData.getRasterMode());
+                        throw new IOException("No se pudo reconstruir la capa \""
+                                + layer.getName() + "\": " + failureMessage);
                     }
-                    }
-                } else {
-                    rasterData = RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
+                    prepared.add(new PreparedLayer(layer, null, vectorData, null));
+                    continue;
                 }
-                if (rasterData != null) {
-                    String savedCrs = layer.getSourceCRS();
-                    if (savedCrs == null || savedCrs.isBlank()) {
-                        layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(rasterData, projectCRS));
-                    }
-                    AppContext.mapPanel().addOrUpdateRasterLayer(layer, rasterData);
+                prepared.add(new PreparedLayer(layer, null, null, null));
+            }
+            return prepared;
+        } finally {
+            AppContext.setCurrentProject(previous);
+        }
+    }
+
+    private static boolean isRemoteVector(Layer layer) {
+        return layer instanceof PostgisLayer || layer instanceof OnlineWfsLayer;
+    }
+
+    private static LocalRasterData prepareRasterData(Layer layer, String projectCRS) throws Exception {
+        String path = layer.getPath() != null ? layer.getPath().trim() : "";
+        if (path.isBlank()) {
+            return null;
+        }
+        File rasterFile = new File(layer.getPath());
+        String sourceCRS = layer.getSourceCRS();
+        if (layer instanceof RasterLayer) {
+            RasterLayer rasterLayer = (RasterLayer) layer;
+            if (rasterLayer.isDerivedLayer()) {
+                if (FloodScenarioService.OP_PRELIMINARY_FLOOD.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
+                    return FloodScenarioService.regenerateDerivedRasterData(rasterLayer);
                 }
-                return;
+                if (BooleanRiskService.OP_SLOPE_BOOLEAN_MASK.equalsIgnoreCase(rasterLayer.getDerivedOperation())
+                        || BooleanRiskService.OP_SOIL_BOOLEAN_MASK.equalsIgnoreCase(rasterLayer.getDerivedOperation())
+                        || BooleanRiskService.OP_PRELIMINARY_BOOLEAN_RISK.equalsIgnoreCase(rasterLayer.getDerivedOperation())) {
+                    return BooleanRiskService.regenerateDerivedRasterData(rasterLayer);
+                }
+                return TerrainHydrologyAnalysisService.regenerateDerivedRasterData(rasterLayer);
             }
-            if ("VECTOR".equalsIgnoreCase(layer.getType())) {
-                LayerVectorDataSupport.ensureDataLoaded(
-                        layer,
-                        CatgisDesktopApp.getMainFrameSafe(),
-                        "Ingresá la clave para reconstruir la capa PostGIS guardada en el proyecto.",
-                        false
-                );
+            String mode = rasterLayer.getRasterMode();
+            if (RasterImageLoader.MODE_REAL.equalsIgnoreCase(mode)) {
+                return RasterImageLoader.loadReal(rasterFile, projectCRS, sourceCRS);
             }
-        } catch (Exception ex) {
-            LayerVectorDataSupport.showLoadFailure(
-                    layer,
-                    CatgisDesktopApp.getMainFrameSafe(),
-                    "Abrir proyecto",
-                    "No se pudo reconstruir la capa seleccionada del proyecto.",
-                    ex
-            );
-            if (!(layer instanceof PostgisLayer) && CatgisDesktopApp.statusBar != null) {
-                String layerName = layer != null ? layer.getName() : "capa desconocida";
-                AppContext.setStatusMessage("No se pudo reconstruir la capa \"" + layerName + "\".");
+            if (RasterImageLoader.MODE_VIRTUAL.equalsIgnoreCase(mode)) {
+                return RasterImageLoader.loadVirtual(rasterFile, projectCRS, sourceCRS);
             }
+            LocalRasterData preview = RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
+            if (preview != null) {
+                rasterLayer.setRasterMode(preview.getRasterMode());
+            }
+            return preview;
+        }
+        return RasterImageLoader.loadPreview(rasterFile, projectCRS, sourceCRS);
+    }
+
+    private static void attachPreparedLayer(PreparedLayer item) {
+        Layer layer = item.layer();
+        if (AppContext.mapPanel() == null) {
+            return;
+        }
+        if (layer instanceof OnlineTileLayer tileLayer) {
+            AppContext.mapPanel().addOrUpdateOnlineTileLayer(tileLayer);
+            return;
+        }
+        if (layer instanceof OnlineWmsLayer wmsLayer) {
+            AppContext.mapPanel().addOrUpdateOnlineWmsLayer(wmsLayer);
+            return;
+        }
+        String projectCRS = AppContext.project() != null ? AppContext.project().getProjectCRS() : "";
+        if (item.rasterData() != null) {
+            if (layer.getSourceCRS() == null || layer.getSourceCRS().isBlank()) {
+                layer.setSourceCRS(RasterCoverageSupport.resolveOperationalRasterCrs(
+                        item.rasterData(), projectCRS));
+            }
+            AppContext.mapPanel().addOrUpdateRasterLayer(layer, item.rasterData());
+            return;
+        }
+        if (item.vectorData() != null) {
+            LayerVectorDataSupport.attachPrepared(layer, item.vectorData());
         }
     }
 
