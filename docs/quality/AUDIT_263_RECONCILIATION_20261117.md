@@ -64,6 +64,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #156 | **CORREGIDO en PR T4-2** (staging + swap transaccional; verificación CI PostGIS) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |
+| #43 | **ACEPTACIÓN VERIFICADA** (evidencia WCS payload; #108 sigue OPEN) | T4 |
 | #164, #167 | **PENDIENTE** (mojibake/WCS race) | T1/T3 |
 | #95–#102, #82/#113/#114/#132, web | **PARCIAL** (CATMAP/GUI/web) | T5 |
 
