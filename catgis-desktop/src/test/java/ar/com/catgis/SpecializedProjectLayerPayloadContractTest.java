@@ -25,13 +25,14 @@ class SpecializedProjectLayerPayloadContractTest {
         layer.setGeometryTypeLabel("MultiPolygon");
         layer.setReadOnly(false);
 
-        Layer parsed = LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer));
+        Layer parsed = LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer), true);
         GeoPackageLayer restored = assertInstanceOf(GeoPackageLayer.class, parsed);
 
         assertEquals(0.42f, restored.getOpacity(), 1e-6);
         assertEquals("parcelas", restored.getTableName());
         assertEquals("Parcelas urbanas", restored.getIdentifier());
-        assertEquals("catastro municipal", restored.getDescription());
+        assertEquals("catastro|municipal", restored.getDescription(),
+                "v2 codec must preserve the pipe instead of replacing it");
         assertEquals("MultiPolygon", restored.getGeometryTypeLabel());
         assertFalse(restored.isReadOnly());
     }
@@ -51,7 +52,7 @@ class SpecializedProjectLayerPayloadContractTest {
         layer.setReadOnly(true);
 
         PostgisLayer restored = assertInstanceOf(PostgisLayer.class,
-                LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer)));
+                LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer), true));
 
         assertEquals(0.61f, restored.getOpacity(), 1e-6);
         assertEquals("db.internal", restored.getHost());
@@ -78,7 +79,7 @@ class SpecializedProjectLayerPayloadContractTest {
         layer.setReadOnly(true);
 
         OnlineWfsLayer restored = assertInstanceOf(OnlineWfsLayer.class,
-                LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer)));
+                LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer), true));
 
         assertEquals(0.75f, restored.getOpacity(), 1e-6);
         assertEquals("Municipio", restored.getProviderName());
@@ -150,7 +151,7 @@ class SpecializedProjectLayerPayloadContractTest {
         layer.setGeometryTypeLabel("LineString");
 
         SpatiaLiteLayer restored = assertInstanceOf(SpatiaLiteLayer.class,
-                LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer)));
+                LoadProjectAction.parseLayer(SaveProjectAction.buildLayerLine(layer), true));
 
         assertEquals("/data/city.sqlite", restored.getPath());
         assertEquals("roads", restored.getTableName());

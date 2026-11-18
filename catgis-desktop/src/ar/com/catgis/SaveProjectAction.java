@@ -287,6 +287,9 @@ public class SaveProjectAction extends AbstractAction {
         if (layer.getSourceName() != null && !layer.getSourceName().isBlank()) {
             sb.append("|").append("SOURCE_NAME=").append(safe(layer.getSourceName()));
         }
+        if (layer.getFeatureCount() > 0) {
+            sb.append("|").append("FEATURE_COUNT=").append(layer.getFeatureCount());
+        }
         if (CadLayerSupport.isCadLayer(layer) || layer.hasCadPlacementAdjustment()) {
             sb.append("|").append("CAD_SHIFT_X=").append(layer.getCadOffsetX());
             sb.append("|").append("CAD_SHIFT_Y=").append(layer.getCadOffsetY());

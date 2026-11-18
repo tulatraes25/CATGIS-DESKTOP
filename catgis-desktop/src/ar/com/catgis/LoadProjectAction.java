@@ -549,7 +549,11 @@ public class LoadProjectAction extends AbstractAction {
                 payloadStart++;
             }
             // Skip LABEL_* keyed suffixes so raster payload is read from correct positions
-            while (parts.length > payloadStart && (parts[payloadStart].startsWith("LABEL_") || parts[payloadStart].startsWith("CAD_") || parts[payloadStart].startsWith("SOURCE_NAME="))) {
+            while (parts.length > payloadStart && (parts[payloadStart].startsWith("LABEL_")
+                    || parts[payloadStart].startsWith("CAD_")
+                    || parts[payloadStart].startsWith("SOURCE_NAME=")
+                    || parts[payloadStart].startsWith("FEATURE_COUNT=")
+                    || parts[payloadStart].startsWith("GROUP="))) {
                 payloadStart++;
             }
 
@@ -606,6 +610,15 @@ public class LoadProjectAction extends AbstractAction {
                 }
                 if (part.startsWith("GROUP=")) {
                     layer.setGroupName(part.substring("GROUP=".length()).trim());
+                } else if (part.startsWith("SOURCE_NAME=")) {
+                    layer.setSourceName(part.substring("SOURCE_NAME=".length()).trim());
+                } else if (part.startsWith("FEATURE_COUNT=")) {
+                    try {
+                        layer.setFeatureCount(Integer.parseInt(
+                                part.substring("FEATURE_COUNT=".length()).trim()));
+                    } catch (Exception ignored) {
+                        CatgisLogger.warn("Error al interpretar feature count en proyecto CATGIS", ignored);
+                    }
                 } else if (part.startsWith("CAD_SHIFT_X=")) {
                     try {
                         layer.setCadOffsetX(Double.parseDouble(part.substring("CAD_SHIFT_X=".length()).trim().replace(",", ".")));

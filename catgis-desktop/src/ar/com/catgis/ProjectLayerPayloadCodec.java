@@ -92,7 +92,7 @@ final class ProjectLayerPayloadCodec {
                 tile.setAttribution(value(keyed, "TILE_ATTRIBUTION"));
                 tile.setTermsUrl(value(keyed, "TILE_TERMS"));
                 tile.setRequiresApiKey(parseBoolean(keyed, "TILE_REQUIRES_KEY", tile.isRequiresApiKey()));
-            } else {
+            } else if (isLegacyPayloadStart(parts, payloadStart)) {
                 decodeLegacyTile(tile, parts, rasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof OnlineWmsLayer wms) {
@@ -114,7 +114,7 @@ final class ProjectLayerPayloadCodec {
                         parseDouble(keyed, "WMS_MIN_Y"),
                         parseDouble(keyed, "WMS_MAX_X"),
                         parseDouble(keyed, "WMS_MAX_Y"));
-            } else {
+            } else if (isLegacyPayloadStart(parts, payloadStart)) {
                 decodeLegacyWms(wms, parts, rasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof OnlineWfsLayer wfs) {
@@ -126,7 +126,7 @@ final class ProjectLayerPayloadCodec {
                 wfs.setRequestCrs(value(keyed, "WFS_REQUEST_CRS"));
                 wfs.setVersion(value(keyed, "WFS_VERSION"));
                 wfs.setReadOnly(parseBoolean(keyed, "WFS_READ_ONLY", wfs.isReadOnly()));
-            } else {
+            } else if (isLegacyPayloadStart(parts, payloadStart)) {
                 decodeLegacyWfs(wfs, parts, nonRasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof GeoPackageLayer gpkg) {
@@ -136,7 +136,7 @@ final class ProjectLayerPayloadCodec {
                 gpkg.setDescription(value(keyed, "GPKG_DESCRIPTION"));
                 gpkg.setGeometryTypeLabel(value(keyed, "GPKG_GEOMETRY"));
                 gpkg.setReadOnly(parseBoolean(keyed, "GPKG_READ_ONLY", gpkg.isReadOnly()));
-            } else {
+            } else if (isLegacyPayloadStart(parts, payloadStart)) {
                 decodeLegacyGeoPackage(gpkg, parts, nonRasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof PostgisLayer postgis) {
@@ -150,7 +150,7 @@ final class ProjectLayerPayloadCodec {
                 postgis.setTableName(value(keyed, "POSTGIS_TABLE"));
                 postgis.setGeometryTypeLabel(value(keyed, "POSTGIS_GEOMETRY"));
                 postgis.setReadOnly(parseBoolean(keyed, "POSTGIS_READ_ONLY", postgis.isReadOnly()));
-            } else {
+            } else if (isLegacyPayloadStart(parts, payloadStart)) {
                 decodeLegacyPostgis(postgis, parts, nonRasterLegacyStart(payloadStart));
             }
         } else if (layer instanceof SpatiaLiteLayer spatialite) {
@@ -160,6 +160,23 @@ final class ProjectLayerPayloadCodec {
                 spatialite.setGeometryTypeLabel(value(keyed, "SPATIALITE_GEOMETRY"));
             }
         }
+    }
+
+    /**
+     * Legacy positional payloads start with plain values; a keyed suffix
+     * (KEY=value), an empty field or a placeholder "-" is not a legacy start.
+     * Without this guard, SOURCE_NAME/FEATURE_COUNT/GROUP suffixes could be
+     * misread as provider/URL fields and corrupt the layer path.
+     */
+    private static boolean isLegacyPayloadStart(String[] parts, int start) {
+        if (parts == null || start < 0 || start >= parts.length) {
+            return false;
+        }
+        String value = parts[start] == null ? "" : parts[start].trim();
+        if (value.isEmpty() || "-".equals(value) || value.contains("=")) {
+            return false;
+        }
+        return true;
     }
 
     private static int nonRasterLegacyStart(int payloadStart) {
@@ -306,6 +323,6 @@ final class ProjectLayerPayloadCodec {
 
     private static void append(StringBuilder target, String key, Object rawValue) {
         String value = rawValue == null ? "" : String.valueOf(rawValue);
-        target.append('|').append(key).append('=').append(value.replace("|", " "));
+        target.append('|').append(key).append('=').append(ProjectRecordCodec.escape(value));
     }
 }

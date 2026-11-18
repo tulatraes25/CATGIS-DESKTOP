@@ -50,7 +50,8 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #144 | **CORREGIDO en PR T1-2** (staging detached + commit atómico) | T1 |
 | #148 | **CORREGIDO en PR T1-3** (codec v2 reversible con compatibilidad v1) | T1 |
 | #155 | **CORREGIDO en PR T1-4** (journal crash-recoverable + lock de identidad) | T1 |
-| #146, #149 | **CONFIRMADO/PARCIAL** (pérdida de trabajo/proyecto) | T1 |
+| #146 | **CORREGIDO en PR T1-5** (roundtrip por tipo + feature count/source name) | T1 |
+| #149 | **CONFIRMADO** (crash recovery de trabajo sin guardar) | T1 |
 | #260 | **CORREGIDO en PR T1-1** (pendiente gates) | T1 |
 | #150, #151, #195, #193, #175, #176, #153 | **PARCIAL** (CRS fuente/preview/streaming) | T1 |
 | #256, #257, #258, #259, #262 | **CORREGIDO en PRs T2** (#257/#258/#262 en `6cd043d`; #256/#259 en el PR T2-2) | T2 |
