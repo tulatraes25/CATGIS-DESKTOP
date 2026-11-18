@@ -95,6 +95,12 @@ public class ExportVectorLayerAction {
             NotificationManager.warn(parent, null, "No hay una capa seleccionada.");
             return null;
         }
+        try {
+            LasPreviewPolicy.requireCompleteForExport(layer);
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(parent, "LiDAR", preview.getMessage());
+            return null;
+        }
         if (!hasExportableVectorData(data)) {
             NotificationManager.warn(parent, null, "La capa no tiene datos disponibles para exportar.");
             return null;
@@ -182,6 +188,12 @@ public class ExportVectorLayerAction {
             NotificationManager.warn(parent, null, "No hay una capa seleccionada.");
             return null;
         }
+        try {
+            LasPreviewPolicy.requireCompleteForExport(layer);
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(parent, "LiDAR", preview.getMessage());
+            return null;
+        }
         if (!hasExportableVectorData(data)) {
             NotificationManager.warn(parent, null, "La capa no tiene datos disponibles para exportar.");
             return null;
@@ -246,6 +258,12 @@ public class ExportVectorLayerAction {
 
     public static boolean saveLayerToCurrentPath(Layer layer, Component parent, boolean showSuccessMessage) {
         if (layer == null || layer.getPath() == null || layer.getPath().isBlank() || AppContext.mapPanel() == null) {
+            return false;
+        }
+        try {
+            LasPreviewPolicy.requireCompleteForExport(layer);
+        } catch (IllegalStateException preview) {
+            NotificationManager.warn(parent, "LiDAR", preview.getMessage());
             return false;
         }
 

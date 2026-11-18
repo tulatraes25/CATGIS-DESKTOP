@@ -619,6 +619,23 @@ public class LoadProjectAction extends AbstractAction {
                     } catch (Exception ignored) {
                         CatgisLogger.warn("Error al interpretar feature count en proyecto CATGIS", ignored);
                     }
+                } else if (part.startsWith("PARTIAL_PREVIEW=")) {
+                    layer.setPartialPreview(Boolean.parseBoolean(
+                            part.substring("PARTIAL_PREVIEW=".length()).trim()));
+                } else if (part.startsWith("TOTAL_SOURCE_FEATURES=")) {
+                    try {
+                        layer.setTotalSourceFeatures(Long.parseLong(
+                                part.substring("TOTAL_SOURCE_FEATURES=".length()).trim()));
+                    } catch (Exception ignored) {
+                        CatgisLogger.warn("Error al interpretar total de features en proyecto CATGIS", ignored);
+                    }
+                } else if (part.startsWith("LOADED_SOURCE_FEATURES=")) {
+                    try {
+                        layer.setLoadedSourceFeatures(Long.parseLong(
+                                part.substring("LOADED_SOURCE_FEATURES=".length()).trim()));
+                    } catch (Exception ignored) {
+                        CatgisLogger.warn("Error al interpretar features cargados en proyecto CATGIS", ignored);
+                    }
                 } else if (part.startsWith("CAD_SHIFT_X=")) {
                     try {
                         layer.setCadOffsetX(Double.parseDouble(part.substring("CAD_SHIFT_X=".length()).trim().replace(",", ".")));
