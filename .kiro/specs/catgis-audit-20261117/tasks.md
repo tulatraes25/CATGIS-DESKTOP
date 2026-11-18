@@ -105,3 +105,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   BooleanRisk, vector CRS, FlatGeobuf, declaredCode raster). Tests
   `CrsNormalizationSplitContractTest` (4); política en
   `docs/quality/CRS_NORMALIZATION_POLICY_20261117.md`.
+- T4 avance 1 (2026-11-17): **#261** corregido (PR en curso):
+  `PostgisCredentialVault` v2 con secreto de instalación aleatorio 32 bytes
+  (`~/.catgis/postgis.key`, permisos POSIX), AES-256-GCM por registro;
+  migración legacy v1/XOR fail-closed; claves Preferences largas hasheadas.
+  Tests `PostgisCredentialsVaultContractTest` (7); política en
+  `docs/quality/POSTGIS_CREDENTIALS_SECURITY_20261117.md`. DPAPI/Keychain
+  completo queda como mejora futura.
