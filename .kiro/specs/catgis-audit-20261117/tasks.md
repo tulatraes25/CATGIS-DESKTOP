@@ -174,3 +174,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   computeAnalysis calibrado, conserva AnalysisRaster float en LocalRasterData y
   permite exportar GeoTIFF analitico; entrada ambigua/raw falla cerrado sin capa.
   Tests `SpectralCalibrationInputContractTest` (4). 1689 tests ok.
+- T1 cierre de #150/#151/#153 (2026-11-17): SpatiaLite usa CRS del schema
+  real (`requireSourceCrs`, SRID real), FlatGeobuf exige CRS verificado del
+  header y LAS exige CRS declarado (sin default 4326); `hasUnsavedProjectChanges`
+  lee el proyecto autoritativo de AppContext. Tests
+  `SpatiaLiteSourceCrsTruthContractTest`, `FlatGeobufCrsFailClosedContractTest`,
+  `LasSourceCrsProjectRoundTripContractTest`, `ProjectAuthorityContractTest`.
+  1690 tests ok.
