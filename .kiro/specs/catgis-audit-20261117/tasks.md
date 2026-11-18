@@ -195,3 +195,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   (5 s + cierre forzado) y falla cerrado si no drena, en lugar de snapshot tras
   join(1 s) (causa del flake MacIntel21). Test repite 5 veces y verifica marcador
   de truncado y ausencia de "could not be fully drained".
+- T4/T5 avance (2026-11-17): cierre verificado de gates WCS (#86/#87/#91/#94),
+  XYZ/GDAL (#50/#64/#67/#70) y SpatiaLite (#152) con tests certificados en main.
+  Quedan abiertos #263, #261, #175, #143, #132, #114, #113, #112, #109, #82,
+  #74 y #73; A0.7/F3 NOT_CERTIFIED.
