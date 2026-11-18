@@ -169,3 +169,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   #193 (LocalVectorSourceCrsProvenance + LasSourceCrsProjectRoundTripContractTest)
   y #164 (UserVisibleTextEncodingContractTest sin sentinelas). #195 sigue
   parcial (SHP cubierto; GeoJSON/KML pendientes).
+- T3 cierre de #139 (2026-11-17): `SpectralCalibrationInput` exige declaracion
+  explicita scale/offset/NoData; `SpectralIndexDialog` calcula via
+  computeAnalysis calibrado, conserva AnalysisRaster float en LocalRasterData y
+  permite exportar GeoTIFF analitico; entrada ambigua/raw falla cerrado sin capa.
+  Tests `SpectralCalibrationInputContractTest` (4). 1689 tests ok.
