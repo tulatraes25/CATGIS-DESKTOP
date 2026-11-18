@@ -49,8 +49,8 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 |---|---|---|
 | #144, #146, #148, #149, #155, #260 | **CONFIRMADO/PARCIAL** (pérdida de trabajo/proyecto) | T1 |
 | #150, #151, #195, #193, #175, #176, #153 | **PARCIAL** (CRS fuente/preview/streaming) | T1 |
-| #257, #258, #262 | **CORREGIDO en PR T2** (pendiente gates); #256/#259 siguen abiertos | T2 |
-| #162, #139, #163, #128, #161 | **CONFIRMADO/PARCIAL** (datos y proveedores) | T2/T3 |
+| #256, #257, #258, #259, #262 | **CORREGIDO en PRs T2** (#257/#258/#262 en `6cd043d`; #256/#259 en el PR T2-2) | T2 |
+| #162, #139, #163, #128, #161 | **CONFIRMADO/PARCIAL** (datos y proveedores) | T3 |
 | #156, #261 | **CONFIRMADO** (PostGIS/credenciales) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |

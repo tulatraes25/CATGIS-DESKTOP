@@ -7,9 +7,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
     reforzado, snapshot de runs.
 - [ ] **T1 — No perder trabajo**
   - #144 #146 #155 #260 #148 #149 #153 #151 #150 #195 #193 #175 #176.
-- [ ] **T2 — Ciencia básica fiable**
+- [x] **T2 — Ciencia básica fiable (PRs #266 + este)**
   - #258 IDW, #262 ASCII/stats, #257 métrica/signos, #256 raster calculator,
-    #259 CRS favoritos, #162 NetCDF.
+    #259 CRS favoritos (todos corregidos con oráculos). #162 NetCDF y #139/#163
+    se reasignan a T3 (datos/proveedores).
 - [ ] **T3 — Datos y proveedores**
   - #128 georreferencia embebida, #161 sidecar atómico, #139 calibración
     espectral, #112 GeoParquet real, FGB/LAS escalable.
@@ -29,3 +30,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   escala métrica por CRS (`MetricScale`) y convención corte/relleno corregida en
   `VolumeCalculator`/`BasinMorphometry` con oráculos grados/metros. Pendientes
   T2: #256 raster calculator, #259 CRS favoritos, #162 NetCDF.
+
+- T2 cierre (2026-11-17): #258/#262/#257 certificados en `main` `6cd043d`
+  (PR #266); #256 (calculadora raster científica float/NoData + GeoTIFF y
+  preview separado) y #259 (favoritos POSGAR 94 / Campo Inchauspe / POSGAR 2007
+  validados contra la base EPSG de GeoTools) en el PR T2-2. Suite local **1602
+  tests / 0 fallos / 15 skips**.

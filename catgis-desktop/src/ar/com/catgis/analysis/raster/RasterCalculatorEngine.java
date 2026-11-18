@@ -1,5 +1,8 @@
 package ar.com.catgis.analysis.raster;
 
+import ar.com.catgis.catmap.AnalysisRaster;
+import ar.com.catgis.catmap.TerrainRasterAlgorithms;
+
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.Raster;
@@ -33,6 +36,12 @@ public final class RasterCalculatorEngine {
         void onProgress(int current, int total);
     }
 
+    /**
+     * Legacy 8-bit preview evaluator (clamped to 0..255). Scientific callers must
+     * use {@link #evaluateAnalysis(List, String, String, ProgressListener)} which
+     * keeps floating point values, NoData and the CRS.
+     */
+    @Deprecated
     public static BufferedImage evaluate(List<RasterSource> sources, String expression) {
         return evaluate(sources, expression, null);
     }
@@ -121,7 +130,6 @@ public final class RasterCalculatorEngine {
     private static double evaluatePixel(List<Token> rpn, List<Raster> rasters,
                                         int x, int y, int w, int h) {
         Stack<Double> stack = new Stack<>();
-        double[] pixel = new double[4];
 
         for (Token t : rpn) {
             switch (t.type) {
@@ -130,8 +138,9 @@ public final class RasterCalculatorEngine {
                     int idx = t.intValue;
                     Raster r = idx < rasters.size() ? rasters.get(idx) : null;
                     if (r != null) {
-                        r.getPixel(x, y, pixel);
-                        stack.push(pixel[0]);
+                        // Double samples preserve float/ushort rasters; the legacy
+                        // preview still clamps the final value to a byte.
+                        stack.push(r.getSampleDouble(x, y, 0));
                     } else {
                         stack.push(0.0);
                     }
@@ -143,7 +152,7 @@ public final class RasterCalculatorEngine {
                         case "+" -> a + b;
                         case "-" -> a - b;
                         case "*" -> a * b;
-                        case "/" -> b != 0 ? a / b : 0;
+                        case "/" -> b != 0 ? a / b : Double.NaN;
                         default -> 0;
                     };
                     stack.push(r);
@@ -167,8 +176,8 @@ public final class RasterCalculatorEngine {
                     switch (f) {
                         case "sin" -> stack.push(Math.sin(stack.pop()));
                         case "cos" -> stack.push(Math.cos(stack.pop()));
-                        case "sqrt" -> { double v = stack.pop(); stack.push(v >= 0 ? Math.sqrt(v) : 0); }
-                        case "log" -> { double v = stack.pop(); stack.push(v > 0 ? Math.log(v) : 0); }
+                        case "sqrt" -> { double v = stack.pop(); stack.push(v >= 0 ? Math.sqrt(v) : Double.NaN); }
+                        case "log" -> { double v = stack.pop(); stack.push(v > 0 ? Math.log(v) : Double.NaN); }
                         case "abs" -> stack.push(Math.abs(stack.pop()));
                         case "pow" -> {
                             double exp = stack.pop();
@@ -191,13 +200,13 @@ public final class RasterCalculatorEngine {
                         case "ndvi" -> {
                             double nir = stack.pop();
                             double red = stack.pop();
-                            double ndviVal = (nir + red) > 0 ? (nir - red) / (nir + red) : 0;
+                            double ndviVal = (nir + red) != 0 ? (nir - red) / (nir + red) : Double.NaN;
                             stack.push(ndviVal);
                         }
-                        case "ndwi" -> { double nir = stack.pop(); double green = stack.pop(); stack.push((green + nir) > 0 ? (green - nir) / (green + nir) : 0); }
-                        case "nbr" -> { double swir = stack.pop(); double nir = stack.pop(); stack.push((nir + swir) > 0 ? (nir - swir) / (nir + swir) : 0); }
-                        case "savi" -> { double red = stack.pop(); double nir = stack.pop(); stack.push(((nir - red) / (nir + red + 0.5)) * 1.5); }
-                        case "evi" -> { double blue = stack.pop(); double red = stack.pop(); double nir = stack.pop(); double denom = nir + 6*red - 7.5*blue + 1; stack.push(denom != 0 ? 2.5 * (nir - red) / denom : 0); }
+                        case "ndwi" -> { double nir = stack.pop(); double green = stack.pop(); stack.push((green + nir) != 0 ? (green - nir) / (green + nir) : Double.NaN); }
+                        case "nbr" -> { double swir = stack.pop(); double nir = stack.pop(); stack.push((nir + swir) != 0 ? (nir - swir) / (nir + swir) : Double.NaN); }
+                        case "savi" -> { double red = stack.pop(); double nir = stack.pop(); double denom = nir + red + 0.5; stack.push(denom != 0 ? ((nir - red) / denom) * 1.5 : Double.NaN); }
+                        case "evi" -> { double blue = stack.pop(); double red = stack.pop(); double nir = stack.pop(); double denom = nir + 6*red - 7.5*blue + 1; stack.push(denom != 0 ? 2.5 * (nir - red) / denom : Double.NaN); }
                         case "tan" -> stack.push(Math.tan(stack.pop()));
                         case "atan2" -> { double dy = stack.pop(); stack.push(Math.atan2(stack.pop(), dy)); }
                         case "asin" -> stack.push(Math.asin(Math.max(-1, Math.min(1, stack.pop()))));
@@ -229,6 +238,116 @@ public final class RasterCalculatorEngine {
         return stack.isEmpty() ? 0 : stack.pop();
     }
 
+    /** Hard cap for the scientific output grid (matches AnalysisRaster policy). */
+    public static final int MAX_CELLS = 4_000_000;
+
+    /**
+     * Scientific raster algebra result: float values, explicit NoData and CRS.
+     * Requires identical grids/envelopes across sources (no silent resampling);
+     * per-pixel math errors and non-finite samples become NoData instead of
+     * transparent 8-bit zeros.
+     */
+    public static AnalysisRaster evaluateAnalysis(List<RasterSource> sources, String expression,
+                                                  String crsCode, ProgressListener progress) {
+        if (sources == null || sources.isEmpty()) {
+            throw new IllegalArgumentException("El calculador raster requiere al menos una fuente.");
+        }
+        if (expression == null || expression.isBlank()) {
+            throw new IllegalArgumentException("La expresion raster esta vacia.");
+        }
+        if (crsCode == null || crsCode.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El resultado cientifico requiere un CRS explicito (raster georreferenciado).");
+        }
+        RasterSource first = null;
+        int width = -1;
+        int height = -1;
+        for (RasterSource source : sources) {
+            if (source == null || source.image() == null || source.envelope() == null) {
+                throw new IllegalArgumentException(
+                        "Todas las fuentes deben tener imagen y envelope (grilla declarada).");
+            }
+            if (first == null) {
+                first = source;
+                width = source.image().getWidth();
+                height = source.image().getHeight();
+                continue;
+            }
+            if (source.image().getWidth() != width || source.image().getHeight() != height
+                    || !sameEnvelope(first.envelope(), source.envelope())) {
+                throw new IllegalArgumentException(
+                        "Las fuentes del calculador no comparten grilla/envelope; "
+                                + "no se aplica resample implicito. Usa rasters alineados.");
+            }
+        }
+        long cells = (long) width * height;
+        if (cells <= 0 || cells > MAX_CELLS) {
+            throw new IllegalArgumentException("El calculador excede el tamano soportado ("
+                    + MAX_CELLS + " celdas).");
+        }
+        List<Token> tokens;
+        try {
+            tokens = shuntingYard(tokenize(expression));
+        } catch (Exception invalid) {
+            throw new IllegalArgumentException("Error en la expresion: " + invalid.getMessage(), invalid);
+        }
+        List<Raster> inputRasters = new ArrayList<>();
+        for (RasterSource source : sources) {
+            inputRasters.add(source.image().getRaster());
+        }
+        float[] values = new float[width * height];
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                int index = y * width + x;
+                double result;
+                try {
+                    result = evaluatePixel(tokens, inputRasters, x, y, width, height);
+                } catch (RuntimeException mathError) {
+                    result = Double.NaN;
+                }
+                values[index] = Double.isFinite(result)
+                        ? (float) result : TerrainRasterAlgorithms.NO_DATA;
+                if (progress != null && index % 1000 == 0) {
+                    progress.onProgress(index, width * height);
+                }
+            }
+        }
+        if (progress != null) {
+            progress.onProgress(width * height, width * height);
+        }
+        return new AnalysisRaster("Calculadora raster", "", width, height, values,
+                TerrainRasterAlgorithms.NO_DATA,
+                first.envelope().getMinX(), first.envelope().getMinY(),
+                first.envelope().getMaxX(), first.envelope().getMaxY(), crsCode.trim());
+    }
+
+    /** 8-bit ARGB preview (display only): NoData stays transparent. */
+    public static BufferedImage toPreviewImage(AnalysisRaster raster) {
+        if (raster == null) {
+            throw new IllegalArgumentException("Preview requires an analysis raster.");
+        }
+        BufferedImage image = new BufferedImage(raster.width(), raster.height(),
+                BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < raster.height(); y++) {
+            for (int x = 0; x < raster.width(); x++) {
+                int argb = raster.isNoData(x, y) ? 0x00000000
+                        : (0xFF000000 | (clampToByte(raster.valueAt(x, y)) * 0x010101));
+                image.setRGB(x, y, argb);
+            }
+        }
+        return image;
+    }
+
+    private static boolean sameEnvelope(org.locationtech.jts.geom.Envelope a,
+                                        org.locationtech.jts.geom.Envelope b) {
+        double scale = Math.max(1.0, Math.max(Math.max(Math.abs(a.getMinX()),
+                Math.abs(a.getMaxX())), Math.max(Math.abs(a.getMinY()), Math.abs(a.getMaxY()))));
+        double tolerance = scale * 1.0e-9;
+        return Math.abs(a.getMinX() - b.getMinX()) <= tolerance
+                && Math.abs(a.getMinY() - b.getMinY()) <= tolerance
+                && Math.abs(a.getMaxX() - b.getMaxX()) <= tolerance
+                && Math.abs(a.getMaxY() - b.getMaxY()) <= tolerance;
+    }
     private static int clampToByte(double val) {
         if (Double.isNaN(val) || Double.isInfinite(val)) return 0;
         int i = (int) Math.round(val);

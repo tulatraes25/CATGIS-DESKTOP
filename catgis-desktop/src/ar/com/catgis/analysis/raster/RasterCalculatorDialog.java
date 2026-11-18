@@ -2,6 +2,8 @@ package ar.com.catgis.analysis.raster;
 import ar.com.catgis.core.model.Layer;
 import ar.com.catgis.core.model.Project;
 import ar.com.catgis.analysis.raster.RasterCalculatorEngine;
+import ar.com.catgis.catmap.AnalysisRaster;
+import ar.com.catgis.RasterImageLoader;
 
 import ar.com.catgis.MapPanel;
 import ar.com.catgis.AppContext;
@@ -34,6 +36,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.io.File;
 import java.util.LinkedHashMap;
 import ar.com.catgis.data.raster.LocalRasterData;
 import java.util.List;
@@ -218,38 +221,62 @@ public class RasterCalculatorDialog extends JDialog {
         progressBar.setIndeterminate(true);
         runButton.setEnabled(false);
 
-        new SwingWorker<BufferedImage, Void>() {
+        new SwingWorker<Object[], Void>() {
             @Override
-            protected BufferedImage doInBackground() throws Exception {
+            protected Object[] doInBackground() throws Exception {
                 List<RasterCalculatorEngine.RasterSource> sources = new ArrayList<>();
-                sources.add(toSource(aSel));
-                if (bSel != null && !"(ninguno)".equals(bSel)) sources.add(toSource(bSel));
-                if (cSel != null && !"(ninguno)".equals(cSel)) sources.add(toSource(cSel));
-
-                BufferedImage result = RasterCalculatorEngine.evaluate(sources, expr);
-                if (result == null) throw new RuntimeException("La expresion no produjo resultado.");
-                return result;
+                RasterCalculatorEngine.RasterSource aSource = toSource(aSel);
+                if (aSource == null) throw new IllegalArgumentException("Seleccione un raster A valido.");
+                sources.add(aSource);
+                if (bSel != null && !"(ninguno)".equals(bSel)) {
+                    RasterCalculatorEngine.RasterSource bSource = toSource(bSel);
+                    if (bSource != null) sources.add(bSource);
+                }
+                if (cSel != null && !"(ninguno)".equals(cSel)) {
+                    RasterCalculatorEngine.RasterSource cSource = toSource(cSel);
+                    if (cSource != null) sources.add(cSource);
+                }
+                LocalRasterData sourceData = rasterMap.get(aSel);
+                String crs = sourceData == null ? null : sourceData.getSourceCRS();
+                if (crs == null || crs.isBlank()) {
+                    throw new IllegalArgumentException(
+                            "El calculador cientifico requiere un raster con CRS explicito.");
+                }
+                AnalysisRaster analysis = RasterCalculatorEngine.evaluateAnalysis(
+                        sources, expr, crs, null);
+                File tif = File.createTempFile("raster_calc_", ".tif");
+                tif.deleteOnExit();
+                analysis.exportGeoTiff(tif);
+                return new Object[]{analysis, RasterCalculatorEngine.toPreviewImage(analysis), tif};
             }
 
             @Override
             protected void done() {
                 try {
-                    BufferedImage result = get();
-                    // Save as new raster layer
+                    Object[] payload = get();
+                    AnalysisRaster analysis = (AnalysisRaster) payload[0];
+                    BufferedImage preview = (BufferedImage) payload[1];
+                    File tif = (File) payload[2];
                     String name = NotificationManager.inputText(RasterCalculatorDialog.this,
                             "Resultado", "Nombre de la capa resultante:", null);
                     if (name == null || name.isBlank()) name = "calc_" + System.currentTimeMillis() % 10000;
 
                     LocalRasterData src = rasterMap.get(aSel);
                     if (src != null) {
-                        LocalRasterData outData = new LocalRasterData(result, src.getEnvelope(),
-                                1, src.isGeoreferenced(), src.getSourceCRS());
-                        Layer layer = new Layer(name, "", "RASTER");
+                        LocalRasterData outData;
+                        try {
+                            outData = RasterImageLoader.load(tif);
+                        } catch (Exception loadFailure) {
+                            outData = new LocalRasterData(preview, src.getEnvelope(),
+                                    1, src.isGeoreferenced(), analysis.crsCode());
+                        }
+                        Layer layer = new Layer(name, tif.getAbsolutePath(), "RASTER");
                         AppContext.project().addLayer(layer);
                         AppContext.addLayer(layer);
                         AppContext.mapPanel().addOrUpdateRasterLayer(layer, outData);
                         CatgisDesktopApp.markProjectDirty();
-                        NotificationManager.toastSuccess("Capa '" + name + "' creada correctamente.");
+                        NotificationManager.toastSuccess(
+                                "Capa '" + name + "' creada (GeoTIFF float: " + tif.getName() + ").");
                     }
                 } catch (Exception ex) {
                     NotificationManager.error(RasterCalculatorDialog.this, "Error",
