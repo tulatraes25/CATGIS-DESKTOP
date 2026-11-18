@@ -104,7 +104,7 @@ public class CatgisDesktopApp extends JFrame {
         onlineConnectionsToolbar = new OnlineConnectionsToolbar();
         topographyToolbar = new TopographyToolbar();
 
-        // Wire AppContext (migration in progress — new code should use AppContext, not static fields)
+        // Wire AppContext (migration in progress - new code should use AppContext, not static fields)
         AppContext ctx = AppContext.get();
         ctx.setMapPanel(mapPanel);
         ctx.setLayersPanel(layersPanel);
@@ -481,6 +481,41 @@ public class CatgisDesktopApp extends JFrame {
             }
         }
         updateWindowTitle();
+        offerRecoveryIfAvailable();
+    }
+
+    private void offerRecoveryIfAvailable() {
+        if (java.awt.GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+        ProjectRecoveryJournal.RecoverableSnapshot snapshot =
+                ProjectRecoveryJournal.latestRecoverable();
+        if (snapshot == null) {
+            return;
+        }
+        boolean restore = NotificationManager.confirm(
+                getMainFrameSafe(),
+                "Recuperar trabajo sin guardar",
+                "Hay un snapshot de recuperacion del "
+                        + java.time.Instant.ofEpochMilli(snapshot.timestamp())
+                        + " con " + snapshot.layerCount() + " capa(s).\n"
+                        + "Se abrira como proyecto recuperado; tu archivo original no se modifica.\n"
+                        + "¿Restaurarlo ahora?"
+        );
+        if (!restore) {
+            return;
+        }
+        try {
+            boolean opened = LoadProjectAction.loadProjectFile(
+                    ProjectRecoveryJournal.requireRestorable(snapshot).toFile(), false);
+            if (!opened) {
+                NotificationManager.warn(getMainFrameSafe(), "Recuperacion",
+                        "No se pudo abrir el snapshot de recuperacion. Se conserva el proyecto actual.");
+            }
+        } catch (Exception failure) {
+            NotificationManager.warn(getMainFrameSafe(), "Recuperacion",
+                    "Snapshot de recuperacion invalido: " + failure.getMessage());
+        }
     }
 
     public void showStartupProjectCrsPromptIfNeeded() {
@@ -588,6 +623,8 @@ public class CatgisDesktopApp extends JFrame {
         AppContext.get().markProjectDirty();
         updateWindowTitle();
     }
+
+
 
     /**
      * @deprecated Use {@code AppContext.get().markProjectClean()} instead.

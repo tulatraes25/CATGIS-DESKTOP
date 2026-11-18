@@ -39,6 +39,7 @@ public final class AppContext {
     public void setProject(Project p) { this.currentProject = p; }
     public void markProjectDirty() {
         if (currentProject != null) currentProject.setModified(true);
+        ProjectRecoveryJournal.onProjectDirty();
     }
     public void markProjectClean() {
         if (currentProject != null) currentProject.setModified(false);

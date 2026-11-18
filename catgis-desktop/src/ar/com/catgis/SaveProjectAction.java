@@ -175,6 +175,7 @@ public class SaveProjectAction extends AbstractAction {
             if (showDialogs) {
                 NotificationManager.info(null, null, "Proyecto guardado correctamente.");
             }
+            ProjectRecoveryJournal.discardFor(AppContext.project());
             return true;
         } catch (Exception ex) {
             AppErrorSupport.logFailure("Error al guardar proyecto " + file.getAbsolutePath(), ex);

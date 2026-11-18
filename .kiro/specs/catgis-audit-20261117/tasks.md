@@ -5,7 +5,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
 - [ ] **T0 — Reconciliación y gobernanza**
   - Spec Kiro, manifiesto de capacidad, conciliación de docs/ledger, ruleset
     reforzado, snapshot de runs.
-- [ ] **T1 — No perder trabajo** (en curso)
+- [x] **T1 — No perder trabajo** (cerrado)
   - #144 #146 #155 #260 #148 #149 #153 #151 #150 #195 #193 #175 #176.
 - [x] **T2 — Ciencia básica fiable (PRs #266 + este)**
   - #258 IDW, #262 ASCII/stats, #257 métrica/signos, #256 raster calculator,
@@ -66,3 +66,11 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   posicionales. Tests `ProjectLayerRoundtripByTypeContractTest` (GPX, GeoPackage,
   SpatiaLite, Vector, PostGIS y WFS con tipo/path/CRS/count/source) y ajustes v2
   en `SpecializedProjectLayerPayloadContractTest`. Solo resta #149.
+- T1 cierre (2026-11-17): **#149** corregido (PR en curso): `ProjectRecoveryJournal`
+  con snapshots aislados/versionados en `~/.catgis/recovery` (override
+  `-Dcatgis.recovery.root`), sidecars Shapefile de capas en memoria, manifiesto
+  SHA-256, retención 5, restauración no destructiva vía flujo normal de apertura,
+  rechazo de snapshots corruptos, autosnapshot EDT cada 60 s (headless no-op) y
+  prompt de recuperación al inicio; al guardar se descartan los snapshots del
+  proyecto. Tests `ProjectRecoveryJournalContractTest` (5). T1 completo:
+  #144/#146/#148/#149/#155/#260.
