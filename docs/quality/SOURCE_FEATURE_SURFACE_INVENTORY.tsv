@@ -131,6 +131,7 @@ LOADER_OR_READER	climate/NetCdfLoader.java
 LOADER_OR_READER	CsvTableReader.java
 LOADER_OR_READER	DbfTableReader.java
 LOADER_OR_READER	DxfLoader.java
+LOADER_OR_READER	FlatGeobufFrameReader.java
 LOADER_OR_READER	FlatGeobufLoader.java
 LOADER_OR_READER	GeoJsonLoader.java
 LOADER_OR_READER	GeoPackageLoader.java
