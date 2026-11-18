@@ -243,7 +243,11 @@ public final class PostgisConnectionStore {
             for (int i = 0; i < bytes.length; i++) {
                 bytes[i] ^= key[i % key.length];
             }
-            return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            java.nio.charset.CharsetDecoder decoder = java.nio.charset.StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT);
+            return decoder.decode(java.nio.ByteBuffer.wrap(bytes)).toString();
         } catch (Exception invalidLegacy) {
             return "";
         }
