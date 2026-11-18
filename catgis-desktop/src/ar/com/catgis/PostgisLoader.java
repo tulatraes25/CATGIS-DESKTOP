@@ -400,7 +400,7 @@ public final class PostgisLoader {
         return false;
     }
 
-    private static Connection openJdbcConnection(PostgisConnectionInfo info) throws Exception {
+    static Connection openJdbcConnection(PostgisConnectionInfo info) throws Exception {
         Class.forName("org.postgresql.Driver");
         DriverManager.setLoginTimeout(8);
         String url = "jdbc:postgresql://" + info.getHost() + ":" + info.getPort() + "/" + info.getDatabase()

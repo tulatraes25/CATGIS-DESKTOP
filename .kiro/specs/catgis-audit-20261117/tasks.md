@@ -112,3 +112,10 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   Tests `PostgisCredentialsVaultContractTest` (7); política en
   `docs/quality/POSTGIS_CREDENTIALS_SECURITY_20261117.md`. DPAPI/Keychain
   completo queda como mejora futura.
+- T4 avance 2 (2026-11-17): **#156** implementado (PR en curso): REPLACE TABLE
+  escribe a `<tabla>_catgis_stage_<hex>`, verifica filas y hace DROP+RENAME en
+  una transacción JDBC con ROLLBACK y limpieza de staging; identificadores
+  validados/citados; modo oculto en UI. Tests de plan (4) y test real en
+  `PostgisRealIntegrationTest` (job PostGIS CI). #261 se registra como
+  **PARCIAL/MITIGADO**: vault v2 con secreto local, pero DPAPI/Keychain/Secret
+  Service completo sigue pendiente.
