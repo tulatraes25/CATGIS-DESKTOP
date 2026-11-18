@@ -83,3 +83,26 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 - Los conteos de tests (1588 locales) y los 15 skips declarados **no** son PASS
   de GUI/nativo; ver `docs/quality/SKIP_INVENTORY.md`.
 - No se ejecutaron sesiones GUI interactivas ni ensayos con datos municipales.
+## 8. Cierre administrativo de issues (2026-11-17)
+
+Los siguientes issues ya tenían corrección mergeada, tests y `main` certificado;
+se cerraron en GitHub con comentario de evidencia apuntando al PR, al test y a
+`main = 0acd7052ec9238dd1cdf8a49c1f2de1d7f6adb02` (Certification post-main +
+attestation `44356056579`):
+
+`#128, #144, #146, #148, #149, #155, #156, #161, #162, #163, #176, #256, #257,
+#258, #259, #260, #262`, y previamente `#43` y `#108`.
+
+### Issues que permanecen ABIERTOS (trabajo real pendiente o decisión)
+
+| Issue | Estado honesto |
+|---|---|
+| #263 | Epic de auditoría (se cierra sólo con el mapa completo remediado). |
+| #112 | GeoParquet: M1/M2 certificados; **M3 ingesta real de filas NO implementada** (feature freeze A0.7). |
+| #175 | FlatGeobuf: streaming por ventanas/cancelación certificado; **lector indexado >100k pendiente**. |
+| #139 | Núcleo de calibración espectral certificado; **UI de índices calibrados pendiente**. |
+| #261 | Vault v2 mitigado; **DPAPI/Keychain/Secret Service pendiente**. |
+| #150, #151, #153, #193, #195 | CRS fuente/persistencia: parciales. |
+| #164 | Mojibake residual en superficies de edición/medición/CATMAP. |
+| #167, #174, #143, #132, #114, #113 | CI/mojibake/gobernanza/procesamiento/QA. |
+| A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |
