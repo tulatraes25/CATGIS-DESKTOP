@@ -54,3 +54,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   `ProjectOpenService.inspect`, grupos y codec legacy; archivos v1 siguen
   abriendo. Tests `ProjectCodecRoundTripContractTest` (4). Restan
   #146/#149/#155.
+- T1 avance 4 (2026-11-17): **#155** corregido (PR en curso): publicacion de
+  familias Shapefile con journal (`.base.catgis-publish.journal`), commit point
+  por borrado del journal, recuperacion al siguiente guardado, backups huerfanos
+  limpiados, lock de identidad con deteccion de stale (15 min) y seam de crash
+  inyectado. Tests `VectorFamilyJournalContractTest` (7). Solo resta #146/#149.
