@@ -221,16 +221,16 @@ class RuntimeIdentityTests(unittest.TestCase):
                 check.verify_junit(path)
 
     def test_full_suite_count_nodes_and_skip_budget(self):
-        root = ET.Element('testsuite', name='synthetic', tests='700', failures='0', errors='0', skipped='15')
+        root = ET.Element('testsuite', name='synthetic', tests='700', failures='0', errors='0', skipped='16')
         for i in range(700):
             case = ET.SubElement(root, 'testcase', name=str(i))
-            if i < 15:
+            if i < 16:
                 ET.SubElement(case, 'skipped')
         path = self.root / 'TEST-synthetic.xml'
         path.write_bytes(ET.tostring(root))
-        self.assertEqual(15, check.verify_full_suite(self.root)['skipped'])
-        ET.SubElement(root[15], 'skipped')
-        root.set('skipped', '16')
+        self.assertEqual(16, check.verify_full_suite(self.root)['skipped'])
+        ET.SubElement(root[16], 'skipped')
+        root.set('skipped', '17')
         path.write_bytes(ET.tostring(root))
         with self.assertRaises(ValueError):
             check.verify_full_suite(self.root)
