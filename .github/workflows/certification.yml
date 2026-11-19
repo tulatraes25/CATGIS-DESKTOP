@@ -276,6 +276,23 @@ jobs:
       - name: Full macOS headless suite and native .app packaging
         shell: bash
         run: ./gradlew --offline --no-daemon clean verifyMacAppImage test
+      - name: Verify native macOS Keychain backend executed (skip is not evidence)
+        shell: bash
+        run: |
+          set -euo pipefail
+          xml="$(find build/test-results/test -name 'TEST-*MacKeychainBackendContractTest*.xml' -print -quit)"
+          test -n "$xml"
+          python3 - "$xml" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          root = ET.parse(sys.argv[1]).getroot()
+          tests = int(root.attrib.get('tests', '0'))
+          failures = len(root.findall('.//failure')) + len(root.findall('.//error'))
+          skipped = len(root.findall('.//skipped'))
+          print(f'MAC_KEYCHAIN_NATIVE_EVIDENCE tests={tests} failures={failures} skipped={skipped}')
+          if tests != 1 or failures != 0 or skipped != 0:
+              raise SystemExit('Native macOS Keychain test did not execute successfully; a skip is not evidence')
+          PY
       - name: Beta --self-test (headless smoke)
         shell: bash
         run: ./gradlew --offline --no-daemon -q run --args="--self-test"
