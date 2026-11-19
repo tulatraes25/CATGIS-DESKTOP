@@ -211,3 +211,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   ExternalToolService.runBounded (sin ProcessBuilder nuevo). Tests
   OsKeyProtectorContractTest (5) + vault (7). 1695 tests ok. #261 SIGUE
   ABIERTO por Keychain macOS y matriz nativa de sesiones.
+- T4 avance (2026-11-17): #132 `executeCode` ya no usa `deleteOnExit`; el
+  script temporal se elimina en `finally` y se registra un warning si falla.
+  Nuevo `ScriptTempCleanupContractTest` (sin fugas). #132 SIGUE ABIERTO por la
+  anomalia Windows original y la matriz nativa de lifecycle.
