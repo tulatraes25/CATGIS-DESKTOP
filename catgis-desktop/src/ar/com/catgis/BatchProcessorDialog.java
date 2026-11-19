@@ -16,6 +16,7 @@ public class BatchProcessorDialog extends JDialog {
     private final JTextField outputDirField;
     private final JComboBox<String> operationCombo;
     private final JCheckBox includeSubdirsCheck;
+    private final JCheckBox transactionalCheck;
     private final JTextArea fileListArea;
     private final JProgressBar progressBar;
     private final JLabel statusLabel;
@@ -94,6 +95,15 @@ public class BatchProcessorDialog extends JDialog {
         gbc.gridy = 3; gbc.gridx = 0;
         includeSubdirsCheck = new JCheckBox("Incluir subdirectorios");
         form.add(includeSubdirsCheck, gbc);
+
+        gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2;
+        transactionalCheck = new JCheckBox(
+                "Transaccional: todo o nada (staging + rollback de salidas previas)");
+        transactionalCheck.setSelected(true);
+        transactionalCheck.setToolTipText(
+                "Si una operacion o publicacion falla, no se reemplaza ninguna salida previa.");
+        form.add(transactionalCheck, gbc);
+        gbc.gridwidth = 1;
 
         // Form and file preview share the body; the title keeps the NORTH region.
 
@@ -277,10 +287,12 @@ public class BatchProcessorDialog extends JDialog {
         }
 
         String operation = selectedOperation;
+        boolean transactional = transactionalCheck.isSelected();
         runButton.setEnabled(false);
         scanButton.setEnabled(false);
         operationCombo.setEnabled(false);
         includeSubdirsCheck.setEnabled(false);
+        transactionalCheck.setEnabled(false);
         statusLabel.setText("Procesando...");
         statusLabel.setForeground(Color.BLUE);
         progressBar.setValue(0);
@@ -292,7 +304,7 @@ public class BatchProcessorDialog extends JDialog {
         new SwingWorker<BatchProcessor.BatchResult, Void>() {
             @Override
             protected BatchProcessor.BatchResult doInBackground() {
-                return BatchProcessor.processBatch(job, (input, output) -> {
+                java.util.function.BiConsumer<File, File> operationBody = (input, output) -> {
                     try {
                         switch (operation) {
                             case "Copiar archivos" -> {
@@ -308,7 +320,12 @@ public class BatchProcessorDialog extends JDialog {
                     } catch (Exception e) {
                         throw new RuntimeException("Error en operacion batch '" + operation + "' sobre " + input.getName(), e);
                     }
-                }, progress -> SwingUtilities.invokeLater(() -> progressBar.setValue(progress)));
+                };
+                java.util.function.Consumer<Integer> progressSink =
+                        progress -> SwingUtilities.invokeLater(() -> progressBar.setValue(progress));
+                return transactional
+                        ? BatchTransactionalProcessor.process(job, operationBody, progressSink)
+                        : BatchProcessor.processBatch(job, operationBody, progressSink);
             }
 
             @Override
@@ -321,6 +338,7 @@ public class BatchProcessorDialog extends JDialog {
                     scanButton.setEnabled(true);
                     operationCombo.setEnabled(true);
                     includeSubdirsCheck.setEnabled(true);
+                    transactionalCheck.setEnabled(true);
                     runButton.setEnabled(!currentFiles.isEmpty()
                             && normalizedInput.equals(scannedInputPath)
                             && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs
