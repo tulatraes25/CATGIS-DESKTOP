@@ -239,3 +239,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   se mantienen congelados por feature freeze A0.7 y documentados como
   INSPECTION_ONLY/BETA_LIMITED. El epic #263 queda pendiente solo de A0.7/F3
   fisico y decision de programa sobre residuales #82/#74/#73/#114/#113/#132.
+- T4 avance (2026-11-19): #114 `BatchTransactionalProcessor` opt-in con
+  staging privado, publicacion atomica, backup/rollback de salidas previas y
+  limpieza; tests (4: exito, fallo de operacion, fallo de publicacion, plan
+  rechazado). API existente intacta; UI/sidecars/crash siguen residuales.
+  1701 tests ok.

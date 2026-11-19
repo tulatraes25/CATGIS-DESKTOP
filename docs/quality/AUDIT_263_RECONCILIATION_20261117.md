@@ -105,7 +105,7 @@ attestation `44356056579`):
 
 
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
-| #143, #132, #114, #113 | Ledger/scripting/procesamiento/QA: #132 con limpieza de temporales certificada; anomalia Windows y matriz nativa siguen abiertas. |
+| #143, #132, #114, #113 | #132 limpieza de temporales certificada; #114 transaccion opt-in all-files con rollback certificada (UI/sidecars/crash residuales); anomalias/QA abiertas. |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |
 ## 9. CATMAP A0.x — cierres de implementación (2026-11-17)
 
