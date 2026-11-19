@@ -258,3 +258,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   basename como unidad (backup/publish/rollback conjuntos), con tests de exito
   y de fallo de sidecar restaurando principal y sidecar previos. 1707 tests ok.
   UI de lote y familias completas Shapefile siguen residuales.
+- Consolidacion final (2026-11-19): main bf671b4 certificado (Certification
+  44531670621, Runtime 44531670539, attestation 44534311113), 1707 tests,
+  ruleset 25 checks activo. Evidencia nativa OS-backed/scripting multi-OS
+  registrada; residuales #175/#112 congelados por decision owner, #114/#113/
+  #132 parciales y #82/#74/#73 fisicos bajo A0.7/F3 NOT_CERTIFIED.
