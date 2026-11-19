@@ -300,7 +300,7 @@ jobs:
           print('macOS JUnit:', counters)
           if counters['tests'] < 700 or counters['failures'] or counters['errors']:
               raise SystemExit('macOS test-count or JUnit failures/errors gate violated')
-          if counters['skipped'] > 15:
+          if counters['skipped'] > 16:
               raise SystemExit('macOS reviewed test-skip budget exceeded')
           PY
           app='build/installer/macos/app-image/CATGIS Desktop.app'
@@ -375,8 +375,9 @@ jobs:
           "- skipped: $skipped" >> $env:GITHUB_STEP_SUMMARY
           if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
-          # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips.
-          if ($skipped -gt 15) { throw "Linux skip budget exceeded: $skipped > 15" }
+          # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips
+          # + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
+          if ($skipped -gt 16) { throw "Linux skip budget exceeded: $skipped > 16" }
       - name: Upload Linux evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -483,8 +484,9 @@ jobs:
           "- skipped: $skipped" >> $env:GITHUB_STEP_SUMMARY
           if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
-          # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips.
-          if ($skipped -gt 15) { throw "Windows skip budget exceeded: $skipped > 15" }
+          # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips
+          # + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
+          if ($skipped -gt 16) { throw "Windows skip budget exceeded: $skipped > 16" }
       - name: Upload Windows evidence
         if: failure()
         uses: actions/upload-artifact@v4

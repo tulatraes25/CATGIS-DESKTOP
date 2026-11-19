@@ -178,7 +178,7 @@ def verify_full_suite(directory: Path) -> dict:
             totals[key] += value
     require(totals["tests"] >= 700, "Full-suite count below existing minimum")
     require(totals["failures"] == 0 and totals["errors"] == 0, "Full-suite failures/errors")
-    require(totals["skipped"] <= 15, "Reviewed dependency-skip budget exceeded")
+    require(totals["skipped"] <= 16, "Reviewed dependency-skip budget exceeded")
     return totals
 
 

@@ -26,6 +26,10 @@ final class OsKeyProtector {
         byte[] protect(byte[] secret) throws IOException;
 
         byte[] unprotect(byte[] protectedSecret) throws IOException;
+
+        default void clear() {
+            // OS stores that support removal override this.
+        }
     }
 
     private OsKeyProtector() {}
@@ -48,7 +52,10 @@ final class OsKeyProtector {
         if (os.contains("linux")) {
             return linuxSecretTool();
         }
-        return null; // macOS Keychain remains a declared residual.
+        if (os.contains("mac")) {
+            return macKeychain();
+        }
+        return null;
     }
 
     private static Protector windowsDpapi(String os) {
@@ -128,6 +135,56 @@ final class OsKeyProtector {
 
     private static String runLlmTool(String[] command, String stdinText) throws IOException {
         return runProcess(command, stdinText, 10_000L);
+    }
+
+    private static Protector macKeychain() {
+        Path security = Path.of("/usr/bin/security");
+        if (!Files.isExecutable(security)) {
+            return null;
+        }
+        return new Protector() {
+            private static final String ACCOUNT = "catgis";
+            private static final String SERVICE = "catgis-postgis-vault";
+
+            @Override
+            public String name() {
+                return "macos-keychain";
+            }
+
+            @Override
+            public byte[] protect(byte[] secret) throws IOException {
+                // security -i reads the command from stdin: the Base64 secret is
+                // never in argv/ps and interactive-mode tokenization is safe for
+                // the Base64 alphabet.
+                String encoded = Base64.getEncoder().encodeToString(secret);
+                String command = "add-generic-password -U -a " + ACCOUNT
+                        + " -s " + SERVICE + " -w " + encoded + "\n";
+                runProcess(new String[]{security.toString(), "-i"}, command, 10_000L);
+                return secret;
+            }
+
+            @Override
+            public byte[] unprotect(byte[] protectedSecret) throws IOException {
+                String encoded = runProcess(new String[]{security.toString(),
+                        "find-generic-password", "-w", "-a", ACCOUNT, "-s", SERVICE},
+                        null, 10_000L);
+                if (encoded == null || encoded.isBlank()) {
+                    throw new IOException("Keychain no devolvio el secreto PostGIS.");
+                }
+                return Base64.getDecoder().decode(encoded.trim());
+            }
+
+            @Override
+            public void clear() {
+                try {
+                    runProcess(new String[]{security.toString(), "-i"},
+                            "delete-generic-password -a " + ACCOUNT + " -s " + SERVICE + "\n",
+                            10_000L);
+                } catch (IOException ignored) {
+                    // Best-effort removal for tests/credential clearing.
+                }
+            }
+        };
     }
 
     private static String runProcess(String[] command, String stdinText, long timeoutMillis)

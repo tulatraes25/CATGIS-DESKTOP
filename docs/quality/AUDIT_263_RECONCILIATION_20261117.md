@@ -61,7 +61,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #162 | **CORREGIDO en PR T3-3** (CF grid_mapping/packaging, sin WGS84 asumido) | T3 |
 | #139 | **CORREGIDO/VERIFICADO** (UI con calibración explícita y export analítico; PR T3-9) | T3 |
 | #163 | **CORREGIDO en PR T3-5** (normalización explícita vs default UI) | T3 |
-| #261 | **PARCIAL AVANZADO** (vault v2 + wrapping OS-backed Windows DPAPI / Linux Secret Service; Keychain macOS pendiente) | T4 |
+| #261 | **PARCIAL AVANZADO** (vault v2 + DPAPI/Secret Service + Keychain macOS implementado; falta evidencia CI nativa macOS y matriz de sesiones) | T4 |
 | #156 | **CORREGIDO en PR T4-2** (staging + swap transaccional; verificación CI PostGIS) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
 | DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |
@@ -102,7 +102,7 @@ attestation `44356056579`):
 | #112 | GeoParquet: M1/M2 certificados; **M3 ingesta real de filas NO implementada** (feature freeze A0.7). |
 | #175 | FlatGeobuf: streaming por ventanas/cancelación certificado; **lector indexado >100k pendiente**. |
 | #139 | Núcleo de calibración espectral certificado; **UI de índices calibrados pendiente**. |
-| #261 | Vault v2 + `OsKeyProtector` OS-backed en Windows/Linux; **macOS Keychain pendiente** y matriz de sesiones nativa sin cerrar. |
+| #261 | Vault v2 + `OsKeyProtector` OS-backed en Windows/Linux/macOS (`security -i`); pendiente evidencia CI macOS y matriz de sesiones nativa. |
 
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
 | #143, #132, #114, #113 | Ledger/scripting/procesamiento/QA: #132 con limpieza de temporales certificada; anomalia Windows y matriz nativa siguen abiertas. |
