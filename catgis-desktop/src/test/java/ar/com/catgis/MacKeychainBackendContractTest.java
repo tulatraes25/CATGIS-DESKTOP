@@ -27,6 +27,7 @@ class MacKeychainBackendContractTest {
             try {
                 protectedSecret = protector.protect(secret);
             } catch (IOException unavailable) {
+                System.out.println("MAC_KEYCHAIN_NATIVE_UNAVAILABLE " + unavailable.getMessage());
                 org.junit.jupiter.api.Assumptions.assumeTrue(false,
                         "Keychain no disponible en este runner: " + unavailable.getMessage());
                 return;
@@ -34,6 +35,7 @@ class MacKeychainBackendContractTest {
             try {
                 assertArrayEquals(secret, protector.unprotect(protectedSecret),
                         "Keychain roundtrip must preserve the fake secret");
+                System.out.println("MAC_KEYCHAIN_NATIVE_OK backend=" + protector.name());
             } finally {
                 protector.clear();
             }
