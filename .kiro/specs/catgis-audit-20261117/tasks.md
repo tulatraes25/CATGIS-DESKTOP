@@ -215,3 +215,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   script temporal se elimina en `finally` y se registra un warning si falla.
   Nuevo `ScriptTempCleanupContractTest` (sin fugas). #132 SIGUE ABIERTO por la
   anomalia Windows original y la matriz nativa de lifecycle.
+- T4 avance (2026-11-17): #261 backend Keychain macOS implementado con
+  `security -i` (modo batch por stdin; el secreto Base64 nunca va en argv/ps),
+  `clear()` y test nativo `MacKeychainBackendContractTest` (macOS, skip
+  transparente si el runner no expone Keychain). Windows DPAPI/Linux Secret
+  Service ya certificados en PR #297. #261 SIGUE ABIERTO hasta evidencia CI
+  macOS y matriz de sesiones.

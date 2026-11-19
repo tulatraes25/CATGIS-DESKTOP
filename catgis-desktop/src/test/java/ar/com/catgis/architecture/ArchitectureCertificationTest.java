@@ -148,6 +148,7 @@ class ArchitectureCertificationTest {
                 "ar/com/catgis/GeoPackageRealTest.java",
                 "ar/com/catgis/ReleaseFormatCompatibilityTest.java",
                 "ar/com/catgis/SpatiaLiteRealTest.java",
+                "ar/com/catgis/MacKeychainBackendContractTest.java",
                 "ar/com/catgis/integration/HeavyFormatsIntegrationTest.java"
         );
         Set<String> actual = filesContaining(TEST_ROOT, "Assumptions.assume");
