@@ -254,3 +254,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   y salida de 300 KB acotada; pasos de Certification Linux/Windows/macOS exigen
   ejecucion (skip no es evidencia). Anomalia Windows original no erradicada;
   #132 sigue abierto. 1705 tests ok.
+- T4 avance (2026-11-19): #114 transaccion opt-in publica sidecars del mismo
+  basename como unidad (backup/publish/rollback conjuntos), con tests de exito
+  y de fallo de sidecar restaurando principal y sidecar previos. 1707 tests ok.
+  UI de lote y familias completas Shapefile siguen residuales.

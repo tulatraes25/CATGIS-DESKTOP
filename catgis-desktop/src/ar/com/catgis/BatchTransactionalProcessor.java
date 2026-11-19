@@ -70,7 +70,8 @@ public final class BatchTransactionalProcessor {
         try {
             for (int i = 0; i < total; i++) {
                 BatchOutputPlan.Entry entry = plan.get(i);
-                Path stagedPath = stagingRoot.resolve(i + "-" + entry.output().getName());
+                String prefix = i + "-";
+                Path stagedPath = stagingRoot.resolve(prefix + entry.output().getName());
                 try {
                     operation.accept(entry.input(), stagedPath.toFile());
                 } catch (RuntimeException failure) {
@@ -82,32 +83,54 @@ public final class BatchTransactionalProcessor {
                             List.of(entry.input().getName()
                                     + ": la operacion no produjo una salida regular"));
                 }
-                staged.add(new Staged(stagedPath, entry.output().toPath()));
+                // Dataset family: primary output + sidecars named after the same
+                // staged basename (e.g. .aux.xml/.tfw/.prj) are published as one
+                // transaction unit and rolled back together.
+                List<StagedFile> family = new ArrayList<>();
+                family.add(new StagedFile(stagedPath, entry.output().toPath()));
+                try (var files = Files.list(stagingRoot)) {
+                    List<Path> siblings = files
+                            .filter(path -> path.getFileName().toString().startsWith(prefix))
+                            .filter(Files::isRegularFile)
+                            .filter(path -> !path.equals(stagedPath))
+                            .sorted()
+                            .toList();
+                    for (Path sibling : siblings) {
+                        String relative = sibling.getFileName().toString()
+                                .substring(prefix.length());
+                        Path target = entry.output().toPath().getParent().resolve(relative);
+                        family.add(new StagedFile(sibling, target));
+                    }
+                }
+                staged.add(new Staged(family));
                 if (progressCallback != null) {
                     progressCallback.accept((int) ((i + 1.0) / total * 100));
                 }
             }
-            for (int i = 0; i < staged.size(); i++) {
-                Staged current = staged.get(i);
-                Path target = current.target();
-                Path backup = null;
-                if (Files.isRegularFile(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
-                    backup = stagingRoot.resolve("backup-" + i + "-" + target.getFileName());
-                    Files.move(target, backup, StandardCopyOption.ATOMIC_MOVE);
-                }
-                try {
-                    publisher.publish(current.staged(), target);
-                } catch (IOException publishFailure) {
-                    if (backup != null) {
-                        Files.move(backup, target, StandardCopyOption.ATOMIC_MOVE,
-                                StandardCopyOption.REPLACE_EXISTING);
+            int backupIndex = 0;
+            for (Staged current : staged) {
+                for (StagedFile file : current.files()) {
+                    Path target = file.target();
+                    Path backup = null;
+                    if (Files.isRegularFile(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                        backup = stagingRoot.resolve("backup-" + backupIndex++ + "-"
+                                + target.getFileName());
+                        Files.move(target, backup, StandardCopyOption.ATOMIC_MOVE);
                     }
-                    rollback(backups);
-                    return new BatchProcessor.BatchResult(0, total,
-                            List.of("Publicacion transaccional fallida: "
-                                    + publishFailure.getMessage()));
+                    try {
+                        publisher.publish(file.staged(), target);
+                    } catch (IOException publishFailure) {
+                        if (backup != null) {
+                            Files.move(backup, target, StandardCopyOption.ATOMIC_MOVE,
+                                    StandardCopyOption.REPLACE_EXISTING);
+                        }
+                        rollback(backups);
+                        return new BatchProcessor.BatchResult(0, total,
+                                List.of("Publicacion transaccional fallida: "
+                                        + publishFailure.getMessage()));
+                    }
+                    backups.add(new Backup(target, backup));
                 }
-                backups.add(new Backup(target, backup));
             }
             return new BatchProcessor.BatchResult(total, 0, List.of());
         } catch (IOException ioFailure) {
@@ -161,7 +184,9 @@ public final class BatchTransactionalProcessor {
         }
     }
 
-    private record Staged(Path staged, Path target) {}
+    private record Staged(List<StagedFile> files) {}
+
+    private record StagedFile(Path staged, Path target) {}
 
     private record Backup(Path target, Path backup) {}
 }
