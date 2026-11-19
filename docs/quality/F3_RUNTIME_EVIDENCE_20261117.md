@@ -63,3 +63,17 @@ crear ventanas, el job falla de forma visible y no se declara evidencia.
   launcher + E2E).
 - Se mantiene **NOT_CERTIFIED** A0.7/F3: falta matriz interactiva humana,
   HiDPI/foco reales, gestos, impresión física, FPS/memoria y multi-sesión.
+## Verificación funcional local — Windows (2026-11-19)
+
+Ejecutado sobre el árbol de `main` (antes del PR de esta fase):
+
+- `./gradlew build`: **1707 tests / 0 fallos / 15 skips**.
+- `./gradlew run --args="--version"` → `CATGIS Desktop 1.0.0-beta.2 (beta)`.
+- `./gradlew run --args="--self-test"` → **SELFTEST_OK checks=13**.
+- `./gradlew e2eBetaHarness` → **E2E_OK checks=13** (headless, Windows 11 amd64,
+  Java 21.0.10): proyecto+reopen con EPSG:32719, SHP 2 features, GeoTIFF 20x20,
+  pendiente 32x32, GeoTIFF/ASCII reabiertos, PNG 1122x1587, PDF 1 página, SVG,
+  layout roundtrip hash y workspace model. Artefactos en `build/e2e-beta/`
+  (`report.md`, `checksums.sha256`); GDAL nativo no instalado en esta máquina
+  (warning esperado, no afecta los checks headless).
+- Esto **no** certifica la GUI física A0.7/F3; es evidencia funcional headless.

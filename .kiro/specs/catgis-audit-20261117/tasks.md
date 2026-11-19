@@ -269,3 +269,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   Windows: build 1707 tests, `--version` 1.0.0-beta.2 beta, `--self-test`
   13/13 SELFTEST_OK. Residual crash/performance/UI completa de #114 siguen
   abiertos; A0.7/F3 NOT_CERTIFIED.
+- Fase funcional (2026-11-19): verificacion local Windows `--version`,
+  `--self-test` 13/13 y `e2eBetaHarness` E2E_OK checks=13 con artefactos
+  (build/e2e-beta/report.md, checksums); anadida evidencia de stdin acotado
+  (10 KB aceptado, >1 MB rechazado) al contrato nativo de scripting #132.

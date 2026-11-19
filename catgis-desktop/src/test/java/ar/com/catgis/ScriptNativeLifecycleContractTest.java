@@ -49,6 +49,32 @@ class ScriptNativeLifecycleContractTest {
                 "stdout must stay within the reviewed byte budget: "
                         + large.output().length());
 
+        // Bounded stdin: a real child receives the selected input and oversized
+        // input fails closed before launching an unbounded child.
+        try {
+            java.nio.file.Path stdinScript = java.nio.file.Files.createTempFile(
+                    "catgis_stdin_", ".py");
+            try {
+                java.nio.file.Files.writeString(stdinScript,
+                        "import sys\ndata=sys.stdin.read()\nprint(len(data))",
+                        java.nio.charset.StandardCharsets.UTF_8);
+                ScriptEngine.ScriptResult stdin = ScriptEngine.executeScript(
+                        stdinScript.toFile(), 15, "x".repeat(10_000));
+                assertTrue(stdin.success(), "bounded stdin run failed: " + stdin.error());
+                assertTrue(stdin.output().contains("10000"), stdin.output());
+                String tooLarge = "y".repeat(1024 * 1024 + 1);
+                ScriptEngine.ScriptResult rejected = ScriptEngine.executeScript(
+                        stdinScript.toFile(), 15, tooLarge);
+                assertFalse(rejected.success(), "oversized stdin must fail closed");
+                assertFalse(rejected.error() == null || rejected.error().isBlank(),
+                        "oversized stdin must return a diagnostic");
+            } finally {
+                java.nio.file.Files.deleteIfExists(stdinScript);
+            }
+        } catch (java.io.IOException io) {
+            throw new AssertionError("stdin fixture failed", io);
+        }
+
         System.out.println("SCRIPT_NATIVE_LIFECYCLE_OK os="
                 + System.getProperty("os.name", "").toLowerCase(Locale.ROOT)
                 + " syntaxIterations=3 maxSyntaxMillis=" + maxSyntaxMillis
