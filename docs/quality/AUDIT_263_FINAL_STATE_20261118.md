@@ -1,0 +1,73 @@
+# Audit #263 — Estado final verificable (2026-11-17/18)
+
+Documento de cierre de rondas de remediación. **No certifica GUI física ni
+A0.7/F3**: registra exactamente qué issues están corregidos/verificados, qué
+queda abierto, y por qué (feature freeze, decisión de owner o gate físico).
+
+## Main de referencia
+
+- `main = c75df823cef647ddb7dc24868c5f5f7d64011b4d` (2026-11-19 UTC).
+- Post-main: **Certification** `44450886288` SUCCESS (15 jobs Linux/Windows/
+  macOS Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
+  `44450886212` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
+  `44452220530` SUCCESS.
+- Suite local: **1697 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
+- Ruleset activo `24546459` exige **25 checks** incl. `Verify exact main push
+  certification`, native GDAL, PostGIS, Runtime Identity 17/21 ×4, GeoParquet e
+  inventarios (evidencia: reconciliación §2/§8).
+
+## Issues cerrados con evidencia verificada
+
+`#43, #50, #64, #67, #70, #86, #87, #91, #94, #95, #96, #98, #99, #102, #108,
+#128, #139, #144, #146, #148, #149, #150, #151, #152, #153, #155, #156, #161,
+#162, #163, #164, #167, #174, #176, #193, #195, #256, #257, #258, #259, #260,
+#261, #262`
+
+Cada cierre referencia PR mergeado, tests que lo prueban y certificación
+post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10).
+
+## Issues abiertos — motivos verificados
+
+| Issue | Estado real | Bloqueo |
+|---|---|---|
+| **#263** | Epic de este audit. | Se cierra cuando los residuales de abajo sean aceptados/decididos. |
+| **#112** | GeoParquet M1 metadatos y M2 inspección off-EDT **certificados**; **M3 ingesta real de filas no implementada**. | **Feature freeze A0.7**: es una capacidad nueva, no un fix. Requiere decisión de producto + diseño multi-ronda (lector Parquet real no trivial). |
+| **#175** | FlatGeobuf con streaming por ventanas, cancelación, límites y fail-closed **certificados**; dataset >100k features sin lector indexado. | **Feature freeze A0.7**: lector indexado/lazy es una capacidad nueva. |
+| **#82** | Pan/drag sin redibujo completo: código + contrato CI **verificados** (PR #83/#84). | **Medición GUI física** (FPS/memoria/DPI en Windows real) — A0.7/F3. El propio issue prohíbe cerrarlo por CI headless. |
+| **#74** | Descubrimiento portable de WhiteboxTools corregido (PR #77). | **Ejecución nativa/resultados científicos** requieren binario WhiteboxTools; no certificado. |
+| **#73** | Lease entre procesos + journal de recuperación certificados (PR #75/#76). | Residuales de corte eléctrico, filesystems de red, estados ambiguos y escaneo al inicio. |
+| **#132** | `executeCode` sin `deleteOnExit` (limpieza inmediata certificada, PR #298); `ScriptProcessIO` con stdin/output acotado. | **Anomalía Windows original** (timeout intermitente) no reproducida/erradicada; matriz nativa de lifecycle pendiente. |
+| **#114** | Preflight completo del lote, colisiones/case/NFC/aliases, cero callbacks ante rechazo (PR #115). | **Transacción all-files**, rollback ante crash, contrato de sidecars Shapefile y evidencia de performance: incrementos separados. |
+| **#113** | `PolygonCoverageAudit` real, gaps/overlaps honestos, `NOT_EVALUATED` (PR #116). | **GUI asíncrona con progreso/cancelación, selección AOI, reparación reversible** y validación física. |
+| **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
+| **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
+
+## Bloqueos por decisión del owner
+
+- **DC-5 / CATSERVER T1**: productor de `catastro.ejido_urbano_mask`. Requiere
+  decisión de **fuente autoritativa y rol publicador**. Sin decisión, queda
+  bloqueado por diseño; no se puede cerrar con código.
+- **#112 / #175**: aceptar mantenerlos bloqueados por feature freeze A0.7 hasta
+  que el owner autorice nuevas capacidades, o priorizarlos explícitamente.
+
+## A0.7 / F3 — lo que sí hay y lo que falta
+
+Evidencia headless/CI vigente:
+- `ui-snapshot.yml` `44414255394` (3/3 Linux Xvfb/Windows/macOS ARM).
+- `f3-runtime-smoke.yml` `44414260382` (3/3 app-image + launcher + E2E).
+- Certification multi-OS + Runtime Identity 17/21 ×4 + native GDAL + PostGIS.
+- Evidencia nativa OS-backed de credenciales: Windows DPAPI, Linux Secret
+  Service/unsupported, macOS Keychain (Intel+ARM), con pasos que fallan ante skip.
+
+**No certificado** (A0.7/F3 `NOT_CERTIFIED`): matriz interactiva humana
+(F3.2/F3.3/F3.4), HiDPI/foco reales, gestos del owner, impresión física,
+mediciones de FPS/memoria en Windows real y aislamiento físico multi-sesión.
+
+## Conclusión
+
+La remediación de código/CI del audit está **sustancialmente completa y
+certificada** en `main`: 43 issues cerrados con evidencia, 1697 tests verdes,
+ruleset estricto y attestation por push. El cierre del **epic #263** requiere:
+1) decisión DC-5 del owner, 2) decisión sobre #112/#175 (feature freeze),
+3) aceptación de los residuales físicos de #82/#74/#73/#114/#113 bajo A0.7/F3.
+No se declara GUI interactiva certificada.
