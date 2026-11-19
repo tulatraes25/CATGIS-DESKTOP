@@ -133,6 +133,66 @@ class BatchTransactionalProcessorContractTest {
         assertFalse(result.errors().isEmpty());
     }
 
+    @Test
+    void sidecarFamilyIsPublishedWithThePrimaryOutput() throws Exception {
+        Path inputDir = Files.createDirectory(directory.resolve("in"));
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        List<File> inputs = List.of(write(inputDir.resolve("a.txt"), "A"));
+
+        BatchProcessor.BatchResult result = BatchTransactionalProcessor.process(
+                new BatchProcessor.BatchJob("tx", inputs, outputDir.toFile(), "copy"),
+                (input, output) -> {
+                    try {
+                        Files.writeString(output.toPath(), "NEW", StandardCharsets.UTF_8);
+                        Files.writeString(output.toPath().resolveSibling(
+                                output.getName() + ".aux.xml"), "SIDECAR",
+                                StandardCharsets.UTF_8);
+                    } catch (IOException io) {
+                        throw new RuntimeException(io);
+                    }
+                }, null);
+
+        assertEquals(1, result.success());
+        assertEquals("NEW", Files.readString(outputDir.resolve("a.txt")));
+        assertEquals("SIDECAR", Files.readString(outputDir.resolve("a.txt.aux.xml")));
+        assertNoStaging(outputDir);
+    }
+
+    @Test
+    void sidecarPublishFailureRollsBackPrimaryAndPreviousSidecar() throws Exception {
+        Path inputDir = Files.createDirectory(directory.resolve("in"));
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        List<File> inputs = List.of(write(inputDir.resolve("a.txt"), "A"));
+        Files.writeString(outputDir.resolve("a.txt"), "OLD-A", StandardCharsets.UTF_8);
+        Files.writeString(outputDir.resolve("a.txt.aux.xml"), "OLD-SIDECAR",
+                StandardCharsets.UTF_8);
+
+        BatchProcessor.BatchResult result = BatchTransactionalProcessor.process(
+                new BatchProcessor.BatchJob("tx", inputs, outputDir.toFile(), "copy"),
+                (input, output) -> {
+                    try {
+                        Files.writeString(output.toPath(), "NEW", StandardCharsets.UTF_8);
+                        Files.writeString(output.toPath().resolveSibling(
+                                output.getName() + ".aux.xml"), "NEW-SIDECAR",
+                                StandardCharsets.UTF_8);
+                    } catch (IOException io) {
+                        throw new RuntimeException(io);
+                    }
+                }, null,
+                (staged, target) -> {
+                    if (target.getFileName().toString().endsWith(".aux.xml")) {
+                        throw new IOException("fallo de publicacion de sidecar simulado");
+                    }
+                    Files.move(staged, target, java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                });
+
+        assertEquals(0, result.success());
+        assertEquals("OLD-A", Files.readString(outputDir.resolve("a.txt")));
+        assertEquals("OLD-SIDECAR", Files.readString(outputDir.resolve("a.txt.aux.xml")));
+        assertNoStaging(outputDir);
+    }
+
     private static File write(Path path, String text) throws IOException {
         Files.writeString(path, text, StandardCharsets.UTF_8);
         return path.toFile();
