@@ -221,3 +221,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   transparente si el runner no expone Keychain). Windows DPAPI/Linux Secret
   Service ya certificados en PR #297. #261 SIGUE ABIERTO hasta evidencia CI
   macOS y matriz de sesiones.
+- T4 avance (2026-11-17): #261 test nativo cross-platform
+  `OsNativeBackendContractTest` (sin assumptions): DPAPI en Windows, Keychain en
+  macOS, Secret Service o "unsupported transparente" en Linux; pasos obligatorios
+  en Certification Linux/Windows/macOS que fallan si el test no se ejecuta
+  (skip no es evidencia). DPAPI requiere `Add-Type System.Security`.

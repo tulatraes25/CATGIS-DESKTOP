@@ -117,7 +117,8 @@ final class OsKeyProtector {
 
     private static byte[] runDpapi(byte[] payload, boolean protect) throws IOException {
         String operation = protect ? "Protect" : "Unprotect";
-        String script = "$b=[Console]::In.ReadToEnd().Trim(); "
+        String script = "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.Security; " +
+                "$b=[Console]::In.ReadToEnd().Trim(); "
                 + "$x=[Convert]::FromBase64String($b); "
                 + "$p=[System.Security.Cryptography.ProtectedData]::" + operation
                 + "($x,$null,'CurrentUser'); "
