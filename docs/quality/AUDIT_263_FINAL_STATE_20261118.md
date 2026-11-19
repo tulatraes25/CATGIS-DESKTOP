@@ -37,7 +37,7 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#74** | Descubrimiento portable de WhiteboxTools corregido (PR #77). | **Ejecución nativa/resultados científicos** requieren binario WhiteboxTools; no certificado. |
 | **#73** | Lease entre procesos + journal de recuperación certificados (PR #75/#76). | Residuales de corte eléctrico, filesystems de red, estados ambiguos y escaneo al inicio. |
 | **#132** | `executeCode` sin `deleteOnExit` (limpieza inmediata certificada, PR #298); `ScriptProcessIO` con stdin/output acotado. | **Anomalía Windows original** (timeout intermitente) no reproducida/erradicada; matriz nativa de lifecycle pendiente. |
-| **#114** | Preflight completo del lote, colisiones/case/NFC/aliases, cero callbacks ante rechazo (PR #115). | **Transacción all-files**, rollback ante crash, contrato de sidecars Shapefile y evidencia de performance: incrementos separados. |
+| **#114** | Preflight completo (PR #115) + **transacción all-files opt-in** (`BatchTransactionalProcessor`: staging privado, publicación atómica, rollback de salidas previas) certificada. | **UI de lote no migrada**, contrato de sidecars Shapefile, rollback ante crash y evidencia de performance: incrementos separados. |
 | **#113** | `PolygonCoverageAudit` real, gaps/overlaps honestos, `NOT_EVALUATED` (PR #116). | **GUI asíncrona con progreso/cancelación, selección AOI, reparación reversible** y validación física. |
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
