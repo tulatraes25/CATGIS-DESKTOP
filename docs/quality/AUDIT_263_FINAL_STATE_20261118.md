@@ -6,8 +6,8 @@ queda abierto, y por qué (feature freeze, decisión de owner o gate físico).
 
 ## Main de referencia
 
-- `main = bf671b4b5476fa1a102c5197c5325f4ad6256ced` (2026-11-19 UTC).
-- Post-main: **Certification** `44531670621` SUCCESS (Linux/Windows/macOS
+- `main = 127f84cd44d8f4477eeb0e1ed1adeed84a9d247e` (2026-11-19 UTC).
+- Post-main: **Certification** `44536963098` SUCCESS (Linux/Windows/macOS
   Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
   `44531670539` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
   `44534311113` SUCCESS.
