@@ -226,3 +226,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   macOS, Secret Service o "unsupported transparente" en Linux; pasos obligatorios
   en Certification Linux/Windows/macOS que fallan si el test no se ejecuta
   (skip no es evidencia). DPAPI requiere `Add-Type System.Security`.
+- T4 cierre de #261 (2026-11-17): evidencia nativa obligatoria post-main
+  WINDOWS_NATIVE_DPAPI_EVIDENCE/LINUX_NATIVE_OS_BACKEND_EVIDENCE/
+  MACOS_NATIVE_KEYCHAIN_EVIDENCE tests=1 skipped=0 (main fdb785f, PR #301,
+  attestation 44449352932). Matriz fisica multi-sesion queda bajo A0.7.
