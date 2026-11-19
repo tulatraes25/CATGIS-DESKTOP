@@ -44,11 +44,12 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 
 ## Bloqueos por decisión del owner
 
-- **DC-5 / CATSERVER T1**: productor de `catastro.ejido_urbano_mask`. Requiere
-  decisión de **fuente autoritativa y rol publicador**. Sin decisión, queda
-  bloqueado por diseño; no se puede cerrar con código.
-- **#112 / #175**: aceptar mantenerlos bloqueados por feature freeze A0.7 hasta
-  que el owner autorice nuevas capacidades, o priorizarlos explícitamente.
+- **DC-5 / CATSERVER T1 — RESUELTO 2026-11-19**: el owner decidió declarar
+  `UNSUPPORTED` y retirar el productor de `catastro.ejido_urbano_mask` del
+  alcance beta (sin fuente autoritativa/rol publicador no se inventan datos).
+- **#112 / #175 — RESUELTO 2026-11-19**: el owner decidió mantener estas
+  capacidades nuevas congeladas hasta la certificación A0.7; se documentan como
+  `INSPECTION_ONLY` / `BETA_LIMITED` y no se implementan ahora.
 
 ## A0.7 / F3 — lo que sí hay y lo que falta
 
@@ -67,7 +68,8 @@ mediciones de FPS/memoria en Windows real y aislamiento físico multi-sesión.
 
 La remediación de código/CI del audit está **sustancialmente completa y
 certificada** en `main`: 43 issues cerrados con evidencia, 1697 tests verdes,
-ruleset estricto y attestation por push. El cierre del **epic #263** requiere:
-1) decisión DC-5 del owner, 2) decisión sobre #112/#175 (feature freeze),
-3) aceptación de los residuales físicos de #82/#74/#73/#114/#113 bajo A0.7/F3.
-No se declara GUI interactiva certificada.
+ruleset estricto y attestation por push. El **epic #263** queda pendiente únicamente de: 1) certificación A0.7/F3
+física (matriz interactiva humana), y 2) decisión de programa sobre los
+incrementos residuales #82/#74/#73/#114/#113/#132. Las decisiones DC-5 y
+#112/#175 ya fueron tomadas por el owner (2026-11-19). No se declara GUI
+interactiva certificada.

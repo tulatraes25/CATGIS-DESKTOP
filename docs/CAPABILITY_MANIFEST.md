@@ -15,7 +15,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Versión | **1.0.0-beta.2** (canal `beta`) |
 | Release | `v1.0.0-beta.2` (pre-release, sin firma) |
 | CLI | `--version`, `--self-test` (13 checks) |
-| `main` de referencia | `c75df82` (Certification/Runtime/CI/GeoParquet + UI snapshot/F3 smoke + attestation `44452220530`) |
+| `main` de referencia | `a328c24` (Certification/Runtime/CI/GeoParquet + UI snapshot/F3 smoke + attestation `44455527822`) |
 | Estado GUI interactiva | **NOT_CERTIFIED** (A0.7/F3); evidencia headless UI snapshot + runtime smoke, sin matriz interactiva humana |
 
 ## Capacidades (Desktop/CATMAP)
@@ -33,8 +33,10 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | WCS | SUPPORTED_VERIFIED | payload validado (#43) y ejes nativos vía DescribeCoverage con caché/fallback (#108) |
 | STAC | BETA_LIMITED | pendiente aceptación OGC |
 | DEM/suelo/clima online (OpenTopography, SoilGrids, WorldClim/Open-Meteo) | BETA_LIMITED | TIFF+sidecar atomicos (#161); georreferencia embebida #128 abierto |
-| FlatGeobuf | BETA_LIMITED | frames en ventanas acotadas + cancelación (#175 parcial); lector indexado >100k pendiente |
-| LAS/LAZ | BETA_LIMITED | rechazo >50k, sin LAZ (#176) |
+| GeoParquet | INSPECTION_ONLY | metadatos reales e inspección off-EDT certificados (M1/M2); ingesta real de filas M3 congelada por decisión owner + feature freeze A0.7 (#112 abierto) |
+| FlatGeobuf | BETA_LIMITED | frames en ventanas acotadas, cancelación y fail-closed certificados; dataset >100k/indexado congelado por decisión owner + feature freeze A0.7 (#175 abierto) |
+| LAS | BETA_LIMITED | <=50k completo; >50k preview estratificado con badge y guards (#176); dataset completo >50k requiere lector indexado |
+| LAZ / LAS formatos 4-10 | REQUIRES_DEPENDENCY | fallo cerrado; requiere PDAL/decoder dedicado |
 | DWG/DXF | REQUIRES_DEPENDENCY | convertidor externo |
 | NetCDF | BETA_LIMITED | CF grid_mapping/packaging implementado (#162); fixtures .nc reales pendientes |
 | Georreferencia raster (GeoKeys vs sidecar) | SUPPORTED_VERIFIED | precedencia y veto de conflicto (#128) |
@@ -53,7 +55,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Capacidad | Estado | Límite |
 |---|---|---|
 | Pipeline SQL 00→21, políticas T2–T4 (vista canónica, privilegios, destructivo) | SUPPORTED_VERIFIED | PostGIS CI + `_tests/dc6/dc7` |
-| DC-5 productor de máscara ejido | UNSUPPORTED | decisión de fuente pendiente |
+| DC-5 productor de máscara ejido | UNSUPPORTED | decisión del owner 2026-11-19: sin fuente autoritativa/rol publicador se retira del alcance beta; no se inventan datos |
 | Visor web | BETA_LIMITED | sin E2E de navegación pública |
 
 ## Cómo verificar
