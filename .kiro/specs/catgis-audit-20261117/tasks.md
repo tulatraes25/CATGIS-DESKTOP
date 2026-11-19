@@ -249,3 +249,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   done()/EDT; dialog con boton Cancelar. Tests (3: off-EDT, cancelacion no
   publica, error reportado). 1704 tests ok. AOI/reparacion/fisico siguen
   residuales.
+- T4 avance (2026-11-19): #132 `ScriptNativeLifecycleContractTest` con Python
+  real: 3 errores de sintaxis devuelven diagnostico no vacio dentro del deadline
+  y salida de 300 KB acotada; pasos de Certification Linux/Windows/macOS exigen
+  ejecucion (skip no es evidencia). Anomalia Windows original no erradicada;
+  #132 sigue abierto. 1705 tests ok.
