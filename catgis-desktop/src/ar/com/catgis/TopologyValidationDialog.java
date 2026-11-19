@@ -51,6 +51,9 @@ public class TopologyValidationDialog extends JDialog {
     private final JLabel lblSummary;
     private final DefaultTableModel model;
     private final JTable table;
+    private JButton runButton;
+    private JButton cancelButton;
+    private TopologyValidationWorker activeWorker;
     private final TableRowSorter<DefaultTableModel> sorter;
 
     private List<TopologyCheckResult> currentResults = new ArrayList<>();
@@ -98,9 +101,13 @@ public class TopologyValidationDialog extends JDialog {
         JPanel topRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
         topRow.add(new JLabel("Capa:"));
         topRow.add(layerCombo);
-        JButton runButton = new JButton("Validar");
+        runButton = new JButton("Validar");
         runButton.addActionListener(e -> runValidation());
+        cancelButton = new JButton("Cancelar");
+        cancelButton.setEnabled(false);
+        cancelButton.addActionListener(e -> cancelValidation());
         topRow.add(runButton);
+        topRow.add(cancelButton);
         topRow.add(new JLabel("Filtro:"));
         topRow.add(txtFilter);
         topRow.add(new JLabel("Severidad:"));
@@ -182,6 +189,9 @@ public class TopologyValidationDialog extends JDialog {
     }
 
     private void runValidation() {
+        if (activeWorker != null) {
+            return; // One validation at a time; cancel or wait.
+        }
         Layer layer = layerCombo.getItemCount() > 0 ? layerCombo.getItemAt(layerCombo.getSelectedIndex()) : null;
         if (layer == null) {
             NotificationManager.warn(this, null, "Seleccione una capa vectorial.");
@@ -193,32 +203,71 @@ public class TopologyValidationDialog extends JDialog {
             NotificationManager.warn(this, "LiDAR", preview.getMessage());
             return;
         }
-
         ShapefileData data = VectorLayerUtils.ensureVectorData(layer);
         if (data == null) {
             NotificationManager.warn(this, null, "La capa seleccionada no tiene datos vectoriales disponibles.");
             return;
         }
+        TopologyValidationOptions options = buildOptions();
+        setBusy(true, "Validando topologia en segundo plano...");
+        final Layer targetLayer = layer;
+        activeWorker = new TopologyValidationWorker(
+                () -> TopologyValidationService.validateLayer(targetLayer, data, options),
+                results -> {
+                    // done() runs on the EDT: publish only after the worker finished.
+                    activeWorker = null;
+                    if (results == null) {
+                        setBusy(false, "Validacion sin resultados.");
+                        return;
+                    }
+                    currentResults = results;
+                    setBusy(false, null);
+                    applyResults();
+                },
+                error -> {
+                    activeWorker = null;
+                    setBusy(false, null);
+                    AppErrorSupport.logFailure("No se pudo ejecutar la validacion topologica", error);
+                    AppErrorSupport.showErrorDialog(this, "Topologia",
+                            "No se pudo ejecutar la validacion.", error);
+                });
+        activeWorker.execute();
+    }
 
-        try {
-            TopologyValidationOptions options = buildOptions();
-            currentResults = TopologyValidationService.validateLayer(layer, data, options);
-            reloadTable();
-            updateTypeFilter();
-            applyFilters();
-            lblSummary.setText("Observaciones detectadas: " + currentResults.size());
+    private void cancelValidation() {
+        TopologyValidationWorker worker = activeWorker;
+        if (worker == null) {
+            return;
+        }
+        worker.cancel(true);
+        activeWorker = null;
+        setBusy(false, "Cancelando validacion...");
+    }
 
-            if (currentResults.isEmpty()) {
-                NotificationManager.info(this, null, "No se detectaron problemas con las reglas actuales.");
-            } else {
-                table.setRowSelectionInterval(0, 0);
-                if (chkAutoZoom.isSelected()) {
-                    highlightSelectedResult();
-                }
+    private void setBusy(boolean busy, String message) {
+        if (runButton != null) {
+            runButton.setEnabled(!busy);
+        }
+        if (cancelButton != null) {
+            cancelButton.setEnabled(busy);
+        }
+        if (message != null && lblSummary != null) {
+            lblSummary.setText(message);
+        }
+    }
+
+    private void applyResults() {
+        reloadTable();
+        updateTypeFilter();
+        applyFilters();
+        lblSummary.setText("Observaciones detectadas: " + currentResults.size());
+        if (currentResults.isEmpty()) {
+            NotificationManager.info(this, null, "No se detectaron problemas con las reglas actuales.");
+        } else {
+            table.setRowSelectionInterval(0, 0);
+            if (chkAutoZoom.isSelected()) {
+                highlightSelectedResult();
             }
-        } catch (Exception ex) {
-            AppErrorSupport.logFailure("No se pudo ejecutar la validacion topologica", ex);
-            AppErrorSupport.showErrorDialog(this, "Topologia", "No se pudo ejecutar la validacion.", ex);
         }
     }
 

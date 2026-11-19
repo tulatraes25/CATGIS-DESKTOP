@@ -244,3 +244,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   limpieza; tests (4: exito, fallo de operacion, fallo de publicacion, plan
   rechazado). API existente intacta; UI/sidecars/crash siguen residuales.
   1701 tests ok.
+- T5 avance (2026-11-19): #113 `TopologyValidationWorker` ejecuta la validacion
+  JTS fuera del EDT, cancela cooperativamente y publica resultados solo en
+  done()/EDT; dialog con boton Cancelar. Tests (3: off-EDT, cancelacion no
+  publica, error reportado). 1704 tests ok. AOI/reparacion/fisico siguen
+  residuales.

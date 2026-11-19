@@ -38,7 +38,7 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#73** | Lease entre procesos + journal de recuperación certificados (PR #75/#76). | Residuales de corte eléctrico, filesystems de red, estados ambiguos y escaneo al inicio. |
 | **#132** | `executeCode` sin `deleteOnExit` (limpieza inmediata certificada, PR #298); `ScriptProcessIO` con stdin/output acotado. | **Anomalía Windows original** (timeout intermitente) no reproducida/erradicada; matriz nativa de lifecycle pendiente. |
 | **#114** | Preflight completo (PR #115) + **transacción all-files opt-in** (`BatchTransactionalProcessor`: staging privado, publicación atómica, rollback de salidas previas) certificada. | **UI de lote no migrada**, contrato de sidecars Shapefile, rollback ante crash y evidencia de performance: incrementos separados. |
-| **#113** | `PolygonCoverageAudit` real, gaps/overlaps honestos, `NOT_EVALUATED` (PR #116). | **GUI asíncrona con progreso/cancelación, selección AOI, reparación reversible** y validación física. |
+| **#113** | `PolygonCoverageAudit` real, gaps/overlaps honestos, `NOT_EVALUATED` (PR #116) + **validación asíncrona con cancelación y publicación sólo en EDT**. | Selección AOI, reparación reversible y validación física/GUI. |
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 
