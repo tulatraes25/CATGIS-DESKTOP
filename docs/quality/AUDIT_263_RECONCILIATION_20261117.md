@@ -105,7 +105,7 @@ attestation `44356056579`):
 
 
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
-| #143, #132, #114, #113 | #132 limpieza de temporales certificada; #114 transaccion opt-in con rollback; #113 validacion topologica asincrona con cancelacion certificada; UI/sidecars/fisico residuales. |
+| #143, #132, #114, #113 | #132 limpieza de temporales + evidencia nativa de lifecycle Python (sintaxis/limites); #114 transaccion opt-in; #113 worker async; anomalia Windows/UI/sidecars/fisico residuales. |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |
 ## 9. CATMAP A0.x — cierres de implementación (2026-11-17)
 
