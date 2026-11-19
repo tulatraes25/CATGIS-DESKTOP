@@ -6,12 +6,12 @@ queda abierto, y por qué (feature freeze, decisión de owner o gate físico).
 
 ## Main de referencia
 
-- `main = c75df823cef647ddb7dc24868c5f5f7d64011b4d` (2026-11-19 UTC).
-- Post-main: **Certification** `44450886288` SUCCESS (15 jobs Linux/Windows/
-  macOS Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
-  `44450886212` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
-  `44452220530` SUCCESS.
-- Suite local: **1697 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
+- `main = bf671b4b5476fa1a102c5197c5325f4ad6256ced` (2026-11-19 UTC).
+- Post-main: **Certification** `44531670621` SUCCESS (Linux/Windows/macOS
+  Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
+  `44531670539` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
+  `44534311113` SUCCESS.
+- Suite local: **1707 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
 - Ruleset activo `24546459` exige **25 checks** incl. `Verify exact main push
   certification`, native GDAL, PostGIS, Runtime Identity 17/21 ×4, GeoParquet e
   inventarios (evidencia: reconciliación §2/§8).
@@ -56,6 +56,9 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 Evidencia headless/CI vigente:
 - `ui-snapshot.yml` `44414255394` (3/3 Linux Xvfb/Windows/macOS ARM).
 - `f3-runtime-smoke.yml` `44414260382` (3/3 app-image + launcher + E2E).
+- Evidencia nativa de scripting `*_SCRIPT_LIFECYCLE_EVIDENCE tests=1 skipped=0`
+  y de OS-backed credentials `*_NATIVE_*_EVIDENCE tests=1 skipped=0` (Linux,
+  Windows, macOS Intel+ARM) en Certification.
 - Certification multi-OS + Runtime Identity 17/21 ×4 + native GDAL + PostGIS.
 - Evidencia nativa OS-backed de credenciales: Windows DPAPI, Linux Secret
   Service/unsupported, macOS Keychain (Intel+ARM), con pasos que fallan ante skip.
@@ -67,7 +70,7 @@ mediciones de FPS/memoria en Windows real y aislamiento físico multi-sesión.
 ## Conclusión
 
 La remediación de código/CI del audit está **sustancialmente completa y
-certificada** en `main`: 43 issues cerrados con evidencia, 1697 tests verdes,
+certificada** en `main`: 43 issues cerrados con evidencia, 1707 tests verdes,
 ruleset estricto y attestation por push. El **epic #263** queda pendiente únicamente de: 1) certificación A0.7/F3
 física (matriz interactiva humana), y 2) decisión de programa sobre los
 incrementos residuales #82/#74/#73/#114/#113/#132. Las decisiones DC-5 y
