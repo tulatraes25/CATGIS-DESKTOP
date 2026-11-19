@@ -55,3 +55,11 @@ crear ventanas, el job falla de forma visible y no se declara evidencia.
 - Esto **no** certifica A0.7/F3: falta la matriz interactiva humana (F3.2/F3.3/
   F3.4), HiDPI/foco reales, gestos del owner y validación física de impresión.
   `NOT_CERTIFIED` se mantiene.
+## Refresh 2026-11-19 (main `fc200f0`)
+
+- `ui-snapshot.yml` run **`44545814882`**: **3/3 SUCCESS** (Linux Xvfb, Windows,
+  macOS Apple Silicon).
+- `f3-runtime-smoke.yml` run **`44545819822`**: **3/3 SUCCESS** (app-image +
+  launcher + E2E).
+- Se mantiene **NOT_CERTIFIED** A0.7/F3: falta matriz interactiva humana,
+  HiDPI/foco reales, gestos, impresión física, FPS/memoria y multi-sesión.
