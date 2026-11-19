@@ -105,7 +105,7 @@ attestation `44356056579`):
 | #261 | Vault v2 + `OsKeyProtector` OS-backed en Windows/Linux; **macOS Keychain pendiente** y matriz de sesiones nativa sin cerrar. |
 
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
-| #143, #132, #114, #113 | Ledger/scripting/procesamiento/QA (residuales declarados). |
+| #143, #132, #114, #113 | Ledger/scripting/procesamiento/QA: #132 con limpieza de temporales certificada; anomalia Windows y matriz nativa siguen abiertas. |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |
 ## 9. CATMAP A0.x — cierres de implementación (2026-11-17)
 

@@ -87,11 +87,9 @@ public final class ScriptEngine {
      * Execute Python code string with timeout.
      */
     public static ScriptResult executeCode(String code, long timeoutSeconds) {
+        File tempFile = null;
         try {
-            File tempFile = File.createTempFile("catgis_script_", ".py");
-            tempFile.deleteOnExit();
-
-            // Write script with CATGIS bootstrap
+            tempFile = File.createTempFile("catgis_script_", ".py");
             try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(
                     new FileOutputStream(tempFile), StandardCharsets.UTF_8))) {
                 pw.println("# -*- coding: utf-8 -*-");
@@ -105,10 +103,15 @@ public final class ScriptEngine {
                 pw.println();
                 pw.println(code);
             }
-
             return executeScript(tempFile, timeoutSeconds);
         } catch (Exception ex) {
             return new ScriptResult(false, "", ex.getMessage());
+        } finally {
+            // T4/#132: never leave generated script sources behind until JVM exit.
+            if (tempFile != null && tempFile.exists() && !tempFile.delete()) {
+                CatgisLogger.warn("ScriptEngine: no se pudo borrar el script temporal "
+                        + tempFile.getAbsolutePath(), null);
+            }
         }
     }
 
