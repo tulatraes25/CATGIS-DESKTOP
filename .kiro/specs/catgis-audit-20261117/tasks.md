@@ -234,3 +234,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   cerrado/abierto y bloqueos verificados; manifiesto en main c75df82. 43 issues
   cerrados, 1697 tests. Epic #263 pendiente de DC-5, decision feature-freeze
   #112/#175 y aceptacion de residuales fisicos A0.7/F3.
+- Decisiones de owner (2026-11-19): DC-5 productor de mascara ejido ->
+  UNSUPPORTED y retirado del alcance beta (sin fuente autoritativa); #112 y #175
+  se mantienen congelados por feature freeze A0.7 y documentados como
+  INSPECTION_ONLY/BETA_LIMITED. El epic #263 queda pendiente solo de A0.7/F3
+  fisico y decision de programa sobre residuales #82/#74/#73/#114/#113/#132.

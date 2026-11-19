@@ -64,7 +64,7 @@ El `strict_required_status_checks_policy` permanece `true`. Rollback disponible:
 | #261 | **CORREGIDO/VERIFICADO** (vault v2 + DPAPI/Keychain/Secret Service nativos con evidencia CI multi-OS; matriz física bajo A0.7) | T4 |
 | #156 | **CORREGIDO en PR T4-2** (staging + swap transaccional; verificación CI PostGIS) | T4 |
 | #174 | **CORREGIDO EN T0** (ruleset con 25 checks) | T0 |
-| DC-5 / CATSERVER T1 | **BLOQUEADO POR DECISIÓN** (fuente de máscara ejido) | T4 |
+| DC-5 / CATSERVER T1 | **RESUELTO POR DECISIÓN** (2026-11-19: `UNSUPPORTED`, retirado del alcance beta sin fuente autoritativa) | T4 |
 | #43 | **ACEPTACIÓN VERIFICADA** (evidencia WCS payload) | T4 |
 | #108 | **INTEGRADO/VERIFICADO** (DescribeCoverage en descarga real; A0.7 GUI física aparte) | T4 |
 | #164 | **CORREGIDO/VERIFICADO** (contrato de encoding) | T1 |
@@ -145,5 +145,5 @@ Ver `docs/quality/AUDIT_263_FINAL_STATE_20261118.md`: `main` `c75df82`
 certificado (Certification `44450886288`, Runtime `44450886212`, attestation
 `44452220530`), 43 issues cerrados con evidencia, 1697 tests. Abiertos: #263
 epic, #112/#175 (feature freeze A0.7), #82/#74/#73 (físicos), #132/#114/#113
-(residuales), #143 (ledger), #109 (spec). Bloqueos por decisión: **DC-5**,
-aceptación feature-freeze #112/#175. A0.7/F3 siguen NOT_CERTIFIED.
+(residuales), #143 (ledger), #109 (spec). Decisiones del owner 2026-11-19:
+DC-5 `UNSUPPORTED`; #112/#175 congelados hasta A0.7. A0.7/F3 siguen NOT_CERTIFIED.
