@@ -139,3 +139,11 @@ Cerrados en GitHub con evidencia en `main = f4d8067` (attestation `44407049092`)
 | #152 SpatiaLite sin primera tabla automatica | `SpatiaLiteSourceCrsTruthContractTest.selectedTableMustExistAndCannotBeSubstitutedByFirstAvailable`. |
 
 **Alcance:** evidencia headless/CI; **A0.7/F3 (GUI/runtime fisico) sigue NOT_CERTIFIED**.
+## 11. Estado final verificable (2026-11-18/19)
+
+Ver `docs/quality/AUDIT_263_FINAL_STATE_20261118.md`: `main` `c75df82`
+certificado (Certification `44450886288`, Runtime `44450886212`, attestation
+`44452220530`), 43 issues cerrados con evidencia, 1697 tests. Abiertos: #263
+epic, #112/#175 (feature freeze A0.7), #82/#74/#73 (físicos), #132/#114/#113
+(residuales), #143 (ledger), #109 (spec). Bloqueos por decisión: **DC-5**,
+aceptación feature-freeze #112/#175. A0.7/F3 siguen NOT_CERTIFIED.
