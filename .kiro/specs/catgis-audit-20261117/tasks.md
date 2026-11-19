@@ -263,3 +263,9 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   ruleset 25 checks activo. Evidencia nativa OS-backed/scripting multi-OS
   registrada; residuales #175/#112 congelados por decision owner, #114/#113/
   #132 parciales y #82/#74/#73 fisicos bajo A0.7/F3 NOT_CERTIFIED.
+- Fase corregida/funcional (2026-11-19): UI de lotes migrada a
+  `BatchTransactionalProcessor` con checkbox transaccional (todo o nada,
+  staging+rollback+sidecars) y modo por archivo conservado. Verificacion local
+  Windows: build 1707 tests, `--version` 1.0.0-beta.2 beta, `--self-test`
+  13/13 SELFTEST_OK. Residual crash/performance/UI completa de #114 siguen
+  abiertos; A0.7/F3 NOT_CERTIFIED.
