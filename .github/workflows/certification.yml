@@ -280,7 +280,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          xml="$(find build/test-results/test -name 'TEST-*MacKeychainBackendContractTest*.xml' -print -quit)"
+          xml="$(find build/test-results/test -name 'TEST-*OsNativeBackendContractTest*.xml' -print -quit)"
           test -n "$xml"
           python3 - "$xml" <<'PY'
           import sys
@@ -289,7 +289,7 @@ jobs:
           tests = int(root.attrib.get('tests', '0'))
           failures = len(root.findall('.//failure')) + len(root.findall('.//error'))
           skipped = len(root.findall('.//skipped'))
-          print(f'MAC_KEYCHAIN_NATIVE_EVIDENCE tests={tests} failures={failures} skipped={skipped}')
+          print(f'MACOS_NATIVE_KEYCHAIN_EVIDENCE tests={tests} failures={failures} skipped={skipped}')
           if tests != 1 or failures != 0 or skipped != 0:
               raise SystemExit('Native macOS Keychain test did not execute successfully; a skip is not evidence')
           PY
@@ -395,6 +395,17 @@ jobs:
           # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips
           # + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
           if ($skipped -gt 16) { throw "Linux skip budget exceeded: $skipped > 16" }
+      - name: Verify native Linux OS credential backend was accounted
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path build/test-results/test -Filter 'TEST-*OsNativeBackendContractTest*.xml' -File
+          if ($files.Count -ne 1) { throw "Expected one native backend XML, found $($files.Count)" }
+          [xml]$xml = Get-Content -LiteralPath $files[0].FullName -Raw
+          $suite = $xml.testsuite
+          $tests = [int]$suite.tests
+          $skipped = @($suite.testcase | Where-Object { $_.skipped }).Count
+          "LINUX_NATIVE_OS_BACKEND_EVIDENCE tests=$tests skipped=$skipped" | Tee-Object -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          if ($tests -ne 1 -or $skipped -ne 0) { throw 'Native Linux OS backend test did not execute successfully.' }
       - name: Upload Linux evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -504,6 +515,17 @@ jobs:
           # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips
           # + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
           if ($skipped -gt 16) { throw "Windows skip budget exceeded: $skipped > 16" }
+      - name: Verify native Windows DPAPI backend executed (skip is not evidence)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path build/test-results/test -Filter 'TEST-*OsNativeBackendContractTest*.xml' -File
+          if ($files.Count -ne 1) { throw "Expected one native backend XML, found $($files.Count)" }
+          [xml]$xml = Get-Content -LiteralPath $files[0].FullName -Raw
+          $suite = $xml.testsuite
+          $tests = [int]$suite.tests
+          $skipped = @($suite.testcase | Where-Object { $_.skipped }).Count
+          "WINDOWS_NATIVE_DPAPI_EVIDENCE tests=$tests skipped=$skipped" | Tee-Object -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          if ($tests -ne 1 -or $skipped -ne 0) { throw 'Native Windows DPAPI test did not execute successfully.' }
       - name: Upload Windows evidence
         if: failure()
         uses: actions/upload-artifact@v4
