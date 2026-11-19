@@ -376,7 +376,7 @@ jobs:
           if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
           # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips
-# + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
+          # + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
           if ($skipped -gt 16) { throw "Linux skip budget exceeded: $skipped > 16" }
       - name: Upload Linux evidence
         if: failure()
@@ -485,7 +485,7 @@ jobs:
           if ($tests -lt 700) { throw "Unexpected test-count regression: $tests < 700" }
           if ($failures -ne 0 -or $errors -ne 0) { throw 'JUnit failures/errors detected.' }
           # 3 pre-existing reviewed dependency skips + 12 explicit GDAL real-format skips
-# + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
+          # + 1 reviewed OS-specific macOS Keychain test skip on Linux/Windows.
           if ($skipped -gt 16) { throw "Windows skip budget exceeded: $skipped > 16" }
       - name: Upload Windows evidence
         if: failure()
