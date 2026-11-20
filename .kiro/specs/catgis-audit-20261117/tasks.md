@@ -276,3 +276,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
 - Fase funcional (2026-11-19/20): #114 cancelacion cooperativa del lote
   transaccional (supplier/interrupcion, nada se publica al cancelar) y boton
   Cancelar en la UI; tests de cancelacion por supplier/interrupcion. 1709 tests.
+- Fase corregida/funcional final (2026-11-20): main 47a24a9 certificado
+  (Certification 44717822524, Runtime 44717822460, attestation 44720165406);
+  1709 tests; verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13
+  sobre el main fusionado (incluye UI batch transaccional y cancelacion).

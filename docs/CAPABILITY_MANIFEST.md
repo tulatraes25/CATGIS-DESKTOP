@@ -15,7 +15,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Versión | **1.0.0-beta.2** (canal `beta`) |
 | Release | `v1.0.0-beta.2` (pre-release, sin firma) |
 | CLI | `--version`, `--self-test` (13 checks) |
-| `main` de referencia | `fc200f0` (Certification/Runtime/CI/GeoParquet + UI snapshot `44545814882` / F3 smoke `44545819822` + attestation `44545609152`) |
+| `main` de referencia | `47a24a9` (Certification `44717822524` / Runtime `44717822460` + UI snapshot/F3 smoke + attestation `44720165406`) |
 | Estado GUI interactiva | **NOT_CERTIFIED** (A0.7/F3); evidencia headless UI snapshot + runtime smoke, sin matriz interactiva humana |
 
 ## Capacidades (Desktop/CATMAP)
