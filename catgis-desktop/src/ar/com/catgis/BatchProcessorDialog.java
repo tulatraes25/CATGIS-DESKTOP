@@ -338,10 +338,7 @@ public class BatchProcessorDialog extends JDialog {
                 java.util.function.BiConsumer<File, File> operationBody = (input, output) -> {
                     try {
                         switch (operation) {
-                            case "Copiar archivos" -> {
-                                java.nio.file.Files.copy(input.toPath(), output.toPath(),
-                                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                            }
+                            case "Copiar archivos" -> BatchDatasetCopier.copy(input, output);
                             case "Calcular NDVI (B4/B3)" -> BatchProcessor.applySpectralIndex(input, output, "NDVI", 4, 3);
                             case "Calcular NDWI (B2/B4)" -> BatchProcessor.applySpectralIndex(input, output, "NDWI", 2, 4);
                             case "Calcular NBR (B4/B5)" -> BatchProcessor.applySpectralIndex(input, output, "NBR", 4, 5);

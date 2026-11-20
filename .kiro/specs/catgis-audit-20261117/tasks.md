@@ -280,3 +280,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   (Certification 44717822524, Runtime 44717822460, attestation 44720165406);
   1709 tests; verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13
   sobre el main fusionado (incluye UI batch transaccional y cancelacion).
+- Fase funcional (2026-11-20): #114 `BatchDatasetCopier` copia familias
+  Shapefile completas (.shp/.shx/.dbf/.prj/.cpg/.qix + sidecars) con nombres del
+  staging, fail-closed si falta .shx/.dbf y sidecars raster (.aux.xml/.tfw/...);
+  UI de lotes la usa en "Copiar archivos". Tests (5). 1714 tests.

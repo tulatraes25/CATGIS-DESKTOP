@@ -105,7 +105,7 @@ attestation `44356056579`):
 
 
 | #139 | Cerrado con UI calibrada explícita (ver `docs/quality/SPECTRAL_CALIBRATION_UI_20261117.md`). |
-| #143, #132, #114, #113 | #132 temporal + lifecycle nativo; #114 transaccion con sidecars, UI migrada y cancelacion cooperativa; #113 worker async; crash/performance/fisico residuales. |
+| #143, #132, #114, #113 | #132 temporal + lifecycle nativo; #114 transaccion, familia SHP completa, UI y cancelacion; #113 worker async; crash/performance/fisico residuales. |
 | A0.x CATMAP (#82..#102) | Gates de arquitectura/GUI CATMAP. |
 ## 9. CATMAP A0.x — cierres de implementación (2026-11-17)
 
