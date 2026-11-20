@@ -6,12 +6,12 @@ queda abierto, y por qué (feature freeze, decisión de owner o gate físico).
 
 ## Main de referencia
 
-- `main = fc200f0af14ac90e691be508f2677013c5f1cd51` (2026-11-19 UTC).
-- Post-main: **Certification** `44543248106` SUCCESS (Linux/Windows/macOS
+- `main = 47a24a958781ff864ab2c21b56d6903a42f9fe6a` (2026-11-20 UTC).
+- Post-main: **Certification** `44717822524` SUCCESS (Linux/Windows/macOS
   Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
   `44531670539` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
   `44534311113` SUCCESS.
-- Suite local: **1707 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
+- Suite local: **1709 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
 - Ruleset activo `24546459` exige **25 checks** incl. `Verify exact main push
   certification`, native GDAL, PostGIS, Runtime Identity 17/21 ×4, GeoParquet e
   inventarios (evidencia: reconciliación §2/§8).
@@ -42,7 +42,14 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 
-## Verificación funcional local\n\n- Windows: build 1707 tests, `--version` 1.0.0-beta.2, `--self-test` 13/13 y\n  `e2eBetaHarness` **E2E_OK checks=13** (proyecto/SHP/GeoTIFF/terrain/PNG/PDF/SVG/\n  layout/workspace). Evidencia en `F3_RUNTIME_EVIDENCE_20261117.md`.\n\n## Bloqueos por decisión del owner
+## Verificación funcional local
+
+- Windows (main `47a24a9`): build **1709 tests**, `--version` 1.0.0-beta.2,
+  `--self-test` **13/13** y `e2eBetaHarness` **E2E_OK checks=13**
+  (proyecto/SHP/GeoTIFF/terrain/PNG/PDF/SVG/layout/workspace). Evidencia en
+  `F3_RUNTIME_EVIDENCE_20261117.md`.
+
+## Bloqueos por decisión del owner
 
 - **DC-5 / CATSERVER T1 — RESUELTO 2026-11-19**: el owner decidió declarar
   `UNSUPPORTED` y retirar el productor de `catastro.ejido_urbano_mask` del
@@ -70,7 +77,7 @@ mediciones de FPS/memoria en Windows real y aislamiento físico multi-sesión.
 ## Conclusión
 
 La remediación de código/CI del audit está **sustancialmente completa y
-certificada** en `main`: 43 issues cerrados con evidencia, 1707 tests verdes,
+certificada** en `main`: 43 issues cerrados con evidencia, 1709 tests verdes,
 ruleset estricto y attestation por push. El **epic #263** queda pendiente únicamente de: 1) certificación A0.7/F3
 física (matriz interactiva humana), y 2) decisión de programa sobre los
 incrementos residuales #82/#74/#73/#114/#113/#132. Las decisiones DC-5 y
