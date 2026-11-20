@@ -288,3 +288,8 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   44794533426, Runtime 44794533397, attestation 44797017666); 1714 tests;
   verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13 sobre main
   fusionado con familia Shapefile completa en copia batch.
+- T5 avance (2026-11-20): #113 cobertura contra AOI: `TopologyValidationOptions`
+  acepta studyArea/CRS/umbral, el servicio reporta el area faltante con geometria
+  de foco y falla cerrado si el CRS del AOI difiere; UI agrega checkbox, combo de
+  capas POLYGON y umbral. Tests numericos `TopologyCoverageAoiContractTest` (4).
+  1718 tests ok.

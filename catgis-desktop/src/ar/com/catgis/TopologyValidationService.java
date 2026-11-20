@@ -1,5 +1,6 @@
 package ar.com.catgis;
 import ar.com.catgis.data.vector.ShapefileData;
+import ar.com.catgis.core.geometry.PolygonCoverageAudit;
 import ar.com.catgis.data.vector.VectorLayerUtils;
 import ar.com.catgis.core.model.Layer;
 
@@ -141,6 +142,10 @@ public final class TopologyValidationService {
             if (safeOptions.isHoles() || safeOptions.isSlivers()) {
                 detectPolygonVoids(results, polygonFeatures, safeOptions, sourceCrs);
             }
+            if (safeOptions.isCoverageWithinStudyArea()) {
+                appendCoverageWithinStudyArea(results, layer, polygonFeatures,
+                        safeOptions, sourceCrs);
+            }
         }
 
         return results;
@@ -167,6 +172,70 @@ public final class TopologyValidationService {
                     writer.newLine();
                 }
             }
+        }
+    }
+
+    private static void appendCoverageWithinStudyArea(List<TopologyCheckResult> results,
+                                                       Layer layer,
+                                                       List<SimpleFeature> polygonFeatures,
+                                                       TopologyValidationOptions options,
+                                                       String sourceCrs) {
+        ShapefileData studyArea = options.getStudyArea();
+        if (studyArea == null || studyArea.getFeatures() == null
+                || studyArea.getFeatures().isEmpty()) {
+            results.add(result("Advertencia", "Cobertura AOI",
+                    "No se selecciono un area de estudio valida.", List.of(), null, sourceCrs));
+            return;
+        }
+        String studyCrs = options.getStudyAreaCrs();
+        if (!studyCrs.isBlank() && !sourceCrs.isBlank()
+                && !VectorCrsTransformSupport.equivalent(sourceCrs, studyCrs)) {
+            results.add(result("Error", "Cobertura AOI",
+                    "El AOI esta en " + studyCrs + " y la capa en " + sourceCrs
+                            + "; reproyecte el AOI antes de validar.",
+                    List.of(), null, sourceCrs));
+            return;
+        }
+        try {
+            List<Geometry> coverage = new ArrayList<>();
+            for (SimpleFeature feature : polygonFeatures) {
+                Geometry geometry = geometryOf(feature);
+                if (geometry != null && !geometry.isEmpty()) {
+                    coverage.add(geometry);
+                }
+            }
+            List<Geometry> studyGeometries = new ArrayList<>();
+            for (SimpleFeature feature : studyArea.getFeatures()) {
+                if (feature == null) {
+                    continue;
+                }
+                Object geometry = feature.getDefaultGeometry();
+                if (geometry instanceof Geometry value && !value.isEmpty()) {
+                    studyGeometries.add(value);
+                }
+            }
+            if (coverage.isEmpty() || studyGeometries.isEmpty()) {
+                results.add(result("Advertencia", "Cobertura AOI",
+                        "La capa o el AOI no contienen poligonos validos.",
+                        List.of(), null, sourceCrs));
+                return;
+            }
+            Geometry studyGeometry = UnaryUnionOp.union(studyGeometries);
+            Geometry missing = PolygonCoverageAudit.uncoveredWithin(coverage, studyGeometry);
+            if (missing == null || missing.isEmpty()) {
+                return;
+            }
+            double area = missing.getArea();
+            if (Double.isFinite(area) && area > options.getCoverageAreaThreshold()) {
+                results.add(result("Advertencia", "Cobertura AOI",
+                        String.format(Locale.ROOT, "Faltan %.3f unidades cuadradas dentro del AOI.",
+                                area),
+                        List.of(), missing, sourceCrs));
+            }
+        } catch (RuntimeException failure) {
+            results.add(result("Advertencia", "Cobertura AOI",
+                    "Cobertura no evaluada: " + failure.getMessage(),
+                    List.of(), null, sourceCrs));
         }
     }
 

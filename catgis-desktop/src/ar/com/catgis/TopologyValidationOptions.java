@@ -1,5 +1,7 @@
 package ar.com.catgis;
 
+import ar.com.catgis.data.vector.ShapefileData;
+
 public class TopologyValidationOptions {
 
     private boolean invalidGeometries = true;
@@ -13,6 +15,10 @@ public class TopologyValidationOptions {
     private boolean problematicMultiparts = true;
     private double connectionTolerance = 1.0;
     private double sliverAreaThreshold = 1.0;
+    private ShapefileData studyArea;
+    private String studyAreaCrs = "";
+    private boolean coverageWithinStudyArea;
+    private double coverageAreaThreshold = 1.0;
 
     public boolean isInvalidGeometries() {
         return invalidGeometries;
@@ -84,6 +90,40 @@ public class TopologyValidationOptions {
 
     public void setProblematicMultiparts(boolean problematicMultiparts) {
         this.problematicMultiparts = problematicMultiparts;
+    }
+
+    public ShapefileData getStudyArea() {
+        return studyArea;
+    }
+
+    public void setStudyArea(ShapefileData studyArea) {
+        this.studyArea = studyArea;
+    }
+
+    public String getStudyAreaCrs() {
+        return studyAreaCrs;
+    }
+
+    public void setStudyAreaCrs(String studyAreaCrs) {
+        this.studyAreaCrs = studyAreaCrs == null ? "" : studyAreaCrs;
+    }
+
+    public boolean isCoverageWithinStudyArea() {
+        return coverageWithinStudyArea;
+    }
+
+    public void setCoverageWithinStudyArea(boolean coverageWithinStudyArea) {
+        this.coverageWithinStudyArea = coverageWithinStudyArea;
+    }
+
+    public double getCoverageAreaThreshold() {
+        return coverageAreaThreshold;
+    }
+
+    public void setCoverageAreaThreshold(double coverageAreaThreshold) {
+        if (coverageAreaThreshold >= 0d) {
+            this.coverageAreaThreshold = coverageAreaThreshold;
+        }
     }
 
     public double getConnectionTolerance() {
