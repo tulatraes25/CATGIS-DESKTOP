@@ -36,13 +36,13 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#82** | Pan/drag sin redibujo completo: código + contrato CI **verificados** (PR #83/#84). | **Medición GUI física** (FPS/memoria/DPI en Windows real) — A0.7/F3. El propio issue prohíbe cerrarlo por CI headless. |
 | **#74** | Descubrimiento portable de WhiteboxTools corregido (PR #77). | **Ejecución nativa/resultados científicos** requieren binario WhiteboxTools; no certificado. |
 | **#73** | Lease entre procesos + journal de recuperación certificados (PR #75/#76). | Residuales de corte eléctrico, filesystems de red, estados ambiguos y escaneo al inicio. |
-| **#132** | `executeCode` sin `deleteOnExit` (PR #298); `ScriptProcessIO` acotado; **evidencia nativa multi-OS**: 3 syntax-errors con diagnóstico no vacío y salida de 300 KB limitada, con pasos de CI que fallan ante skip. | **Anomalía Windows original** no reproducida en 40+ rondas; no se declara erradicada. |
+| **#132** | `executeCode` sin `deleteOnExit`; **evidencia nativa multi-OS**: 3 syntax-errors con diagnóstico no vacío, salida de 300 KB limitada y **stdin de 10 KB aceptado / >1 MB rechazado**; pasos de CI fallan ante skip. | **Anomalía Windows original** no reproducida; no se declara erradicada. |
 | **#114** | Preflight completo (PR #115) + **transacción all-files con sidecars** y **UI de lotes migrada** (checkbox transaccional, modo por archivo conservado). | Contrato completo de familias Shapefile, rollback ante crash y evidencia de performance. |
 | **#113** | `PolygonCoverageAudit` real, gaps/overlaps honestos, `NOT_EVALUATED` (PR #116) + **validación asíncrona con cancelación y publicación sólo en EDT**. | Selección AOI, reparación reversible y validación física/GUI. |
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 
-## Bloqueos por decisión del owner
+## Verificación funcional local\n\n- Windows: build 1707 tests, `--version` 1.0.0-beta.2, `--self-test` 13/13 y\n  `e2eBetaHarness` **E2E_OK checks=13** (proyecto/SHP/GeoTIFF/terrain/PNG/PDF/SVG/\n  layout/workspace). Evidencia en `F3_RUNTIME_EVIDENCE_20261117.md`.\n\n## Bloqueos por decisión del owner
 
 - **DC-5 / CATSERVER T1 — RESUELTO 2026-11-19**: el owner decidió declarar
   `UNSUPPORTED` y retirar el productor de `catastro.ejido_urbano_mask` del
