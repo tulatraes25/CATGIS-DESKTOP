@@ -293,3 +293,7 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   de foco y falla cerrado si el CRS del AOI difiere; UI agrega checkbox, combo de
   capas POLYGON y umbral. Tests numericos `TopologyCoverageAoiContractTest` (4).
   1718 tests ok.
+- Fase funcional final AOI (2026-11-20): main 1d1c27d certificado (Certification
+  44827163743, Runtime 44827163826, attestation 44829178457); 1718 tests;
+  verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13; cobertura
+  contra AOI integrada a UI y backend.
