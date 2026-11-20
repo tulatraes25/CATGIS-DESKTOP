@@ -15,7 +15,7 @@ servicio externo), **INSPECTION_ONLY** (sólo lectura de metadatos/preview),
 | Versión | **1.0.0-beta.2** (canal `beta`) |
 | Release | `v1.0.0-beta.2` (pre-release, sin firma) |
 | CLI | `--version`, `--self-test` (13 checks) |
-| `main` de referencia | `c361649` (Certification `44794533426` / Runtime `44794533397` + UI snapshot/F3 smoke + attestation `44797017666`) |
+| `main` de referencia | `1d1c27d` (Certification `44827163743` / Runtime `44827163826` + UI snapshot/F3 smoke + attestation `44829178457`) |
 | Estado GUI interactiva | **NOT_CERTIFIED** (A0.7/F3); evidencia headless UI snapshot + runtime smoke, sin matriz interactiva humana |
 
 ## Capacidades (Desktop/CATMAP)

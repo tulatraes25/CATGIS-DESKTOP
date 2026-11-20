@@ -6,12 +6,12 @@ queda abierto, y por qué (feature freeze, decisión de owner o gate físico).
 
 ## Main de referencia
 
-- `main = c36164947817627ecd0dd143c1adf3f23446d7f5` (2026-11-20 UTC).
-- Post-main: **Certification** `44794533426` SUCCESS (Linux/Windows/macOS
+- `main = 1d1c27da454f985257a691169e6d04f9f9350a02` (2026-11-20 UTC).
+- Post-main: **Certification** `44827163743` SUCCESS (Linux/Windows/macOS
   Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
   `44531670539` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
   `44534311113` SUCCESS.
-- Suite local: **1714 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
+- Suite local: **1718 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
 - Ruleset activo `24546459` exige **25 checks** incl. `Verify exact main push
   certification`, native GDAL, PostGIS, Runtime Identity 17/21 ×4, GeoParquet e
   inventarios (evidencia: reconciliación §2/§8).
@@ -44,7 +44,7 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 
 ## Verificación funcional local
 
-- Windows (main `c361649`): build **1714 tests**, `--version` 1.0.0-beta.2,
+- Windows (main `1d1c27d`): build **1718 tests**, `--version` 1.0.0-beta.2,
   `--self-test` **13/13** y `e2eBetaHarness` **E2E_OK checks=13**
   (proyecto/SHP/GeoTIFF/terrain/PNG/PDF/SVG/layout/workspace). Evidencia en
   `F3_RUNTIME_EVIDENCE_20261117.md`.
@@ -77,7 +77,7 @@ mediciones de FPS/memoria en Windows real y aislamiento físico multi-sesión.
 ## Conclusión
 
 La remediación de código/CI del audit está **sustancialmente completa y
-certificada** en `main`: 43 issues cerrados con evidencia, 1714 tests verdes,
+certificada** en `main`: 43 issues cerrados con evidencia, 1718 tests verdes,
 ruleset estricto y attestation por push. El **epic #263** queda pendiente únicamente de: 1) certificación A0.7/F3
 física (matriz interactiva humana), y 2) decisión de programa sobre los
 incrementos residuales #82/#74/#73/#114/#113/#132. Las decisiones DC-5 y
