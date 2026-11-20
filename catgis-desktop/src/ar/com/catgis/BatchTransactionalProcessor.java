@@ -38,12 +38,22 @@ public final class BatchTransactionalProcessor {
     public static BatchProcessor.BatchResult process(BatchProcessor.BatchJob job,
                                                      BiConsumer<File, File> operation,
                                                      Consumer<Integer> progressCallback) {
-        return process(job, operation, progressCallback, BatchTransactionalProcessor::publishAtomically);
+        return process(job, operation, progressCallback, () -> false,
+                BatchTransactionalProcessor::publishAtomically);
+    }
+
+    public static BatchProcessor.BatchResult process(BatchProcessor.BatchJob job,
+                                                     BiConsumer<File, File> operation,
+                                                     Consumer<Integer> progressCallback,
+                                                     java.util.function.BooleanSupplier cancelled) {
+        return process(job, operation, progressCallback, cancelled,
+                BatchTransactionalProcessor::publishAtomically);
     }
 
     static BatchProcessor.BatchResult process(BatchProcessor.BatchJob job,
                                               BiConsumer<File, File> operation,
                                               Consumer<Integer> progressCallback,
+                                              java.util.function.BooleanSupplier cancelled,
                                               AtomicPublisher publisher) {
         List<File> inputs = List.copyOf(job.inputFiles());
         int total = inputs.size();
@@ -69,6 +79,9 @@ public final class BatchTransactionalProcessor {
         List<Backup> backups = new ArrayList<>();
         try {
             for (int i = 0; i < total; i++) {
+                if (isCancelled(cancelled)) {
+                    return cancelled(total);
+                }
                 BatchOutputPlan.Entry entry = plan.get(i);
                 String prefix = i + "-";
                 Path stagedPath = stagingRoot.resolve(prefix + entry.output().getName());
@@ -107,6 +120,9 @@ public final class BatchTransactionalProcessor {
                     progressCallback.accept((int) ((i + 1.0) / total * 100));
                 }
             }
+            if (isCancelled(cancelled)) {
+                return cancelled(total);
+            }
             int backupIndex = 0;
             for (Staged current : staged) {
                 for (StagedFile file : current.files()) {
@@ -140,6 +156,16 @@ public final class BatchTransactionalProcessor {
         } finally {
             deleteRecursively(stagingRoot);
         }
+    }
+
+    private static boolean isCancelled(java.util.function.BooleanSupplier cancelled) {
+        return Thread.currentThread().isInterrupted()
+                || (cancelled != null && cancelled.getAsBoolean());
+    }
+
+    private static BatchProcessor.BatchResult cancelled(int total) {
+        return new BatchProcessor.BatchResult(0, total,
+                List.of("Lote cancelado; no se publico ninguna salida y las previas quedaron intactas."));
     }
 
     private static void publishAtomically(Path staged, Path target) throws IOException {

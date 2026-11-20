@@ -22,6 +22,8 @@ public class BatchProcessorDialog extends JDialog {
     private final JLabel statusLabel;
     private final JButton scanButton;
     private final JButton runButton;
+    private JButton cancelButton;
+    private SwingWorker<BatchProcessor.BatchResult, Void> activeBatchWorker;
     private List<File> currentFiles = List.of();
     private SwingWorker<List<File>, Void> scanWorker;
     private int scanGeneration;
@@ -128,10 +130,14 @@ public class BatchProcessorDialog extends JDialog {
         runButton = new JButton("Ejecutar");
         runButton.setEnabled(false);
         runButton.addActionListener(e -> executeBatch());
+        cancelButton = new JButton("Cancelar");
+        cancelButton.setEnabled(false);
+        cancelButton.addActionListener(e -> cancelBatch());
         JButton closeButton = new JButton("Cerrar");
         closeButton.addActionListener(e -> dispose());
         footer.add(scanButton);
         footer.add(runButton);
+        footer.add(cancelButton);
         footer.add(closeButton);
         statusLabel = new JLabel("Selecciona un directorio y escanea.");
         footer.add(statusLabel);
@@ -256,6 +262,30 @@ public class BatchProcessorDialog extends JDialog {
         scanWorker.execute();
     }
 
+    private void restoreAfterRun() {
+        scanButton.setEnabled(true);
+        operationCombo.setEnabled(true);
+        includeSubdirsCheck.setEnabled(true);
+        transactionalCheck.setEnabled(true);
+        String inputPath = inputDirField.getText().trim();
+        String normalized = inputPath.isEmpty() ? ""
+                : new File(inputPath).toPath().toAbsolutePath().normalize().toString();
+        runButton.setEnabled(!currentFiles.isEmpty()
+                && normalized.equals(scannedInputPath)
+                && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs
+                && java.util.Objects.equals(operationCombo.getSelectedItem(), scannedOperation));
+    }
+
+    private void cancelBatch() {
+        SwingWorker<BatchProcessor.BatchResult, Void> worker = activeBatchWorker;
+        if (worker == null) {
+            return;
+        }
+        worker.cancel(true);
+        statusLabel.setText("Cancelando lote; no se publicaran salidas parciales...");
+        statusLabel.setForeground(Color.ORANGE);
+    }
+
     private void executeBatch() {
         String inputPath = inputDirField.getText().trim();
         String normalizedInput = inputPath.isEmpty() ? ""
@@ -293,6 +323,7 @@ public class BatchProcessorDialog extends JDialog {
         operationCombo.setEnabled(false);
         includeSubdirsCheck.setEnabled(false);
         transactionalCheck.setEnabled(false);
+        cancelButton.setEnabled(transactional);
         statusLabel.setText("Procesando...");
         statusLabel.setForeground(Color.BLUE);
         progressBar.setValue(0);
@@ -301,7 +332,7 @@ public class BatchProcessorDialog extends JDialog {
                 operation, currentFiles, outputDir, operation);
 
         // Execute in background
-        new SwingWorker<BatchProcessor.BatchResult, Void>() {
+        activeBatchWorker = new SwingWorker<BatchProcessor.BatchResult, Void>() {
             @Override
             protected BatchProcessor.BatchResult doInBackground() {
                 java.util.function.BiConsumer<File, File> operationBody = (input, output) -> {
@@ -324,14 +355,23 @@ public class BatchProcessorDialog extends JDialog {
                 java.util.function.Consumer<Integer> progressSink =
                         progress -> SwingUtilities.invokeLater(() -> progressBar.setValue(progress));
                 return transactional
-                        ? BatchTransactionalProcessor.process(job, operationBody, progressSink)
+                        ? BatchTransactionalProcessor.process(job, operationBody, progressSink,
+                                this::isCancelled)
                         : BatchProcessor.processBatch(job, operationBody, progressSink);
             }
 
             @Override
             protected void done() {
+                activeBatchWorker = null;
+                cancelButton.setEnabled(false);
                 try {
                     BatchProcessor.BatchResult result = get();
+                    if (isCancelled()) {
+                        restoreAfterRun();
+                        statusLabel.setText("Lote cancelado; no se publico ninguna salida.");
+                        statusLabel.setForeground(Color.RED);
+                        return;
+                    }
                     statusLabel.setText("Completado: " + result.success() + " exitosos, " + result.failed() + " fallidos");
                     statusLabel.setForeground(result.failed() == 0 ? new Color(0, 128, 0) : Color.RED);
                     progressBar.setValue(100);
@@ -361,6 +401,7 @@ public class BatchProcessorDialog extends JDialog {
                     scanButton.setEnabled(true);
                     operationCombo.setEnabled(true);
                     includeSubdirsCheck.setEnabled(true);
+                    transactionalCheck.setEnabled(true);
                     runButton.setEnabled(!currentFiles.isEmpty()
                             && normalizedInput.equals(scannedInputPath)
                             && includeSubdirsCheck.isSelected() == scannedIncludeSubdirs
@@ -370,7 +411,8 @@ public class BatchProcessorDialog extends JDialog {
                     statusLabel.setForeground(Color.RED);
                 }
             }
-        }.execute();
+        };
+        activeBatchWorker.execute();
     }
 
     private static BatchFileDiscovery.InputKind inputKindForOperation(String operation) {
