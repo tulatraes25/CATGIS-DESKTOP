@@ -101,7 +101,7 @@ class BatchTransactionalProcessorContractTest {
                     } catch (IOException io) {
                         throw new RuntimeException(io);
                     }
-                }, null,
+                }, null, () -> false,
                 (staged, target) -> {
                     if (++published[0] == 2) {
                         throw new IOException("fallo de publicacion simulado");
@@ -178,7 +178,7 @@ class BatchTransactionalProcessorContractTest {
                     } catch (IOException io) {
                         throw new RuntimeException(io);
                     }
-                }, null,
+                }, null, () -> false,
                 (staged, target) -> {
                     if (target.getFileName().toString().endsWith(".aux.xml")) {
                         throw new IOException("fallo de publicacion de sidecar simulado");
@@ -190,6 +190,61 @@ class BatchTransactionalProcessorContractTest {
         assertEquals(0, result.success());
         assertEquals("OLD-A", Files.readString(outputDir.resolve("a.txt")));
         assertEquals("OLD-SIDECAR", Files.readString(outputDir.resolve("a.txt.aux.xml")));
+        assertNoStaging(outputDir);
+    }
+
+    @Test
+    void cancellationPublishesNothingAndPreservesExistingOutputs() throws Exception {
+        Path inputDir = Files.createDirectory(directory.resolve("in"));
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        List<File> inputs = List.of(
+                write(inputDir.resolve("a.txt"), "A"),
+                write(inputDir.resolve("b.txt"), "B"));
+        Files.writeString(outputDir.resolve("a.txt"), "OLD-A", StandardCharsets.UTF_8);
+        java.util.concurrent.atomic.AtomicInteger checks =
+                new java.util.concurrent.atomic.AtomicInteger();
+        BatchProcessor.BatchResult result = BatchTransactionalProcessor.process(
+                new BatchProcessor.BatchJob("tx", inputs, outputDir.toFile(), "copy"),
+                (input, output) -> {
+                    try {
+                        Files.copy(input.toPath(), output.toPath());
+                    } catch (IOException io) {
+                        throw new RuntimeException(io);
+                    }
+                }, null, () -> checks.incrementAndGet() > 1);
+
+        assertEquals(0, result.success());
+        assertEquals(2, result.failed());
+        assertTrue(result.errors().get(0).toLowerCase(java.util.Locale.ROOT).contains("cancel"),
+                result.errors().toString());
+        assertEquals("OLD-A", Files.readString(outputDir.resolve("a.txt")));
+        assertFalse(Files.exists(outputDir.resolve("b.txt")));
+        assertNoStaging(outputDir);
+    }
+
+    @Test
+    void interruptedThreadCancelsBeforePublication() throws Exception {
+        Path inputDir = Files.createDirectory(directory.resolve("in"));
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        List<File> inputs = List.of(write(inputDir.resolve("a.txt"), "A"));
+        Files.writeString(outputDir.resolve("a.txt"), "OLD-A", StandardCharsets.UTF_8);
+        BatchProcessor.BatchResult result;
+        try {
+            result = BatchTransactionalProcessor.process(
+                    new BatchProcessor.BatchJob("tx", inputs, outputDir.toFile(), "copy"),
+                    (input, output) -> {
+                        try {
+                            Files.copy(input.toPath(), output.toPath());
+                            Thread.currentThread().interrupt();
+                        } catch (IOException io) {
+                            throw new RuntimeException(io);
+                        }
+                    }, null);
+        } finally {
+            Thread.interrupted();
+        }
+        assertEquals(0, result.success());
+        assertEquals("OLD-A", Files.readString(outputDir.resolve("a.txt")));
         assertNoStaging(outputDir);
     }
 

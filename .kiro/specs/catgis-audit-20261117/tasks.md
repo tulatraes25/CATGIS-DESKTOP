@@ -273,3 +273,6 @@ Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
   `--self-test` 13/13 y `e2eBetaHarness` E2E_OK checks=13 con artefactos
   (build/e2e-beta/report.md, checksums); anadida evidencia de stdin acotado
   (10 KB aceptado, >1 MB rechazado) al contrato nativo de scripting #132.
+- Fase funcional (2026-11-19/20): #114 cancelacion cooperativa del lote
+  transaccional (supplier/interrupcion, nada se publica al cancelar) y boton
+  Cancelar en la UI; tests de cancelacion por supplier/interrupcion. 1709 tests.
