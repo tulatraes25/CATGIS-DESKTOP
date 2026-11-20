@@ -37,8 +37,8 @@
 - S3: `scripts/_common/DestructiveGuard.ps1`; `07/10/12/14/16` declaran
   `-AllowDestructive`, usan backup/restauracion o stage+swap, y `14` reemplaza la
   tabla viva en transaccion; `DestructiveScriptPolicyTest` (4) lo verifica.
-- Validacion real pendiente del PR CI (PostGIS Real Integration + static tests);
-  sin claim de bases reales fuera de CI.
+- Validacion real certificada en el job **PostGIS Real Integration** del PR
+  #252 y en `main`; sin claim de bases reales fuera de CI.
   - Evidence (2026-11-17): PR #252 (head `fdd805e`) con PostGIS Real
     Integration PASS (`_tests/dc6_*`, `_tests/dc7_*`) y checks completos; merge
     `48b008a` con Certification/CI/Runtime Identity/GeoParquet SUCCESS y

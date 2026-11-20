@@ -1,299 +1,125 @@
-# CATGIS — Remediación audit #263 — Tasks
+# CATGIS — Remediación audit #263 — Tasks (estado autoritativo)
 
-Estado: ACTIVE. Base `main` `c0484a1` (2026-11-17).
+**Estado:** fase de remediación cerrada; ejecución verificada sobre `main`
+`1756e0b` (código `1d1c27d`), 2026-11-20.
+**Evidencia:** [AUDIT_263_FINAL_STATE_20261118.md](../../../docs/quality/AUDIT_263_FINAL_STATE_20261118.md),
+[reconciliación](../../../docs/quality/AUDIT_263_RECONCILIATION_20261117.md),
+[manifiesto](../../../docs/CAPABILITY_MANIFEST.md),
+[F3](../../../docs/quality/F3_RUNTIME_EVIDENCE_20261117.md).
 
-- [ ] **T0 — Reconciliación y gobernanza**
-  - Spec Kiro, manifiesto de capacidad, conciliación de docs/ledger, ruleset
-    reforzado, snapshot de runs.
-- [x] **T1 — No perder trabajo** (cerrado)
-  - #144 #146 #155 #260 #148 #149 #153 #151 #150 #195 #193 #175 #176.
-- [x] **T2 — Ciencia básica fiable (PRs #266 + este)**
-  - #258 IDW, #262 ASCII/stats, #257 métrica/signos, #256 raster calculator,
-    #259 CRS favoritos (todos corregidos con oráculos). #162 NetCDF y #139/#163
-    se reasignan a T3 (datos/proveedores).
-- [ ] **T3 — Datos y proveedores**
-  - #128 georreferencia embebida, #161 sidecar atómico, #139 calibración
-    espectral, #112 GeoParquet real, FGB/LAS escalable.
-- [ ] **T4 — Integración y seguridad**
-  - #261 credential store, #156 PostGIS replace transaccional, OGC/WCS/WMTS,
-    DC-5, #174 ruleset, web auth/proxy.
-- [ ] **T5 — A0.7/F3 y release**
-  - Gates de arquitectura + GUI interactiva + firma/notarización; sin cerrar
-    A0.7 por snapshots/E2E.
+> Este archivo reemplaza las notas cronológicas con estados intermedios
+> (“PR en curso”, “parcial”) que quedaron obsoletas. Cualquier discrepancia se
+> resuelve con GitHub `main`, los runs exactos y el manifiesto.
 
-## Progreso
+## Criterios de aceptación (cumplidos)
 
-- T0 completado y certificado en `main` `1a51ac0` (PR #265, ruleset 25 checks,
-  manifiesto y reconciliación).
-- T2 parcial (PR en curso): **#258** IDW con norte alineado y centros exactos;
-  **#262** ASCII falla cerrada si dx!=dy y stats ignoran no finitos; **#257**
-  escala métrica por CRS (`MetricScale`) y convención corte/relleno corregida en
-  `VolumeCalculator`/`BasinMorphometry` con oráculos grados/metros. Pendientes
-  T2: #256 raster calculator, #259 CRS favoritos, #162 NetCDF.
+- [x] Caso RED reproducido antes del fix (test/oráculo) en cada PR.
+- [x] Fix mínimo, compatibilidad y migración versionada cuando aplica.
+- [x] CI + Certification (Linux/Windows/macOS Intel+ARM) + Runtime Identity
+      17/21 ×4 + GeoParquet + GDAL nativo + PostGIS real.
+- [x] Merge con head esperado y **attestation** post-main (última: `44833072706`).
+- [x] Manifiesto/documentación/ledger actualizados por tranche.
+- [x] Suite local: **1718 tests / 0 fallos / 15 skips**; integridad
+      `JAVA_SOURCE_INTEGRITY_PASS files=899`.
+- [x] `--version`, `--self-test` 13/13 y `e2eBetaHarness` E2E_OK 13/13.
 
-- T2 cierre (2026-11-17): #258/#262/#257 certificados en `main` `6cd043d`
-  (PR #266); #256 (calculadora raster científica float/NoData + GeoTIFF y
-  preview separado) y #259 (favoritos POSGAR 94 / Campo Inchauspe / POSGAR 2007
-  validados contra la base EPSG de GeoTools) en el PR T2-2. Suite local **1602
-  tests / 0 fallos / 15 skips**.
+## T0 — Gobernanza y reconciliación
 
-- T1 avance (2026-11-17): **#260** corregido (PR en curso): preflight de todas
-  las salidas de capas vectoriales transitorias con reserva de nombre físico
-  único (`a_b.shp`, `a_b_2.shp`, ...), sin sobreescribir archivos ajenos y
-  reutilizando el archivo propio de la capa. Tests
-  `VectorAutosaveCollisionContractTest` (4). Restan #144/#146/#148/#149/#155.
-- T1 avance 2 (2026-11-17): **#144** corregido (PR en curso): apertura en dos
-  fases, `stageProject` detached (raster/vector contra el proyecto candidato,
-  remoto pendiente explícito) y commit atómico; un fallo obligatorio deja la
-  sesión previa intacta y no hay éxito parcial. Tests
-  `ProjectOpenAtomicCommitContractTest` (2: raster corrupto conserva sesión,
-  proyecto válido commitea raster adjunto). Restan #146/#148/#149/#155.
-- T1 avance 3 (2026-11-17): **#148** corregido (PR en curso): formato `.catgis`
-  v2 con marcador `PROJECT_FORMAT|2` y codec reversible (`%`, `|`, CR/LF
-  escapados; Unicode y backslashes verbatim) en guardado/carga canonicos,
-  `ProjectOpenService.inspect`, grupos y codec legacy; archivos v1 siguen
-  abriendo. Tests `ProjectCodecRoundTripContractTest` (4). Restan
-  #146/#149/#155.
-- T1 avance 4 (2026-11-17): **#155** corregido (PR en curso): publicacion de
-  familias Shapefile con journal (`.base.catgis-publish.journal`), commit point
-  por borrado del journal, recuperacion al siguiente guardado, backups huerfanos
-  limpiados, lock de identidad con deteccion de stale (15 min) y seam de crash
-  inyectado. Tests `VectorFamilyJournalContractTest` (7). Solo resta #146/#149.
-- T1 avance 5 (2026-11-17): **#146** corregido (PR en curso): featureCount y
-  sourceName se persisten/restauran (solo se escribe FEATURE_COUNT si >0 para
-  mantener la forma legacy), el payload keyed usa el codec v2 (pipes preservados)
-  y el decodificador legacy ya no interpreta sufijos KEY=value como campos
-  posicionales. Tests `ProjectLayerRoundtripByTypeContractTest` (GPX, GeoPackage,
-  SpatiaLite, Vector, PostGIS y WFS con tipo/path/CRS/count/source) y ajustes v2
-  en `SpecializedProjectLayerPayloadContractTest`. Solo resta #149.
-- T1 cierre (2026-11-17): **#149** corregido (PR en curso): `ProjectRecoveryJournal`
-  con snapshots aislados/versionados en `~/.catgis/recovery` (override
-  `-Dcatgis.recovery.root`), sidecars Shapefile de capas en memoria, manifiesto
-  SHA-256, retención 5, restauración no destructiva vía flujo normal de apertura,
-  rechazo de snapshots corruptos, autosnapshot EDT cada 60 s (headless no-op) y
-  prompt de recuperación al inicio; al guardar se descartan los snapshots del
-  proyecto. Tests `ProjectRecoveryJournalContractTest` (5). T1 completo:
-  #144/#146/#148/#149/#155/#260.
-- T3 avance 1 (2026-11-17): **#161** corregido (PR en curso):
-  `RasterBundlePublisher` publica TIFF+sidecar atomicos (staged, backup de ambos,
-  verificacion de imagen/sidecar, restauracion ante fallo, deletion de sidecar
-  obsoleto si no hay georreferencia) y se usa en OpenTopography, SoilGrids y
-  Climate (WorldClim/Open-Meteo). Tests `RasterBundlePublisherContractTest` (6).
-- T3 avance 2 (2026-11-17): **#128** corregido (PR en curso): precedencia
-  GeoKeys embebidas > sidecar, veto de conflicto con warning de provenance,
-  sidecar sólo si no hay GeoKeys y declara CRS decodable, y
-  `declaredCode()` evita inventar EPSG:4326 en decisiones de georreferencia
-  (incluido el fallback por CRS de capa). Tests
-  `GeoreferencePrecedenceContractTest` (4) con oracle de pixeles; decisión en
-  `docs/quality/GEOREFERENCE_PRECEDENCE_20261117.md`.
-- T3 avance 3 (2026-11-17): **#162** corregido (PR en curso): `NetCdfCfSupport`
-  resuelve CRS por `grid_mapping` (`epsg_code`/`spatial_ref`/
-  `latitude_longitude`/grados) y falla cerrado en grids rotados sin CRS; el
-  fallback UCAR ya no asume EPSG:4326, aplica packaging CF
-  (scale/offset/fill/valid) y convierte unidades (radianes, 0..360).
-  `NetCdfCfSupportContractTest` (9); politica en
-  `docs/quality/NETCDF_CF_POLICY_20261117.md`.
-- T3 avance 4 (2026-11-17): **#139** corregido en su núcleo (PR en curso):
-  API `computeAnalysis` con calibración obligatoria (scale/offset/NoData),
-  dominio de reflectancia validado, propagación de NoData y grilla/CRS
-  compartidos; el preview 8-bit del diálogo queda marcado no profesional.
-  Tests `SpectralCalibrationContractTest` (6); política en
-  `docs/quality/SPECTRAL_CALIBRATION_POLICY_20261117.md`.
-- T3 avance 5 (2026-11-17): **#163** corregido (PR en curso):
-  `normalizeExplicit` conserva vacío y `normalizeCode` mantiene el default
-  UI EPSG:4326 delegando en aquel; migradas rutas sensibles (transforms,
-  BooleanRisk, vector CRS, FlatGeobuf, declaredCode raster). Tests
-  `CrsNormalizationSplitContractTest` (4); política en
-  `docs/quality/CRS_NORMALIZATION_POLICY_20261117.md`.
-- T4 avance 1 (2026-11-17): **#261** corregido (PR en curso):
-  `PostgisCredentialVault` v2 con secreto de instalación aleatorio 32 bytes
-  (`~/.catgis/postgis.key`, permisos POSIX), AES-256-GCM por registro;
-  migración legacy v1/XOR fail-closed; claves Preferences largas hasheadas.
-  Tests `PostgisCredentialsVaultContractTest` (7); política en
-  `docs/quality/POSTGIS_CREDENTIALS_SECURITY_20261117.md`. DPAPI/Keychain
-  completo queda como mejora futura.
-- T4 avance 2 (2026-11-17): **#156** implementado (PR en curso): REPLACE TABLE
-  escribe a `<tabla>_catgis_stage_<hex>`, verifica filas y hace DROP+RENAME en
-  una transacción JDBC con ROLLBACK y limpieza de staging; identificadores
-  validados/citados; modo oculto en UI. Tests de plan (4) y test real en
-  `PostgisRealIntegrationTest` (job PostGIS CI). #261 se registra como
-  **PARCIAL/MITIGADO**: vault v2 con secreto local, pero DPAPI/Keychain/Secret
-  Service completo sigue pendiente.
-- T3 avance 6 (2026-11-17): **#175** parcial/mejorado (PR en curso):
-  `FlatGeobufFrameReader` transmite frames size-prefixed en ventanas acotadas
-  (sin buffer directo del payload completo), completa lecturas cortas, falla
-  cerrado ante truncamiento/tamaño inválido/conteo incongruente y cancela por
-  interrupción; el loader mantiene límites de 100k features en RAM. Tests
-  `FlatGeobufFrameReaderContractTest` (7). **Sigue pendiente** el lector
-  indexado para >100k features: #175 no se considera cerrado.
-- T3 avance 7 (2026-11-17): **#176** núcleo implementado (PR en curso):
-  `LasPreviewPolicy` (completo <=50k, muestra estratificada >50k),
-  `LasReader.readSampledPoints`, estado tipado persistente en `Layer`
-  (PARTIAL_PREVIEW/TOTAL/LOADED), envelope de muestra y guarda de exportación.
-  Tests `LasPreviewPolicyContractTest` (4). **Pendiente** etiquetas UI extendidas
-  y bloqueo de todos los flujos profesionales: #176 sigue abierto.
-- T4 avance 3 (2026-11-17): **#43** aceptación verificada (PR docs en curso):
-  WCS valida firmas TIFF/BigTIFF, ImageIO, dimensiones, CRS/extent, strips y
-  muestras de píxel antes del rename atómico; staging/presupuesto/fallback y EDT
-  cubiertos por 34+ tests existentes. Evidencia en
-  `docs/quality/WCS_PAYLOAD_INTEGRITY_EVIDENCE_20261117.md`. **#108 (ejes WCS2/
-  DescribeCoverage) sigue OPEN**; A0.7/F3 NOT_CERTIFIED.
-- T4 avance 4 (2026-11-17): **#108** núcleo implementado (PR en curso):
-  `WcsDescribeCoverageAxes` parsea DescribeCoverage seguro (<=4 MiB), exige
-  srsName y exactamente 2 ejes, mapea x/y por significado (lon/lat/e/n/...) y
-  falla cerrado ante ambigüedad; genera SUBSET/SCALESIZE con etiquetas nativas.
-  Tests `WcsDescribeCoverageAxesContractTest` (5). **#108 sigue OPEN** hasta
-  integrar fetch DescribeCoverage + flujo de descarga/UI. A0.7/F3 NOT_CERTIFIED.
-- T4 cierre de #108 (2026-11-17): `DescribeCoverage` integrado en la descarga
-  real (`downloadCoverageToFileNegotiated` + WcsDialog), con caché LRU, URL de
-  ejes nativos y fallback v2->v1 sin adivinar x/y; tests
-  `WcsNegotiatedDownloadContractTest` (3) con URL capturada. A0.7/F3 siguen
-  NOT_CERTIFIED.
-- T3 avance 8 (2026-11-17): #176 UI/analítica parcial: badge persistente
-  `PREVIEW - N de TOTAL` en tabla de atributos (título/subtítulo/estado) y
-  bloqueo de validación topológica sobre preview; exportación ya bloqueada.
-  Tests `LasPreviewPolicyContractTest` (5). Siguen pendientes calculadora de
-  campos/geoprocesamiento/clasificación y simbología: #176 ABIERTO.
-- T3 cierre de #176 (2026-11-17): badge `[PREVIEW]` en lista de capas y estado
-  `PREVIEW - N de TOTAL` en tabla; guards centrales bloquean exportacion,
-  topologia, calculadora de campos, geoprocesamiento y clasificacion ML sobre
-  previews. Tests de politica (5). Dataset completo >50k y LAZ siguen fuera de
-  alcance declarado.
-- Gobernanza (2026-11-17): cierre administrativo de issues con evidencia
-  (PR+test+main certificado): #128/#144/#146/#148/#149/#155/#156/#161/#162/
-  #163/#176/#256/#257/#258/#259/#260/#262 (+#43/#108 previos). Quedan abiertos
-  #112 (M3 ingesta), #175 (indexado), #139 (UI), #261 (OS vault), #150/#151/
-  #153/#193/#195, #164 y gates CATMAP/A0.7. Ver reconciliacion seccion 8.
-- Gobernanza (2026-11-17, cont.): cierre verificado adicional de #174
-  (ruleset activo exige 25 checks incl. Verify exact main push certification),
-  #193 (LocalVectorSourceCrsProvenance + LasSourceCrsProjectRoundTripContractTest)
-  y #164 (UserVisibleTextEncodingContractTest sin sentinelas). #195 sigue
-  parcial (SHP cubierto; GeoJSON/KML pendientes).
-- T3 cierre de #139 (2026-11-17): `SpectralCalibrationInput` exige declaracion
-  explicita scale/offset/NoData; `SpectralIndexDialog` calcula via
-  computeAnalysis calibrado, conserva AnalysisRaster float en LocalRasterData y
-  permite exportar GeoTIFF analitico; entrada ambigua/raw falla cerrado sin capa.
-  Tests `SpectralCalibrationInputContractTest` (4). 1689 tests ok.
-- T1 cierre de #150/#151/#153 (2026-11-17): SpatiaLite usa CRS del schema
-  real (`requireSourceCrs`, SRID real), FlatGeobuf exige CRS verificado del
-  header y LAS exige CRS declarado (sin default 4326); `hasUnsavedProjectChanges`
-  lee el proyecto autoritativo de AppContext. Tests
-  `SpatiaLiteSourceCrsTruthContractTest`, `FlatGeobufCrsFailClosedContractTest`,
-  `LasSourceCrsProjectRoundTripContractTest`, `ProjectAuthorityContractTest`.
-  1690 tests ok.
-- T1/T3 cierres (2026-11-17): #195 provenance source-vs-display para SHP/
-  GeoJSON/KML con fixtures reales, roundtrip de proyecto, bytes originales
-  intactos, CRS-null y path-change invalidation; #167 contrato WCS shared
-  deadline con headroom determinista (1500 ms vs stream 3 s, requests==1 sin
-  fallback). Ambos verificados en main certificado (attestation 44384865579).
-- T5 avance (2026-11-17): cierre verificado de gates CATMAP A0.x con tests
-  certificados: #95 (save atómico/backup), #99 (exports atómicos + SVG vectorial),
-  #98 (multipágina/v2), #96 (Atlas no muta/streaming), #102 (edición/undo por
-  página). A0.7/F3 GUI física siguen NOT_CERTIFIED; no se sobrepromete.
-- CI/QA (2026-11-17): estabilizado `ExternalToolTimeoutContractTest`
-  veryLargeOutput... — ExternalToolService espera EOF del drain con latch
-  (5 s + cierre forzado) y falla cerrado si no drena, en lugar de snapshot tras
-  join(1 s) (causa del flake MacIntel21). Test repite 5 veces y verifica marcador
-  de truncado y ausencia de "could not be fully drained".
-- T4/T5 avance (2026-11-17): cierre verificado de gates WCS (#86/#87/#91/#94),
-  XYZ/GDAL (#50/#64/#67/#70) y SpatiaLite (#152) con tests certificados en main.
-  Quedan abiertos #263, #261, #175, #143, #132, #114, #113, #112, #109, #82,
-  #74 y #73; A0.7/F3 NOT_CERTIFIED.
-- T5 evidencia (2026-11-17, main 21bd9a6): refresco real de `ui-snapshot.yml`
-  (run 44414255394, 3/3 SUCCESS: Linux Xvfb/Windows/macOS ARM) y
-  `f3-runtime-smoke.yml` (run 44414260382, 3/3 SUCCESS: app-image + launcher +
-  E2E). Manifiesto/F3 doc actualizados; A0.7/F3 siguen NOT_CERTIFIED por falta
-  de matriz interactiva humana/HiDPI/foco/impresión física.
-- T4 avance (2026-11-17): #261 `OsKeyProtector` envuelve el secreto de
-  instalacion con DPAPI (Windows, PowerShell stdin) o Secret Service (Linux
-  secret-tool), formato de archivo versionado C G O S 1, migracion unica del
-  key raw, fail-closed ante tamper/backend distinto/ausente; ejecucion via
-  ExternalToolService.runBounded (sin ProcessBuilder nuevo). Tests
-  OsKeyProtectorContractTest (5) + vault (7). 1695 tests ok. #261 SIGUE
-  ABIERTO por Keychain macOS y matriz nativa de sesiones.
-- T4 avance (2026-11-17): #132 `executeCode` ya no usa `deleteOnExit`; el
-  script temporal se elimina en `finally` y se registra un warning si falla.
-  Nuevo `ScriptTempCleanupContractTest` (sin fugas). #132 SIGUE ABIERTO por la
-  anomalia Windows original y la matriz nativa de lifecycle.
-- T4 avance (2026-11-17): #261 backend Keychain macOS implementado con
-  `security -i` (modo batch por stdin; el secreto Base64 nunca va en argv/ps),
-  `clear()` y test nativo `MacKeychainBackendContractTest` (macOS, skip
-  transparente si el runner no expone Keychain). Windows DPAPI/Linux Secret
-  Service ya certificados en PR #297. #261 SIGUE ABIERTO hasta evidencia CI
-  macOS y matriz de sesiones.
-- T4 avance (2026-11-17): #261 test nativo cross-platform
-  `OsNativeBackendContractTest` (sin assumptions): DPAPI en Windows, Keychain en
-  macOS, Secret Service o "unsupported transparente" en Linux; pasos obligatorios
-  en Certification Linux/Windows/macOS que fallan si el test no se ejecuta
-  (skip no es evidencia). DPAPI requiere `Add-Type System.Security`.
-- T4 cierre de #261 (2026-11-17): evidencia nativa obligatoria post-main
-  WINDOWS_NATIVE_DPAPI_EVIDENCE/LINUX_NATIVE_OS_BACKEND_EVIDENCE/
-  MACOS_NATIVE_KEYCHAIN_EVIDENCE tests=1 skipped=0 (main fdb785f, PR #301,
-  attestation 44449352932). Matriz fisica multi-sesion queda bajo A0.7.
-- Consolidacion (2026-11-18/19): `AUDIT_263_FINAL_STATE_20261118.md` con mapa
-  cerrado/abierto y bloqueos verificados; manifiesto en main c75df82. 43 issues
-  cerrados, 1697 tests. Epic #263 pendiente de DC-5, decision feature-freeze
-  #112/#175 y aceptacion de residuales fisicos A0.7/F3.
-- Decisiones de owner (2026-11-19): DC-5 productor de mascara ejido ->
-  UNSUPPORTED y retirado del alcance beta (sin fuente autoritativa); #112 y #175
-  se mantienen congelados por feature freeze A0.7 y documentados como
-  INSPECTION_ONLY/BETA_LIMITED. El epic #263 queda pendiente solo de A0.7/F3
-  fisico y decision de programa sobre residuales #82/#74/#73/#114/#113/#132.
-- T4 avance (2026-11-19): #114 `BatchTransactionalProcessor` opt-in con
-  staging privado, publicacion atomica, backup/rollback de salidas previas y
-  limpieza; tests (4: exito, fallo de operacion, fallo de publicacion, plan
-  rechazado). API existente intacta; UI/sidecars/crash siguen residuales.
-  1701 tests ok.
-- T5 avance (2026-11-19): #113 `TopologyValidationWorker` ejecuta la validacion
-  JTS fuera del EDT, cancela cooperativamente y publica resultados solo en
-  done()/EDT; dialog con boton Cancelar. Tests (3: off-EDT, cancelacion no
-  publica, error reportado). 1704 tests ok. AOI/reparacion/fisico siguen
-  residuales.
-- T4 avance (2026-11-19): #132 `ScriptNativeLifecycleContractTest` con Python
-  real: 3 errores de sintaxis devuelven diagnostico no vacio dentro del deadline
-  y salida de 300 KB acotada; pasos de Certification Linux/Windows/macOS exigen
-  ejecucion (skip no es evidencia). Anomalia Windows original no erradicada;
-  #132 sigue abierto. 1705 tests ok.
-- T4 avance (2026-11-19): #114 transaccion opt-in publica sidecars del mismo
-  basename como unidad (backup/publish/rollback conjuntos), con tests de exito
-  y de fallo de sidecar restaurando principal y sidecar previos. 1707 tests ok.
-  UI de lote y familias completas Shapefile siguen residuales.
-- Consolidacion final (2026-11-19): main bf671b4 certificado (Certification
-  44531670621, Runtime 44531670539, attestation 44534311113), 1707 tests,
-  ruleset 25 checks activo. Evidencia nativa OS-backed/scripting multi-OS
-  registrada; residuales #175/#112 congelados por decision owner, #114/#113/
-  #132 parciales y #82/#74/#73 fisicos bajo A0.7/F3 NOT_CERTIFIED.
-- Fase corregida/funcional (2026-11-19): UI de lotes migrada a
-  `BatchTransactionalProcessor` con checkbox transaccional (todo o nada,
-  staging+rollback+sidecars) y modo por archivo conservado. Verificacion local
-  Windows: build 1707 tests, `--version` 1.0.0-beta.2 beta, `--self-test`
-  13/13 SELFTEST_OK. Residual crash/performance/UI completa de #114 siguen
-  abiertos; A0.7/F3 NOT_CERTIFIED.
-- Fase funcional (2026-11-19): verificacion local Windows `--version`,
-  `--self-test` 13/13 y `e2eBetaHarness` E2E_OK checks=13 con artefactos
-  (build/e2e-beta/report.md, checksums); anadida evidencia de stdin acotado
-  (10 KB aceptado, >1 MB rechazado) al contrato nativo de scripting #132.
-- Fase funcional (2026-11-19/20): #114 cancelacion cooperativa del lote
-  transaccional (supplier/interrupcion, nada se publica al cancelar) y boton
-  Cancelar en la UI; tests de cancelacion por supplier/interrupcion. 1709 tests.
-- Fase corregida/funcional final (2026-11-20): main 47a24a9 certificado
-  (Certification 44717822524, Runtime 44717822460, attestation 44720165406);
-  1709 tests; verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13
-  sobre el main fusionado (incluye UI batch transaccional y cancelacion).
-- Fase funcional (2026-11-20): #114 `BatchDatasetCopier` copia familias
-  Shapefile completas (.shp/.shx/.dbf/.prj/.cpg/.qix + sidecars) con nombres del
-  staging, fail-closed si falta .shx/.dbf y sidecars raster (.aux.xml/.tfw/...);
-  UI de lotes la usa en "Copiar archivos". Tests (5). 1714 tests.
-- Fase funcional final (2026-11-20): main c361649 certificado (Certification
-  44794533426, Runtime 44794533397, attestation 44797017666); 1714 tests;
-  verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13 sobre main
-  fusionado con familia Shapefile completa en copia batch.
-- T5 avance (2026-11-20): #113 cobertura contra AOI: `TopologyValidationOptions`
-  acepta studyArea/CRS/umbral, el servicio reporta el area faltante con geometria
-  de foco y falla cerrado si el CRS del AOI difiere; UI agrega checkbox, combo de
-  capas POLYGON y umbral. Tests numericos `TopologyCoverageAoiContractTest` (4).
-  1718 tests ok.
-- Fase funcional final AOI (2026-11-20): main 1d1c27d certificado (Certification
-  44827163743, Runtime 44827163826, attestation 44829178457); 1718 tests;
-  verificacion Windows --version, --self-test 13/13 y E2E_OK 13/13; cobertura
-  contra AOI integrada a UI y backend.
+- [x] Ledger audit y reconciliación por issue/tranche.
+- [x] Manifiesto único de versión/capacidad.
+- [x] Ruleset activo `24546459` con **25 checks** (incluye nativos, runtime,
+      GeoParquet, inventarios y `Verify exact main push certification`).
+- [x] Inventarios de superficies/comandos y mapa semántico.
+
+## T1 — No perder trabajo del usuario
+
+- [x] #144 apertura de proyecto fail-closed en dos fases.
+- [x] #146 roundtrip por tipo con feature count/source name.
+- [x] #148 codec `.catgis` v2 reversible (compatibilidad v1).
+- [x] #149 snapshots aislados y restauración de trabajo sin guardar.
+- [x] #150 SpatiaLite con CRS/SRID reales.
+- [x] #151 FlatGeobuf/LAS sin EPSG:4326 inventado.
+- [x] #153 AppContext autoritativo para cambios sin guardar.
+- [x] #155 journal crash-recoverable de familias Shapefile.
+- [x] #193/#195 provenance de CRS de archivo y roundtrip SHP/GeoJSON/KML/LAS.
+- [x] #260 autosave vectorial sin colisiones.
+- [x] #176 preview LAS tipado, muestreo estratificado, badge y guards.
+- [x] #175 streaming FlatGeobuf por ventanas, cancelación y fail-closed.
+
+## T2 — Ciencia básica fiable
+
+- [x] #256 calculadora raster float/NoData/CRS (no ARGB como único resultado).
+- [x] #257 métrica de cuenca y signos cut/fill.
+- [x] #258 IDW alineado al norte con centros exactos.
+- [x] #259 favoritos CRS argentinos autoritativos.
+- [x] #262 ASCII CATMAP falla cerrado si dx≠dy; estadísticas finitas.
+- [x] #162 NetCDF CF `grid_mapping`/packaging sin WGS84 asumido.
+- [x] #139 índices espectrales con calibración explícita y GeoTIFF analítico.
+- [x] #163 normalización explícita separada del default WGS84.
+
+## T3 — Datos, proveedores y formatos
+
+- [x] #128 georreferencia embebida con veto de sidecar.
+- [x] #161 publicación atómica TIFF+sidecar (DEM/suelo/clima).
+- [x] #162 climate CF sin relabel.
+- [x] #163 CRS explícito.
+- [x] #139/#176 calibración espectral y LiDAR preview.
+- [x] #175 FlatGeobuf acotado y fail-closed.
+- [x] #112 M1 metadatos reales + M2 inspección off-EDT **certificados**.
+- [ ] #112 M3 ingesta real de filas — **congelada por decisión del owner**
+      (feature freeze A0.7; manifiesto `INSPECTION_ONLY`).
+- [ ] #175 lector indexado >100k — **congelado por decisión del owner**
+      (manifiesto `BETA_LIMITED`).
+- [ ] LAZ / LAS formatos 4–10 — `REQUIRES_DEPENDENCY` (PDAL/decoder dedicado).
+
+## T4 — Integración y seguridad
+
+- [x] #156 PostGIS Replace Table transaccional con CI PostGIS real.
+- [x] #261 vault v2 + DPAPI/Keychain/Secret Service con evidencia nativa
+      multi-OS (`tests=1 skipped=0`).
+- [x] #43 WCS payload validado antes de publicar.
+- [x] #108 WCS 2.x `DescribeCoverage` con ejes nativos, caché y fallback.
+- [x] #174 ruleset con certificación nativa y attestation.
+- [x] DC-5/CATSERVER: decisión owner → **UNSUPPORTED**, retirado del alcance
+      beta (sin fuente autoritativa no se inventan datos).
+- [x] OGC/WCS gates cerrados con evidencia CI multi-OS.
+
+## T5 — A0.7/F3 y evidencia
+
+- [x] Gates de implementación CATMAP: #95/#96/#98/#99/#102 con tests
+      (save/exports atómicos, multipágina, Atlas, undo por página).
+- [x] WCS/XYZ/GDAL: #50/#64/#67/#70/#86/#87/#91/#94.
+- [x] UI snapshot y runtime smoke multi-OS (última: `44545814882` /
+      `44545819822`).
+- [x] Verificación funcional local: `--version`, `--self-test` 13/13,
+      `e2eBetaHarness` E2E_OK 13/13.
+- [x] Copy batch de familia Shapefile completa (#114), transacción con
+      rollback/cancelación y UI migrada.
+- [x] Topología asíncrona con cancelación y **cobertura contra AOI** (#113).
+- [ ] **A0.7/F3 físico** — `NOT_CERTIFIED`: falta matriz interactiva humana,
+      HiDPI/foco reales, gestos del owner, impresión física, FPS/memoria y
+      multi-sesión. No se certifica desde CI headless.
+- [ ] #132 anomalía Windows original de scripting — no reproducida en 40+
+      rondas; no se declara erradicada (evidencia nativa de lifecycle y stdin
+      acotado certificada).
+- [ ] #114 rollback ante crash y evidencia de performance — incrementos
+      separados.
+- [ ] #113 reparación reversible de incidencias — incremento separado.
+- [ ] #82 medición GUI de pan/drag en Windows real — gate físico.
+- [ ] #74 ejecución nativa de WhiteboxTools — depende de binario externo.
+- [ ] #73 residuos de corte eléctrico/filesystems de red — gate físico.
+
+## Issues de seguimiento
+
+- **#263** epic: pendiente de la certificación física A0.7/F3 y de decisión de
+  programa sobre residuales.
+- **#143** ledger vivo.
+- **#109** spec de producto umbrella.
+
+## Guard de consistencia\n\n- [x] `KiroAuditSpecConsistencyContractTest` (3) protege contra estados\n      obsoletos, pérdida de la decisión DC-5 y specs vacías/no UTF-8.\n- [x] `catgis-catmap-beta-1` y `catserver-sql-policies-t2-t4` sin pendientes\n      contradictorios.\n\n## Historial de cierre por fases
+
+- T0/T1/T2 cerrados y certificados en `main`.
+- T3/T4/T5 con gates de implementación cerrados; capacidades nuevas congeladas
+  por decisión owner.
+- Suites y attestation registradas en el manifiesto y la reconciliación; este
+  archivo ya no contiene estados “en curso”.

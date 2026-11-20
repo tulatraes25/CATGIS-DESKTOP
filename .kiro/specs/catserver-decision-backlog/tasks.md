@@ -1,6 +1,6 @@
 # CATSERVER Decision Backlog — Tasks
 
-Status: ACTIVE (T2–T4 DECIDED 2026-11-16 option A and CERTIFIED 2026-11-17; T1 still needs decision)
+Status: DECIDED (T1 DC-5 decided 2026-11-19: UNSUPPORTED; T2–T4 decided 2026-11-16 option A and CERTIFIED 2026-11-17)
 Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)
 Origin: transferred from `.kiro/specs/repository-audit-remediation/` at its
 CLOSED_CERTIFIED closure (2026-11-15).
@@ -11,19 +11,19 @@ GitHub-first gate as the closed remediation spec: new branch from live main,
 exact PR head CI + Certification + Runtime Identity + GeoParquet, merge with
 `expected_head_sha`, post-main runs and post-main attestation.
 
-## Pending
+## Decisiones
 
-> Fichas de decisión preparadas (2026-11-16):
-> `docs/quality/SQL_DECISION_RECORDS_20261116.md` con opciones, recomendación,
-> impacto y criterios de aceptación para DC-6/DC-7/DC-8. T2–T4 siguen
-> bloqueadas hasta que el owner registre la decisión en esta spec.
+> Fichas de decisión: `docs/quality/SQL_DECISION_RECORDS_20261116.md`.
+> DC-6/DC-7/DC-8 decididas y certificadas; DC-5 resuelta por decisión owner.
 
-- [ ] **T1 — DC-5: producer for `catastro.ejido_urbano_mask`**
-  - Needs: authoritative source (survey export, CAD/DWG pipeline or GIS service)
-    and the role that runs the publisher.
-  - Deliverable: import/derive script honoring `gid`/`geom`/SRID 4326, idempotent,
-    with a synthetic-fixture test in the PostGIS job; docs/11 updated.
-  - Acceptance: REQ-AR-16.
+- [x] **T1 — DC-5: producer for `catastro.ejido_urbano_mask` — DECIDED 2026-11-19: UNSUPPORTED**
+  - **Decisión del owner:** sin una fuente autoritativa y un rol publicador
+    definidos, la máscara se declara `UNSUPPORTED` y se retira del alcance
+    beta; **no se implementa ni se inventan datos**.
+  - El guard de consumidores (`_common/assert_ejido_mask.sql`, PR #212) sigue
+    fallando cerrado si la máscara no existe.
+  - Evidencia: `docs/CAPABILITY_MANIFEST.md` (DC-5 UNSUPPORTED) y
+    `docs/quality/AUDIT_263_RECONCILIATION_20261117.md` §4/§11.
 
 - [x] **T2 — DC-6: canonical `circunscripcion_sector` object**
   - **Decisión (2026-11-16, owner): A — vista canónica sobre la tabla cruda

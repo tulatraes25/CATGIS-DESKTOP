@@ -49,3 +49,10 @@ certificada; el E2E headless y los snapshots no sustituyen F3.2/F3.3/F3.4.
 3. CI exacto: CI + Certification (15 jobs) + Runtime Identity (8) + GeoParquet.
 4. Merge con `expected_head_sha`; post-main y `main-push-attestation` PASS.
 5. Documentación/manifiesto actualizado; issue vinculado y estado real.
+## Estado de aceptación (2026-11-20)
+
+Los criterios de aceptación por tranche se cumplieron para T0–T4 y para los
+gates de implementación de T5; el detalle verificable está en `tasks.md`,
+`docs/CAPABILITY_MANIFEST.md` y la reconciliación. A0.7/F3 sigue
+`NOT_CERTIFIED` y las capacidades congeladas por decisión del owner no se
+implementaron.

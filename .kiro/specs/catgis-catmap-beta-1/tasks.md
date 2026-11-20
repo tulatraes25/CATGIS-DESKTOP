@@ -46,8 +46,8 @@ Cada tarea se certifica con el mismo gate GitHub-first.
   - `release-beta.yml` (workflow_dispatch, `contents: write`): app-images
     Linux/Windows/macOS, artefactos adjuntos y `gh release create --prerelease`
     con las notas de B4. Ejecucion manual verificada.
-  - Evidence: workflow agregado; ejecucion manual pendiente de merge (se corre en
-    la tranche B7).
+  - Evidence: workflow agregado y ejecucion manual verificada en B7; sin
+    pendientes de merge en esta spec.
 
 - [x] **B7 — Certificacion y cierre**
   - Cada tranche con PR/checks/merge expected head/post-main/attestation; log de
