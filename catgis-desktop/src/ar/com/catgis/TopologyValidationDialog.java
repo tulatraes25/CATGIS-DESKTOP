@@ -48,6 +48,9 @@ public class TopologyValidationDialog extends JDialog {
     private final JCheckBox chkSlivers;
     private final JCheckBox chkMultiparts;
     private final JCheckBox chkAutoZoom;
+    private final JCheckBox chkCoverageAoi;
+    private final JComboBox<Layer> aoiCombo;
+    private final JTextField txtCoverageArea;
     private final JLabel lblSummary;
     private final DefaultTableModel model;
     private final JTable table;
@@ -81,6 +84,10 @@ public class TopologyValidationDialog extends JDialog {
         chkSlivers = new JCheckBox("Slivers", true);
         chkMultiparts = new JCheckBox("Multipartes problematicas", true);
         chkAutoZoom = new JCheckBox("Auto zoom al resultado", true);
+        chkCoverageAoi = new JCheckBox("Cobertura dentro de AOI", false);
+        aoiCombo = new JComboBox<>();
+        refreshAoiCombo();
+        txtCoverageArea = new JTextField("1.0", 6);
         lblSummary = new JLabel("Sin validacion ejecutada.");
 
         model = new DefaultTableModel(new Object[]{"Severidad", "Tipo", "Detalle", "Entidades"}, 0) {
@@ -131,6 +138,10 @@ public class TopologyValidationDialog extends JDialog {
         optionsPanel.add(txtTolerance);
         optionsPanel.add(new JLabel("Area sliver:"));
         optionsPanel.add(txtSliverArea);
+        optionsPanel.add(chkCoverageAoi);
+        optionsPanel.add(aoiCombo);
+        optionsPanel.add(new JLabel("Umbral area AOI:"));
+        optionsPanel.add(txtCoverageArea);
 
         JPanel summaryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         summaryPanel.add(lblSummary);
@@ -271,6 +282,16 @@ public class TopologyValidationDialog extends JDialog {
         }
     }
 
+    private void refreshAoiCombo() {
+        aoiCombo.removeAllItems();
+        for (Layer candidate : VectorLayerUtils.getVectorLayers()) {
+            ShapefileData data = VectorLayerUtils.ensureVectorData(candidate);
+            if (data != null && "POLYGON".equals(VectorLayerUtils.resolveGeometryFamily(data))) {
+                aoiCombo.addItem(candidate);
+            }
+        }
+    }
+
     private TopologyValidationOptions buildOptions() {
         TopologyValidationOptions options = new TopologyValidationOptions();
         options.setInvalidGeometries(chkInvalid.isSelected());
@@ -284,6 +305,16 @@ public class TopologyValidationDialog extends JDialog {
         options.setProblematicMultiparts(chkMultiparts.isSelected());
         options.setConnectionTolerance(parseDoubleField(txtTolerance, 1.0));
         options.setSliverAreaThreshold(parseDoubleField(txtSliverArea, 1.0));
+        options.setCoverageWithinStudyArea(chkCoverageAoi.isSelected());
+        if (chkCoverageAoi.isSelected()) {
+            Object selected = aoiCombo.getSelectedItem();
+            if (selected instanceof Layer aoiLayer) {
+                ShapefileData aoiData = VectorLayerUtils.ensureVectorData(aoiLayer);
+                options.setStudyArea(aoiData);
+                options.setStudyAreaCrs(VectorLayerUtils.pickLayerCrs(aoiLayer, aoiData));
+            }
+            options.setCoverageAreaThreshold(parseDoubleField(txtCoverageArea, 1.0));
+        }
         return options;
     }
 
