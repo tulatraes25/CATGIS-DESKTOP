@@ -2,7 +2,11 @@ package ar.com.catgis;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.LinkOption;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -50,11 +54,22 @@ public final class BatchTransactionalProcessor {
                 BatchTransactionalProcessor::publishAtomically);
     }
 
+    private static final String JOURNAL_PREFIX = ".catgis-batch-tx-journal-";
+    private static final String JOURNAL_HEADER = "CATGIS_BATCH_TX|1|";
+
     static BatchProcessor.BatchResult process(BatchProcessor.BatchJob job,
                                               BiConsumer<File, File> operation,
                                               Consumer<Integer> progressCallback,
                                               java.util.function.BooleanSupplier cancelled,
                                               AtomicPublisher publisher) {
+        try {
+            recoverInterruptedTransactions(job.outputDir());
+        } catch (IOException recoveryFailure) {
+            return new BatchProcessor.BatchResult(0,
+                    job.inputFiles() == null ? 0 : job.inputFiles().size(),
+                    List.of("No se pudo recuperar un lote interrumpido: "
+                            + recoveryFailure.getMessage()));
+        }
         List<File> inputs = List.copyOf(job.inputFiles());
         int total = inputs.size();
         List<BatchOutputPlan.Entry> plan;
@@ -124,31 +139,40 @@ public final class BatchTransactionalProcessor {
                 return cancelled(total);
             }
             int backupIndex = 0;
-            for (Staged current : staged) {
-                for (StagedFile file : current.files()) {
-                    Path target = file.target();
-                    Path backup = null;
-                    if (Files.isRegularFile(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
-                        backup = stagingRoot.resolve("backup-" + backupIndex++ + "-"
-                                + target.getFileName());
-                        Files.move(target, backup, StandardCopyOption.ATOMIC_MOVE);
-                    }
-                    try {
-                        publisher.publish(file.staged(), target);
-                    } catch (IOException publishFailure) {
-                        if (backup != null) {
-                            Files.move(backup, target, StandardCopyOption.ATOMIC_MOVE,
-                                    StandardCopyOption.REPLACE_EXISTING);
+            Path journal = createJournal(stagingRoot, job.outputDir().toPath());
+            try {
+                for (Staged current : staged) {
+                    for (StagedFile file : current.files()) {
+                        Path target = file.target();
+                        Path backup = null;
+                        if (Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+                            backup = stagingRoot.resolve("backup-" + backupIndex++ + "-"
+                                    + target.getFileName());
+                            appendJournal(journal, "B|" + target + "|" + backup);
+                            Files.move(target, backup, StandardCopyOption.ATOMIC_MOVE);
+                        } else {
+                            appendJournal(journal, "B|" + target + "|-");
                         }
-                        rollback(backups);
-                        return new BatchProcessor.BatchResult(0, total,
-                                List.of("Publicacion transaccional fallida: "
-                                        + publishFailure.getMessage()));
+                        try {
+                            publisher.publish(file.staged(), target);
+                        } catch (IOException publishFailure) {
+                            if (backup != null) {
+                                Files.move(backup, target, StandardCopyOption.ATOMIC_MOVE,
+                                        StandardCopyOption.REPLACE_EXISTING);
+                            }
+                            rollback(backups);
+                            return new BatchProcessor.BatchResult(0, total,
+                                    List.of("Publicacion transaccional fallida: "
+                                            + publishFailure.getMessage()));
+                        }
+                        appendJournal(journal, "P|" + target);
+                        backups.add(new Backup(target, backup));
                     }
-                    backups.add(new Backup(target, backup));
                 }
+                return new BatchProcessor.BatchResult(total, 0, List.of());
+            } finally {
+                Files.deleteIfExists(journal);
             }
-            return new BatchProcessor.BatchResult(total, 0, List.of());
         } catch (IOException ioFailure) {
             rollback(backups);
             return new BatchProcessor.BatchResult(0, total,
@@ -166,6 +190,91 @@ public final class BatchTransactionalProcessor {
     private static BatchProcessor.BatchResult cancelled(int total) {
         return new BatchProcessor.BatchResult(0, total,
                 List.of("Lote cancelado; no se publico ninguna salida y las previas quedaron intactas."));
+    }
+
+    private static Path createJournal(Path stagingRoot, Path outputDir) throws IOException {
+        Path journal = outputDir.resolve(JOURNAL_PREFIX + java.util.UUID.randomUUID());
+        String header = JOURNAL_HEADER + stagingRoot.toAbsolutePath().normalize() + "\n";
+        try (FileChannel channel = FileChannel.open(journal,
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+            channel.write(java.nio.ByteBuffer.wrap(header.getBytes(StandardCharsets.UTF_8)));
+            channel.force(true);
+        }
+        return journal;
+    }
+
+    private static void appendJournal(Path journal, String line) throws IOException {
+        try (FileChannel channel = FileChannel.open(journal,
+                StandardOpenOption.WRITE, StandardOpenOption.APPEND)) {
+            channel.write(java.nio.ByteBuffer.wrap((line + "\n")
+                    .getBytes(StandardCharsets.UTF_8)));
+            channel.force(true);
+        }
+    }
+
+    /**
+     * Recover batches interrupted between backup and publication. The journal is
+     * written before each destructive move, so recovery restores previous bytes
+     * (or removes a new partial output) and always deletes the private staging.
+     * Only journals inside the requested output directory are considered.
+     */
+    public static int recoverInterruptedTransactions(File outputDir) throws IOException {
+        if (outputDir == null || !outputDir.isDirectory()) {
+            return 0;
+        }
+        Path root = outputDir.toPath().toAbsolutePath().normalize();
+        int recovered = 0;
+        try (var entries = Files.list(root)) {
+            for (Path journal : entries
+                    .filter(path -> path.getFileName().toString().startsWith(JOURNAL_PREFIX))
+                    .filter(Files::isRegularFile)
+                    .toList()) {
+                recoverJournal(journal, root);
+                recovered++;
+            }
+        }
+        return recovered;
+    }
+
+    private static void recoverJournal(Path journal, Path root) throws IOException {
+        List<String> lines = Files.readAllLines(journal, StandardCharsets.UTF_8);
+        if (lines.isEmpty() || !lines.get(0).startsWith(JOURNAL_HEADER)) {
+            throw new IOException("Journal de lote invalido: " + journal.getFileName());
+        }
+        Path staging = Path.of(lines.get(0).substring(JOURNAL_HEADER.length()))
+                .toAbsolutePath().normalize();
+        if (!staging.startsWith(root)) {
+            throw new IOException("Journal de lote apunta fuera del directorio de salida.");
+        }
+        java.util.LinkedHashMap<Path, Path> backups = new java.util.LinkedHashMap<>();
+        for (String line : lines.subList(1, lines.size())) {
+            String[] parts = line.split("\\|", -1);
+            if (parts.length < 2 || !"B".equals(parts[0])) {
+                continue; // P lines only confirm a publication; B carries the restore plan.
+            }
+            Path target = Path.of(parts[1]).toAbsolutePath().normalize();
+            if (!target.startsWith(root)) {
+                throw new IOException("Journal de lote contiene un destino fuera de la salida.");
+            }
+            Path backup = "-".equals(parts[2]) ? null
+                    : Path.of(parts[2]).toAbsolutePath().normalize();
+            if (backup != null && !backup.startsWith(staging)) {
+                throw new IOException("Journal de lote contiene un backup fuera del staging.");
+            }
+            backups.put(target, backup);
+        }
+        for (var entry : backups.entrySet()) {
+            Path target = entry.getKey();
+            Path backup = entry.getValue();
+            if (backup != null && Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS)) {
+                Files.deleteIfExists(target);
+                Files.move(backup, target, StandardCopyOption.ATOMIC_MOVE);
+            } else if (backup == null) {
+                Files.deleteIfExists(target);
+            }
+        }
+        deleteRecursively(staging);
+        Files.deleteIfExists(journal);
     }
 
     private static void publishAtomically(Path staged, Path target) throws IOException {
