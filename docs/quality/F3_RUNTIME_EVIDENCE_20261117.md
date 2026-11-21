@@ -65,9 +65,9 @@ crear ventanas, el job falla de forma visible y no se declara evidencia.
   HiDPI/foco reales, gestos, impresión física, FPS/memoria y multi-sesión.
 ## Verificación funcional local — Windows (2026-11-19)
 
-Ejecutado sobre el árbol de `main` `1d1c27d` (fase funcional final):
+Ejecutado sobre el árbol de `main` `68a9f96` (fase funcional final):
 
-- `./gradlew build`: **1718 tests / 0 fallos / 15 skips**.
+- `./gradlew build`: **1733 tests / 0 fallos / 15 skips**.
 - `./gradlew run --args="--version"` → `CATGIS Desktop 1.0.0-beta.2 (beta)`.
 - `./gradlew run --args="--self-test"` → **SELFTEST_OK checks=13**.
 - `./gradlew e2eBetaHarness` → **E2E_OK checks=13** (headless, Windows 11 amd64,

@@ -6,12 +6,12 @@ queda abierto, y por qué (feature freeze, decisión de owner o gate físico).
 
 ## Main de referencia
 
-- `main = 1d1c27da454f985257a691169e6d04f9f9350a02` (2026-11-20 UTC).
-- Post-main: **Certification** `44827163743` SUCCESS (Linux/Windows/macOS
+- `main = 68a9f9665e847626e7e01ea88ab4de445ca65134` (2026-11-21 UTC).
+- Post-main: **Certification** `44906799689` SUCCESS (Linux/Windows/macOS
   Intel+ARM, GDAL nativo, PostGIS real, app images), **Runtime Identity**
   `44531670539` SUCCESS (8 jobs), **CI**, **GeoParquet**, y **attestation**
   `44534311113` SUCCESS.
-- Suite local: **1718 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
+- Suite local: **1733 tests / 0 fallos / 15 skips**; `JAVA_SOURCE_INTEGRITY_PASS`.
 - Ruleset activo `24546459` exige **25 checks** incl. `Verify exact main push
   certification`, native GDAL, PostGIS, Runtime Identity 17/21 ×4, GeoParquet e
   inventarios (evidencia: reconciliación §2/§8).
@@ -42,9 +42,9 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 
-## Consistencia SPEC/Kiro\n\n- El ledger `.kiro/specs/catgis-audit-20261117/tasks.md` fue reescrito como\n  estado autoritativo (sin “PR en curso”/estados parciales obsoletos) y  \n  `design.md`/`requirements.md` apuntan al estado de ejecución.\n- La decisión owner de **DC-5 (`UNSUPPORTED`)** está reflejada en\n  `.kiro/specs/catserver-decision-backlog/` y en el manifiesto.\n- Guard automatizado `KiroAuditSpecConsistencyContractTest`: falla si reaparecen\n  estados obsoletos, si se pierde la decisión DC-5 o si algún `.md` de\n  `.kiro/specs` está vacío/no es UTF-8.\n\n## Verificación funcional local
+## Release readiness\n\n- Informe exacto: `docs/quality/RELEASE_READINESS_20261121.md`.\n- Guard `ReleaseReadinessContractTest`: versión consistente en AppVersion/build.gradle/\n  manifiesto/BETA_README, release beta con pre-release y 3 app-images, y\n  A0.7/F3 explícitamente `NOT_CERTIFIED`.\n- Performance smoke del lote transaccional: 40 archivos, cota 120 s, marker\n  `BATCH_TX_PERF`.\n\n## Consistencia SPEC/Kiro\n\n- El ledger `.kiro/specs/catgis-audit-20261117/tasks.md` fue reescrito como\n  estado autoritativo (sin “PR en curso”/estados parciales obsoletos) y  \n  `design.md`/`requirements.md` apuntan al estado de ejecución.\n- La decisión owner de **DC-5 (`UNSUPPORTED`)** está reflejada en\n  `.kiro/specs/catserver-decision-backlog/` y en el manifiesto.\n- Guard automatizado `KiroAuditSpecConsistencyContractTest`: falla si reaparecen\n  estados obsoletos, si se pierde la decisión DC-5 o si algún `.md` de\n  `.kiro/specs` está vacío/no es UTF-8.\n\n## Verificación funcional local
 
-- Windows (main `1d1c27d`): build **1718 tests**, `--version` 1.0.0-beta.2,
+- Windows (main `68a9f96`): build **1733 tests**, `--version` 1.0.0-beta.2,
   `--self-test` **13/13** y `e2eBetaHarness` **E2E_OK checks=13**
   (proyecto/SHP/GeoTIFF/terrain/PNG/PDF/SVG/layout/workspace). Evidencia en
   `F3_RUNTIME_EVIDENCE_20261117.md`.
@@ -77,7 +77,7 @@ mediciones de FPS/memoria en Windows real y aislamiento físico multi-sesión.
 ## Conclusión
 
 La remediación de código/CI del audit está **sustancialmente completa y
-certificada** en `main`: 43 issues cerrados con evidencia, 1718 tests verdes,
+certificada** en `main`: 43 issues cerrados con evidencia, 1733 tests verdes,
 ruleset estricto y attestation por push. El **epic #263** queda pendiente únicamente de: 1) certificación A0.7/F3
 física (matriz interactiva humana), y 2) decisión de programa sobre los
 incrementos residuales #82/#74/#73/#114/#113/#132. Las decisiones DC-5 y
