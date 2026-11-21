@@ -68,10 +68,24 @@ public class GeoJsonLoader {
             throw new RuntimeException("No se pudo leer el GeoJSON: " + file.getAbsolutePath());
         }
 
-        List<SimpleFeature> features = new ArrayList<>();
-        try (FeatureIterator<SimpleFeature> iterator = featureCollection.features()) {
-            while (iterator.hasNext()) {
-                features.add(iterator.next());
+        List<SimpleFeature> features = collect(featureCollection);
+        if (features.stream().noneMatch(feature -> geometryOf(feature) != null)) {
+            // FeatureJSON can attach a duplicate Map "geometry" attribute when the
+            // schema was pre-detected for untyped GeoJSON (e.g. OSM exports) and
+            // then drops the real geometry. Retry with a clean parser before
+            // failing closed, and never publish a layer without geometries.
+            FeatureJSON plain = new FeatureJSON();
+            try (FileReader reader = new FileReader(file,
+                    java.nio.charset.StandardCharsets.UTF_8)) {
+                SimpleFeatureCollection repaired =
+                        (SimpleFeatureCollection) plain.readFeatureCollection(reader);
+                List<SimpleFeature> repairedFeatures = collect(repaired);
+                if (repairedFeatures.stream().anyMatch(feature -> geometryOf(feature) != null)) {
+                    featureCollection = repaired;
+                    features = repairedFeatures;
+                }
+            } catch (Exception ignored) {
+                CatgisLogger.warn("GeoJsonLoader: fallback de geometria fallo", ignored);
             }
         }
 
@@ -87,9 +101,8 @@ public class GeoJsonLoader {
                     continue;
                 }
 
-                Object geomObj = feature.getDefaultGeometry();
-                if (geomObj instanceof Geometry) {
-                    Geometry geometry = (Geometry) geomObj;
+                Geometry geometry = geometryOf(feature);
+                if (geometry != null) {
                     if (!geometry.isEmpty()) {
                         if (envelope == null) {
                             envelope = new Envelope(geometry.getEnvelopeInternal());
@@ -106,6 +119,37 @@ public class GeoJsonLoader {
         String message = "GeoJSON cargado: " + file.getName() + " | entidades: " + featureCount;
 
         return new ShapefileData(features, envelope, sourceName, featureCount, message, featureCollection.getSchema());
+    }
+
+    private static List<SimpleFeature> collect(SimpleFeatureCollection collection) {
+        List<SimpleFeature> features = new ArrayList<>();
+        try (FeatureIterator<SimpleFeature> iterator = collection.features()) {
+            while (iterator.hasNext()) {
+                features.add(iterator.next());
+            }
+        }
+        return features;
+    }
+
+    private static Geometry geometryOf(SimpleFeature feature) {
+        if (feature == null) {
+            return null;
+        }
+        Object value = feature.getDefaultGeometry();
+        if (value instanceof Geometry geometry) {
+            return geometry;
+        }
+        for (int i = 0; i < feature.getAttributeCount(); i++) {
+            try {
+                Object attribute = feature.getAttribute(i);
+                if (attribute instanceof Geometry geometry) {
+                    return geometry;
+                }
+            } catch (RuntimeException ignored) {
+                // A malformed optional attribute must not hide a valid geometry.
+            }
+        }
+        return null;
     }
 
     public static ShapefileData loadGeoJson(File file) throws Exception {
