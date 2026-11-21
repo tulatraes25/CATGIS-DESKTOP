@@ -15,7 +15,7 @@ decisiones de programa; no se puede certificar desde este entorno.
 | Certification post-main | `44906799689` SUCCESS |
 | Runtime Identity post-main | `44906799701` SUCCESS |
 | Attestation post-main | `44907764585` SUCCESS |
-| Suite local | **1733 tests / 0 fallos / 15 skips** |
+| Suite local | **1735 tests / 0 fallos / 15 skips** |
 | Integridad fuentes | `JAVA_SOURCE_INTEGRITY_PASS files=903` |
 | CLI | `--version` → `CATGIS Desktop 1.0.0-beta.2 (beta)` |
 | Self-test | `SELFTEST_OK checks=13` |
