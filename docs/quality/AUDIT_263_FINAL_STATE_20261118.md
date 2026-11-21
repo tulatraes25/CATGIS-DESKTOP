@@ -38,7 +38,7 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#73** | Lease entre procesos + journal de recuperación certificados (PR #75/#76). | Residuales de corte eléctrico, filesystems de red, estados ambiguos y escaneo al inicio. |
 | **#132** | `executeCode` sin `deleteOnExit`; **evidencia nativa multi-OS**: 3 syntax-errors con diagnóstico no vacío, salida de 300 KB limitada y **stdin de 10 KB aceptado / >1 MB rechazado**; pasos de CI fallan ante skip. | **Anomalía Windows original** no reproducida; no se declara erradicada. |
 | **#114** | Preflight + **transacción all-files con sidecars**, **familia Shapefile completa**, **UI transaccional con cancelación** y **journal durable con recuperación** (restaura previos/elimina nuevos parciales, limpia staging). | Evidencia de performance. |
-| **#113** | `PolygonCoverageAudit` real, gaps/overlaps honestos, **validación asíncrona con cancelación**, y **cobertura contra AOI** (leyenda/unidades, CRS fail-closed, umbral). | Reparación reversible y validación física/GUI. |
+| **#113** | `PolygonCoverageAudit`, validación **asíncrona**, **cobertura contra AOI** y **propuestas de reparación no destructivas exportables** (CSV/JSON atómicos, UI). | Validación física/GUI y aplicación manual revisada. |
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 

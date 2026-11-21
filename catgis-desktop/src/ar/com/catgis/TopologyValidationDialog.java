@@ -166,6 +166,8 @@ public class TopologyValidationDialog extends JDialog {
         highlightButton.addActionListener(e -> highlightSelectedResult());
         JButton exportButton = new JButton("Exportar reporte");
         exportButton.addActionListener(e -> exportReport());
+        JButton proposalsButton = new JButton("Exportar propuestas");
+        proposalsButton.addActionListener(e -> exportRepairProposals());
         JButton closeButton = new JButton("Cerrar");
         closeButton.addActionListener(e -> dispose());
         footer.add(prevButton);
@@ -174,6 +176,7 @@ public class TopologyValidationDialog extends JDialog {
         footer.add(zoomButton);
         footer.add(highlightButton);
         footer.add(exportButton);
+        footer.add(proposalsButton);
         footer.add(closeButton);
         add(footer, BorderLayout.SOUTH);
 
@@ -425,6 +428,46 @@ public class TopologyValidationDialog extends JDialog {
         }
         if (result.hasFocusGeometry()) {
             AppContext.mapPanel().zoomToGeometry(result.getFocusGeometry(), result.getSourceCrs());
+        }
+    }
+
+    private void exportRepairProposals() {
+        if (currentResults == null || currentResults.isEmpty()) {
+            NotificationManager.warn(this, null, "Primero ejecute una validacion.");
+            return;
+        }
+        List<TopologyRepairPlanner.Proposal> proposals =
+                TopologyRepairPlanner.plan(currentResults);
+        JFileChooser chooser = FileChooserSupport.createChooser(
+                "topology-proposals", "Exportar propuestas de reparacion (no destructivas)");
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                "JSON (*.json)", "json"));
+        chooser.setSelectedFile(FileChooserSupport.resolveSuggestedFile(
+                "topology-proposals", new File("topologia_propuestas.json")));
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = chooser.getSelectedFile();
+        boolean json = !file.getName().toLowerCase(Locale.ROOT).endsWith(".csv");
+        if (json && !file.getName().toLowerCase(Locale.ROOT).endsWith(".json")) {
+            file = new File(file.getAbsolutePath() + ".json");
+        }
+        if (!json && !file.getName().toLowerCase(Locale.ROOT).endsWith(".csv")) {
+            file = new File(file.getAbsolutePath() + ".csv");
+        }
+        FileChooserSupport.rememberFile("topology-proposals", file);
+        try {
+            TopologyRepairPlanner.export(proposals, file, json);
+            NotificationManager.info(this, null,
+                    "Propuestas no destructivas exportadas:\n" + file.getAbsolutePath()
+                            + "\n\nRevise cada propuesta antes de aplicar cambios.");
+        } catch (Exception ex) {
+            AppErrorSupport.logFailure(
+                    "No se pudieron exportar las propuestas de topologia a "
+                            + file.getAbsolutePath(), ex);
+            AppErrorSupport.showErrorDialog(this, "Topologia",
+                    "No se pudieron exportar las propuestas.", ex);
         }
     }
 

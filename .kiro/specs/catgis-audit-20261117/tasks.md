@@ -104,7 +104,7 @@
       acotado certificada).
 - [ ] #114 rollback ante crash y evidencia de performance — incrementos
       separados.
-- [ ] #113 reparación reversible de incidencias — incremento separado.
+- [x] #113 propuestas de reparación no destructivas exportables (CSV/JSON\n      atómicos, UI, tests) — sin aplicar cambios automáticamente.\n- [ ] #113 validación física/GUI de la aplicación manual — gate externo.
 - [ ] #82 medición GUI de pan/drag en Windows real — gate físico.
 - [ ] #74 ejecución nativa de WhiteboxTools — depende de binario externo.
 - [ ] #73 residuos de corte eléctrico/filesystems de red — gate físico.
