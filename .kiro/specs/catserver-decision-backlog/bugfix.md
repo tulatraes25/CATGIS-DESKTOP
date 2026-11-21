@@ -1,5 +1,11 @@
 # CATSERVER Decision Backlog — Bugfix/Decision Requests
 
+
+> **Decisión DC-5 (2026-11-19):** sin fuente autoritativa ni rol
+> publicador, `catastro.ejido_urbano_mask` se declara `UNSUPPORTED` y se
+> retira del alcance beta. Este documento queda como análisis histórico;
+> no se implementa productor. Ver `tasks.md` y el manifiesto.
+
 Status: ACTIVE (decision-gated; no production code changes without a recorded decision)
 Owner: CATGIS
 Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)

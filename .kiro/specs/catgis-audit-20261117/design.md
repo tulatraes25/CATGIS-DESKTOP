@@ -56,3 +56,10 @@ Ver requirements; no se abordan hasta cerrar T0–T2 con evidencia.
   (snapshot `.ruleset-before-20261117.json`).
 - Cada fix científico puede alterar goldens/formatos: políticas de golden
   actualizadas sólo con justificación y regeneración Linux.
+## Estado de ejecución (2026-11-20)
+
+El plan de este design fue ejecutado y certificado. Los estados reales están en
+`tasks.md` (autoritativo), `docs/CAPABILITY_MANIFEST.md` y
+`docs/quality/AUDIT_263_FINAL_STATE_20261118.md`. No se declaran A0.7/F3 como
+cerrados: la matriz física interactiva sigue pendiente. Las capacidades nuevas
+#112/#175 quedaron congeladas por decisión del owner.

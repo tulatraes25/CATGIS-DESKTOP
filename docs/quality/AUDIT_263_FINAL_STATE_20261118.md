@@ -42,7 +42,7 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 
-## Verificación funcional local
+## Consistencia SPEC/Kiro\n\n- El ledger `.kiro/specs/catgis-audit-20261117/tasks.md` fue reescrito como\n  estado autoritativo (sin “PR en curso”/estados parciales obsoletos) y  \n  `design.md`/`requirements.md` apuntan al estado de ejecución.\n- La decisión owner de **DC-5 (`UNSUPPORTED`)** está reflejada en\n  `.kiro/specs/catserver-decision-backlog/` y en el manifiesto.\n- Guard automatizado `KiroAuditSpecConsistencyContractTest`: falla si reaparecen\n  estados obsoletos, si se pierde la decisión DC-5 o si algún `.md` de\n  `.kiro/specs` está vacío/no es UTF-8.\n\n## Verificación funcional local
 
 - Windows (main `1d1c27d`): build **1718 tests**, `--version` 1.0.0-beta.2,
   `--self-test` **13/13** y `e2eBetaHarness` **E2E_OK checks=13**

@@ -1,5 +1,11 @@
 # CATSERVER Decision Backlog — Design
 
+
+> **Decisión DC-5 (2026-11-19):** sin fuente autoritativa ni rol
+> publicador, `catastro.ejido_urbano_mask` se declara `UNSUPPORTED` y se
+> retira del alcance beta. Este documento queda como análisis histórico;
+> no se implementa productor. Ver `tasks.md` y el manifiesto.
+
 Status: ACTIVE (decision-gated)
 Baseline: `f965869a8ef73e36afae0de6218cd4191ce8a151` (main after PR #215)
 Inventory date: 2026-11-15
