@@ -13,6 +13,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** T4/#114: opt-in all-files batch transaction with staging and rollback. */
@@ -246,6 +247,68 @@ class BatchTransactionalProcessorContractTest {
         assertEquals(0, result.success());
         assertEquals("OLD-A", Files.readString(outputDir.resolve("a.txt")));
         assertNoStaging(outputDir);
+    }
+
+    @Test
+    void interruptedBackupIsRestoredAndStagingCleanedOnRecovery() throws Exception {
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        Path staging = Files.createDirectory(outputDir.resolve(".catgis-batch-tx-crash"));
+        Path target = outputDir.resolve("a.txt");
+        Path backup = staging.resolve("backup-0-a.txt");
+        Files.writeString(target, "NEW-PARTIAL", StandardCharsets.UTF_8);
+        Files.writeString(backup, "OLD", StandardCharsets.UTF_8);
+        Files.writeString(staging.resolve("0-a.txt"), "STAGED", StandardCharsets.UTF_8);
+        Path journal = outputDir.resolve(".catgis-batch-tx-journal-fixed");
+        Files.writeString(journal,
+                "CATGIS_BATCH_TX|1|" + staging.toAbsolutePath().normalize() + "\n"
+                        + "B|" + target.toAbsolutePath().normalize() + "|"
+                        + backup.toAbsolutePath().normalize() + "\n"
+                        + "P|" + target.toAbsolutePath().normalize() + "\n",
+                StandardCharsets.UTF_8);
+
+        assertEquals(1, BatchTransactionalProcessor.recoverInterruptedTransactions(
+                outputDir.toFile()));
+        assertEquals("OLD", Files.readString(target));
+        assertFalse(Files.exists(staging), "staging must be deleted");
+        assertFalse(Files.exists(journal), "journal must be deleted");
+    }
+
+    @Test
+    void interruptedNewOutputIsRemovedOnRecovery() throws Exception {
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        Path staging = Files.createDirectory(outputDir.resolve(".catgis-batch-tx-new"));
+        Path target = outputDir.resolve("new.txt");
+        Files.writeString(target, "NEW-PARTIAL", StandardCharsets.UTF_8);
+        Path journal = outputDir.resolve(".catgis-batch-tx-journal-new");
+        Files.writeString(journal,
+                "CATGIS_BATCH_TX|1|" + staging.toAbsolutePath().normalize() + "\n"
+                        + "B|" + target.toAbsolutePath().normalize() + "|-\n",
+                StandardCharsets.UTF_8);
+
+        assertEquals(1, BatchTransactionalProcessor.recoverInterruptedTransactions(
+                outputDir.toFile()));
+        assertFalse(Files.exists(target));
+        assertFalse(Files.exists(staging));
+        assertFalse(Files.exists(journal));
+    }
+
+    @Test
+    void journalPointingOutsideOutputIsRejectedWithoutTouchingVictims() throws Exception {
+        Path outputDir = Files.createDirectory(directory.resolve("out"));
+        Path other = Files.createDirectory(directory.resolve("other"));
+        Path victim = other.resolve("victim.txt");
+        Files.writeString(victim, "SAFE", StandardCharsets.UTF_8);
+        Path journal = outputDir.resolve(".catgis-batch-tx-journal-evil");
+        Files.writeString(journal,
+                "CATGIS_BATCH_TX|1|" + other.toAbsolutePath().normalize() + "\n"
+                        + "B|" + victim.toAbsolutePath().normalize() + "|-\n",
+                StandardCharsets.UTF_8);
+
+        assertThrows(IOException.class,
+                () -> BatchTransactionalProcessor.recoverInterruptedTransactions(
+                        outputDir.toFile()));
+        assertEquals("SAFE", Files.readString(victim));
+        assertTrue(Files.exists(journal), "invalid journal must not be silently deleted");
     }
 
     private static File write(Path path, String text) throws IOException {
