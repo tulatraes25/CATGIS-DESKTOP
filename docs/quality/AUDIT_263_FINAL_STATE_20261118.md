@@ -42,6 +42,12 @@ post-main con attestation (ver `AUDIT_263_RECONCILIATION_20261117.md` §4–§10
 | **#143** | Ledger vivo actualizado con SHAs/evidencia. | No es un defecto; se mantiene como memoria operativa. |
 | **#109** | Spec de producto umbrella. | Se cierra con el programa completo/A0.7. |
 
+- Cobertura completa de menus: iconos para los 26 items que estaban sin
+  icono, cabeceras de submenu, proyectos recientes, idiomas y menus
+  contextuales (mapa, pines, capas y compositor). `MenuIconSupport` aplica
+  el icono faltante sin cambiar los constructores inventariados.
+- Guard `MenuIconCoverageContractTest` (3).
+
 ## Selector de CRS (fajas argentinas)\n\n- `EPSG:22182` se mostraba como faja 1 porque la tabla de meridianos tenía\n  `-72` duplicado y faltaba `-54`. Corregido a\n  `-72/-69/-66/-63/-60/-57/-54`; el panel ya informa **faja 2 (-69°W)**.\n- Planisferio **regenerado desde Natural Earth** (equirectangular 2:1, 1800×900, ±90°): el\n  área de uso y el marcador caen en Argentina, no en Brasil.\n- `CRSArgentinaBoundsContractTest` (3) protege ambas regresiones.\n\n## Iconografia
 
 - Barra principal migrada a `icons/ui/` (trazo 1.8, paleta slate/azul):

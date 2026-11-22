@@ -49,6 +49,8 @@ public class MapPopupHandler {
             cancelItem.addActionListener(ev -> panel.cancelCurrentDrawing());
             popupMenu.add(cancelItem);
 
+            MenuIconSupport.apply(popupMenu);
+
             popupMenu.show(panel, x, y);
             return;
         }
@@ -63,6 +65,8 @@ public class MapPopupHandler {
             JMenuItem cancelItem = new JMenuItem("Cancelar medici\u00f3n");
             cancelItem.addActionListener(ev -> panel.cancelCurrentMeasurement());
             popupMenu.add(cancelItem);
+
+            MenuIconSupport.apply(popupMenu);
 
             popupMenu.show(panel, x, y);
             return;
@@ -82,6 +86,8 @@ public class MapPopupHandler {
                 panel.showCopiedMessage("Boceto de edici\u00f3n cancelado.");
             });
             popupMenu.add(cancelItem);
+
+            MenuIconSupport.apply(popupMenu);
 
             popupMenu.show(panel, x, y);
             return;
@@ -165,6 +171,8 @@ public class MapPopupHandler {
             });
             popupMenu.add(clearPinsItem);
         }
+
+        MenuIconSupport.apply(popupMenu);
 
         popupMenu.show(panel, x, y);
     }
@@ -256,6 +264,8 @@ public class MapPopupHandler {
         clearItem.addActionListener(ev -> panel.clearSelectedFeature());
         popupMenu.add(clearItem);
 
+        MenuIconSupport.apply(popupMenu);
+
         popupMenu.show(panel, e.getX(), e.getY());
     }
 
@@ -303,6 +313,8 @@ public class MapPopupHandler {
             });
             popupMenu.add(clearPinsItem);
         }
+
+        MenuIconSupport.apply(popupMenu);
 
         popupMenu.show(panel, e.getX(), e.getY());
     }

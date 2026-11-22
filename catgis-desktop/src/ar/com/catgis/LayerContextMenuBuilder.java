@@ -154,6 +154,7 @@ public class LayerContextMenuBuilder {
 
         // Heatmap toggle (point layers only)
         JCheckBoxMenuItem heatmapItem = new JCheckBoxMenuItem("Mapa de calor (heatmap)", selectedLayer.isHeatmapEnabled());
+        heatmapItem.setIcon(MenuIconSupport.iconFor("mapa de calor"));
         heatmapItem.addActionListener(ev -> {
             selectedLayer.setHeatmapEnabled(!selectedLayer.isHeatmapEnabled());
             AppContext.mapPanel().repaint();
@@ -161,6 +162,7 @@ public class LayerContextMenuBuilder {
         popupMenu.add(heatmapItem);
 
         JCheckBoxMenuItem clusterItem = new JCheckBoxMenuItem("Agrupar puntos (clustering)", selectedLayer.isClusteringEnabled());
+        clusterItem.setIcon(MenuIconSupport.iconFor("agrupar puntos"));
         clusterItem.addActionListener(ev -> {
             selectedLayer.setClusteringEnabled(!selectedLayer.isClusteringEnabled());
             AppContext.mapPanel().repaint();

@@ -1451,6 +1451,7 @@ public class LayoutPreviewPanel extends JPanel {
 
     private JMenuItem item(String text, Runnable action) {
         JMenuItem mi = new JMenuItem(text);
+        mi.setIcon(MenuIconSupport.iconFor(text));
         mi.addActionListener(e -> action.run());
         return mi;
     }

@@ -116,6 +116,8 @@ class MapPopupMenuBuilder {
             cancelItem.addActionListener(ev -> ctx.cancelCurrentDrawing());
             popupMenu.add(cancelItem);
 
+            MenuIconSupport.apply(popupMenu);
+
             popupMenu.show(parent, x, y);
             return;
         }
@@ -130,6 +132,8 @@ class MapPopupMenuBuilder {
             JMenuItem cancelItem = new JMenuItem("Cancelar medici\u00f3n");
             cancelItem.addActionListener(ev -> ctx.cancelCurrentMeasurement());
             popupMenu.add(cancelItem);
+
+            MenuIconSupport.apply(popupMenu);
 
             popupMenu.show(parent, x, y);
             return;
@@ -150,6 +154,8 @@ class MapPopupMenuBuilder {
                 ctx.showCopiedMessage("Boceto de edici\u00f3n cancelado.");
             });
             popupMenu.add(cancelItem);
+
+            MenuIconSupport.apply(popupMenu);
 
             popupMenu.show(parent, x, y);
             return;
@@ -233,6 +239,8 @@ class MapPopupMenuBuilder {
             });
             popupMenu.add(clearPinsItem);
         }
+
+        MenuIconSupport.apply(popupMenu);
 
         popupMenu.show(parent, x, y);
     }
@@ -325,6 +333,8 @@ class MapPopupMenuBuilder {
         JMenuItem clearItem = new JMenuItem("Limpiar seleccion");
         clearItem.addActionListener(ev -> ctx.clearSelectedFeature());
         popupMenu.add(clearItem);
+
+        MenuIconSupport.apply(popupMenu);
 
         popupMenu.show(parent, e.getX(), e.getY());
     }

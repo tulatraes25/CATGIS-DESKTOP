@@ -220,6 +220,8 @@ public class PinManager {
             popupMenu.add(clearPinsItem);
         }
 
+        MenuIconSupport.apply(popupMenu);
+
         popupMenu.show(panel, e.getX(), e.getY());
     }
 

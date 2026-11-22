@@ -58,12 +58,14 @@ public class LayoutElementListPanel extends JPanel {
 
     private static JMenuItem menuItem(String text, Runnable action) {
         JMenuItem mi = new JMenuItem(text);
+        mi.setIcon(ar.com.catgis.MenuIconSupport.iconFor(text));
         mi.addActionListener(e -> action.run());
         return mi;
     }
 
     private static JMenuItem menuItem(String text, String type, Consumer<String> onAddQuickElement) {
         JMenuItem mi = new JMenuItem(text);
+        mi.setIcon(ar.com.catgis.MenuIconSupport.iconFor(text));
         mi.addActionListener(e -> onAddQuickElement.accept(type));
         return mi;
     }
