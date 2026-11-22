@@ -846,7 +846,7 @@ public class MainMenuBar extends JMenuBar {
         // =====================================================================
         JMenu menuMapaFinal = new JMenu(I18n.t("Mapa Final"));
 
-        JMenuItem itemCompositorCartografico = createItem("Abrir CATMAP...", AppIcons.projectIcon());
+        JMenuItem itemCompositorCartografico = createItem("Abrir CATMAP...", AppIcons.catmapIcon());
         itemCompositorCartografico.addActionListener(e -> MapLayoutComposerDialog.open());
 
         JMenuItem itemSimbologiaCapa = createItem("Simbología de capa...", AppIcons.propertiesIcon());

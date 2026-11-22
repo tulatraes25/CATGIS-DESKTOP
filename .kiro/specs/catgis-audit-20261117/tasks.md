@@ -116,7 +116,14 @@
 - **#143** ledger vivo.
 - **#109** spec de producto umbrella.
 
-## GeoJSON sin tipado\n\n- [x] `GeoJsonLoader`: fallback de geometria para FeatureCollections sin\n      esquema (OSM); no publica capa sin geometrias. `GeoJsonLoaderContractTest`\n      (2). Verificado exportando Comodoro Rivadavia con CATMAP.\n\n## Release readiness\n\n- [x] Guard `ReleaseReadinessContractTest` (4): versión consistente, workflow\n      beta con pre-release y 3 app-images, honestidad A0.7/F3 y performance smoke\n      del lote transaccional (40 archivos).\n- [x] Informe `docs/quality/RELEASE_READINESS_20261121.md`: beta funcional\n      certificada, **no versión final**; A0.7/F3 físico `NOT_CERTIFIED`.\n\n## Guard de consistencia\n\n- [x] `KiroAuditSpecConsistencyContractTest` (3) protege contra estados\n      obsoletos, pérdida de la decisión DC-5 y specs vacías/no UTF-8.\n- [x] `catgis-catmap-beta-1` y `catserver-sql-policies-t2-t4` sin pendientes\n      contradictorios.\n\n## Historial de cierre por fases
+## GeoJSON sin tipado\n\n- [x] `GeoJsonLoader`: fallback de geometria para FeatureCollections sin\n      esquema (OSM); no publica capa sin geometrias. `GeoJsonLoaderContractTest`\n      (2). Verificado exportando Comodoro Rivadavia con CATMAP.\n\n## Release readiness\n\n- [x] Guard `ReleaseReadinessContractTest` (4): versión consistente, workflow\n      beta con pre-release y 3 app-images, honestidad A0.7/F3 y performance smoke\n      del lote transaccional (40 archivos).\n- [x] Informe `docs/quality/RELEASE_READINESS_20261121.md`: beta funcional\n      certificada, **no versión final**; A0.7/F3 físico `NOT_CERTIFIED`.\n\n## Guard de consistencia\n\n- [x] `KiroAuditSpecConsistencyContractTest` (3) protege contra estados\n      obsoletos, pérdida de la decisión DC-5 y specs vacías/no UTF-8.\n- [x] `catgis-catmap-beta-1` y `catserver-sql-policies-t2-t4` sin pendientes\n      contradictorios.\n\n## Iconografia
+
+- [x] Set `icons/ui/` coherente para barra principal: abrir, capa+, guardar, zoom,
+      todo, mover, info, punto/linea/poligono y CATMAP; mismo trazo/paleta.
+- [x] Zoom +/− ya no esta invertido y CATMAP usa un icono de layout propio.
+- [x] `AppIconsContractTest` (2) verifica carga y tamano 24 px.
+
+## Historial de cierre por fases
 
 - T0/T1/T2 cerrados y certificados en `main`.
 - T3/T4/T5 con gates de implementación cerrados; capacidades nuevas congeladas
