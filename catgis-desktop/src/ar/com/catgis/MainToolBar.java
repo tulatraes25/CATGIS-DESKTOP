@@ -30,7 +30,7 @@ public class MainToolBar extends JToolBar {
         // ================================================================
 
         // --- Block 1: Project ---
-        JButton btnAbrirProyecto = createButton(I18n.t("Abrir proyecto"), AppIcons.projectIcon());
+        JButton btnAbrirProyecto = createButton(I18n.t("Abrir proyecto"), AppIcons.openIcon());
         btnAbrirProyecto.addActionListener(e -> LoadProjectAction.loadProject());
 
         JButton btnAgregarCapa = createButton(I18n.t("Agregar capa al proyecto actual"), AppIcons.addLayerIcon());
@@ -60,11 +60,11 @@ public class MainToolBar extends JToolBar {
         JButton btnIdentificar = createButton(I18n.t("Consultar entidades"), AppIcons.identifyIcon());
         btnIdentificar.addActionListener(e -> AppContext.mapPanel().enableIdentifyMode());
 
-        add(createLabeledButton(btnZoomMas, "\u2212"));
-        add(createLabeledButton(btnZoomMenos, "+"));
-        add(createLabeledButton(btnZoomTodo, "\u2316 Todo"));
-        add(createLabeledButton(btnMover, "\u270B Mover"));
-        add(createLabeledButton(btnIdentificar, "\u2139 Info"));
+        add(createLabeledButton(btnZoomMas, "Zoom +"));
+        add(createLabeledButton(btnZoomMenos, "Zoom \u2212"));
+        add(createLabeledButton(btnZoomTodo, "Todo"));
+        add(createLabeledButton(btnMover, "Mover"));
+        add(createLabeledButton(btnIdentificar, "Info"));
         addSeparator();
 
         // --- Block 3: Drawing ---
@@ -77,16 +77,16 @@ public class MainToolBar extends JToolBar {
         JButton btnPoligono = createButton(I18n.t("Dibujar poligonos"), AppIcons.polygonIcon());
         btnPoligono.addActionListener(e -> AppContext.mapPanel().enableDrawPolygonMode());
 
-        add(createLabeledButton(btnPunto, "\u2022 Punto"));
-        add(createLabeledButton(btnLinea, "\u2215 L\u00EDnea"));
-        add(createLabeledButton(btnPoligono, "\u25AD Pol\u00EDgono"));
+        add(createLabeledButton(btnPunto, "Punto"));
+        add(createLabeledButton(btnLinea, "L\u00EDnea"));
+        add(createLabeledButton(btnPoligono, "Pol\u00EDgono"));
         addSeparator();
 
         // --- Block 4: CATMAP ---
-        JButton btnCatmap = createButton(I18n.t("Compositor cartografico CATMAP"), AppIcons.toolboxIcon());
+        JButton btnCatmap = createButton(I18n.t("Compositor cartografico CATMAP"), AppIcons.catmapIcon());
         btnCatmap.addActionListener(e -> MapLayoutComposerDialog.open());
 
-        add(createLabeledButton(btnCatmap, "\u229E CATMAP"));
+        add(createLabeledButton(btnCatmap, "CATMAP"));
 
         // ================================================================
         // HIDDEN — moved to menus per UI_REORGANIZATION_PROPOSAL.md
