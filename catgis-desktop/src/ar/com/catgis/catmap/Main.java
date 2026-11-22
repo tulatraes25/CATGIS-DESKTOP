@@ -221,15 +221,20 @@ public class Main {
         addMenuItem(menuVista, "Zoom 100%", 0, e -> previewPanel.setZoom(1.0));
         menuVista.addSeparator();
         JCheckBoxMenuItem showRulers = new JCheckBoxMenuItem("Mostrar reglas", true);
+        showRulers.setIcon(ar.com.catgis.MenuIconSupport.iconFor("reglas"));
         menuVista.add(showRulers);
         JCheckBoxMenuItem showGrid = new JCheckBoxMenuItem("Mostrar grilla", false);
+        showGrid.setIcon(ar.com.catgis.MenuIconSupport.iconFor("grilla"));
         menuVista.add(showGrid);
         JCheckBoxMenuItem showGuides = new JCheckBoxMenuItem("Mostrar guías", false);
+        showGuides.setIcon(ar.com.catgis.MenuIconSupport.iconFor("guias"));
         menuVista.add(showGuides);
         menuVista.addSeparator();
         JCheckBoxMenuItem showLayers = new JCheckBoxMenuItem("Mostrar panel de capas", true);
+        showLayers.setIcon(ar.com.catgis.MenuIconSupport.iconFor("capas"));
         menuVista.add(showLayers);
         JCheckBoxMenuItem showProps = new JCheckBoxMenuItem("Mostrar panel de propiedades", true);
+        showProps.setIcon(ar.com.catgis.MenuIconSupport.iconFor("propiedades"));
         menuVista.add(showProps);
         menuVista.addSeparator();
         addMenuItem(menuVista, "Cambiar tema (claro/oscuro)", 0, e -> {
@@ -2163,6 +2168,7 @@ public class Main {
 
     private static JMenuItem addMenuItem(JMenu menu, String text, int mnemonic, java.awt.event.ActionListener action) {
         JMenuItem item = new JMenuItem(text);
+        item.setIcon(ar.com.catgis.MenuIconSupport.iconFor(text));
         if (mnemonic != 0) item.setAccelerator(KeyStroke.getKeyStroke(mnemonic, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()));
         item.addActionListener(action);
         menu.add(item);

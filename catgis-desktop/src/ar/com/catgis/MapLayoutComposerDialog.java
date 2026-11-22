@@ -974,6 +974,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         JMenuItem more = new JMenuItem("Mas plantillas...");
         more.addActionListener(e -> showTemplatePicker());
         menu.add(more);
+        MenuIconSupport.apply(menu);
         menu.show(previewPanel, 200, 100);
     }
 
@@ -3138,6 +3139,7 @@ public class MapLayoutComposerDialog extends JFrame implements PreviewToolbarAct
         menu.addSeparator();
         addContextItem(menu, "Eliminar", customSelected || fixedSelected, this::deleteSelectedLayoutObject);
         addContextItem(menu, "Restaurar elementos por defecto", true, this::restoreDefaultLayoutElements);
+        MenuIconSupport.apply(menu);
         menu.show(invoker, x, y);
     }
 

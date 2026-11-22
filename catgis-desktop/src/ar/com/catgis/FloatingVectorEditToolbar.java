@@ -481,6 +481,7 @@ public class FloatingVectorEditToolbar extends JPanel {
             for (AbstractButton btn : buttons) {
                 if (btn == null) continue;
                 JMenuItem item = new JMenuItem(btn.getToolTipText() != null ? btn.getToolTipText() : "");
+            item.setIcon(btn.getIcon());
                 item.addActionListener(ev -> btn.doClick());
                 menu.add(item);
             }

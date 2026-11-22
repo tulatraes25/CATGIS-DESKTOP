@@ -128,4 +128,32 @@ public final class AppIcons {
     public static Icon attrAssignIcon() { return legacy("assign"); }
     public static Icon attrCloseIcon() { return legacy("close"); }
     public static Icon fieldsIcon() { return legacy("fields"); }
+
+    // Menu/UI actions (new coherent set)
+    public static Icon exitIcon() { return uiSvg("exit"); }
+    public static Icon hillshadeIcon() { return uiSvg("hillshade"); }
+    public static Icon slopeIcon() { return uiSvg("slope"); }
+    public static Icon aspectIcon() { return uiSvg("aspect"); }
+    public static Icon viewshedIcon() { return uiSvg("viewshed"); }
+    public static Icon networkIcon() { return uiSvg("network"); }
+    public static Icon routeIcon() { return uiSvg("route"); }
+    public static Icon hexagonIcon() { return uiSvg("hexagon"); }
+    public static Icon spectralIcon() { return uiSvg("spectral"); }
+    public static Icon mlIcon() { return uiSvg("ml"); }
+    public static Icon batchIcon() { return uiSvg("batch"); }
+    public static Icon geoprocessIcon() { return uiSvg("geoprocess"); }
+    public static Icon scriptIcon() { return uiSvg("script"); }
+    public static Icon downloadIcon() { return uiSvg("download"); }
+    public static Icon catalogIcon() { return uiSvg("catalog"); }
+    public static Icon kmlIcon() { return uiSvg("kml"); }
+    public static Icon styleIcon() { return uiSvg("style"); }
+    public static Icon environmentIcon() { return uiSvg("environment"); }
+    public static Icon satelliteIcon() { return uiSvg("satellite"); }
+    public static Icon settingsIcon() { return uiSvg("settings"); }
+    public static Icon topologyIcon() { return uiSvg("topology"); }
+    public static Icon cadIcon() { return uiSvg("cad"); }
+    public static Icon climateIcon() { return uiSvg("climate"); }
+    public static Icon helpIcon() { return uiSvg("help"); }
+    public static Icon historyIcon() { return uiSvg("history"); }
+    public static Icon languageIcon() { return uiSvg("language"); }
 }

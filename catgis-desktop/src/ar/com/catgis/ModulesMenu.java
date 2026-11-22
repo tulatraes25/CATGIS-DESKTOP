@@ -53,12 +53,16 @@ public class ModulesMenu extends JMenu {
             moduleMenu.setToolTipText(buildModuleTooltip(module));
             if (!module.isEnabled()) {
                 JMenuItem statusItem = new JMenuItem(I18n.t("Modulo desactivado. Activarlo desde el Gestor de modulos."));
+        statusItem.setIcon(MenuIconSupport.iconFor("modulo"));
                 statusItem.setEnabled(false);
                 moduleMenu.add(statusItem);
                 moduleMenu.addSeparator();
             }
             for (CatgisModuleAction action : module.getActions()) {
                 JMenuItem item = new JMenuItem(action.getName(), action.getIcon());
+            if (item.getIcon() == null) {
+                item.setIcon(MenuIconSupport.iconFor(action.getName()));
+            }
                 boolean availableByContext = action.isAvailable();
                 item.setToolTipText(buildActionTooltip(module, action, availableByContext));
                 item.setEnabled(module.isEnabled() && availableByContext);
