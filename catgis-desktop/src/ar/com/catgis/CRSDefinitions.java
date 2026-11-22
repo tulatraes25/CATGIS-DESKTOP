@@ -316,8 +316,9 @@ public class CRSDefinitions {
     }
 
     private static CrsTechnicalDetails argentineFajaBounds(String code, int zone, String family) {
-        double[] cm = {-72, -72, -69, -66, -63, -60, -57};
-        String[] cmLabel = {"-72°W", "-72°W", "-69°W", "-66°W", "-63°W", "-60°W", "-57°W"};
+        // Fajas 1..7: -72, -69, -66, -63, -60, -57, -54.
+        double[] cm = {-72, -69, -66, -63, -60, -57, -54};
+        String[] cmLabel = {"-72°W", "-69°W", "-66°W", "-63°W", "-60°W", "-57°W", "-54°W"};
         int i = Math.max(0, Math.min(6, zone - 1));
         double w = cm[i] - 1.5, e = cm[i] + 1.5;
         String label = family + " / Argentina " + zone;
